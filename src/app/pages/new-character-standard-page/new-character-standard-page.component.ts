@@ -522,6 +522,110 @@ const backgroundStartingPackages = {
 const validSteps = new Set<StandardStep>(['home', 'class', 'background', 'species', 'abilities', 'equipment', 'whats-next']);
 
 const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
+    Artificer: [
+        {
+            level: 1, features: [
+                {
+                    name: 'Core Artificer Traits',
+                    level: 1,
+                    description: 'Blend invention and spellcasting through arcane tools.',
+                    choices: {
+                        title: 'Choose 2 Skill Proficiencies',
+                        count: 2,
+                        options: ['Arcana', 'History', 'Investigation', 'Medicine', 'Nature', 'Perception', 'Sleight of Hand']
+                    }
+                },
+                { name: 'Magical Tinkering', level: 1, description: 'Imbue mundane objects with minor magical effects.' },
+                { name: 'Spellcasting', level: 1, description: 'Cast spells using Intelligence.' }
+            ]
+        },
+        {
+            level: 2, features: [
+                { name: 'Infuse Item', level: 2, description: 'Create and maintain magical infusions on equipment.' }
+            ]
+        },
+        {
+            level: 3, features: [
+                { name: 'Artificer Specialist', level: 3, description: 'Choose your Artificer subclass specialization.' },
+                { name: 'The Right Tool for the Job', level: 3, description: 'Conjure the exact artisan tool needed for your work.' }
+            ]
+        },
+        {
+            level: 4, features: [
+                { name: 'Ability Score Improvement', level: 4, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 5, features: [
+                { name: 'Artificer Specialist Feature', level: 5, description: 'Gain a feature from your Artificer specialization.' }
+            ]
+        },
+        {
+            level: 6, features: [
+                { name: 'Tool Expertise', level: 6, description: 'Double your proficiency for selected tool checks.' }
+            ]
+        },
+        {
+            level: 7, features: [
+                { name: 'Flash of Genius', level: 7, description: 'Add your Intelligence modifier to key checks and saves as support.' }
+            ]
+        },
+        {
+            level: 8, features: [
+                { name: 'Ability Score Improvement', level: 8, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 9, features: [
+                { name: 'Artificer Specialist Feature', level: 9, description: 'Gain a feature from your Artificer specialization.' }
+            ]
+        },
+        {
+            level: 10, features: [
+                { name: 'Magic Item Adept', level: 10, description: 'Improve attunement and crafting capacity for magic items.' }
+            ]
+        },
+        {
+            level: 11, features: [
+                { name: 'Spell-Storing Item', level: 11, description: 'Store a prepared spell in an item for repeated use.' }
+            ]
+        },
+        {
+            level: 12, features: [
+                { name: 'Ability Score Improvement', level: 12, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 14, features: [
+                { name: 'Magic Item Savant', level: 14, description: 'Further improve attunement limits and item use.' }
+            ]
+        },
+        {
+            level: 15, features: [
+                { name: 'Artificer Specialist Feature', level: 15, description: 'Gain a feature from your Artificer specialization.' }
+            ]
+        },
+        {
+            level: 16, features: [
+                { name: 'Ability Score Improvement', level: 16, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 18, features: [
+                { name: 'Magic Item Master', level: 18, description: 'Reach peak attunement and magic item mastery.' }
+            ]
+        },
+        {
+            level: 19, features: [
+                { name: 'Ability Score Improvement', level: 19, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 20, features: [
+                { name: 'Soul of Artifice', level: 20, description: 'Gain your Artificer capstone feature.' }
+            ]
+        }
+    ],
     Barbarian: [
         {
             level: 1, features: [
@@ -1794,6 +1898,7 @@ const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
 };
 
 const classInfoMap: Record<string, BuilderInfo> = {
+    Artificer: { name: 'Artificer', source: "Eberron / Tasha's", summary: 'Inventive half-caster using infusions, tools, and magical engineering.', highlights: ['Primary focus: Intelligence', 'Core feature: Infuse Item', 'Flexible support, utility, and magical item synergy'] },
     Barbarian: {
         name: 'Barbarian',
         source: "Player's Handbook",
@@ -3276,7 +3381,7 @@ export class NewCharacterStandardPageComponent {
         { key: 'whats-next', label: "What's Next" }
     ];
 
-    readonly classOptions = ['Barbarian', 'Blood Hunter', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard'];
+    readonly classOptions = ['Artificer', 'Barbarian', 'Blood Hunter', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard'];
     readonly backgroundOptions: ReadonlyArray<{ name: string; url: string }> = [
         { name: 'Acolyte', url: 'https://dnd5e.wikidot.com/background:acolyte' },
         { name: 'Anthropologist', url: 'https://dnd5e.wikidot.com/background:anthropologist' },
