@@ -28,9 +28,13 @@
     @case ('class') {
     <section class="panel step-panel">
         <h2>Choose a Class</h2>
+
+        <!-- Initial class selection or multiclass selection -->
+        @if ((Object.keys(multiclassList()).length === 0 && !selectedClass()) || selectedClass() === '__MULTICLASS_SELECTOR__') {
         <input class="search-input" type="text" placeholder="Search..." />
         <div class="option-list">
             @for (className of classOptions; track className) {
+            @if (!Object.keys(multiclassList()).includes(className)) {
             <button type="button" class="option-row" (click)="openClassModal(className)">
                 <div>
                     <strong>{{ className }}</strong>
@@ -39,7 +43,68 @@
                 <span>›</span>
             </button>
             }
+            }
         </div>
+        }
+
+        <!-- Display selected classes with their features -->
+        @if (Object.keys(multiclassList()).length > 0 && selectedClass() !== '__MULTICLASS_SELECTOR__') {
+        @for (className of Object.keys(multiclassList()); track className) {
+        <section class="class-section">
+            <div class="class-section-header">
+                <h3>{{ className }}</h3>
+                <div class="level-selector-group">
+                    <label [for]="'level-' + className">Level:</label>
+                    <select [id]="'level-' + className" class="level-select" [value]="multiclassList()[className].toString()" (change)="updateClassLevel(className, +$any($event.target).value)">
+                        @for (level of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]; track level) {
+                        <option [value]="level.toString()">{{ level }}</option>
+                        }
+                    </select>
+                </div>
+                <button type="button" class="btn-remove-class" (click)="removeClass(className)" title="Remove class">✕</button>
+            </div>
+
+            <details class="class-details-toggle">
+                <summary>CLASS FEATURES</summary>
+                <div class="class-features-wrapper">
+                    @for (featureLevel of getClassFeatures(className, multiclassList()[className]); track featureLevel.level) {
+                    @for (feature of featureLevel.features; track feature.name) {
+                    <details class="feature-detail">
+                        <summary>
+                            <span class="feature-name">{{ feature.name }}</span>
+                            <span class="feature-level">Level {{ feature.level }}</span>
+                        </summary>
+                        @if (feature.description) {
+                        <p class="feature-description">{{ feature.description }}</p>
+                        }
+                        @if (feature.choices) {
+                        <div class="feature-choices">
+                            <label class="choice-label">{{ feature.choices.title }}</label>
+                            <div class="choice-select-group">
+                                @for (option of feature.choices.options; track option) {
+                                <label class="choice-checkbox">
+                                    <input type="checkbox" [checked]="(classFeatureSelections()[feature.name] || []).includes(option)" (change)="onFeatureChoiceChange(feature.name, option, $any($event.target).checked, feature.choices.count)">
+                                    <span>{{ option }}</span>
+                                </label>
+                                }
+                            </div>
+                        </div>
+                        }
+                    </details>
+                    }
+                    }
+                </div>
+            </details>
+        </section>
+        }
+        }
+
+        <!-- Multiclass button -->
+        @if (Object.keys(multiclassList()).length > 0 && selectedClass() !== '__MULTICLASS_SELECTOR__') {
+        <section class="multiclass-action">
+            <button type="button" class="btn-multiclass" (click)="startMulticlass()">+ Multiclass</button>
+        </section>
+        }
     </section>
     }
 
@@ -133,12 +198,6 @@
     @case ('species') {
     <section class="panel step-panel">
         <h2>Choose Origin: Species</h2>
-        <div class="form-grid two-col">
-            <label>Filter Species Sources <select>
-                    <option>-- All Sources --</option>
-                </select></label>
-            <label class="toggle-row"><span>Show Legacy Content</span><input type="checkbox" /></label>
-        </div>
         <input class="search-input" type="text" placeholder="Search..." />
         <div class="option-list">
             @for (species of speciesOptions; track species) {
@@ -157,22 +216,131 @@
     @case ('abilities') {
     <section class="panel step-panel">
         <h2>Ability Scores</h2>
-        <select class="wide-input">
-            <option>-- Choose a Generation Method --</option>
-        </select>
+        <div class="ability-method-select">
+            <label for="abilityMethod">Select a Generation Method</label>
+            <select id="abilityMethod" class="wide-input" [value]="selectedAbilityMethod()" (change)="onAbilityMethodSelected($any($event.target).value)">
+                @for (method of abilityMethods; track method.value) {
+                <option [value]="method.value">{{ method.label }}</option>
+                }
+            </select>
+        </div>
+
+        @if (selectedAbilityMethod() === '') {
+        <p class="muted">Choose a generation method to start assigning scores.</p>
+        }
+
+        @if (selectedAbilityMethod() === 'standard-array') {
+        <section class="ability-method-panel">
+            <h3>Standard Array</h3>
+            <p class="muted">Assign each value once: 15, 14, 13, 12, 10, 8.</p>
+            <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;overflow-x:auto">
+                @for (ability of abilityTiles; track ability) {
+                <div style="display:flex;flex-direction:column;gap:4px;min-width:80px">
+                    <span style="font-weight:700;font-size:.75rem;text-transform:uppercase">{{ abilityAbbreviations[ability] }}</span>
+                    <select style="min-height:30px;font:inherit;border:1px solid var(--panel-border);border-radius:6px;background:var(--surface-raised);color:var(--text-main)" [value]="getStandardArraySelection(ability)" (change)="onStandardArraySelected(ability, $any($event.target).value)">
+                        <option value="">--</option>
+                        @for (value of getStandardArrayOptions(ability); track value) {
+                        <option [value]="value">{{ value }}</option>
+                        }
+                    </select>
+                    <span style="font-size:.78rem;font-weight:700">TOTAL: {{ getAbilityBaseScore(ability) || '--' }}</span>
+                </div>
+                }
+            </div>
+        </section>
+        }
+
+        @if (selectedAbilityMethod() === 'manual-rolled') {
+        <section class="ability-method-panel">
+            <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;overflow-x:auto">
+                @for (ability of abilityTiles; track ability; let idx = $index) {
+                <div style="display:flex;flex-direction:column;gap:4px;min-width:80px">
+                    <span style="font-weight:700;font-size:.75rem;text-transform:uppercase">{{ abilityAbbreviations[ability] }}</span>
+                    <input type="number" min="3" max="20" style="min-height:30px;font:inherit;border:1px solid var(--panel-border);border-radius:6px;background:var(--surface-raised);color:var(--text-main);padding:0 6px" [value]="getAbilityBaseScore(ability) || ''"
+                        (input)="onAbilityScoreInput(ability, $any($event.target).value)" />
+                    <span style="font-size:.78rem;font-weight:700">TOTAL: {{ getAbilityBaseScore(ability) || '--' }}</span>
+                </div>
+                }
+            </div>
+
+            <details [open]="diceRollGroupOpen()" (toggle)="diceRollGroupOpen.set($any($event.target).open)" style="border:1px solid var(--panel-border);border-radius:8px">
+                <summary style="padding:10px 12px;font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center">
+                    Dice Roll Groups
+                    <span>{{ diceRollGroupOpen() ? '∧' : '∨' }}</span>
+                </summary>
+                <div style="padding:0 12px 12px;display:grid;gap:10px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <button type="button" class="secondary-btn" (click)="addManualRollGroup()">+Add Group</button>
+                        <span class="muted">Groups: {{ manualRollGroupCount() }}</span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px">
+                        @for (ability of abilityTiles; track ability; let idx = $index) {
+                        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                            <span style="font-weight:700;font-size:1rem">{{ getManualRolledDisplay(idx) }}</span>
+                            <button type="button" style="width:100%;min-height:34px;border:0;border-radius:6px;background:#5a8a3d;color:#fff;font:inherit;font-weight:700;text-transform:uppercase;cursor:pointer" (click)="rollAbilitySlot(idx)">Roll</button>
+                        </div>
+                        }
+                    </div>
+                    <div style="display:flex;justify-content:flex-end;gap:8px">
+                        <button type="button" class="secondary-btn" (click)="resetManualRollGroup()">Reset Group</button>
+                        <button type="button" class="secondary-btn" (click)="applyManualRolledScores()">Apply Ability Scores</button>
+                    </div>
+                </div>
+            </details>
+        </section>
+        }
+
+        @if (selectedAbilityMethod() === 'point-buy') {
+        <section class="ability-method-panel">
+            <div class="point-buy-header">
+                <h3>Point Buy</h3>
+            </div>
+            <p class="muted">POINTS REMAINING: <strong>{{ pointBuyRemaining() }} / {{ pointBuyBudget }}</strong></p>
+            <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;overflow-x:auto">
+                @for (ability of abilityTiles; track ability) {
+                <div style="display:flex;flex-direction:column;gap:4px;min-width:80px">
+                    <span style="font-weight:700;font-size:.75rem;text-transform:uppercase">{{ abilityAbbreviations[ability] }}</span>
+                    <select style="min-height:30px;font:inherit;border:1px solid var(--panel-border);border-radius:6px;background:var(--surface-raised);color:var(--text-main)" [value]="getPointBuySelection(ability)" (change)="onPointBuySelected(ability, $any($event.target).value)">
+                        @for (value of pointBuyValues; track value) {
+                        <option [value]="value" [disabled]="isPointBuyOptionDisabled(ability, value)">{{ getPointBuyOptionLabel(value) }}</option>
+                        }
+                    </select>
+                    <span style="font-size:.78rem;font-weight:700">TOTAL: {{ getAbilityBaseScore(ability) }}</span>
+                </div>
+                }
+            </div>
+        </section>
+        }
+
         <h3>Score Calculations</h3>
-        <p class="muted">Base and modifier values for each ability are summarized below.</p>
+        <p class="muted">Calculations, including the base scores you set above and any modifiers, are found below. You can also override any automatic calculations or modify them under each ability summary.</p>
         <div class="ability-grid">
             @for (ability of abilityTiles; track ability) {
             <article class="ability-card">
                 <header>{{ ability }}</header>
                 <div class="ability-rows">
-                    <div><span>Total Score</span><strong>--</strong></div>
-                    <div><span>Modifier</span><strong>--</strong></div>
-                    <div><span>Base Score</span><strong>--</strong></div>
+                    <div style="background:color-mix(in srgb,#5b8fc9 60%,var(--surface-raised));font-weight:700">
+                        <span>Total Score</span>
+                        <strong>{{ getTotalScore(ability) || '—' }}</strong>
+                    </div>
+                    <div style="background:color-mix(in srgb,#5b8fc9 40%,var(--surface-raised));font-weight:700">
+                        <span>Modifier</span>
+                        <strong>{{ getTotalModifier(ability) }}</strong>
+                    </div>
+                    <div><span>Base Score</span><strong>{{ getAbilityBaseScore(ability) || '—' }}</strong></div>
                     <div><span>Bonus</span><strong>+0</strong></div>
                     <div><span>Set Score</span><strong>0</strong></div>
                     <div><span>Stacking Bonus</span><strong>+0</strong></div>
+                </div>
+                <div class="ability-rows" style="border-top:2px solid var(--panel-border)">
+                    <div>
+                        <span>Other Modifier</span>
+                        <input type="number" class="score-input" style="width:52px" placeholder="--" [value]="getOtherModifierDisplay(ability)" (input)="onOtherModifierInput(ability, $any($event.target).value)" />
+                    </div>
+                    <div>
+                        <span>Override Score</span>
+                        <input type="number" class="score-input" style="width:52px" placeholder="--" [value]="getOverrideScoreDisplay(ability)" (input)="onOverrideScoreInput(ability, $any($event.target).value)" />
+                    </div>
                 </div>
             </article>
             }
@@ -183,17 +351,130 @@
     @case ('equipment') {
     <section class="panel step-panel">
         <h2>Choose Equipment</h2>
-        <div class="equipment-block">Starting Equipment</div>
-        <div class="equipment-block">Current Inventory (0)</div>
-        <div class="equipment-block">Other Possessions</div>
-        <div class="equipment-block">Currency</div>
-        <div class="currency-list">
-            <div><span>Platinum</span><input type="number" value="0" /></div>
-            <div><span>Gold</span><input type="number" value="0" /></div>
-            <div><span>Electrum</span><input type="number" value="0" /></div>
-            <div><span>Silver</span><input type="number" value="0" /></div>
-            <div><span>Copper</span><input type="number" value="0" /></div>
-        </div>
+        <details class="equipment-section" open>
+            <summary>
+                <span>Starting Equipment</span>
+            </summary>
+            <div class="equipment-section-body">
+                <p class="equipment-center-copy">Choose <strong>Equipment</strong> or <strong>Gold</strong></p>
+
+                <div class="equipment-choice-group">
+                    <h4>Barbarian Starting Equipment</h4>
+                    <label class="equipment-choice-row">
+                        <input type="radio" name="class-starting-equipment" value="A" [checked]="selectedClassStartingOption() === 'A'" (change)="onClassStartingOptionChanged($any($event.target).value)" />
+                        <span>(A) Greataxe, 4 Handaxes, Explorer's Pack, and 15 GP</span>
+                    </label>
+                    <span class="equipment-or">OR</span>
+                    <label class="equipment-choice-row">
+                        <input type="radio" name="class-starting-equipment" value="B" [checked]="selectedClassStartingOption() === 'B'" (change)="onClassStartingOptionChanged($any($event.target).value)" />
+                        <span>(B) 75 GP</span>
+                    </label>
+                </div>
+
+                <div class="equipment-choice-group">
+                    <h4>Acolyte Starting Equipment</h4>
+                    <label class="equipment-choice-row">
+                        <input type="radio" name="background-starting-equipment" value="A" [checked]="selectedBackgroundStartingOption() === 'A'" (change)="onBackgroundStartingOptionChanged($any($event.target).value)" />
+                        <span>(A) Calligrapher's Supplies, Book (prayers), Holy Symbol, Parchment (10 sheets), Robe, 8 GP</span>
+                    </label>
+                    <span class="equipment-or">OR</span>
+                    <label class="equipment-choice-row">
+                        <input type="radio" name="background-starting-equipment" value="B" [checked]="selectedBackgroundStartingOption() === 'B'" (change)="onBackgroundStartingOptionChanged($any($event.target).value)" />
+                        <span>(B) 50 GP</span>
+                    </label>
+                </div>
+
+                <div class="equipment-actions">
+                    <button type="button" class="equipment-danger-action" [disabled]="!canAddStartingEquipment()" (click)="addStartingEquipment()">Add Starting Equipment</button>
+                    <button type="button" class="equipment-link-action" (click)="clearEquipmentSelections()">Clear All</button>
+                </div>
+            </div>
+        </details>
+
+        <details class="equipment-section" open>
+            <summary>
+                <span>Current Inventory ({{ inventoryItemCount() }})</span>
+                <span class="equipment-summary-meta">Total Weight: 0 lb</span>
+            </summary>
+            <div class="equipment-section-body compact">
+                @if (inventoryEntries().length > 0) {
+                <div class="equipment-item-list">
+                    @for (entry of inventoryEntries(); track entry.name) {
+                    <div class="equipment-item-row">
+                        <div>
+                            <strong>{{ entry.name }}</strong>
+                            <p>{{ entry.category }}</p>
+                        </div>
+                        <strong>QTY {{ entry.quantity }}</strong>
+                    </div>
+                    }
+                </div>
+                } @else {
+                <p class="muted">You currently have no items in your inventory. Add Starting Equipment above or Add Items from the list below.</p>
+                }
+            </div>
+        </details>
+
+        <details class="equipment-section" open>
+            <summary>
+                <span>Other Possessions</span>
+            </summary>
+            <div class="equipment-section-body compact">
+                <div class="possession-row">
+                    <strong>Personal Possessions</strong>
+                    <button type="button" class="equipment-pill-action">Add Possessions</button>
+                </div>
+            </div>
+        </details>
+
+        <details class="equipment-section" open>
+            <summary>
+                <span>Add Items</span>
+            </summary>
+            <div class="equipment-section-body">
+                <label class="equipment-filter-label">Filter</label>
+                <input class="wide-input" type="text" placeholder="Weapon, Longsword, Vorpal Longsword, etc." [value]="equipmentSearchTerm()" (input)="onEquipmentSearchChanged($any($event.target).value)" />
+
+                <div class="equipment-source-list">
+                    @for (source of equipmentSources; track source.url) {
+                    <button type="button" class="equipment-source-chip" [class.active]="selectedEquipmentSourceUrl() === source.url" (click)="onEquipmentSourceSelected(source.url)">
+                        {{ source.label }}
+                    </button>
+                    }
+                </div>
+
+                <div class="equipment-item-list">
+                    @for (item of filteredEquipmentItems(); track item.name) {
+                    <div class="equipment-item-row">
+                        <div>
+                            <strong>{{ item.name }}</strong>
+                            <p>{{ item.category }}</p>
+                        </div>
+                        <button type="button" class="equipment-pill-action" (click)="addEquipmentItemToInventory(item)">Add</button>
+                    </div>
+                    }
+                    @if (filteredEquipmentItems().length === 0) {
+                    <p class="muted">No items match your current filters.</p>
+                    }
+                </div>
+            </div>
+        </details>
+
+        <details class="equipment-section" open>
+            <summary>
+                <span>Currency</span>
+                <span class="equipment-summary-meta">Total in GP: {{ totalCurrencyInGp() }}</span>
+            </summary>
+            <div class="equipment-section-body compact">
+                <div class="currency-list">
+                    <div><span>Platinum</span><input type="number" min="0" [value]="currency().pp" (input)="onCurrencyInputChanged('pp', $any($event.target).value)" /></div>
+                    <div><span>Gold</span><input type="number" min="0" [value]="currency().gp" (input)="onCurrencyInputChanged('gp', $any($event.target).value)" /></div>
+                    <div><span>Electrum</span><input type="number" min="0" [value]="currency().ep" (input)="onCurrencyInputChanged('ep', $any($event.target).value)" /></div>
+                    <div><span>Silver</span><input type="number" min="0" [value]="currency().sp" (input)="onCurrencyInputChanged('sp', $any($event.target).value)" /></div>
+                    <div><span>Copper</span><input type="number" min="0" [value]="currency().cp" (input)="onCurrencyInputChanged('cp', $any($event.target).value)" /></div>
+                </div>
+            </div>
+        </details>
     </section>
     }
 
@@ -308,11 +589,66 @@
             </section>
             }
 
+            @if (modal.type === 'species' && modal.info.speciesDetails; as speciesDetails) {
+            <section class="details-block">
+                <h4>{{ speciesDetails.tagline }}</h4>
+                <div class="fact-grid">
+                    <div><span>Creature Type</span><strong>{{ speciesDetails.creatureType }}</strong></div>
+                    <div><span>Size</span><strong>{{ speciesDetails.size }}</strong></div>
+                    <div><span>Speed</span><strong>{{ speciesDetails.speed }}</strong></div>
+                </div>
+                <a class="inline-action" [href]="speciesDetails.sourceUrl" target="_blank" rel="noopener noreferrer">Open lineage reference</a>
+            </section>
+
+            <section class="details-block core-traits-block">
+                <h4>Core Lineage Traits</h4>
+                <div class="traits-table">
+                    @for (trait of speciesDetails.coreTraits; track trait.label) {
+                    <div class="trait-row">
+                        <span>{{ trait.label }}</span>
+                        <strong>{{ trait.value }}</strong>
+                    </div>
+                    }
+                </div>
+            </section>
+
+            <section class="details-block">
+                <h4>Lineage Notes</h4>
+                <p class="section-meta">
+                    Showing {{ visibleFeatureNoteCount(speciesDetails.traitNotes.length) }} of {{ speciesDetails.traitNotes.length }}. Click a row to view more details.
+                </p>
+                <ul class="highlight-list interactive-list">
+                    @for (note of speciesDetails.traitNotes; track note.title; let i = $index) {
+                    @if (showExtendedInfo() || i < 4) { <li>
+                        <button type="button" class="detail-row" (click)="toggleFeatureNote(i)">
+                            <span class="detail-row-title">{{ note.title }}</span>
+                            <span class="detail-row-summary">{{ note.summary }}</span>
+                        </button>
+                        @if (isFeatureNoteExpanded(i)) {
+                        <div class="detail-expand">{{ note.details }}</div>
+                        }
+                        </li>
+                        }
+                        }
+                </ul>
+                @if (speciesDetails.traitNotes.length > 4) {
+                <button type="button" class="show-more section-show-more" (click)="toggleExtendedInfo()">
+                    {{ showExtendedInfo() ? 'Show fewer lineage notes' : 'Show ' + (speciesDetails.traitNotes.length - 4) + ' more lineage notes' }}
+                </button>
+                }
+            </section>
+            }
+
             <ul class="highlight-list">
                 @for (highlight of modal.info.highlights; track highlight) {
                 <li>{{ highlight }}</li>
                 }
             </ul>
+
+            <footer class="info-modal-footer">
+                <button type="button" class="btn-secondary" (click)="closeInfoModal()">Cancel</button>
+                <button type="button" class="btn-primary" (click)="modal.type === 'class' ? selectClass(modal.info.name) : selectBackground(modal.info.name)">Confirm Selection</button>
+            </footer>
         </article>
     </div>
     }

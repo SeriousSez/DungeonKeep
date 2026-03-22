@@ -8,12 +8,14 @@ import { DungeonStoreService } from '../../state/dungeon-store.service';
 
 type StandardStep = 'home' | 'class' | 'background' | 'species' | 'abilities' | 'equipment' | 'whats-next';
 type InfoModalType = 'class' | 'species';
+type AbilityGenerationMethod = '' | 'standard-array' | 'manual-rolled' | 'point-buy';
 
 interface BuilderInfo {
     name: string;
     source: string;
     summary: string;
     highlights: string[];
+    speciesDetails?: SpeciesDetail;
     details?: {
         tagline: string;
         primaryAbility: string;
@@ -48,7 +50,1748 @@ interface BackgroundDetail {
     sourceUrl: string;
 }
 
+interface SpeciesDetail {
+    tagline: string;
+    creatureType: string;
+    size: string;
+    speed: string;
+    sourceUrl: string;
+    coreTraits: Array<{ label: string; value: string }>;
+    traitNotes: Array<{ title: string; summary: string; details: string }>;
+}
+
+interface EquipmentSource {
+    label: string;
+    url: string;
+    category: string;
+}
+
+interface EquipmentItem {
+    name: string;
+    category: string;
+    sourceUrl: string;
+}
+
+interface InventoryEntry {
+    name: string;
+    category: string;
+    quantity: number;
+    sourceUrl?: string;
+}
+
+interface CurrencyState {
+    pp: number;
+    gp: number;
+    ep: number;
+    sp: number;
+    cp: number;
+}
+
+interface ClassFeature {
+    name: string;
+    level: number;
+    description?: string;
+    choices?: {
+        title: string;
+        count: number;
+        options: string[];
+    };
+}
+
+interface ClassFeaturesForLevel {
+    level: number;
+    features: ClassFeature[];
+}
+
+const equipmentSourceLinks: ReadonlyArray<EquipmentSource> = [
+    { label: 'Weapons', url: 'https://dnd5e.wikidot.com/weapons', category: 'Weapons' },
+    { label: 'Adventuring Gear', url: 'https://dnd5e.wikidot.com/adventuring-gear', category: 'Adventuring Gear' },
+    { label: 'Armor', url: 'https://dnd5e.wikidot.com/armor', category: 'Armor' },
+    { label: 'Trinkets', url: 'https://dnd5e.wikidot.com/trinkets', category: 'Trinkets' },
+    { label: 'Firearms', url: 'https://dnd5e.wikidot.com/firearms', category: 'Firearms' },
+    { label: 'Explosives', url: 'https://dnd5e.wikidot.com/explosives', category: 'Explosives' },
+    { label: 'Wondrous Items', url: 'https://dnd5e.wikidot.com/wondrous-items', category: 'Wondrous Item' },
+    { label: 'Poisons', url: 'https://dnd5e.wikidot.com/poisons', category: 'Poison' },
+    { label: 'Tools', url: 'https://dnd5e.wikidot.com/tools', category: 'Tools' },
+    { label: 'Siege Equipment', url: 'https://dnd5e.wikidot.com/siege-equipment', category: 'Siege Equipment' }
+];
+
+const equipmentCatalog: ReadonlyArray<EquipmentItem> = [
+    { name: 'Club', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+    { name: 'Dagger', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+    { name: 'Greatclub', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+    { name: 'Handaxe', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+    { name: 'Javelin', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+    { name: 'Light Hammer', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+    { name: 'Mace', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+    { name: 'Quarterstaff', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+    { name: 'Sickle', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+    { name: 'Spear', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+    { name: 'Crossbow, Light', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+    { name: 'Shortbow', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+    { name: 'Longbow', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+    { name: 'Longsword', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+    { name: 'Greatsword', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+    { name: 'Warhammer', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+    { name: 'Rapier', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+    { name: 'Scimitar', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+    { name: 'Padded Armor', category: 'Armor', sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+    { name: 'Leather Armor', category: 'Armor', sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+    { name: 'Studded Leather Armor', category: 'Armor', sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+    { name: 'Chain Shirt', category: 'Armor', sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+    { name: 'Scale Mail', category: 'Armor', sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+    { name: 'Breastplate', category: 'Armor', sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+    { name: 'Half Plate', category: 'Armor', sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+    { name: 'Chain Mail', category: 'Armor', sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+    { name: 'Splint Armor', category: 'Armor', sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+    { name: 'Plate Armor', category: 'Armor', sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+    { name: 'Shield', category: 'Armor', sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+    { name: 'Abacus', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Acid (Vial)', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: "Alchemist's Fire (Flask)", category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Backpack', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Bedroll', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Caltrops (Bag of 20)', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Crowbar', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: "Explorer's Pack", category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Grappling Hook', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: "Healer's Kit", category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Lantern, Hooded', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Rations (1 day)', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Torch', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Waterskin', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Trinket (Random)', category: 'Trinket', sourceUrl: 'https://dnd5e.wikidot.com/trinkets' },
+    { name: 'Rabbit Foot Charm', category: 'Trinket', sourceUrl: 'https://dnd5e.wikidot.com/trinkets' },
+    { name: 'Old Rusty Key', category: 'Trinket', sourceUrl: 'https://dnd5e.wikidot.com/trinkets' },
+    { name: 'Tiny Box with a Button', category: 'Trinket', sourceUrl: 'https://dnd5e.wikidot.com/trinkets' },
+    { name: 'Azurite (10 gp)', category: 'Gemstone', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Obsidian (10 gp)', category: 'Gemstone', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Bloodstone (50 gp)', category: 'Gemstone', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Jasper (50 gp)', category: 'Gemstone', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Amber (100 gp)', category: 'Gemstone', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Pearl (100 gp)', category: 'Gemstone', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Black Opal (1000 gp)', category: 'Gemstone', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Blue Sapphire (1000 gp)', category: 'Gemstone', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Diamond (5000 gp)', category: 'Gemstone', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Ruby (5000 gp)', category: 'Gemstone', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Amulet', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Spellbook', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Holy Water (Flask)', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Fishing Tackle', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Hunting Trap', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Portable Ram', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Mess Kit', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Miner\'s Pick', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Pitons (10)', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Whetstone', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Iron, 1 lb', category: 'Trade Good', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Salt, 1 lb', category: 'Trade Good', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Wheat, 1 lb', category: 'Trade Good', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Flour, 1 lb', category: 'Trade Good', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+    { name: 'Pistol', category: 'Firearm', sourceUrl: 'https://dnd5e.wikidot.com/firearms' },
+    { name: 'Musket', category: 'Firearm', sourceUrl: 'https://dnd5e.wikidot.com/firearms' },
+    { name: 'Pepperbox', category: 'Firearm', sourceUrl: 'https://dnd5e.wikidot.com/firearms' },
+    { name: 'Blunderbuss', category: 'Firearm', sourceUrl: 'https://dnd5e.wikidot.com/firearms' },
+    { name: 'Bomb', category: 'Explosive', sourceUrl: 'https://dnd5e.wikidot.com/explosives' },
+    { name: 'Dynamite (Stick)', category: 'Explosive', sourceUrl: 'https://dnd5e.wikidot.com/explosives' },
+    { name: 'Fragmentation Grenade', category: 'Explosive', sourceUrl: 'https://dnd5e.wikidot.com/explosives' },
+    { name: 'Smoke Grenade', category: 'Explosive', sourceUrl: 'https://dnd5e.wikidot.com/explosives' },
+    { name: 'Bead of Nourishment', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Bead of Refreshment', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Boots of False Tracks', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Bottle of Boundless Coffee', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Breathing Bubble', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Candle of the Deep', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: "Charlatan's Die", category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Chest of Preserving', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Cleansing Stone', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Cloak of Billowing', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Cloak of Many Fashions', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Clockwork Amulet', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Clothes of Mending', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Coin of Delving', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Cuddly Strixhaven Mascot', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Dark Shard Amulet', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Dread Helm', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ear Horn of Hearing', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Earring of Message', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Enduring Spellbook', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ersatz Eye', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Everbright Lantern', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Feather Token', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Glamerweave', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Hat of Vermin', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Hat of Wizardry', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: "Heward's Handy Spice Pouch", category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Horn of Silent Alarm', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: "Illuminator's Tattoo", category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Imbued Wood Focus', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Instrument of Illusions', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Instrument of Scribing', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Keycharm', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Lantern of Tracking', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Lock of Trickery', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Masque Charm', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Masquerade Tattoo', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Medal of Muscle', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Medal of the Conch', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Medal of the Horizonback', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Medal of the Maze', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Medal of the Meat Pie', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Medal of the Wetlands', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Medal of Wit', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Mind Crystal', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Moodmark Paint', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Mystery Key', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Orb of Direction', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Orb of Gonging', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Orb of Shielding', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Orb of Time', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Perfume of Bewitching', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Pipe of Remembrance', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Pipe of Smoke Monsters', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Pole of Angling', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Pole of Collapsing', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Pot of Awakening', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Pressure Capsule', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Prosthetic Limb', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Rope of Mending', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ruby of the War Mage', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: "Scribe's Pen", category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Sekolahian Worshipping Statuette', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Shiftweave', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Spellshard', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Spellwrought Tattoo', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Strixhaven Pennant', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Talking Doll', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Tankard of Plenty', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Tankard of Sobriety', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Thermal Cube', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: "Veteran's Cane", category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Vox Seeker', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Wand Sheath', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    // Uncommon Wondrous Items
+    { name: 'Bag of Holding', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Bag of Tricks', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Boots of Elvenkind', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Boots of Levitation', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Boots of Striding and Springing', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Boots of the Winterlands', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Bracers of Archery', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Brooch of Shielding', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Broom of Flying', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Circlet of Blasting', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Cloak of Elvinkind', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Cloak of the Manta Ray', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Decanter of Endless Water', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Deck of Illusions', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Dust of Disappearance', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Dust of Dryness', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Dust of Sneezing and Choking', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Elemental Gem', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Eversmoking Bottle', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Eyes of Charming', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Eyes of Minute Seeing', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Eyes of the Eagle', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Gauntlets of Ogre Power', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Gem of Brightness', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Gloves of Missile Snaring', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Gloves of Swimming and Climbing', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Hat of Disguise', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Headband of Intellect', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Helm of Comprehending Languages', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Javelin of Lightning', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Lantern of Revealing', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Medallion of Thoughts', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Mithral Armor', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Necklace of Adaptation', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Pearl of Power', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Periapt of Health', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Periapt of Wound Closure', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Pipes of Haunting', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Pipes of the Sewers', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Potion of Climbing', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Potion of Growth', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Jumping', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Mind Shielding', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Swimming', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Warmth', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Water Walking', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Restorative Ointment', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Rope of Climbing', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Slippers of Spider Climbing', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Staff of the Python', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Stone of Good Luck (Luckstone)', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Trident of Fish Command', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Wand of Magic Detection', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Wand of Magic Missiles', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Wand of Secrets', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Wand of Web', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Wind Fan', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Winged Boots', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    // Rare Wondrous Items
+    { name: 'Amulet of Health', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Amulet of Proof against Detection and Location', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Amulet of the Planes', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Bag of Beans', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Bead of Force', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Belt of Dwarvenkind', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Belt of Giant Strength (Hill Giant)', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Bowl of Commanding Water Elementals', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Bracers of Defense', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Brazier of Commanding Fire Elementals', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Censer of Controlling Air Elementals', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Chime of Opening', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Cloak of Arachnida', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Cloak of Displacement', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Cloak of Protection', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Cloak of the Bat', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Cube of Force', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Dimensional Shackles', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Dragon Scale Mail', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Efficient Quiver', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Efreeti Bottle', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Figurine of Wondrous Power', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Folding Boat', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Gem of Seeing', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Handy Haversack', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Helm of Telepathy', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Helm of Teleportation', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Horn of Blasting', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Horn of Valhalla (Silver or Brass)', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Horseshoes of Speed', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Instant Fortress', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ioun Stone', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Iron Bands of Binding', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Mantle of Spell Resistance', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Mirror of Life Trapping', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Necklace of Fireballs', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Necklace of Prayer Beads', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Oil of Etherealness', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Periapt of Proof against Poison', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Animal Influence', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Evasion', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Feather Falling', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Free Action', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Invisibility', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Protection', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Resistance', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Shooting Stars', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Spell Storing', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Telekinesis', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of the Ram', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Robe of Eyes', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Rod of Alertness', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Rod of Rulership', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Rod of Security', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Rope of Entanglement', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Stone of Controlling Earth Elementals', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Wand of Binding', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Wand of Enemy Detection', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Wand of Fear', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Wand of Fireballs', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Wand of Lightning Bolts', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Wand of Polymorph', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Wand of the War Mage (+1)', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Wand of Wonder', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Wings of Flying', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    // Very Rare Wondrous Items
+    { name: 'Animated Shield', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Absorbing Tattoo', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Apparatus of the Crab', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Armor of Invulnerability', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Arrow of Slaying', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Bag of Devouring', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Belt of Giant Strength (Stone/Frost/Fire)', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Candle of Invocation', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Carpet of Flying', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Crystal Ball', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Cubic Gate', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Demon Armor', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Frost Brand', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Helm of Brilliance', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Horseshoes of a Zephyr', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Iron Flask', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Marvelous Pigments', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Nine Lives Stealer', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Oathbow', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Oil of Sharpness', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Plate Armor of Etherealness', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Potion of Flying', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Potion of Invisibility', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Djinni Summoning', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Elemental Command', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Regeneration', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Robe of Scintillating Colors', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Robe of Stars', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Scimitar of Speed', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Sphere of Annihilation', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Staff of Fire', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Staff of Frost', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Staff of Power', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Staff of Swarming Insects', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Staff of Thunder and Lightning', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Wand of the War Mage (+2)', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Well of Many Worlds', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    // Legendary Wondrous Items
+    { name: 'Belt of Giant Strength (Cloud/Storm)', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Deck of Many Things', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Defender (Sword)', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Holy Avenger', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Luck Blade', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Manual of Bodily Health', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Manual of Gainful Exercise', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Manual of Golems', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Manual of Quickness of Action', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Spell Turning', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Ring of Three Wishes', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Robe of the Archmagi', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Rod of Lordly Might', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Scarab of Protection', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Sovereign Glue', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Staff of the Magi', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Talisman of Pure Good', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Talisman of the Sphere', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Talisman of Ultimate Evil', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Universal Solvent', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    // Artifact Items
+    { name: 'Orb of Dragonkind', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Hand of Vecna', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Eye of Vecna', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Wand of Orcus', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Wyvern Throne of Asmodeus', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Throne of Bhaal', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Staff of the Spellsteal', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    { name: 'Basic Poison (Vial)', category: 'Poison', sourceUrl: 'https://dnd5e.wikidot.com/poisons' },
+    { name: "Assassin's Blood", category: 'Poison', sourceUrl: 'https://dnd5e.wikidot.com/poisons' },
+    { name: 'Burnt Othur Fumes', category: 'Poison', sourceUrl: 'https://dnd5e.wikidot.com/poisons' },
+    { name: 'Crawler Mucus', category: 'Poison', sourceUrl: 'https://dnd5e.wikidot.com/poisons' },
+    { name: 'Drow Poison', category: 'Poison', sourceUrl: 'https://dnd5e.wikidot.com/poisons' },
+    { name: 'Purple Worm Poison', category: 'Poison', sourceUrl: 'https://dnd5e.wikidot.com/poisons' },
+    { name: "Alchemist's Supplies", category: 'Tools', sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+    { name: "Brewer's Supplies", category: 'Tools', sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+    { name: "Calligrapher's Supplies", category: 'Tools', sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+    { name: "Carpenter's Tools", category: 'Tools', sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+    { name: "Cook's Utensils", category: 'Tools', sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+    { name: 'Disguise Kit', category: 'Tools', sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+    { name: 'Forgery Kit', category: 'Tools', sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+    { name: 'Herbalism Kit', category: 'Tools', sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+    { name: "Navigator's Tools", category: 'Tools', sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+    { name: "Poisoner's Kit", category: 'Tools', sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+    { name: "Thieves' Tools", category: 'Tools', sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+    { name: 'Ballista', category: 'Siege Equipment', sourceUrl: 'https://dnd5e.wikidot.com/siege-equipment' },
+    { name: 'Mangonel', category: 'Siege Equipment', sourceUrl: 'https://dnd5e.wikidot.com/siege-equipment' },
+    { name: 'Trebuchet', category: 'Siege Equipment', sourceUrl: 'https://dnd5e.wikidot.com/siege-equipment' },
+    { name: 'Battering Ram', category: 'Siege Equipment', sourceUrl: 'https://dnd5e.wikidot.com/siege-equipment' },
+    { name: 'Siege Tower', category: 'Siege Equipment', sourceUrl: 'https://dnd5e.wikidot.com/siege-equipment' }
+];
+
+const classStartingPackages = {
+    A: {
+        items: [
+            { name: 'Greataxe', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+            { name: 'Handaxe', category: 'Weapon', quantity: 4, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+            { name: "Explorer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+        ],
+        currency: { gp: 15 }
+    },
+    B: {
+        items: [],
+        currency: { gp: 75 }
+    }
+} as const;
+
+const backgroundStartingPackages = {
+    A: {
+        items: [
+            { name: "Calligrapher's Supplies", category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+            { name: 'Book (Prayers)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Holy Symbol', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Parchment (10 sheets)', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Robe', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+        ],
+        currency: { gp: 8 }
+    },
+    B: {
+        items: [],
+        currency: { gp: 50 }
+    }
+} as const;
+
 const validSteps = new Set<StandardStep>(['home', 'class', 'background', 'species', 'abilities', 'equipment', 'whats-next']);
+
+const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
+    Barbarian: [
+        {
+            level: 1, features: [
+                {
+                    name: 'Core Barbarian Traits',
+                    level: 1,
+                    description: 'Gain all barbarian proficiencies and hit dice.',
+                    choices: {
+                        title: 'Choose 2 Skill Proficiencies',
+                        count: 2,
+                        options: ['Animal Handling', 'Athletics', 'Intimidation', 'Nature', 'Perception', 'Survival']
+                    }
+                },
+                { name: 'Rage', level: 1, description: 'Enter a primal rage 2 times per long rest. You gain advantage on Strength checks/saves and damage resistance while raging.' },
+                { name: 'Unarmored Defense', level: 1, description: 'While unarmored, your AC = 10 + Dexterity modifier + Constitution modifier.' }
+            ]
+        },
+        {
+            level: 2, features: [
+                { name: 'Reckless Attack', level: 2, description: 'Attack with advantage before your allies take their turns. Attacks against you have advantage until your next turn.' },
+                { name: 'Danger Sense', level: 2, description: 'Gain advantage on Dexterity saves you can see coming.' }
+            ]
+        },
+        {
+            level: 3, features: [
+                { name: 'Barbarian Subclass', level: 3, description: 'Choose your Barbarian subclass.' },
+                { name: 'Primal Knowledge', level: 3, description: 'Gain primal utility improvements.' }
+            ]
+        },
+        {
+            level: 4, features: [
+                { name: 'Ability Score Improvement', level: 4, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 5, features: [
+                { name: 'Extra Attack', level: 5, description: 'Attack twice when you take the Attack action on your turn.' },
+                { name: 'Fast Movement', level: 5, description: 'Your speed increases while not wearing heavy armor.' }
+            ]
+        },
+        {
+            level: 6, features: [
+                { name: 'Subclass Feature', level: 6, description: 'Gain a feature from your Barbarian subclass.' }
+            ]
+        },
+        {
+            level: 7, features: [
+                { name: 'Feral Instinct', level: 7, description: 'Improve initiative and awareness in combat.' },
+                { name: 'Instinctive Pounce', level: 7, description: 'Move aggressively when entering rage.' }
+            ]
+        },
+        {
+            level: 8, features: [
+                { name: 'Ability Score Improvement', level: 8, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 9, features: [
+                { name: 'Brutal Strike', level: 9, description: 'Your heavy melee pressure scales upward.' }
+            ]
+        },
+        {
+            level: 10, features: [
+                { name: 'Subclass Feature', level: 10, description: 'Gain a feature from your Barbarian subclass.' }
+            ]
+        },
+        {
+            level: 11, features: [
+                { name: 'Relentless Rage', level: 11, description: 'You can remain standing after dropping to 0 HP while raging.' }
+            ]
+        },
+        {
+            level: 12, features: [
+                { name: 'Ability Score Improvement', level: 12, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 13, features: [
+                { name: 'Improved Brutal Strike', level: 13, description: 'Your brutal strike options improve.' }
+            ]
+        },
+        {
+            level: 14, features: [
+                { name: 'Subclass Feature', level: 14, description: 'Gain a feature from your Barbarian subclass.' }
+            ]
+        },
+        {
+            level: 15, features: [
+                { name: 'Persistent Rage', level: 15, description: 'Your rage becomes harder to end early.' }
+            ]
+        },
+        {
+            level: 16, features: [
+                { name: 'Ability Score Improvement', level: 16, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 17, features: [
+                { name: 'Improved Brutal Strike', level: 17, description: 'Your brutal strike options improve again.' }
+            ]
+        },
+        {
+            level: 18, features: [
+                { name: 'Indomitable Might', level: 18, description: 'Your physical prowess becomes exceptionally reliable.' }
+            ]
+        },
+        {
+            level: 19, features: [
+                { name: 'Epic Boon', level: 19, description: 'Gain a powerful epic boon.' }
+            ]
+        },
+        {
+            level: 20, features: [
+                { name: 'Primal Champion', level: 20, description: 'Reach the Barbarian capstone of primal strength and endurance.' }
+            ]
+        }
+    ],
+    'Blood Hunter': [
+        {
+            level: 1, features: [
+                {
+                    name: "Hunter's Bane and Blood Maledict",
+                    level: 1,
+                    description: 'Gain supernatural tracking abilities and blood curses.',
+                    choices: {
+                        title: 'Choose 2 Skill Proficiencies',
+                        count: 2,
+                        options: ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Insight', 'Investigation', 'Medicine', 'Perception', 'Stealth', 'Survival']
+                    }
+                },
+                { name: 'Blood Maledict', level: 1, description: 'Cast blood curses on enemies you can see. You know 1 curse at 1st level.' },
+                { name: 'Crimson Rite', level: 1, description: 'Infuse your weapon with elemental power by spending hit points.' }
+            ]
+        }
+    ],
+    Bard: [
+        {
+            level: 1, features: [
+                {
+                    name: 'Core Bard Traits',
+                    level: 1,
+                    description: 'Gain spellcasting and bardic inspiration.',
+                    choices: {
+                        title: 'Choose 2 Skill Proficiencies from any skill',
+                        count: 2,
+                        options: ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation', 'Investigation', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Sleight of Hand', 'Stealth', 'Survival']
+                    }
+                },
+                { name: 'Spellcasting', level: 1, description: 'Cast spells using Charisma. Know 4 cantrips and have 2 1st-level spell slots.' },
+                { name: 'Bardic Inspiration', level: 1, description: 'Grant allies inspiration dice (d6) they can add to ability checks, attack rolls, or saves.' }
+            ]
+        },
+        {
+            level: 2, features: [
+                { name: 'Jack of All Trades', level: 2, description: 'Add half your proficiency bonus to ability checks you don\'t already add proficiency to.' }
+            ]
+        },
+        {
+            level: 3, features: [
+                { name: 'Bard Subclass', level: 3, description: 'Choose your Bard subclass.' }
+            ]
+        },
+        {
+            level: 4, features: [
+                { name: 'Ability Score Improvement', level: 4, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 5, features: [
+                { name: 'Font of Inspiration', level: 5, description: 'Your inspiration engine improves at this tier.' }
+            ]
+        },
+        {
+            level: 6, features: [
+                { name: 'Subclass Feature', level: 6, description: 'Gain a feature from your Bard subclass.' }
+            ]
+        },
+        {
+            level: 7, features: [
+                { name: 'Countercharm', level: 7, description: 'Use performance to protect allies from disruptive effects.' }
+            ]
+        },
+        {
+            level: 8, features: [
+                { name: 'Ability Score Improvement', level: 8, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 9, features: [
+                { name: 'Expertise', level: 9, description: 'Broaden your mastery in chosen proficiencies.' }
+            ]
+        },
+        {
+            level: 10, features: [
+                { name: 'Magical Secrets', level: 10, description: 'Learn spells outside the Bard list.' }
+            ]
+        },
+        {
+            level: 12, features: [
+                { name: 'Ability Score Improvement', level: 12, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 14, features: [
+                { name: 'Subclass Feature', level: 14, description: 'Gain a feature from your Bard subclass.' }
+            ]
+        },
+        {
+            level: 16, features: [
+                { name: 'Ability Score Improvement', level: 16, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 18, features: [
+                { name: 'Superior Inspiration', level: 18, description: 'Your inspiration support reaches late-tier reliability.' }
+            ]
+        },
+        {
+            level: 19, features: [
+                { name: 'Epic Boon', level: 19, description: 'Gain a powerful epic boon.' }
+            ]
+        },
+        {
+            level: 20, features: [
+                { name: 'Words of Creation', level: 20, description: 'Gain your Bard capstone feature.' }
+            ]
+        }
+    ],
+    Cleric: [
+        {
+            level: 1, features: [
+                {
+                    name: 'Core Cleric Traits',
+                    level: 1,
+                    description: 'Gain divine spellcasting and channel divinity.',
+                    choices: {
+                        title: 'Choose 2 Skill Proficiencies',
+                        count: 2,
+                        options: ['Insight', 'Medicine', 'Persuasion', 'Religion']
+                    }
+                },
+                { name: 'Spellcasting', level: 1, description: 'Cast spells using Wisdom.' },
+                { name: 'Divine Order', level: 1, description: 'Choose your divine training focus.' }
+            ]
+        },
+        {
+            level: 2, features: [
+                { name: 'Channel Divinity', level: 2, description: 'Gain Channel Divinity uses and options.' }
+            ]
+        },
+        {
+            level: 3, features: [
+                { name: 'Cleric Subclass', level: 3, description: 'Choose your Divine Domain subclass.' }
+            ]
+        },
+        {
+            level: 4, features: [
+                { name: 'Ability Score Improvement', level: 4, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 5, features: [
+                { name: 'Sear Undead', level: 5, description: 'Your anti-undead channeling power increases.' }
+            ]
+        },
+        {
+            level: 6, features: [
+                { name: 'Subclass Feature', level: 6, description: 'Gain a feature from your Cleric subclass.' }
+            ]
+        },
+        {
+            level: 7, features: [
+                { name: 'Blessed Strikes', level: 7, description: 'Your divine strikes improve your offense.' }
+            ]
+        },
+        {
+            level: 8, features: [
+                { name: 'Ability Score Improvement', level: 8, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 10, features: [
+                { name: 'Divine Intervention', level: 10, description: 'Call directly on divine aid.' }
+            ]
+        },
+        {
+            level: 12, features: [
+                { name: 'Ability Score Improvement', level: 12, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 14, features: [
+                { name: 'Improved Blessed Strikes', level: 14, description: 'Your blessed strikes gain additional power.' }
+            ]
+        },
+        {
+            level: 16, features: [
+                { name: 'Ability Score Improvement', level: 16, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 17, features: [
+                { name: 'Subclass Feature', level: 17, description: 'Gain a feature from your Cleric subclass.' }
+            ]
+        },
+        {
+            level: 19, features: [
+                { name: 'Epic Boon', level: 19, description: 'Gain a powerful epic boon.' }
+            ]
+        },
+        {
+            level: 20, features: [
+                { name: 'Greater Divine Intervention', level: 20, description: 'Your divine intervention reaches its capstone power.' }
+            ]
+        }
+    ],
+    Druid: [
+        {
+            level: 1, features: [
+                {
+                    name: 'Core Druid Traits',
+                    level: 1,
+                    description: 'Gain nature spellcasting and wild shape capability.',
+                    choices: {
+                        title: 'Choose 2 Skill Proficiencies',
+                        count: 2,
+                        options: ['Animal Handling', 'Arcana', 'Insight', 'Medicine', 'Nature', 'Perception', 'Religion', 'Survival']
+                    }
+                },
+                { name: 'Spellcasting', level: 1, description: 'Cast spells using Wisdom.' },
+                { name: 'Druidic', level: 1, description: 'Learn the Druidic secret language.' },
+                { name: 'Primal Order', level: 1, description: 'Choose your primal training focus.' }
+            ]
+        },
+        {
+            level: 2, features: [
+                { name: 'Wild Shape', level: 2, description: 'Transform into beasts.' },
+                { name: 'Wild Companion', level: 2, description: 'Summon a temporary familiar-like companion.' }
+            ]
+        },
+        {
+            level: 3, features: [
+                { name: 'Druid Subclass', level: 3, description: 'Choose your Druid Circle.' }
+            ]
+        },
+        {
+            level: 4, features: [
+                { name: 'Ability Score Improvement', level: 4, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 5, features: [
+                { name: 'Wild Resurgence', level: 5, description: 'Improve your wild shape resource cycle.' }
+            ]
+        },
+        {
+            level: 6, features: [
+                { name: 'Subclass Feature', level: 6, description: 'Gain a feature from your Druid subclass.' }
+            ]
+        },
+        {
+            level: 7, features: [
+                { name: 'Elemental Fury', level: 7, description: 'Gain stronger elemental output options.' }
+            ]
+        },
+        {
+            level: 8, features: [
+                { name: 'Ability Score Improvement', level: 8, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 10, features: [
+                { name: 'Subclass Feature', level: 10, description: 'Gain a feature from your Druid subclass.' }
+            ]
+        },
+        {
+            level: 12, features: [
+                { name: 'Ability Score Improvement', level: 12, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 14, features: [
+                { name: 'Subclass Feature', level: 14, description: 'Gain a feature from your Druid subclass.' }
+            ]
+        },
+        {
+            level: 15, features: [
+                { name: 'Improved Elemental Fury', level: 15, description: 'Your elemental fury upgrades in late tiers.' }
+            ]
+        },
+        {
+            level: 16, features: [
+                { name: 'Ability Score Improvement', level: 16, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 18, features: [
+                { name: 'Beast Spells', level: 18, description: 'Cast spells while in beast form.' }
+            ]
+        },
+        {
+            level: 19, features: [
+                { name: 'Epic Boon', level: 19, description: 'Gain a powerful epic boon.' }
+            ]
+        },
+        {
+            level: 20, features: [
+                { name: 'Archdruid', level: 20, description: 'Gain your Druid capstone feature.' }
+            ]
+        }
+    ],
+    Fighter: [
+        {
+            level: 1, features: [
+                {
+                    name: 'Core Fighter Traits',
+                    level: 1,
+                    description: 'Master martial combat with weapon and armor proficiency.',
+                    choices: {
+                        title: 'Choose 1 Fighting Style',
+                        count: 1,
+                        options: ['Archery', 'Defense', 'Dueling', 'Great Weapon Fighting', 'Protection', 'Two-Weapon Fighting', 'Blind Fighting', 'Blessed Warrior', 'Mariner', 'Thrown Weapon Fighting', 'Unarmed Fighting']
+                    }
+                },
+                {
+                    name: 'Fighting Style',
+                    level: 1,
+                    description: 'Gain specific combat bonuses based on your chosen fighting style.'
+                },
+                { name: 'Second Wind', level: 1, description: 'Recover hit points as a bonus action.' },
+                { name: 'Weapon Mastery', level: 1, description: 'Gain mastery options for selected weapons.' }
+            ]
+        },
+        {
+            level: 2, features: [
+                { name: 'Action Surge (one use)', level: 2, description: 'Take an additional action on your turn.' },
+                { name: 'Tactical Mind', level: 2, description: 'Gain tactical combat utility options.' }
+            ]
+        },
+        {
+            level: 3, features: [
+                { name: 'Fighter Subclass', level: 3, description: 'Choose your Fighter subclass.' }
+            ]
+        },
+        {
+            level: 4, features: [
+                { name: 'Ability Score Improvement', level: 4, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 5, features: [
+                { name: 'Extra Attack', level: 5, description: 'Attack twice when you take the Attack action.' },
+                { name: 'Tactical Shift', level: 5, description: 'Gain enhanced battlefield mobility options.' }
+            ]
+        },
+        {
+            level: 6, features: [
+                { name: 'Ability Score Improvement', level: 6, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 7, features: [
+                { name: 'Subclass Feature', level: 7, description: 'Gain a feature from your Fighter subclass.' }
+            ]
+        },
+        {
+            level: 8, features: [
+                { name: 'Ability Score Improvement', level: 8, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 9, features: [
+                { name: 'Indomitable (one use)', level: 9, description: 'Reroll a failed saving throw.' },
+                { name: 'Tactical Master', level: 9, description: 'Gain advanced tactical options.' }
+            ]
+        },
+        {
+            level: 10, features: [
+                { name: 'Subclass Feature', level: 10, description: 'Gain a feature from your Fighter subclass.' }
+            ]
+        },
+        {
+            level: 11, features: [
+                { name: 'Two Extra Attacks', level: 11, description: 'Attack three times when taking the Attack action.' }
+            ]
+        },
+        {
+            level: 12, features: [
+                { name: 'Ability Score Improvement', level: 12, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 13, features: [
+                { name: 'Indomitable (two uses)', level: 13, description: 'Gain an additional Indomitable use.' },
+                { name: 'Studied Attacks', level: 13, description: 'Refine your offensive tactical pressure.' }
+            ]
+        },
+        {
+            level: 14, features: [
+                { name: 'Ability Score Improvement', level: 14, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 15, features: [
+                { name: 'Subclass Feature', level: 15, description: 'Gain a feature from your Fighter subclass.' }
+            ]
+        },
+        {
+            level: 16, features: [
+                { name: 'Ability Score Improvement', level: 16, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 17, features: [
+                { name: 'Action Surge (two uses)', level: 17, description: 'Gain an additional Action Surge use.' },
+                { name: 'Indomitable (three uses)', level: 17, description: 'Gain a third Indomitable use.' }
+            ]
+        },
+        {
+            level: 18, features: [
+                { name: 'Subclass Feature', level: 18, description: 'Gain a feature from your Fighter subclass.' }
+            ]
+        },
+        {
+            level: 19, features: [
+                { name: 'Epic Boon', level: 19, description: 'Gain a powerful epic boon.' }
+            ]
+        },
+        {
+            level: 20, features: [
+                { name: 'Three Extra Attacks', level: 20, description: 'Attack four times when taking the Attack action.' }
+            ]
+        }
+    ],
+    Monk: [
+        {
+            level: 1, features: [
+                {
+                    name: 'Core Monk Traits',
+                    level: 1,
+                    description: 'Master martial arts with discipline and mobility.',
+                    choices: {
+                        title: 'Choose 2 Skill Proficiencies',
+                        count: 2,
+                        options: ['Acrobatics', 'Athletics', 'History', 'Insight', 'Religion', 'Stealth']
+                    }
+                },
+                { name: 'Martial Arts', level: 1, description: 'Use Martial Arts for enhanced unarmed combat.' },
+                { name: 'Unarmored Defense', level: 1, description: 'While unarmored, AC = 10 + Wisdom modifier + Dexterity modifier.' }
+            ]
+        },
+        {
+            level: 2, features: [
+                { name: 'Monk\'s Focus', level: 2, description: 'Gain your core focus resource engine.' },
+                { name: 'Unarmored Movement', level: 2, description: 'Your movement speed increases.' },
+                { name: 'Uncanny Metabolism', level: 2, description: 'Gain improved endurance through your monk resource cycle.' }
+            ]
+        },
+        {
+            level: 3, features: [
+                { name: 'Deflect Attacks', level: 3, description: 'Reduce incoming attack damage with monk reactions.' },
+                { name: 'Monk Subclass', level: 3, description: 'Choose your Monastic Tradition subclass.' }
+            ]
+        },
+        {
+            level: 4, features: [
+                { name: 'Ability Score Improvement', level: 4, description: 'Increase your ability scores or take a feat.' },
+                { name: 'Slow Fall', level: 4, description: 'Reduce falling damage with disciplined movement.' }
+            ]
+        },
+        {
+            level: 5, features: [
+                { name: 'Extra Attack', level: 5, description: 'Attack twice when you take the Attack action.' },
+                { name: 'Stunning Strike', level: 5, description: 'Attempt to stun enemies with focused strikes.' }
+            ]
+        },
+        {
+            level: 6, features: [
+                { name: 'Empowered Strikes', level: 6, description: 'Your strikes become empowered for overcoming resistance.' },
+                { name: 'Subclass Feature', level: 6, description: 'Gain a feature from your Monk subclass.' }
+            ]
+        },
+        {
+            level: 7, features: [
+                { name: 'Evasion', level: 7, description: 'Improve survivability against area effects.' }
+            ]
+        },
+        {
+            level: 8, features: [
+                { name: 'Ability Score Improvement', level: 8, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 9, features: [
+                { name: 'Acrobatic Movement', level: 9, description: 'Gain advanced movement options.' }
+            ]
+        },
+        {
+            level: 10, features: [
+                { name: 'Heightened Focus', level: 10, description: 'Your focus resource utility improves.' },
+                { name: 'Self-Restoration', level: 10, description: 'Gain improved self-sustain and recovery.' }
+            ]
+        },
+        {
+            level: 11, features: [
+                { name: 'Subclass Feature', level: 11, description: 'Gain a feature from your Monk subclass.' }
+            ]
+        },
+        {
+            level: 12, features: [
+                { name: 'Ability Score Improvement', level: 12, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 13, features: [
+                { name: 'Deflect Energy', level: 13, description: 'Expand your deflection techniques against energy effects.' }
+            ]
+        },
+        {
+            level: 14, features: [
+                { name: 'Disciplined Survivor', level: 14, description: 'Your discipline reinforces key saving throw resilience.' }
+            ]
+        },
+        {
+            level: 15, features: [
+                { name: 'Perfect Focus', level: 15, description: 'Improve your focus economy in extended adventuring.' }
+            ]
+        },
+        {
+            level: 16, features: [
+                { name: 'Ability Score Improvement', level: 16, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 17, features: [
+                { name: 'Subclass Feature', level: 17, description: 'Gain a feature from your Monk subclass.' }
+            ]
+        },
+        {
+            level: 18, features: [
+                { name: 'Superior Defense', level: 18, description: 'Reach late-game defensive mastery.' }
+            ]
+        },
+        {
+            level: 19, features: [
+                { name: 'Epic Boon', level: 19, description: 'Gain a powerful epic boon.' }
+            ]
+        },
+        {
+            level: 20, features: [
+                { name: 'Body and Mind', level: 20, description: 'Gain your Monk capstone feature.' }
+            ]
+        }
+    ],
+    Paladin: [
+        {
+            level: 1, features: [
+                {
+                    name: 'Core Paladin Traits',
+                    level: 1,
+                    description: 'Gain holy warrior training and oath preparation.',
+                    choices: {
+                        title: 'Choose 2 Skill Proficiencies',
+                        count: 2,
+                        options: ['Athletics', 'Insight', 'Intimidation', 'Medicine', 'Persuasion', 'Religion']
+                    }
+                },
+                { name: 'Lay On Hands', level: 1, description: 'Restore hit points from your Lay On Hands pool.' },
+                { name: 'Spellcasting', level: 1, description: 'Cast spells using Charisma.' },
+                { name: 'Weapon Mastery', level: 1, description: 'Gain mastery options for selected weapons.' }
+            ]
+        },
+        {
+            level: 2, features: [
+                { name: 'Fighting Style', level: 2, description: 'Choose your holy combat style.' },
+                { name: 'Paladin\'s Smite', level: 2, description: 'Enhance weapon strikes with divine smites.' }
+            ]
+        },
+        {
+            level: 3, features: [
+                { name: 'Channel Divinity', level: 3, description: 'Gain sacred channel divinity options.' },
+                { name: 'Paladin Subclass', level: 3, description: 'Choose your Sacred Oath subclass.' }
+            ]
+        },
+        {
+            level: 4, features: [
+                { name: 'Ability Score Improvement', level: 4, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 5, features: [
+                { name: 'Extra Attack', level: 5, description: 'Attack twice when taking the Attack action.' },
+                { name: 'Faithful Steed', level: 5, description: 'Gain your oath-bound mount support feature.' }
+            ]
+        },
+        {
+            level: 6, features: [
+                { name: 'Aura of Protection', level: 6, description: 'Project a protective aura to aid nearby allies.' }
+            ]
+        },
+        {
+            level: 7, features: [
+                { name: 'Subclass Feature', level: 7, description: 'Gain a feature from your Paladin subclass.' }
+            ]
+        },
+        {
+            level: 8, features: [
+                { name: 'Ability Score Improvement', level: 8, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 9, features: [
+                { name: 'Abjure Foes', level: 9, description: 'Gain stronger anti-foe control options.' }
+            ]
+        },
+        {
+            level: 10, features: [
+                { name: 'Aura of Courage', level: 10, description: 'Bolster allies against fear effects.' }
+            ]
+        },
+        {
+            level: 11, features: [
+                { name: 'Radiant Strikes', level: 11, description: 'Your strikes carry radiant power.' }
+            ]
+        },
+        {
+            level: 12, features: [
+                { name: 'Ability Score Improvement', level: 12, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 14, features: [
+                { name: 'Restoring Touch', level: 14, description: 'Gain improved restorative support options.' }
+            ]
+        },
+        {
+            level: 15, features: [
+                { name: 'Subclass Feature', level: 15, description: 'Gain a feature from your Paladin subclass.' }
+            ]
+        },
+        {
+            level: 16, features: [
+                { name: 'Ability Score Improvement', level: 16, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 18, features: [
+                { name: 'Aura Expansion', level: 18, description: 'Your protective aura extends farther.' }
+            ]
+        },
+        {
+            level: 19, features: [
+                { name: 'Epic Boon', level: 19, description: 'Gain a powerful epic boon.' }
+            ]
+        },
+        {
+            level: 20, features: [
+                { name: 'Subclass Feature', level: 20, description: 'Gain your final Paladin subclass feature.' }
+            ]
+        }
+    ],
+    Ranger: [
+        {
+            level: 1, features: [
+                {
+                    name: 'Core Ranger Traits',
+                    level: 1,
+                    description: 'Gain tracking and exploration abilities.',
+                    choices: {
+                        title: 'Choose 3 Skill Proficiencies',
+                        count: 3,
+                        options: ['Animal Handling', 'Athletics', 'Insight', 'Investigation', 'Nature', 'Perception', 'Stealth', 'Survival']
+                    }
+                },
+                { name: 'Spellcasting', level: 1, description: 'Cast spells using Wisdom.' },
+                { name: 'Favored Enemy', level: 1, description: 'Gain favored enemy tracking and combat benefits.' },
+                { name: 'Weapon Mastery', level: 1, description: 'Gain mastery options for selected weapons.' }
+            ]
+        },
+        {
+            level: 2, features: [
+                { name: 'Deft Explorer', level: 2, description: 'Gain exploration and travel utility upgrades.' },
+                { name: 'Fighting Style', level: 2, description: 'Choose your Ranger fighting style.' }
+            ]
+        },
+        {
+            level: 3, features: [
+                { name: 'Ranger Subclass', level: 3, description: 'Choose your Ranger subclass.' }
+            ]
+        },
+        {
+            level: 4, features: [
+                { name: 'Ability Score Improvement', level: 4, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 5, features: [
+                { name: 'Extra Attack', level: 5, description: 'Attack twice when taking the Attack action.' }
+            ]
+        },
+        {
+            level: 6, features: [
+                { name: 'Roving', level: 6, description: 'Gain improved movement and traversal benefits.' }
+            ]
+        },
+        {
+            level: 7, features: [
+                { name: 'Subclass Feature', level: 7, description: 'Gain a feature from your Ranger subclass.' }
+            ]
+        },
+        {
+            level: 8, features: [
+                { name: 'Ability Score Improvement', level: 8, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 9, features: [
+                { name: 'Expertise', level: 9, description: 'Expand your specialized skill expertise.' }
+            ]
+        },
+        {
+            level: 10, features: [
+                { name: 'Tireless', level: 10, description: 'Gain improved stamina and recovery utility.' }
+            ]
+        },
+        {
+            level: 11, features: [
+                { name: 'Subclass Feature', level: 11, description: 'Gain a feature from your Ranger subclass.' }
+            ]
+        },
+        {
+            level: 12, features: [
+                { name: 'Ability Score Improvement', level: 12, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 13, features: [
+                { name: 'Relentless Hunter', level: 13, description: 'Your hunting pressure improves in prolonged encounters.' }
+            ]
+        },
+        {
+            level: 14, features: [
+                { name: 'Nature\'s Veil', level: 14, description: 'Gain concealment and repositioning support.' }
+            ]
+        },
+        {
+            level: 15, features: [
+                { name: 'Subclass Feature', level: 15, description: 'Gain a feature from your Ranger subclass.' }
+            ]
+        },
+        {
+            level: 16, features: [
+                { name: 'Ability Score Improvement', level: 16, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 17, features: [
+                { name: 'Precise Hunter', level: 17, description: 'Gain higher-tier precision tools.' }
+            ]
+        },
+        {
+            level: 18, features: [
+                { name: 'Feral Senses', level: 18, description: 'Your awareness becomes exceptionally sharp.' }
+            ]
+        },
+        {
+            level: 19, features: [
+                { name: 'Epic Boon', level: 19, description: 'Gain a powerful epic boon.' }
+            ]
+        },
+        {
+            level: 20, features: [
+                { name: 'Foe Slayer', level: 20, description: 'Gain your Ranger capstone feature.' }
+            ]
+        }
+    ],
+    Rogue: [
+        {
+            level: 1, features: [
+                {
+                    name: 'Core Rogue Traits',
+                    level: 1,
+                    description: 'Master stealth, precision, and deception.',
+                    choices: {
+                        title: 'Choose 4 Skill Proficiencies from any skills',
+                        count: 4,
+                        options: ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation', 'Investigation', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Sleight of Hand', 'Stealth', 'Survival']
+                    }
+                },
+                { name: 'Expertise', level: 1, description: 'Double proficiency bonus on chosen proficiencies.' },
+                { name: 'Sneak Attack', level: 1, description: 'Deal extra damage when conditions are met.' },
+                { name: 'Thieves\' Cant', level: 1, description: 'Understand and use rogue cant communication.' },
+                { name: 'Weapon Mastery', level: 1, description: 'Gain mastery options for selected weapons.' }
+            ]
+        },
+        {
+            level: 2, features: [
+                { name: 'Cunning Action', level: 2, description: 'Use bonus actions for mobility and stealth options.' }
+            ]
+        },
+        {
+            level: 3, features: [
+                { name: 'Rogue Subclass', level: 3, description: 'Choose your Rogue subclass.' },
+                { name: 'Steady Aim', level: 3, description: 'Use careful aiming to improve attack reliability.' }
+            ]
+        },
+        {
+            level: 4, features: [
+                { name: 'Ability Score Improvement', level: 4, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 5, features: [
+                { name: 'Cunning Strike', level: 5, description: 'Apply tactical strike riders to sneak attack turns.' },
+                { name: 'Uncanny Dodge', level: 5, description: 'Reduce incoming damage using your reaction.' }
+            ]
+        },
+        {
+            level: 6, features: [
+                { name: 'Expertise', level: 6, description: 'Gain additional expertise choices.' }
+            ]
+        },
+        {
+            level: 7, features: [
+                { name: 'Evasion', level: 7, description: 'Improve survivability against area effects.' },
+                { name: 'Reliable Talent', level: 7, description: 'Increase consistency on proficient checks.' }
+            ]
+        },
+        {
+            level: 8, features: [
+                { name: 'Ability Score Improvement', level: 8, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 9, features: [
+                { name: 'Subclass Feature', level: 9, description: 'Gain a feature from your Rogue subclass.' }
+            ]
+        },
+        {
+            level: 10, features: [
+                { name: 'Ability Score Improvement', level: 10, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 11, features: [
+                { name: 'Improved Cunning Strike', level: 11, description: 'Your cunning strike options improve.' }
+            ]
+        },
+        {
+            level: 12, features: [
+                { name: 'Ability Score Improvement', level: 12, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 13, features: [
+                { name: 'Subclass Feature', level: 13, description: 'Gain a feature from your Rogue subclass.' }
+            ]
+        },
+        {
+            level: 14, features: [
+                { name: 'Devious Strikes', level: 14, description: 'Gain advanced strike manipulation options.' }
+            ]
+        },
+        {
+            level: 15, features: [
+                { name: 'Slippery Mind', level: 15, description: 'Your mental defenses improve.' }
+            ]
+        },
+        {
+            level: 16, features: [
+                { name: 'Ability Score Improvement', level: 16, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 17, features: [
+                { name: 'Subclass Feature', level: 17, description: 'Gain a feature from your Rogue subclass.' }
+            ]
+        },
+        {
+            level: 18, features: [
+                { name: 'Elusive', level: 18, description: 'Become extremely difficult to pin down.' }
+            ]
+        },
+        {
+            level: 19, features: [
+                { name: 'Epic Boon', level: 19, description: 'Gain a powerful epic boon.' }
+            ]
+        },
+        {
+            level: 20, features: [
+                { name: 'Stroke of Luck', level: 20, description: 'Gain your Rogue capstone feature.' }
+            ]
+        }
+    ],
+    Sorcerer: [
+        {
+            level: 1, features: [
+                {
+                    name: 'Core Sorcerer Traits',
+                    level: 1,
+                    description: 'Gain innate arcane spellcasting from your bloodline or origin.',
+                    choices: {
+                        title: 'Choose 2 Skill Proficiencies',
+                        count: 2,
+                        options: ['Arcana', 'Deception', 'Insight', 'Intimidation', 'Persuasion', 'Religion']
+                    }
+                },
+                { name: 'Spellcasting', level: 1, description: 'Cast spells using Charisma. Know 4 cantrips and have 2 1st-level spell slots.' },
+                { name: 'Sorcerous Origin', level: 1, description: 'Choose your Sorcerous Origin, which grants subclass features at levels 1, 6, 14, and 18.' }
+            ]
+        },
+        {
+            level: 2, features: [
+                { name: 'Font of Magic', level: 2, description: 'Gain Sorcery Points (2 at this level) to fuel class features and convert spell slots.' }
+            ]
+        },
+        {
+            level: 3, features: [
+                { name: 'Metamagic', level: 3, description: 'Choose 2 Metamagic options to modify your spells.' }
+            ]
+        },
+        {
+            level: 4, features: [
+                { name: 'Ability Score Improvement', level: 4, description: 'Increase one ability score by 2, or two ability scores by 1 each.' },
+                { name: 'Sorcerous Versatility (Optional)', level: 4, description: 'Optional class feature allowing flexible spell or cantrip changes.' }
+            ]
+        },
+        {
+            level: 5, features: [
+                { name: 'Magical Guidance (Optional)', level: 5, description: 'Optional feature allowing a Sorcery Point to reroll a failed ability check.' }
+            ]
+        },
+        {
+            level: 6, features: [
+                { name: 'Sorcerous Origin Feature', level: 6, description: 'Gain an additional feature from your chosen Sorcerous Origin.' }
+            ]
+        },
+        {
+            level: 8, features: [
+                { name: 'Ability Score Improvement', level: 8, description: 'Increase one ability score by 2, or two ability scores by 1 each.' },
+                { name: 'Sorcerous Versatility (Optional)', level: 8, description: 'Optional class feature allowing flexible spell or cantrip changes.' }
+            ]
+        },
+        {
+            level: 10, features: [
+                { name: 'Metamagic', level: 10, description: 'Learn one additional Metamagic option.' }
+            ]
+        },
+        {
+            level: 12, features: [
+                { name: 'Ability Score Improvement', level: 12, description: 'Increase one ability score by 2, or two ability scores by 1 each.' },
+                { name: 'Sorcerous Versatility (Optional)', level: 12, description: 'Optional class feature allowing flexible spell or cantrip changes.' }
+            ]
+        },
+        {
+            level: 14, features: [
+                { name: 'Sorcerous Origin Feature', level: 14, description: 'Gain another feature from your chosen Sorcerous Origin.' }
+            ]
+        },
+        {
+            level: 16, features: [
+                { name: 'Ability Score Improvement', level: 16, description: 'Increase one ability score by 2, or two ability scores by 1 each.' },
+                { name: 'Sorcerous Versatility (Optional)', level: 16, description: 'Optional class feature allowing flexible spell or cantrip changes.' }
+            ]
+        },
+        {
+            level: 17, features: [
+                { name: 'Metamagic', level: 17, description: 'Learn one additional Metamagic option.' }
+            ]
+        },
+        {
+            level: 18, features: [
+                { name: 'Sorcerous Origin Feature', level: 18, description: 'Gain your final high-level feature from your chosen Sorcerous Origin.' }
+            ]
+        },
+        {
+            level: 19, features: [
+                { name: 'Ability Score Improvement', level: 19, description: 'Increase one ability score by 2, or two ability scores by 1 each.' },
+                { name: 'Sorcerous Versatility (Optional)', level: 19, description: 'Optional class feature allowing flexible spell or cantrip changes.' }
+            ]
+        },
+        {
+            level: 20, features: [
+                { name: 'Sorcerous Restoration', level: 20, description: 'At capstone, recover spent Sorcery Points on short rest as defined by class rules.' }
+            ]
+        }
+    ],
+    Warlock: [
+        {
+            level: 1, features: [
+                {
+                    name: 'Core Warlock Traits',
+                    level: 1,
+                    description: 'Form a pact for eldritch power.',
+                    choices: {
+                        title: 'Choose 2 Skill Proficiencies',
+                        count: 2,
+                        options: ['Arcana', 'Deception', 'History', 'Insight', 'Intimidation', 'Investigation', 'Nature', 'Religion']
+                    }
+                },
+                { name: 'Eldritch Invocations', level: 1, description: 'Gain eldritch invocation options.' },
+                { name: 'Pact Magic', level: 1, description: 'Cast spells using Warlock pact magic.' }
+            ]
+        },
+        {
+            level: 2, features: [
+                { name: 'Magical Cunning', level: 2, description: 'Improve your pact resource utility.' }
+            ]
+        },
+        {
+            level: 3, features: [
+                { name: 'Warlock Subclass', level: 3, description: 'Choose your Warlock subclass.' }
+            ]
+        },
+        {
+            level: 4, features: [
+                { name: 'Ability Score Improvement', level: 4, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 6, features: [
+                { name: 'Subclass Feature', level: 6, description: 'Gain a feature from your Warlock subclass.' }
+            ]
+        },
+        {
+            level: 8, features: [
+                { name: 'Ability Score Improvement', level: 8, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 9, features: [
+                { name: 'Contact Patron', level: 9, description: 'Gain expanded communion with your patron.' }
+            ]
+        },
+        {
+            level: 10, features: [
+                { name: 'Subclass Feature', level: 10, description: 'Gain a feature from your Warlock subclass.' }
+            ]
+        },
+        {
+            level: 11, features: [
+                { name: 'Mystic Arcanum (level 6 spell)', level: 11, description: 'Gain a once-per-long-rest 6th-level arcanum spell.' }
+            ]
+        },
+        {
+            level: 12, features: [
+                { name: 'Ability Score Improvement', level: 12, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 13, features: [
+                { name: 'Mystic Arcanum (level 7 spell)', level: 13, description: 'Gain a once-per-long-rest 7th-level arcanum spell.' }
+            ]
+        },
+        {
+            level: 14, features: [
+                { name: 'Subclass Feature', level: 14, description: 'Gain a feature from your Warlock subclass.' }
+            ]
+        },
+        {
+            level: 15, features: [
+                { name: 'Mystic Arcanum (level 8 spell)', level: 15, description: 'Gain a once-per-long-rest 8th-level arcanum spell.' }
+            ]
+        },
+        {
+            level: 16, features: [
+                { name: 'Ability Score Improvement', level: 16, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 17, features: [
+                { name: 'Mystic Arcanum (level 9 spell)', level: 17, description: 'Gain a once-per-long-rest 9th-level arcanum spell.' }
+            ]
+        },
+        {
+            level: 19, features: [
+                { name: 'Epic Boon', level: 19, description: 'Gain a powerful epic boon.' }
+            ]
+        },
+        {
+            level: 20, features: [
+                { name: 'Eldritch Master', level: 20, description: 'Gain your Warlock capstone feature.' }
+            ]
+        }
+    ],
+    Wizard: [
+        {
+            level: 1, features: [
+                {
+                    name: 'Core Wizard Traits',
+                    level: 1,
+                    description: 'Gain the broadest arcane spell access through study.',
+                    choices: {
+                        title: 'Choose 2 Skill Proficiencies',
+                        count: 2,
+                        options: ['Arcana', 'History', 'Insight', 'Investigation', 'Medicine', 'Religion']
+                    }
+                },
+                { name: 'Spellcasting', level: 1, description: 'Cast spells using Intelligence.' },
+                { name: 'Ritual Adept', level: 1, description: 'Gain enhanced ritual-casting utility.' },
+                { name: 'Arcane Recovery', level: 1, description: 'Recover expended spell resources on short rest.' }
+            ]
+        },
+        {
+            level: 2, features: [
+                { name: 'Scholar', level: 2, description: 'Gain scholarly magical utility improvements.' }
+            ]
+        },
+        {
+            level: 3, features: [
+                { name: 'Wizard Subclass', level: 3, description: 'Choose your Wizard subclass.' }
+            ]
+        },
+        {
+            level: 4, features: [
+                { name: 'Ability Score Improvement', level: 4, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 5, features: [
+                { name: 'Memorize Spell', level: 5, description: 'Gain expanded preparation flexibility.' }
+            ]
+        },
+        {
+            level: 6, features: [
+                { name: 'Subclass Feature', level: 6, description: 'Gain a feature from your Wizard subclass.' }
+            ]
+        },
+        {
+            level: 8, features: [
+                { name: 'Ability Score Improvement', level: 8, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 10, features: [
+                { name: 'Subclass Feature', level: 10, description: 'Gain a feature from your Wizard subclass.' }
+            ]
+        },
+        {
+            level: 12, features: [
+                { name: 'Ability Score Improvement', level: 12, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 14, features: [
+                { name: 'Subclass Feature', level: 14, description: 'Gain a feature from your Wizard subclass.' }
+            ]
+        },
+        {
+            level: 16, features: [
+                { name: 'Ability Score Improvement', level: 16, description: 'Increase your ability scores or take a feat.' }
+            ]
+        },
+        {
+            level: 18, features: [
+                { name: 'Spell Mastery', level: 18, description: 'Master selected spells for frequent use.' }
+            ]
+        },
+        {
+            level: 19, features: [
+                { name: 'Epic Boon', level: 19, description: 'Gain a powerful epic boon.' }
+            ]
+        },
+        {
+            level: 20, features: [
+                { name: 'Signature Spells', level: 20, description: 'Gain your Wizard capstone feature.' }
+            ]
+        }
+    ]
+};
 
 const classInfoMap: Record<string, BuilderInfo> = {
     Barbarian: {
@@ -1257,17 +3000,115 @@ const classSubclassSnapshots: Record<string, { summary: string; details: string 
     }
 };
 
-const speciesInfoMap: Record<string, BuilderInfo> = {
-    Dragonborn: { name: 'Dragonborn', source: "Player's Handbook", summary: 'Draconic ancestry species with a breath weapon and elemental affinity.', highlights: ['Breath weapon attack option', 'Draconic-themed ancestry traits', 'Strong thematic frontline choice'] },
-    Dwarf: { name: 'Dwarf', source: "Player's Handbook", summary: 'Sturdy species known for resilience, discipline, and craftsmanship.', highlights: ['Durability-focused features', 'Solid defensive identity', 'Reliable pick for martial builds'] },
-    Elf: { name: 'Elf', source: "Player's Handbook", summary: 'Graceful species with keen senses and magical heritage variants.', highlights: ['Strong perception and finesse identity', 'Multiple sub-lineage playstyles', 'Good fit for agile or arcane builds'] },
-    Gnome: { name: 'Gnome', source: "Player's Handbook", summary: 'Small, clever species with magical aptitude and defensive tricks.', highlights: ['Cunning defensive traits', 'Intelligence-friendly identity', 'Great utility potential'] },
-    Goliath: { name: 'Goliath', source: "Player's Handbook", summary: 'Powerful mountain-born species emphasizing strength and endurance.', highlights: ['Athletic, durable profile', 'Strong physical roleplay identity', 'Natural fit for frontliners'] },
-    Halfling: { name: 'Halfling', source: "Player's Handbook", summary: 'Small and lucky species with agile and resilient survival tools.', highlights: ['Luck-themed reliability', 'Strong mobility for small builds', 'Excellent for finesse characters'] },
-    Human: { name: 'Human', source: "Player's Handbook", summary: 'Flexible all-round species adaptable to nearly any class concept.', highlights: ['Broad build flexibility', 'Easy fit for any archetype', 'Strong baseline customization'] },
-    Orc: { name: 'Orc', source: "Player's Handbook", summary: 'Aggressive and tough species with momentum-oriented combat traits.', highlights: ['Durable combat profile', 'Strong martial role fit', 'Direct and assertive playstyle'] },
-    Tiefling: { name: 'Tiefling', source: "Player's Handbook", summary: 'Fiend-touched species with innate magic and infernal flavor.', highlights: ['Innate spell access', 'Charisma-friendly identity', 'Strong thematic caster option'] }
-};
+const makeSpeciesInfo = (
+    name: string,
+    summary: string,
+    hallmark: string,
+    buildAngle: string,
+    mobility: string,
+    slug: string,
+    speed = '30 ft'
+): BuilderInfo => ({
+    name,
+    source: "Player's Handbook / Expanded Lineages",
+    summary,
+    highlights: [`Hallmark: ${hallmark}`, `Build angle: ${buildAngle}`, `Mobility profile: ${mobility}`],
+    speciesDetails: {
+        tagline: `${name} Lineage Overview`,
+        creatureType: 'Humanoid',
+        size: 'Medium or Small (lineage dependent)',
+        speed,
+        sourceUrl: `https://dnd5e.wikidot.com/lineage:${slug}`,
+        coreTraits: [
+            { label: 'Creature Type', value: 'Humanoid' },
+            { label: 'Size', value: 'Medium or Small (lineage dependent)' },
+            { label: 'Speed', value: speed },
+            { label: 'Signature Identity', value: hallmark },
+            { label: 'Build Notes', value: buildAngle }
+        ],
+        traitNotes: [
+            {
+                title: 'Lineage Identity',
+                summary: hallmark,
+                details: `${name} provides a distinct lineage package that affects roleplay, exploration, and tactical decisions across a full campaign.`
+            },
+            {
+                title: 'Mobility and Survival',
+                summary: mobility,
+                details: `${name} movement and defensive profile can shape target access, positioning safety, and encounter pacing in both combat and travel.`
+            },
+            {
+                title: 'Build Synergy',
+                summary: buildAngle,
+                details: `${name} is strongest when class and feat choices amplify its unique lineage strengths rather than overlapping them.`
+            }
+        ]
+    }
+});
+
+const speciesCatalog: Array<{ name: string; slug: string; hallmark: string; speed?: string }> = [
+    { name: 'Dragonborn', slug: 'dragonborn', hallmark: 'Breath weapon and draconic ancestry' },
+    { name: 'Dwarf', slug: 'dwarf', hallmark: 'Defensive resilience and durability' },
+    { name: 'Elf', slug: 'elf', hallmark: 'Keen senses and agile utility' },
+    { name: 'Gnome', slug: 'gnome', hallmark: 'Cunning defense and trick utility' },
+    { name: 'Half-Elf', slug: 'half-elf', hallmark: 'Adaptive social flexibility' },
+    { name: 'Half-Orc', slug: 'half-orc', hallmark: 'Relentless martial momentum' },
+    { name: 'Halfling', slug: 'halfling', hallmark: 'Luck-based consistency' },
+    { name: 'Human', slug: 'human', hallmark: 'Broad build adaptability' },
+    { name: 'Tiefling', slug: 'tiefling', hallmark: 'Fiend-touched innate magic' },
+    { name: 'Aarakocra', slug: 'aarakocra', hallmark: 'Aerial positioning profile', speed: '30 ft (with flight features)' },
+    { name: 'Aasimar', slug: 'aasimar', hallmark: 'Celestial-themed power' },
+    { name: 'Changeling', slug: 'changeling', hallmark: 'Shapeshifting social utility' },
+    { name: 'Deep Gnome', slug: 'deep-gnome', hallmark: 'Subterranean stealth resilience' },
+    { name: 'Duergar', slug: 'duergar', hallmark: 'Stoic underdark durability' },
+    { name: 'Eladrin', slug: 'eladrin', hallmark: 'Fey teleport expression' },
+    { name: 'Fairy', slug: 'fairy', hallmark: 'Fey flight and mobility', speed: '30 ft (with flight features)' },
+    { name: 'Firbolg', slug: 'firbolg', hallmark: 'Nature-giant utility profile' },
+    { name: 'Genasi (Air)', slug: 'genasi-air', hallmark: 'Air-aspected mobility' },
+    { name: 'Genasi (Earth)', slug: 'genasi-earth', hallmark: 'Earth-aspected toughness' },
+    { name: 'Genasi (Fire)', slug: 'genasi-fire', hallmark: 'Fire-aspected pressure' },
+    { name: 'Genasi (Water)', slug: 'genasi-water', hallmark: 'Water-aspected adaptability' },
+    { name: 'Githyanki', slug: 'githyanki', hallmark: 'Astral martial discipline' },
+    { name: 'Githzerai', slug: 'githzerai', hallmark: 'Psionic defensive focus' },
+    { name: 'Goliath', slug: 'goliath', hallmark: 'Athletic endurance' },
+    { name: 'Harengon', slug: 'harengon', hallmark: 'Burst reposition mobility' },
+    { name: 'Kenku', slug: 'kenku', hallmark: 'Stealth and trick utility' },
+    { name: 'Locathah', slug: 'locathah', hallmark: 'Aquatic survival profile' },
+    { name: 'Owlin', slug: 'owlin', hallmark: 'Nocturnal aerial scouting', speed: '30 ft (with flight features)' },
+    { name: 'Satyr', slug: 'satyr', hallmark: 'Fey social disruption' },
+    { name: 'Sea Elf', slug: 'sea-elf', hallmark: 'Marine elven adaptability' },
+    { name: 'Shadar-Kai', slug: 'shadar-kai', hallmark: 'Shadowfell repositioning' },
+    { name: 'Tabaxi', slug: 'tabaxi', hallmark: 'Sprint and scouting mobility' },
+    { name: 'Tortle', slug: 'tortle', hallmark: 'Natural shell defense' },
+    { name: 'Triton', slug: 'triton', hallmark: 'Sea-guardian utility' },
+    { name: 'Verdan', slug: 'verdan', hallmark: 'Adaptive growth traits' },
+    { name: 'Bugbear', slug: 'bugbear', hallmark: 'Ambush pressure profile' },
+    { name: 'Centaur', slug: 'centaur', hallmark: 'Charge-oriented movement', speed: '40 ft' },
+    { name: 'Goblin', slug: 'goblin', hallmark: 'Nimble skirmish utility' },
+    { name: 'Grung', slug: 'grung', hallmark: 'Amphibious poison identity' },
+    { name: 'Hobgoblin', slug: 'hobgoblin', hallmark: 'Coordinated martial discipline' },
+    { name: 'Kobold', slug: 'kobold', hallmark: 'Pack-style trickster play' },
+    { name: 'Lizardfolk', slug: 'lizardfolk', hallmark: 'Primal survival durability' },
+    { name: 'Minotaur', slug: 'minotaur', hallmark: 'Heavy melee momentum' },
+    { name: 'Orc', slug: 'orc', hallmark: 'Aggressive frontline cadence' },
+    { name: 'Shifter', slug: 'shifter', hallmark: 'Transformation combat windows' },
+    { name: 'Yuan-Ti', slug: 'yuan-ti', hallmark: 'Serpentine mystical resilience' }
+];
+
+const speciesInfoMap: Record<string, BuilderInfo> = Object.fromEntries(
+    speciesCatalog.map((species) => [
+        species.name,
+        makeSpeciesInfo(
+            species.name,
+            `${species.name} lineage with a ${species.hallmark.toLowerCase()} focus.`,
+            species.hallmark,
+            'Supports multiple class archetypes.',
+            'See lineage reference for exact movement and feature rules.',
+            species.slug,
+            species.speed ?? '30 ft'
+        )
+    ])
+) as Record<string, BuilderInfo>;
 
 const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 'sourceUrl'>> = {
     Acolyte: {
@@ -1370,6 +3211,7 @@ const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 'sourceUr
     styleUrl: './new-character-standard-page.component.scss'
 })
 export class NewCharacterStandardPageComponent {
+    readonly Object = Object;
     readonly store = inject(DungeonStoreService);
     private readonly route = inject(ActivatedRoute);
 
@@ -1384,8 +3226,42 @@ export class NewCharacterStandardPageComponent {
     });
 
     readonly activeInfoModal = signal<ActiveInfoModal | null>(null);
+    readonly selectedClass = signal<string>('');
+    readonly characterLevel = signal<number>(1);
+    readonly multiclassList = signal<Record<string, number>>({});
+    readonly selectedBackgroundName = signal<string>('');
     readonly selectedBackgroundUrl = signal<string>('');
+    readonly classFeatureSelections = signal<Record<string, string[]>>({});
     readonly backgroundChoiceSelections = signal<Record<string, string>>({});
+    readonly selectedAbilityMethod = signal<AbilityGenerationMethod>('');
+    readonly abilityBaseScores = signal<Record<string, number>>({
+        Strength: 10,
+        Dexterity: 10,
+        Constitution: 10,
+        Intelligence: 10,
+        Wisdom: 10,
+        Charisma: 10
+    });
+    readonly abilityOtherModifiers = signal<Record<string, number | null>>({
+        Strength: null, Dexterity: null, Constitution: null,
+        Intelligence: null, Wisdom: null, Charisma: null
+    });
+    readonly abilityOverrideScores = signal<Record<string, number | null>>({
+        Strength: null, Dexterity: null, Constitution: null,
+        Intelligence: null, Wisdom: null, Charisma: null
+    });
+    readonly standardArraySelections = signal<Record<string, number | null>>({
+        Strength: null,
+        Dexterity: null,
+        Constitution: null,
+        Intelligence: null,
+        Wisdom: null,
+        Charisma: null
+    });
+    readonly rolledValues = signal<Array<number | null>>([null, null, null, null, null, null]);
+    readonly rolledAssignments = signal<Record<number, string>>({});
+    readonly manualRollGroupCount = signal(1);
+    readonly diceRollGroupOpen = signal(true);
     readonly showExtendedInfo = signal(false);
     readonly expandedMilestoneIndexes = signal<Set<number>>(new Set<number>());
     readonly expandedFeatureNoteIndexes = signal<Set<number>>(new Set<number>());
@@ -1502,8 +3378,58 @@ export class NewCharacterStandardPageComponent {
         { name: 'Wildspacer', url: 'https://dnd5e.wikidot.com/background:wildspacer' },
         { name: 'Ashari', url: 'https://dnd5e.wikidot.com/background:ashari' }
     ];
-    readonly speciesOptions = ['Dragonborn', 'Dwarf', 'Elf', 'Gnome', 'Goliath', 'Halfling', 'Human', 'Orc', 'Tiefling'];
+    readonly speciesOptions = [
+        'Dragonborn', 'Dwarf', 'Elf', 'Gnome', 'Half-Elf', 'Half-Orc', 'Halfling', 'Human', 'Tiefling',
+        'Aarakocra', 'Aasimar', 'Changeling', 'Deep Gnome', 'Duergar', 'Eladrin', 'Fairy', 'Firbolg',
+        'Genasi (Air)', 'Genasi (Earth)', 'Genasi (Fire)', 'Genasi (Water)', 'Githyanki', 'Githzerai',
+        'Goliath', 'Harengon', 'Kenku', 'Locathah', 'Owlin', 'Satyr', 'Sea Elf', 'Shadar-Kai', 'Tabaxi',
+        'Tortle', 'Triton', 'Verdan',
+        'Bugbear', 'Centaur', 'Goblin', 'Grung', 'Hobgoblin', 'Kobold', 'Lizardfolk', 'Minotaur', 'Orc', 'Shifter', 'Yuan-Ti'
+    ];
     readonly abilityTiles = ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'];
+    readonly abilityAbbreviations: Record<string, string> = {
+        Strength: 'STR',
+        Dexterity: 'DEX',
+        Constitution: 'CON',
+        Intelligence: 'INT',
+        Wisdom: 'WIS',
+        Charisma: 'CHA'
+    };
+    readonly abilityMethods: ReadonlyArray<{ value: AbilityGenerationMethod; label: string }> = [
+        { value: '', label: '-- Choose a Generation Method --' },
+        { value: 'standard-array', label: 'Standard Array' },
+        { value: 'manual-rolled', label: 'Manual/Rolled' },
+        { value: 'point-buy', label: 'Point Buy' }
+    ];
+    readonly standardArrayValues: ReadonlyArray<number> = [15, 14, 13, 12, 10, 8];
+    readonly pointBuyValues: ReadonlyArray<number> = [8, 9, 10, 11, 12, 13, 14, 15];
+    readonly pointBuyBudget = 27;
+    readonly equipmentSources = equipmentSourceLinks;
+    readonly equipmentSearchTerm = signal('');
+    readonly selectedEquipmentSourceUrl = signal('');
+    readonly selectedClassStartingOption = signal<'A' | 'B' | ''>('A');
+    readonly selectedBackgroundStartingOption = signal<'A' | 'B' | ''>('A');
+    readonly inventoryEntries = signal<InventoryEntry[]>([]);
+    readonly currency = signal<CurrencyState>({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 });
+
+    readonly filteredEquipmentItems = computed(() => {
+        const term = this.equipmentSearchTerm().trim().toLowerCase();
+        const selectedSourceUrl = this.selectedEquipmentSourceUrl();
+
+        return equipmentCatalog.filter((item) => {
+            const sourceMatches = selectedSourceUrl ? item.sourceUrl === selectedSourceUrl : true;
+            const termMatches = term
+                ? item.name.toLowerCase().includes(term) || item.category.toLowerCase().includes(term)
+                : true;
+            return sourceMatches && termMatches;
+        });
+    });
+
+    readonly inventoryItemCount = computed(() => this.inventoryEntries().reduce((total, entry) => total + entry.quantity, 0));
+    readonly totalCurrencyInGp = computed(() => {
+        const value = this.currency();
+        return (value.pp * 10) + value.gp + (value.ep * 0.5) + (value.sp * 0.1) + (value.cp * 0.01);
+    });
 
     readonly selectedBackground = computed(() => {
         const selectedUrl = this.selectedBackgroundUrl();
@@ -1554,6 +3480,19 @@ export class NewCharacterStandardPageComponent {
             sourceUrl: selected.url
         };
     });
+
+    readonly pointBuySpent = computed(() => {
+        if (this.selectedAbilityMethod() !== 'point-buy') {
+            return 0;
+        }
+
+        return this.abilityTiles.reduce((total, ability) => {
+            const score = this.abilityBaseScores()[ability] ?? 8;
+            return total + this.getPointBuyCost(score);
+        }, 0);
+    });
+
+    readonly pointBuyRemaining = computed(() => this.pointBuyBudget - this.pointBuySpent());
 
     openClassModal(className: string): void {
         const info = classInfoMap[className];
@@ -1620,8 +3559,142 @@ export class NewCharacterStandardPageComponent {
         this.expandedFeatureNoteIndexes.set(new Set<number>());
     }
 
+    selectClass(className: string): void {
+        const current = this.multiclassList();
+        this.multiclassList.set({
+            ...current,
+            [className]: 1
+        });
+        this.selectedClass.set('');
+        this.closeInfoModal();
+    }
+
+    selectBackground(backgroundName: string): void {
+        this.selectedBackgroundName.set(backgroundName);
+        this.closeInfoModal();
+    }
+
     toggleExtendedInfo(): void {
         this.showExtendedInfo.update((value) => !value);
+    }
+
+    updateClassFeatureSelection(featureName: string, chosenValues: string[]): void {
+        this.classFeatureSelections.update((current) => ({
+            ...current,
+            [featureName]: chosenValues
+        }));
+    }
+
+    onFeatureChoiceChange(featureName: string, option: string, isChecked: boolean, maxChoices: number): void {
+        this.classFeatureSelections.update((current) => {
+            const currentSelections = current[featureName] || [];
+            if (isChecked) {
+                // Add option if not at limit
+                if (currentSelections.length < maxChoices) {
+                    return { ...current, [featureName]: [...currentSelections, option] };
+                }
+            } else {
+                // Remove option
+                return { ...current, [featureName]: currentSelections.filter((s: string) => s !== option) };
+            }
+            return current;
+        });
+    }
+
+    getClassFeatures(className: string, maxLevel: number = 1): ClassFeaturesForLevel[] {
+        const seededFeatures = classLevelOneFeatures[className] || [];
+        const hasSeededProgression = seededFeatures.some((featureGroup) => featureGroup.level > 1);
+
+        if (hasSeededProgression) {
+            return [...seededFeatures]
+                .sort((a, b) => a.level - b.level)
+                .filter((featureLevel) => featureLevel.level <= maxLevel);
+        }
+
+        const milestoneFeatures = this.getClassFeaturesFromMilestones(className);
+        const mergedByLevel = new Map<number, ClassFeature[]>();
+
+        for (const featureGroup of [...seededFeatures, ...milestoneFeatures]) {
+            const current = mergedByLevel.get(featureGroup.level) || [];
+            for (const feature of featureGroup.features) {
+                const exists = current.some((entry) => entry.name.toLowerCase() === feature.name.toLowerCase());
+                if (!exists) {
+                    current.push(feature);
+                }
+            }
+            mergedByLevel.set(featureGroup.level, current);
+        }
+
+        return Array.from(mergedByLevel.entries())
+            .map(([level, features]) => ({ level, features }))
+            .sort((a, b) => a.level - b.level)
+            .filter((featureLevel) => featureLevel.level <= maxLevel);
+    }
+
+    private getClassFeaturesFromMilestones(className: string): ClassFeaturesForLevel[] {
+        const details = classInfoMap[className]?.details ?? classDetailFallbacks[className];
+        if (!details?.levelMilestones?.length) {
+            return [];
+        }
+
+        return details.levelMilestones
+            .map((milestone) => {
+                const level = this.extractMilestoneLevel(milestone.title);
+                if (!level) {
+                    return null;
+                }
+
+                return {
+                    level,
+                    features: [{
+                        name: milestone.summary,
+                        level,
+                        description: milestone.details
+                    }]
+                } as ClassFeaturesForLevel;
+            })
+            .filter((value): value is ClassFeaturesForLevel => value !== null);
+    }
+
+    private extractMilestoneLevel(title: string): number | null {
+        const levelMatch = title.match(/level\s*(\d+)/i);
+        if (levelMatch) {
+            return Number(levelMatch[1]);
+        }
+
+        const rangedMatch = title.match(/(\d+)\s*[-–]\s*(\d+)/);
+        if (rangedMatch) {
+            return Number(rangedMatch[1]);
+        }
+
+        return null;
+    }
+
+    addClass(className: string, level: number): void {
+        const current = this.multiclassList();
+        this.multiclassList.set({
+            ...current,
+            [className]: level
+        });
+        this.selectedClass.set('');
+        this.characterLevel.set(1);
+    }
+
+    removeClass(className: string): void {
+        const current = this.multiclassList();
+        const updated = { ...current };
+        delete updated[className];
+        this.multiclassList.set(updated);
+    }
+
+    updateClassLevel(className: string, level: number): void {
+        const current = this.multiclassList();
+        current[className] = level;
+        this.multiclassList.set({ ...current });
+    }
+
+    startMulticlass(): void {
+        this.selectedClass.set('__MULTICLASS_SELECTOR__');
     }
 
     toggleMilestone(index: number): void {
@@ -1686,5 +3759,336 @@ export class NewCharacterStandardPageComponent {
             ...current,
             [compositeKey]: value
         }));
+    }
+
+    onEquipmentSearchChanged(value: string): void {
+        this.equipmentSearchTerm.set(value);
+    }
+
+    onEquipmentSourceSelected(url: string): void {
+        this.selectedEquipmentSourceUrl.update((current) => (current === url ? '' : url));
+    }
+
+    onClassStartingOptionChanged(value: string): void {
+        this.selectedClassStartingOption.set((value === 'A' || value === 'B') ? value : '');
+    }
+
+    onBackgroundStartingOptionChanged(value: string): void {
+        this.selectedBackgroundStartingOption.set((value === 'A' || value === 'B') ? value : '');
+    }
+
+    canAddStartingEquipment(): boolean {
+        return this.selectedClassStartingOption() !== '' && this.selectedBackgroundStartingOption() !== '';
+    }
+
+    addStartingEquipment(): void {
+        if (!this.canAddStartingEquipment()) {
+            return;
+        }
+
+        const classKey = this.selectedClassStartingOption() as 'A' | 'B';
+        const backgroundKey = this.selectedBackgroundStartingOption() as 'A' | 'B';
+        const classPackage = classStartingPackages[classKey];
+        const backgroundPackage = backgroundStartingPackages[backgroundKey];
+
+        classPackage.items.forEach((item) => this.addInventoryItem(item));
+        backgroundPackage.items.forEach((item) => this.addInventoryItem(item));
+
+        this.addCurrency('gp', classPackage.currency.gp ?? 0);
+        this.addCurrency('gp', backgroundPackage.currency.gp ?? 0);
+    }
+
+    clearEquipmentSelections(): void {
+        this.inventoryEntries.set([]);
+        this.currency.set({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 });
+    }
+
+    addEquipmentItemToInventory(item: EquipmentItem): void {
+        this.addInventoryItem({
+            name: item.name,
+            category: item.category,
+            quantity: 1,
+            sourceUrl: item.sourceUrl
+        });
+    }
+
+    onCurrencyInputChanged(key: keyof CurrencyState, value: string): void {
+        const parsed = Number.parseInt(value, 10);
+        const safeValue = Number.isNaN(parsed) ? 0 : Math.max(0, parsed);
+        this.currency.update((current) => ({ ...current, [key]: safeValue }));
+    }
+
+    private addInventoryItem(item: InventoryEntry): void {
+        this.inventoryEntries.update((entries) => {
+            const index = entries.findIndex((entry) => entry.name === item.name);
+            if (index === -1) {
+                return [...entries, { ...item }];
+            }
+
+            const next = [...entries];
+            next[index] = {
+                ...next[index],
+                quantity: next[index].quantity + item.quantity
+            };
+            return next;
+        });
+    }
+
+    private addCurrency(key: keyof CurrencyState, amount: number): void {
+        if (amount <= 0) {
+            return;
+        }
+        this.currency.update((current) => ({ ...current, [key]: current[key] + amount }));
+    }
+
+    onAbilityMethodSelected(method: AbilityGenerationMethod): void {
+        this.selectedAbilityMethod.set(method);
+        const nullRecord = { Strength: null, Dexterity: null, Constitution: null, Intelligence: null, Wisdom: null, Charisma: null };
+        this.abilityOtherModifiers.set({ ...nullRecord });
+        this.abilityOverrideScores.set({ ...nullRecord });
+
+        if (method === 'standard-array') {
+            this.standardArraySelections.set({
+                Strength: null,
+                Dexterity: null,
+                Constitution: null,
+                Intelligence: null,
+                Wisdom: null,
+                Charisma: null
+            });
+            this.abilityBaseScores.set({
+                Strength: 0,
+                Dexterity: 0,
+                Constitution: 0,
+                Intelligence: 0,
+                Wisdom: 0,
+                Charisma: 0
+            });
+            return;
+        }
+
+        if (method === 'point-buy') {
+            this.abilityBaseScores.set({
+                Strength: 8,
+                Dexterity: 8,
+                Constitution: 8,
+                Intelligence: 8,
+                Wisdom: 8,
+                Charisma: 8
+            });
+            return;
+        }
+
+        if (method === 'manual-rolled') {
+            this.abilityBaseScores.set({
+                Strength: 0,
+                Dexterity: 0,
+                Constitution: 0,
+                Intelligence: 0,
+                Wisdom: 0,
+                Charisma: 0
+            });
+            this.rolledValues.set([null, null, null, null, null, null]);
+            this.rolledAssignments.set({});
+            this.manualRollGroupCount.set(1);
+            return;
+        }
+
+        this.abilityBaseScores.set({
+            Strength: 10,
+            Dexterity: 10,
+            Constitution: 10,
+            Intelligence: 10,
+            Wisdom: 10,
+            Charisma: 10
+        });
+    }
+
+    onAbilityScoreInput(ability: string, value: string): void {
+        const parsed = Number.parseInt(value, 10);
+        if (Number.isNaN(parsed)) {
+            return;
+        }
+
+        const method = this.selectedAbilityMethod();
+        const min = method === 'point-buy' ? 8 : 3;
+        const max = method === 'point-buy' ? 15 : 20;
+        const clamped = Math.max(min, Math.min(max, parsed));
+
+        this.abilityBaseScores.update((current) => ({
+            ...current,
+            [ability]: clamped
+        }));
+    }
+
+    onStandardArraySelected(ability: string, value: string): void {
+        const parsed = Number.parseInt(value, 10);
+        const nextValue = Number.isNaN(parsed) ? null : parsed;
+
+        this.standardArraySelections.update((current) => ({
+            ...current,
+            [ability]: nextValue
+        }));
+
+        this.abilityBaseScores.update((current) => ({
+            ...current,
+            [ability]: nextValue ?? 0
+        }));
+    }
+
+    getStandardArraySelection(ability: string): string {
+        const value = this.standardArraySelections()[ability];
+        return value == null ? '' : String(value);
+    }
+
+    getStandardArrayOptions(ability: string): ReadonlyArray<number> {
+        const selections = this.standardArraySelections();
+        const ownValue = selections[ability];
+        const takenValues = new Set(
+            Object.entries(selections)
+                .filter(([key, val]) => key !== ability && val != null)
+                .map(([, val]) => val as number)
+        );
+        return this.standardArrayValues.filter((v) => !takenValues.has(v) || v === ownValue);
+    }
+
+    onPointBuySelected(ability: string, value: string): void {
+        const parsed = Number.parseInt(value, 10);
+        if (Number.isNaN(parsed)) {
+            return;
+        }
+
+        this.abilityBaseScores.update((current) => ({
+            ...current,
+            [ability]: parsed
+        }));
+    }
+
+    getPointBuySelection(ability: string): string {
+        return String(this.getAbilityBaseScore(ability));
+    }
+
+    isPointBuyOptionDisabled(ability: string, candidate: number): boolean {
+        if (this.selectedAbilityMethod() !== 'point-buy') {
+            return false;
+        }
+
+        const currentScore = this.getAbilityBaseScore(ability);
+        const nextSpent = this.pointBuySpent() - this.getPointBuyCost(currentScore) + this.getPointBuyCost(candidate);
+        return nextSpent > this.pointBuyBudget;
+    }
+
+    addManualRollGroup(): void {
+        this.manualRollGroupCount.update((count) => count + 1);
+    }
+
+    rollAbilitySlot(index: number): void {
+        const rolls = [
+            Math.ceil(Math.random() * 6),
+            Math.ceil(Math.random() * 6),
+            Math.ceil(Math.random() * 6),
+            Math.ceil(Math.random() * 6)
+        ];
+        rolls.sort((a, b) => b - a);
+        const total = rolls[0] + rolls[1] + rolls[2];
+
+        this.rolledValues.update((current) => {
+            const next = [...current];
+            next[index] = total;
+            return next;
+        });
+    }
+
+    resetManualRollGroup(): void {
+        this.rolledValues.set([null, null, null, null, null, null]);
+        this.rolledAssignments.set({});
+    }
+
+    applyManualRolledScores(): void {
+        const nextScores: Record<string, number> = {
+            Strength: 0,
+            Dexterity: 0,
+            Constitution: 0,
+            Intelligence: 0,
+            Wisdom: 0,
+            Charisma: 0
+        };
+
+        this.rolledValues().forEach((value, index) => {
+            const abilityName = this.abilityTiles[index];
+            if (abilityName && value != null) {
+                nextScores[abilityName] = value;
+            }
+        });
+
+        this.abilityBaseScores.set(nextScores);
+    }
+
+    getManualRolledDisplay(index: number): string {
+        const value = this.rolledValues()[index];
+        return value == null ? '--' : String(value);
+    }
+
+    getAbilityBaseScore(ability: string): number {
+        return this.abilityBaseScores()[ability] ?? 10;
+    }
+
+    getTotalScore(ability: string): number {
+        return this.abilityOverrideScores()[ability] ?? this.getAbilityBaseScore(ability);
+    }
+
+    getTotalModifier(ability: string): string {
+        const score = this.getTotalScore(ability);
+        const base = Math.floor((score - 10) / 2);
+        const other = this.abilityOtherModifiers()[ability] ?? 0;
+        const total = base + other;
+        return total >= 0 ? `+${total}` : `${total}`;
+    }
+
+    getOtherModifierDisplay(ability: string): string {
+        const val = this.abilityOtherModifiers()[ability];
+        return val == null ? '' : String(val);
+    }
+
+    getOverrideScoreDisplay(ability: string): string {
+        const val = this.abilityOverrideScores()[ability];
+        return val == null ? '' : String(val);
+    }
+
+    onOtherModifierInput(ability: string, value: string): void {
+        const parsed = Number.parseInt(value, 10);
+        this.abilityOtherModifiers.update((c) => ({ ...c, [ability]: Number.isNaN(parsed) ? null : parsed }));
+    }
+
+    onOverrideScoreInput(ability: string, value: string): void {
+        const parsed = Number.parseInt(value, 10);
+        this.abilityOverrideScores.update((c) => ({ ...c, [ability]: Number.isNaN(parsed) ? null : parsed }));
+    }
+
+    getAbilityModifier(score: number): string {
+        const modifier = Math.floor((score - 10) / 2);
+        return modifier >= 0 ? `+${modifier}` : `${modifier}`;
+    }
+
+    getPointBuyCost(score: number): number {
+        if (score <= 8) {
+            return 0;
+        }
+        if (score <= 13) {
+            return score - 8;
+        }
+        if (score === 14) {
+            return 7;
+        }
+        return 9;
+    }
+
+    getPointBuyOptionLabel(value: number): string {
+        const cost = this.getPointBuyCost(value);
+        if (cost === 0) {
+            return String(value);
+        }
+        const unit = cost === 1 ? 'Point' : 'Points';
+        return `${value} (-${cost} ${unit})`;
     }
 }
