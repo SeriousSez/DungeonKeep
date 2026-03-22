@@ -1,0 +1,124 @@
+<article class="panel studio-panel">
+    <div class="panel-heading">
+        <div>
+            <p class="eyebrow">Creation studio</p>
+            @if (mode() === 'campaign') {
+            <h2>Create new campaign</h2>
+            } @else if (mode() === 'character') {
+            <h2>Create new character</h2>
+            } @else {
+            <h2>Add new material</h2>
+            }
+        </div>
+        <span class="pill">Local in-memory demo state</span>
+    </div>
+
+    <div class="studio-grid" [class.single]="mode() !== 'both'">
+        @if (mode() !== 'character') {
+        <form class="form-card" (ngSubmit)="addCampaign()">
+            <div class="form-heading">
+                <h3>New campaign</h3>
+                <p>Create a world, drop in a hook, and start tracking it immediately.</p>
+            </div>
+
+            <label>
+                <span>Campaign name</span>
+                <input type="text" name="campaignName" [ngModel]="campaignDraft().name" (ngModelChange)="updateCampaign('name', $event)" placeholder="The Blackglass Road" />
+            </label>
+
+            <label>
+                <span>Setting</span>
+                <input type="text" name="campaignSetting" [ngModel]="campaignDraft().setting" (ngModelChange)="updateCampaign('setting', $event)" placeholder="Shattered Coast" />
+            </label>
+
+            <label>
+                <span>Tone</span>
+                <select name="campaignTone" [ngModel]="campaignDraft().tone" (ngModelChange)="updateCampaign('tone', $event)">
+                    <option value="Heroic">Heroic</option>
+                    <option value="Grim">Grim</option>
+                    <option value="Mystic">Mystic</option>
+                    <option value="Chaotic">Chaotic</option>
+                </select>
+            </label>
+
+            <label>
+                <span>Hook</span>
+                <textarea name="campaignHook" [ngModel]="campaignDraft().hook" (ngModelChange)="updateCampaign('hook', $event)" rows="3" placeholder="A relic has gone missing and every guild wants it first."></textarea>
+            </label>
+
+            <label>
+                <span>Next session</span>
+                <input type="text" name="campaignNextSession" [ngModel]="campaignDraft().nextSession" (ngModelChange)="updateCampaign('nextSession', $event)" placeholder="2026-05-03" />
+            </label>
+
+            <label>
+                <span>Summary</span>
+                <textarea name="campaignSummary" [ngModel]="campaignDraft().summary" (ngModelChange)="updateCampaign('summary', $event)" rows="3" placeholder="What is the big picture for this campaign?"></textarea>
+            </label>
+
+            <button type="submit" class="primary-button">Create campaign</button>
+        </form>
+        }
+
+        @if (mode() !== 'campaign') {
+        <form class="form-card" (ngSubmit)="addCharacter()">
+            <div class="form-heading">
+                <h3>New character</h3>
+                <p>Add a party member directly into the currently selected campaign.</p>
+            </div>
+
+            <label>
+                <span>Character name</span>
+                <input type="text" name="characterName" [ngModel]="characterDraft().name" (ngModelChange)="updateCharacter('name', $event)" placeholder="Aveline Thorn" />
+            </label>
+
+            <div class="form-split">
+                <label>
+                    <span>Player</span>
+                    <input type="text" name="characterPlayer" [ngModel]="characterDraft().playerName" (ngModelChange)="updateCharacter('playerName', $event)" placeholder="Morgan" />
+                </label>
+
+                <label>
+                    <span>Level</span>
+                    <input type="number" name="characterLevel" [ngModel]="characterDraft().level" (ngModelChange)="updateCharacter('level', $event)" min="1" max="20" />
+                </label>
+            </div>
+
+            <div class="form-split">
+                <label>
+                    <span>Race</span>
+                    <input type="text" name="characterRace" [ngModel]="characterDraft().race" (ngModelChange)="updateCharacter('race', $event)" placeholder="Human" />
+                </label>
+
+                <label>
+                    <span>Class</span>
+                    <input type="text" name="characterClass" [ngModel]="characterDraft().className" (ngModelChange)="updateCharacter('className', $event)" placeholder="Warlock" />
+                </label>
+            </div>
+
+            <label>
+                <span>Role</span>
+                <select name="characterRole" [ngModel]="characterDraft().role" (ngModelChange)="updateCharacter('role', $event)">
+                    <option value="Tank">Tank</option>
+                    <option value="Support">Support</option>
+                    <option value="Scout">Scout</option>
+                    <option value="Striker">Striker</option>
+                    <option value="Caster">Caster</option>
+                </select>
+            </label>
+
+            <label>
+                <span>Background</span>
+                <textarea name="characterBackground" [ngModel]="characterDraft().background" (ngModelChange)="updateCharacter('background', $event)" rows="3" placeholder="Who are they before the first die roll?"></textarea>
+            </label>
+
+            <label>
+                <span>Notes</span>
+                <textarea name="characterNotes" [ngModel]="characterDraft().notes" (ngModelChange)="updateCharacter('notes', $event)" rows="3" placeholder="Secrets, hooks, flaws, and goals."></textarea>
+            </label>
+
+            <button type="submit" class="primary-button">Add to selected campaign</button>
+        </form>
+        }
+    </div>
+</article>

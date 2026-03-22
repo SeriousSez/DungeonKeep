@@ -1,0 +1,394 @@
+<main class="page-shell">
+    @if (character(); as char) {
+    <div class="detail-header">
+        <a routerLink="/characters" class="back-link">← Back to Characters</a>
+        <div class="header-content">
+            <div>
+                <p class="eyebrow">Character Sheet</p>
+                <h1>{{ char.name }}</h1>
+                <p class="subheader">{{ char.race }} {{ char.className }} · Level {{ char.level }} · {{ campaignName() }}</p>
+            </div>
+            <span class="status-pill" [attr.data-status]="char.status">{{ char.status }}</span>
+        </div>
+    </div>
+
+    <div class="summary-panels">
+        <section class="panel summary-panel">
+            <h2 class="section-title">Ability Scores</h2>
+            <div class="summary-strip abilities-strip">
+                @for (ability of abilityCards(); track ability.key) {
+                <div class="summary-item ability-card">
+                    <span class="summary-label">{{ ability.abbr }}</span>
+                    <strong class="summary-value">{{ ability.score }}</strong>
+                    <span class="summary-mod">{{ ability.modifierLabel }}</span>
+                </div>
+                }
+            </div>
+        </section>
+
+        <section class="panel summary-panel">
+            <h2 class="section-title">Core Stats</h2>
+            <div class="summary-strip secondary-stats-strip">
+                <div class="summary-item">
+                    <span class="summary-label">Proficiency</span>
+                    <strong class="summary-value">+{{ char.proficiencyBonus }}</strong>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Speed</span>
+                    <strong class="summary-value">{{ speed() }} ft</strong>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Initiative</span>
+                    <strong class="summary-value">{{ initiative() >= 0 ? '+' : '' }}{{ initiative() }}</strong>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Armor Class</span>
+                    <strong class="summary-value">{{ char.armorClass }}</strong>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Heroic Inspiration</span>
+                    <strong class="summary-value">No</strong>
+                    <span class="summary-meta">Inactive</span>
+                </div>
+                <div class="summary-item hp">
+                    <span class="summary-label">Hit Points</span>
+                    <strong class="summary-value">{{ char.hitPoints }} / {{ char.maxHitPoints }}</strong>
+                    <span class="summary-meta">Temp HP: 0</span>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class="sheet-grid">
+        <section class="panel left-column">
+            <h2 class="section-title">Saving Throws</h2>
+            <div class="save-list">
+                @for (save of savingThrows(); track save.key) {
+                <div class="save-card" [class.proficient]="save.proficient">
+                    <span class="save-label">{{ save.label }}</span>
+                    <strong class="save-value">{{ save.modifierLabel }}</strong>
+                </div>
+                }
+            </div>
+
+            <h3 class="subsection-title">Senses</h3>
+            <div class="passive-list">
+                <div class="passive-row"><span>Passive Perception</span><strong>{{ passivePerception() }}</strong></div>
+                <div class="passive-row"><span>Passive Investigation</span><strong>{{ passiveInvestigation() }}</strong></div>
+                <div class="passive-row"><span>Passive Insight</span><strong>{{ passiveInsight() }}</strong></div>
+            </div>
+
+            <h3 class="subsection-title">Proficiencies & Training</h3>
+            <div class="training-grid">
+                <div class="training-block">
+                    <span class="label">Armor</span>
+                    <p>{{ training().armor.length ? training().armor.join(', ') : 'None' }}</p>
+                </div>
+                <div class="training-block">
+                    <span class="label">Weapons</span>
+                    <p>{{ training().weapons.length ? training().weapons.join(', ') : 'None' }}</p>
+                </div>
+                <div class="training-block">
+                    <span class="label">Tools</span>
+                    <p>{{ training().tools.length ? training().tools.join(', ') : 'None' }}</p>
+                </div>
+                <div class="training-block">
+                    <span class="label">Languages</span>
+                    <p>{{ languageList().join(', ') }}</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel middle-column">
+            <h2 class="section-title">Skills</h2>
+            <div class="skills-list">
+                @for (skill of skillRows(); track skill.key) {
+                <div class="skill-row" [class.proficient]="skill.proficient">
+                    <span class="skill-prof">@if (skill.proficient) { ● } @else { ○ }</span>
+                    <span class="skill-name">{{ skill.name }}</span>
+                    <span class="skill-ability">{{ skill.ability }}</span>
+                    <span class="skill-mod">{{ skill.modifierLabel }}</span>
+                </div>
+                }
+            </div>
+        </section>
+
+        <section class="panel right-column">
+            <h2 class="section-title">Defenses & Conditions</h2>
+            <div class="defense-condition-grid">
+                <div>
+                    <h3 class="subsection-title">Defenses</h3>
+                    <ul class="mini-list">
+                        @for (item of defenses(); track $index) {
+                        <li>{{ item }}</li>
+                        }
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="subsection-title">Conditions</h3>
+                    <p class="notes-block">{{ conditionSummary() }}</p>
+                </div>
+            </div>
+
+            <section class="actions-hub">
+                <div class="primary-tab-row">
+                    @for (tab of combatTabs; track tab.key) {
+                    <button type="button" class="combat-tab" [class.active]="activeCombatTab() === tab.key" (click)="setCombatTab(tab.key)">
+                        {{ tab.label }}
+                    </button>
+                    }
+                </div>
+
+                @if (activeCombatTab() === 'actions') {
+                <div class="action-filter-row">
+                    @for (filter of actionFilters; track filter.key) {
+                    <button type="button" class="action-filter" [class.active]="activeActionFilter() === filter.key" (click)="setActionFilter(filter.key)">
+                        {{ filter.label }}
+                    </button>
+                    }
+                </div>
+
+                <div class="actions-meta-row">
+                    <span>Actions · Attacks per Action: {{ attacksPerAction() }}</span>
+                    <span class="manage-custom">Manage Custom</span>
+                </div>
+
+                <div class="actions-table-scroll">
+                    <div class="actions-table">
+                        <div class="actions-head">
+                            <span>Attack</span>
+                            <span>Type</span>
+                            <span>Hit / DC</span>
+                            <span>Damage</span>
+                            <span>Notes</span>
+                        </div>
+                        @for (action of filteredActionRows(); track action.name) {
+                        <div class="actions-row">
+                            <span>{{ action.name }}</span>
+                            <span>{{ action.type }}</span>
+                            <span>{{ action.bonusLabel }}</span>
+                            <span>{{ action.damage }}</span>
+                            <span>{{ action.note }}</span>
+                        </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="quick-lists">
+                    <div>
+                        <h3 class="subsection-title">Bonus Actions</h3>
+                        <ul class="mini-list">
+                            @for (item of quickActions().bonusActions; track item) {
+                            <li>{{ item }}</li>
+                            }
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="subsection-title">Reactions</h3>
+                        <ul class="mini-list">
+                            @for (item of quickActions().reactions; track item) {
+                            <li>{{ item }}</li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+                } @else if (activeCombatTab() === 'spells') {
+                <h3 class="subsection-title">Spellcasting</h3>
+                @if (spellcastingProfile(); as spell) {
+                <div class="info-rows">
+                    <div class="info-row"><span class="label">Modifier</span><span class="value">{{ spell.modifierLabel }}</span></div>
+                    <div class="info-row"><span class="label">Spell Attack</span><span class="value">{{ spell.attackBonus }}</span></div>
+                    <div class="info-row"><span class="label">Save DC</span><span class="value">{{ spell.saveDC }}</span></div>
+                </div>
+                <div class="actions-meta-row">
+                    <span>Search Spell Names, Casting Times, Damage Types, Conditions or Tags</span>
+                    <span class="manage-custom">Manage Spells</span>
+                </div>
+                <div class="action-filter-row">
+                    <button type="button" class="action-filter active">All</button>
+                    <button type="button" class="action-filter">-0-</button>
+                    <button type="button" class="action-filter">1st</button>
+                    <button type="button" class="action-filter">2nd</button>
+                    <button type="button" class="action-filter">3rd</button>
+                </div>
+
+                <h3 class="subsection-title">Cantrip</h3>
+                <div class="actions-table-scroll">
+                    <div class="actions-table">
+                        <div class="actions-head">
+                            <span>Name</span>
+                            <span>Time</span>
+                            <span>Range</span>
+                            <span>Hit / DC</span>
+                            <span>Effect</span>
+                        </div>
+                        @for (spellRow of spellCantrips(); track spellRow.name) {
+                        <div class="actions-row">
+                            <span>{{ spellRow.name }}</span>
+                            <span>1A</span>
+                            <span>60 ft.</span>
+                            <span>{{ spellRow.bonusLabel }}</span>
+                            <span>{{ spellRow.damage }}</span>
+                        </div>
+                        }
+                    </div>
+                </div>
+
+                <h3 class="subsection-title">1st Level</h3>
+                <div class="slot-list">
+                    @for (slot of spell.slots; track slot.level) {
+                    <span class="slot-pill">L{{ slot.level }}: {{ slot.count }}</span>
+                    }
+                </div>
+                <div class="actions-table-scroll">
+                    <div class="actions-table">
+                        <div class="actions-head">
+                            <span>Name</span>
+                            <span>Time</span>
+                            <span>Range</span>
+                            <span>Hit / DC</span>
+                            <span>Effect</span>
+                        </div>
+                        @for (spellRow of spellLevelOne(); track spellRow.name) {
+                        <div class="actions-row">
+                            <span>{{ spellRow.name }}</span>
+                            <span>1A</span>
+                            <span>Touch</span>
+                            <span>{{ spellRow.bonusLabel }}</span>
+                            <span>{{ spellRow.damage }}</span>
+                        </div>
+                        }
+                    </div>
+                </div>
+                } @else {
+                <p class="notes-block">No class spell slots available.</p>
+                }
+                } @else if (activeCombatTab() === 'inventory') {
+                <h3 class="subsection-title">Inventory</h3>
+                @if (inventory(); as bag) {
+                <div class="info-rows">
+                    <div class="info-row"><span class="label">My Inventory</span><span class="value">Weight Carried: {{ inventorySummary().weight }}</span></div>
+                    <div class="info-row"><span class="label">Party Inventory</span><span class="value">{{ inventorySummary().partyWeight }}</span></div>
+                </div>
+                <div class="actions-meta-row">
+                    <span>Search Item Names, Types, Rarities, or Tags</span>
+                    <span class="manage-custom">Manage Inventory</span>
+                </div>
+                <div class="action-filter-row">
+                    <button type="button" class="action-filter active">All</button>
+                    <button type="button" class="action-filter">Equipment</button>
+                    <button type="button" class="action-filter">Backpack</button>
+                    <button type="button" class="action-filter">Other Possessions</button>
+                </div>
+                <div class="training-grid">
+                    <div class="training-block"><span class="label">Weapons</span>
+                        <p>{{ bag.weapons.join(', ') }}</p>
+                    </div>
+                    <div class="training-block"><span class="label">Armor</span>
+                        <p>{{ bag.armor.join(', ') }}</p>
+                    </div>
+                    <div class="training-block"><span class="label">Gear</span>
+                        <p>{{ bag.gear.join(', ') }}</p>
+                    </div>
+                    <div class="training-block"><span class="label">Currency</span>
+                        <p>GP {{ bag.currency.gp }} · SP {{ bag.currency.sp }} · CP {{ bag.currency.cp }}</p>
+                    </div>
+                </div>
+                }
+                } @else if (activeCombatTab() === 'features') {
+                <h3 class="subsection-title">Features & Traits</h3>
+                <div class="action-filter-row">
+                    <button type="button" class="action-filter active">All</button>
+                    <button type="button" class="action-filter">Class Features</button>
+                    <button type="button" class="action-filter">Species Traits</button>
+                    <button type="button" class="action-filter">Feats</button>
+                </div>
+                <ul class="mini-list feature-list">
+                    @for (feature of classFeatures(); track feature.name) {
+                    <li>
+                        <strong>{{ feature.name }}</strong>
+                        <p>{{ feature.description }}</p>
+                    </li>
+                    }
+                </ul>
+                <ul class="traits-list">
+                    @for (trait of char.traits; track $index) {
+                    <li>{{ trait }}</li>
+                    }
+                </ul>
+                } @else if (activeCombatTab() === 'background') {
+                <h3 class="subsection-title">Background</h3>
+                <div class="action-filter-row">
+                    <button type="button" class="action-filter active">All</button>
+                    <button type="button" class="action-filter">Background</button>
+                    <button type="button" class="action-filter">Characteristics</button>
+                    <button type="button" class="action-filter">Appearance</button>
+                </div>
+                <div class="info-rows">
+                    @for (item of basicIdentityRows(); track item.label) {
+                    <div class="info-row">
+                        <span class="label">{{ item.label }}</span>
+                        <span class="value">{{ item.value }}</span>
+                    </div>
+                    }
+                </div>
+                <h3 class="subsection-title">Personality & Roleplay</h3>
+                @if (roleplay(); as rp) {
+                <div class="training-grid">
+                    <div class="training-block"><span class="label">Personality</span>
+                        <p>{{ rp.personality }}</p>
+                    </div>
+                    <div class="training-block"><span class="label">Ideals</span>
+                        <p>{{ rp.ideals }}</p>
+                    </div>
+                    <div class="training-block"><span class="label">Bonds</span>
+                        <p>{{ rp.bonds }}</p>
+                    </div>
+                    <div class="training-block"><span class="label">Flaws</span>
+                        <p>{{ rp.flaws }}</p>
+                    </div>
+                </div>
+                }
+                } @else if (activeCombatTab() === 'notes') {
+                <h3 class="subsection-title">Notes</h3>
+                <div class="action-filter-row">
+                    <button type="button" class="action-filter active">All</button>
+                    <button type="button" class="action-filter">Orgs</button>
+                    <button type="button" class="action-filter">Allies</button>
+                    <button type="button" class="action-filter">Enemies</button>
+                    <button type="button" class="action-filter">Backstory</button>
+                    <button type="button" class="action-filter">Other</button>
+                </div>
+                <div class="training-grid">
+                    <div class="training-block"><span class="label">Organizations</span>
+                        <p>Adventurers Guild</p>
+                    </div>
+                    <div class="training-block"><span class="label">Allies</span>
+                        <p>Elisia</p>
+                    </div>
+                    <div class="training-block"><span class="label">Enemies</span>
+                        <p>Add enemies as needed</p>
+                    </div>
+                    <div class="training-block"><span class="label">Backstory</span>
+                        <p>{{ char.notes || 'No additional notes yet.' }}</p>
+                    </div>
+                </div>
+                } @else {
+                <h3 class="subsection-title">Extras</h3>
+                <div class="actions-meta-row">
+                    <span>Search Names, Types, or Tags</span>
+                    <span class="manage-custom">Manage Extras</span>
+                </div>
+                <p class="notes-block">Extras that you add will display here.</p>
+                }
+            </section>
+        </section>
+    </div>
+    } @else {
+    <div class="empty-state">
+        <h2>Character not found</h2>
+        <p>The character you're looking for doesn't exist.</p>
+        <a routerLink="/characters" class="back-link">← Back to Characters</a>
+    </div>
+    }
+</main>

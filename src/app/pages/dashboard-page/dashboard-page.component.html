@@ -1,0 +1,21 @@
+<main class="page-shell">
+    <app-hero-overview [title]="store.title()" [campaignCount]="store.campaignCount()" [characterCount]="store.characterCount()" [sessionCount]="store.sessionCount()" [readyCharacterCount]="store.readyCharacterCount()" />
+
+    <div class="section-spacing">
+        <app-campaign-board [campaigns]="store.campaigns()" [selectedCampaignId]="store.selectedCampaignId()" [selectedCampaign]="store.selectedCampaign()" [openThreadCount]="store.openThreadCount()" (campaignSelected)="store.selectCampaign($event)" (threadArchived)="store.archiveThread($event)" />
+    </div>
+
+    <section class="bottom-grid">
+        <app-party-roster [selectedParty]="store.selectedParty()" (statusCycled)="store.cycleStatus($event)" (characterPromoted)="store.promoteCharacter($event)" />
+
+        <article class="panel action-panel">
+            <p class="eyebrow">Creation</p>
+            <h2>Start something new</h2>
+            <p class="muted">Use dedicated pages for campaign and character creation.</p>
+            <div class="action-links">
+                <a routerLink="/campaigns/new" class="action-link">New Campaign</a>
+                <a routerLink="/characters/new" class="action-link">New Character</a>
+            </div>
+        </article>
+    </section>
+</main>

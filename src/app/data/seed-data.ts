@@ -1,0 +1,207 @@
+import { Campaign, Character } from '../models/dungeon.models';
+
+export const seedCampaigns: Campaign[] = [
+    {
+        id: 'crown-of-embers',
+        name: 'Crown of Embers',
+        setting: 'Ashfall Reach',
+        tone: 'Heroic',
+        levelRange: 'Levels 5-8',
+        summary: 'A frontier kingdom is rebuilding after a dragon siege, but the royal line is still haunted by the pact that saved it.',
+        hook: 'Recover the ember crown before three rival houses awaken the furnace beneath Redglass Keep.',
+        nextSession: '2026-03-29',
+        partyCharacterIds: ['seraphine', 'brakka', 'ivelios'],
+        sessions: [
+            {
+                id: 'embers-1',
+                title: 'Audience at Redglass Keep',
+                date: '2026-03-29',
+                location: 'Redglass Keep',
+                objective: 'Win the trust of the regent and identify the court saboteur.',
+                threat: 'Moderate'
+            },
+            {
+                id: 'embers-2',
+                title: 'Descent into the Furnace',
+                date: '2026-04-12',
+                location: 'The Cinder Vault',
+                objective: 'Seal the breach before the ash wyrmlings hatch.',
+                threat: 'Deadly'
+            }
+        ],
+        openThreads: ['The regent wears a warding sigil from the old dragon cult.', 'A missing scout was seen entering the soot market under illusion magic.'],
+        loot: ['Glasssteel buckler', 'Map to the Cinder Vault', 'Three sealed phoenix feathers'],
+        npcs: ['Regent Maelis', 'Brother Tovin', 'Rook the soot broker']
+    },
+    {
+        id: 'moonwake-ledger',
+        name: 'Moonwake Ledger',
+        setting: 'The Pearl Coast',
+        tone: 'Mystic',
+        levelRange: 'Levels 3-5',
+        summary: 'A magical storm has begun rewriting ship logs, debts, and family histories across the coast.',
+        hook: 'Track the cursed ledger before an entire harbor city forgets who rules it.',
+        nextSession: '2026-04-05',
+        partyCharacterIds: ['kael', 'mira'],
+        sessions: [
+            {
+                id: 'moonwake-1',
+                title: 'The Ink Tide Auction',
+                date: '2026-04-05',
+                location: 'Harbor of Saint Vey',
+                objective: 'Outbid the ghost cartel for the ledger key.',
+                threat: 'High'
+            }
+        ],
+        openThreads: ['The harbor master appears in two places in the rewritten records.', 'A drowned saint is answering divinations in someone else\'s voice.'],
+        loot: ['Whisper-shell compass', 'Stormglass vial'],
+        npcs: ['Captain Nereza', 'Ledger-Keeper Sol', 'The Lantern Magistrate']
+    },
+    {
+        id: 'wild-below',
+        name: 'The Wild Below',
+        setting: 'Rootmaze Hollow',
+        tone: 'Chaotic',
+        levelRange: 'Levels 1-3',
+        summary: 'Ancient roots have opened a laughing underworld beneath the village orchards.',
+        hook: 'Map the rootmaze before the midsummer fair turns into a fey migration.',
+        nextSession: '2026-04-18',
+        partyCharacterIds: ['thistle'],
+        sessions: [
+            {
+                id: 'wild-1',
+                title: 'Lanterns Under the Orchard',
+                date: '2026-04-18',
+                location: 'Bramble Market',
+                objective: 'Rescue the missing pie judge from a bargain circle.',
+                threat: 'Low'
+            }
+        ],
+        openThreads: ['Every mushroom ring now points toward the mayor\'s cellar.'],
+        loot: ['Honeyed iron key'],
+        npcs: ['Mayor Fen', 'Pip the pie judge', 'The Moss Matron']
+    }
+];
+
+export const seedCharacters: Character[] = [
+    {
+        id: 'seraphine',
+        campaignId: 'crown-of-embers',
+        name: 'Seraphine Vale',
+        playerName: 'Nadia',
+        race: 'Tiefling',
+        className: 'Paladin',
+        level: 7,
+        role: 'Tank',
+        status: 'Ready',
+        background: 'Former inquisitor of the ember cathedral',
+        notes: 'Carries a cracked oath seal that reacts to dragonfire.',
+        abilityScores: { strength: 16, dexterity: 12, constitution: 14, intelligence: 10, wisdom: 15, charisma: 14 },
+        skills: { acrobatics: false, animalHandling: false, arcana: false, athletics: true, deception: false, history: false, insight: true, intimidation: false, investigation: false, medicine: false, nature: false, perception: false, performance: false, persuasion: true, sleightOfHand: false, stealth: false, survival: false },
+        armorClass: 18,
+        hitPoints: 50,
+        maxHitPoints: 52,
+        proficiencyBonus: 3,
+        traits: ['Infernal Legacy: Know the Thaumaturgy cantrip', 'Darkvision: Can see in dim light within 60 feet', 'Resistance to Fire: Resistance to fire damage']
+    },
+    {
+        id: 'brakka',
+        campaignId: 'crown-of-embers',
+        name: 'Brakka Stonehand',
+        playerName: 'Luis',
+        race: 'Goliath',
+        className: 'Fighter',
+        level: 6,
+        role: 'Striker',
+        status: 'Recovering',
+        background: 'Arena veteran turned caravan guard',
+        notes: 'Wants revenge on the noble house that fixed his final match.',
+        abilityScores: { strength: 18, dexterity: 14, constitution: 16, intelligence: 8, wisdom: 10, charisma: 11 },
+        skills: { acrobatics: true, animalHandling: false, arcana: false, athletics: true, deception: false, history: false, insight: false, intimidation: true, investigation: false, medicine: false, nature: false, perception: false, performance: false, persuasion: false, sleightOfHand: false, stealth: false, survival: false },
+        armorClass: 16,
+        hitPoints: 42,
+        maxHitPoints: 47,
+        proficiencyBonus: 3,
+        traits: ['Stone\'s Endurance: Reduce damage to self by 1d12+CON (once per rest)', 'Powerful Build: Can push/drag 1.5x their carrying capacity', 'Mountain Born: Acclimated to high altitudes']
+    },
+    {
+        id: 'ivelios',
+        campaignId: 'crown-of-embers',
+        name: 'Ivelios Quill',
+        playerName: 'Priya',
+        race: 'Elf',
+        className: 'Wizard',
+        level: 7,
+        role: 'Caster',
+        status: 'Ready',
+        background: 'Royal archivist exiled for reading forbidden flame texts',
+        notes: 'Believes the ember crown is sentient and bargaining through dreams.',
+        abilityScores: { strength: 8, dexterity: 13, constitution: 12, intelligence: 17, wisdom: 14, charisma: 11 },
+        skills: { acrobatics: false, animalHandling: false, arcana: true, athletics: false, deception: false, history: true, insight: false, intimidation: false, investigation: true, medicine: false, nature: true, perception: false, performance: false, persuasion: false, sleightOfHand: false, stealth: false, survival: false },
+        armorClass: 13,
+        hitPoints: 31,
+        maxHitPoints: 34,
+        proficiencyBonus: 3,
+        traits: ['Keen Senses: Proficiency in Perception', 'Fey Ancestry: Advantage against being charmed or put to sleep', 'Trance: Meditate instead of sleeping']
+    },
+    {
+        id: 'kael',
+        campaignId: 'moonwake-ledger',
+        name: 'Kael Drift',
+        playerName: 'Jordan',
+        race: 'Half-Elf',
+        className: 'Rogue',
+        level: 5,
+        role: 'Scout',
+        status: 'Ready',
+        background: 'Smuggler with a talent for ghost routes',
+        notes: 'Has seen his own name vanish from three customs ledgers.',
+        abilityScores: { strength: 10, dexterity: 16, constitution: 12, intelligence: 13, wisdom: 13, charisma: 12 },
+        skills: { acrobatics: true, animalHandling: false, arcana: false, athletics: false, deception: true, history: false, insight: false, intimidation: false, investigation: true, medicine: false, nature: false, perception: true, performance: false, persuasion: false, sleightOfHand: true, stealth: true, survival: false },
+        armorClass: 14,
+        hitPoints: 28,
+        maxHitPoints: 31,
+        proficiencyBonus: 3,
+        traits: ['Fey Ancestry: Advantage against being charmed or put to sleep', 'Versatile Heritage: Proficiency in two skills of choice', 'Darkvision: Can see in dim light within 60 feet']
+    },
+    {
+        id: 'mira',
+        campaignId: 'moonwake-ledger',
+        name: 'Mira Fen',
+        playerName: 'Asha',
+        race: 'Human',
+        className: 'Cleric',
+        level: 4,
+        role: 'Support',
+        status: 'Resting',
+        background: 'Dockside chaplain of the moonwake shrine',
+        notes: 'Her prayers are being answered by a voice from the storm wall.',
+        abilityScores: { strength: 12, dexterity: 11, constitution: 13, intelligence: 10, wisdom: 16, charisma: 14 },
+        skills: { acrobatics: false, animalHandling: true, arcana: false, athletics: false, deception: false, history: false, insight: true, intimidation: false, investigation: false, medicine: true, nature: false, perception: true, performance: false, persuasion: true, sleightOfHand: false, stealth: false, survival: true },
+        armorClass: 13,
+        hitPoints: 26,
+        maxHitPoints: 28,
+        proficiencyBonus: 2,
+        traits: ['Versatility: +1 to all ability scores', 'Diverse Heritage: can choose any feat at 1st level']
+    },
+    {
+        id: 'thistle',
+        campaignId: 'wild-below',
+        name: 'Thistle Reed',
+        playerName: 'Cam',
+        race: 'Halfling',
+        className: 'Bard',
+        level: 2,
+        role: 'Support',
+        status: 'Ready',
+        background: 'Traveling fiddler and accidental folk hero',
+        notes: 'A fey chorus keeps harmonizing with every lie she tells.',
+        abilityScores: { strength: 8, dexterity: 14, constitution: 10, intelligence: 12, wisdom: 11, charisma: 16 },
+        skills: { acrobatics: false, animalHandling: true, arcana: false, athletics: false, deception: true, history: false, insight: false, intimidation: false, investigation: false, medicine: false, nature: false, perception: false, performance: true, persuasion: true, sleightOfHand: false, stealth: false, survival: false },
+        armorClass: 12,
+        hitPoints: 11,
+        maxHitPoints: 12,
+        proficiencyBonus: 2,
+        traits: ['Naturally Stealthy: Can hide even when only lightly obscured', 'Halfling Nimbleness: Can move through larger creatures\' spaces', 'Lucky: Reroll natural 1s on attack rolls']
+    }
+];

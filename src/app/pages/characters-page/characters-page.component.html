@@ -1,0 +1,22 @@
+<main class="page-stack">
+    <section class="panel page-intro">
+        <p class="eyebrow">Character management</p>
+        <h1>Characters</h1>
+        <p>Track readiness, level progression, and player-facing notes for the active party.</p>
+    </section>
+
+    <section class="page-stats">
+        <div class="stat-card">
+            <p class="stat-label">Total Characters</p>
+            <p class="stat-value">{{ store.characterCount() }}</p>
+        </div>
+        <div class="stat-card">
+            <p class="stat-label">Ready to Play</p>
+            <p class="stat-value">{{ store.readyCharacterCount() }}</p>
+        </div>
+    </section>
+
+    <app-party-roster [selectedParty]="store.selectedParty()" (statusCycled)="store.cycleStatus($event)" (characterPromoted)="store.promoteCharacter($event)" />
+
+    <a routerLink="/characters/new" class="create-link">+ New Character</a>
+</main>

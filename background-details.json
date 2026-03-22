@@ -1,0 +1,786 @@
+﻿{
+    "Entertainer":  {
+                        "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Entertainer Fold Unfold Table of Contents Variants Gladiator Features Entertainer Routines By Popular Demand Suggested Characteristics Personality Traits Ideals Bonds Flaws You thrive in front of an audience. You know how to entrance them, entertain them, and even inspire them. Your poetics can stir the hearts of those who hear you, awakening grief or joy, laughter or anger. Your music raises their spirits or captures their sorrow. Your dance steps captivate, your humor cuts to the quick. Whatever techniques you use, your art is your life.",
+                        "skills":  "Acrobatics, Performance",
+                        "tools":  "Disguise kit, one type of musical instrument",
+                        "languages":  "None",
+                        "feature":  "Entertainer Routines By Popular Demand",
+                        "url":  "https://dnd5e.wikidot.com/background:entertainer"
+                    },
+    "Far Traveler":  {
+                         "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Far Traveler Fold Unfold Table of Contents Features Why Are You Here? Where Are You From? All Eyes on You Suggested Characteristics Personality Traits Ideals Bonds Flaws Almost all of the common people and other folk that one might encounter along the Sword Coast or in the North have one thing in common: they live out their lives without ever traveling more than a few miles from where they were born. You aren\u0027t one of those folk. You are from a distant place, one so remote that few of the common folk in the North realize that it exists, and chances are good that even if some people you meet have heard of your homeland, they know merely the name and perhaps a few outrageous stories. You have come to this part of Faerûn for your own reasons, which you might or might not choose to share. Although you will undoubtedly find some of this land\u0027s ways to be strange and discomfiting, you can also be sure that some things its people take for granted will be to you new wonders that you\u0027ve never laid eyes on before. By the same token, you\u0027re a person of interest, for good or ill, to those around you almost anywhere you go.",
+                         "skills":  "Insight, Perception",
+                         "tools":  "Any one musical instrument or gaming set of your choice, likely something native to your homeland",
+                         "languages":  "Any one of your choice",
+                         "feature":  "Why Are You Here? Where Are You From? All Eyes on You",
+                         "url":  "https://dnd5e.wikidot.com/background:far-traveler"
+                     },
+    "Shade Fanatic":  {
+                          "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Shade Fanatic",
+                          "skills":  "Deception, Intimidation",
+                          "tools":  "Forgery kit",
+                          "languages":  "Netherese",
+                          "feature":  "Background Feature",
+                          "url":  "https://dnd5e.wikidot.com/background:shade-fanatic"
+                      },
+    "Simic Scientist":  {
+                            "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Simic Scientist Fold Unfold Table of Contents Features Clades and Projects Researcher Simic Guild Spells Suggested Characteristics Personality Traits Ideals Bonds Flaws Contacts Simic Contacts Non-Simic Contacts Imagine a perfect world: one in which nature and civilization exist in harmony, adapted to each other; one in which life is shaped to match its environment and the environment is shaped to match life. That\u0027s the world you have been trying to grow in the laboratories of the Simic Combine. Nature is all about adaptation, evolution, and balance - but for it to keep up with the pace of advancing civilization, nature needs some help from biomancers and terraformers. If, along the way, you happen to create super-soldiers and mutant monsters that can bolster the combine\u0027s defenses against the schemes and ambitions of the other guilds, so much the better.",
+                            "skills":  "",
+                            "tools":  "",
+                            "languages":  "Two of your choice",
+                            "feature":  "Clades and Projects Researcher Simic Guild Spells",
+                            "url":  "https://dnd5e.wikidot.com/background:simic-scientist"
+                        },
+    "Urchin":  {
+                   "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Urchin Fold Unfold Table of Contents Features City Secrets Suggested Characteristics Personality Traits Ideals Bonds Flaws You grew up on the streets alone, orphaned, and poor, You had no one to watch over you or to provide for you, so you learned to provide for yourself. You fought fiercely over food and kept a constant watch out for other desperate souls who might steal from you. You slept on rooftops and in alleyways, exposed to the elements, and endured sickness without the advantage of medicine or a place to recuperate. You\u0027ve survived despite all odds, and did so through cunning, strength, speed, or some combination of each. You begin your adventuring career with enough money to live modestly but securely for at least ten days. How did you come by that money? What allowed you to break free of your desperate circumstances and embark on a better life?",
+                   "skills":  "Sleight of Hand, Stealth",
+                   "tools":  "Disguise kit, thieves\u0027 tools",
+                   "languages":  "None",
+                   "feature":  "City Secrets",
+                   "url":  "https://dnd5e.wikidot.com/background:urchin"
+               },
+    "Rewarded":  {
+                     "description":  "",
+                     "skills":  "Insight, Persuasion Languages: One of your choice",
+                     "tools":  "",
+                     "languages":  "One of your choice Tool Proficiencies: One gaming set of your choice (such as playing cards or three-dragon ante cards)",
+                     "feature":  "Background Feature",
+                     "url":  "https://dnd5e.wikidot.com/background:rewarded"
+                 },
+    "Inheritor":  {
+                      "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Inheritor Fold Unfold Table of Contents Features Inheritance Suggested Characteristics You are the heir to something of great value – not mere coin or wealth, but an object that has been entrusted to you and you alone. Your inheritance might have come directly to you from a member of your family, by right of birth, or it could have been left to you by a friend, a mentor, a teacher, or someone else important in your life. The revelation of your inheritance changed your life, and might have set you on the path to adventure, but it could also come with many dangers, including those who covet your gift and want to take it from you –\u0026nbsp;by force, if need be.",
+                      "skills":  "Survival, plus one from among Arcana, History, and Religion",
+                      "tools":  "Your choice of a gaming set or a musical instrument",
+                      "languages":  "Any one of your choice",
+                      "feature":  "Inheritance",
+                      "url":  "https://dnd5e.wikidot.com/background:inheritor"
+                  },
+    "Hillsfar Merchant":  {
+                              "description":  "",
+                              "skills":  "Insight, Persuasion",
+                              "tools":  "",
+                              "languages":  "",
+                              "feature":  "Background Feature",
+                              "url":  "https://dnd5e.wikidot.com/background:hillsfar-merchant"
+                          },
+    "Anthropologist":  {
+                           "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Anthropologist Fold Unfold Table of Contents Features Cultural Chameleon Adept Linguist Suggested Characteristics Personality Traits Ideals Bonds Flaws You have always been fascinated by other cultures, from the most ancient and primeval lost lands to the most modern civilizations. By studying other cultures\u0027 customs, philosophies, laws, rituals, religious beliefs, languages, and art, you have learned how tribes, empires, and all forms of society in between craft their own destinies and doom. This knowledge came to you not only through books and scrolls, but also through firsthand observation –\u0026nbsp;by visiting far-flung settlements and exploring local histories and customs.",
+                           "skills":  "Insight, Religion",
+                           "tools":  "None",
+                           "languages":  "Two of your choice",
+                           "feature":  "Cultural Chameleon Adept Linguist",
+                           "url":  "https://dnd5e.wikidot.com/background:anthropologist"
+                       },
+    "Faceless":  {
+                     "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Faceless Fold Unfold Table of Contents Features Faceless Persona Dual Personalities Suggested Characteristics Personality Traits Ideals Bonds Flaws Being who you are, you could never be a hero. Whether due to your class, your people, your family, or your sins, something about you prevents you from effectively pursuing the path you\u0027ve chosen. Even so, that doesn\u0027t stop you. You\u0027ve left your old face behind, taking on a new persona, becoming something more. Characters with the faceless background don a disguise—literally or otherwise—as they adventure. This persona might be dramatic or subtle. In a way, though, many characters have such larger than life personalities. Therefore, this background largely focuses on detailing the hero behind the mask.",
+                     "skills":  "Deception, Intimidation",
+                     "tools":  "Disguise kit",
+                     "languages":  "One of your choice",
+                     "feature":  "Faceless Persona Dual Personalities",
+                     "url":  "https://dnd5e.wikidot.com/background:faceless"
+                 },
+    "Initiate":  {
+                     "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Initiate Fold Unfold Table of Contents Features Trial of the Five Gods Suggested Characteristics Personality Traits Ideals Bonds Flaws You are an initiate, on the path to completing the trials of the five gods in the hope of earning a glorified death in the final Trial of Zeal. Some combination of your natural aptitude, your crop’s needs, and your teachers’ assessment while you were an acolyte led you to focus your training in one particular area of specialization—hand-to-hand combat, long-range combat, or spellcasting. But only a well-rounded initiate can be called truly worthy of the afterlife. If you are a hand-to-hand specialist, consider the barbarian, fighter, monk, paladin, or rogue classes. As a long-range combat specialist, you might be a fighter, a ranger, or a rogue. If you are a spellcasting specialist, you might be a bard, sorcerer, or wizard. And beyond this initial choice, you might consider multiclassing or using feats to round out your skills in all three areas.",
+                     "skills":  "Athletics, Intimidation",
+                     "tools":  "",
+                     "languages":  "",
+                     "feature":  "Trial of the Five Gods",
+                     "url":  "https://dnd5e.wikidot.com/background:initiate"
+                 },
+    "Quandrix Student":  {
+                             "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Quandrix Student Fold Unfold Table of Contents Feature Quandrix Initiate Building a Quandrix Character Quandrix Personality Traits Quandrix Trinkets In preparation to become a student of Quandrix College, you have spent years working through the college\u0027s math problems for prospective students. Your interests concentrate on the mathematical principles and patterns found in the natural world. You might lean more toward mathematics or physics, or you delve into more abstract studies of metaphysics, arcana, or logic.",
+                             "skills":  "Arcana, Nature",
+                             "tools":  "One type of artisan\u0027s tools",
+                             "languages":  "One of your choice",
+                             "feature":  "Background Feature",
+                             "url":  "https://dnd5e.wikidot.com/background:quandrix-student"
+                         },
+    "Inquisitor":  {
+                       "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Inquisitor Fold Unfold Table of Contents Features Legal Authority Suggested Characteristics Personality Traits Ideals Bonds Flaws Historically, inquisitors were cathar detectives who investigated crimes both mundane and supernatural. They were known for traveling to remote parishes plagued by unexplained murders, and for exposing werewolves living among normal humans. During Avacyn’s absence, when the archangel was trapped within the demonic prison known as the Helvault, the inquisitors led a series of brutal forays into Kessig and the Gavony Moorland. They executed suspected lycanthropes with little or no proof, and punished accused heretics in unsanctioned trials. With Avacyn’s madness, this savage form of inquisition has become the norm, and inquisitors who still pry into dark mysteries have become a minority.",
+                       "skills":  "Investigation, Religion",
+                       "tools":  "",
+                       "languages":  "",
+                       "feature":  "Legal Authority",
+                       "url":  "https://dnd5e.wikidot.com/background:inquisitor"
+                   },
+    "Marine":  {
+                   "description":  "",
+                   "skills":  "Athletics, Survival",
+                   "tools":  "Vehicles (land \u0026amp; water)",
+                   "languages":  "None",
+                   "feature":  "Hardship Endured Steady",
+                   "url":  "https://dnd5e.wikidot.com/background:marine"
+               },
+    "House Agent":  {
+                        "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: House Agent Fold Unfold Table of Contents Features Role House Connection Suggested Characteristics Personality Traits Ideals Bonds Flaws You have sworn fealty to a dragonmarked house. If you have a dragonmark, you\u0027re likely a member of one of the house\u0027s influential families; otherwise you\u0027re an outsider who hopes to make your fortune through the house. Your main task is to serve as the eyes of your house, but you could be called on at any time to act as its hand. Such missions can be perilous but lucrative.",
+                        "skills":  "Investigation, Persuasion",
+                        "tools":  "Two proficiencies from the House Tool Proficiencies table",
+                        "languages":  "None",
+                        "feature":  "Role House Connection",
+                        "url":  "https://dnd5e.wikidot.com/background:house-agent"
+                    },
+    "Phlan Refugee":  {
+                          "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Phlan Refugee",
+                          "skills":  "Insight, Athletics",
+                          "tools":  "One type of artisan\u0027s tools",
+                          "languages":  "One of your choosing",
+                          "feature":  "Background Feature",
+                          "url":  "https://dnd5e.wikidot.com/background:phlan-refugee"
+                      },
+    "Feylost":  {
+                    "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Feylost Fold Unfold Table of Contents Features Fey Mark Feywild Visitor Feywild Connection Suggested Characteristics Personality Traits Ideals Bonds Flaws You grew up in the Feywild after disappearing from your home plane as a child. Perhaps you were spirited away by kindly Fey who thought you were destined for great things. Perhaps you stumbled through a Fey crossing by chance during a twilight stroll in the woods. Perhaps you were kidnapped by evil Fey but escaped from their clutches. Whatever the manner of your disappearance, you gradually fell under the Feywild\u0027s spell and learned a little about the nature of the mercurial tricksters that dwell there. When you finally returned to your home plane, you did not come back unchanged. You are haunted by the fact the Feywild-a mirror world hidden behind a mere twist of perception-is only a hair\u0027s breadth away. Although your memories of the Feywild grow fainter with each passing day, your heart swells with a mixture of fear and joy at the prospect of one day venturing back to the Plane of Faerie-your home away from home.",
+                    "skills":  "Deception, Survival",
+                    "tools":  "One type of musical instrument",
+                    "languages":  "One of your choice of Elvish, Gnomish, Goblin, or Sylvan.",
+                    "feature":  "Fey Mark Feywild Visitor Feywild Connection",
+                    "url":  "https://dnd5e.wikidot.com/background:feylost"
+                },
+    "Boros Legionnaire":  {
+                              "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Boros Legionnaire Fold Unfold Table of Contents Features Legion Station Boros Guild Spells Suggested Characteristics Personality Traits Ideals Bonds Flaws Contacts Boros Contacts Non-Boros Contacts As a member of the Boros Legion, your life is devoted to the service of angels and consecrated to the work of establishing justice and peace on the streets of Ravnica. You might be a true believer, inspired by the example of the angels, moved by the plight of the downtrodden, and devoted to the cause of justice. Or you could be a cynic in the ranks, perhaps because you reluctantly followed in the footsteps of a Boros parent, succumbed to the persuasion of a charismatic recruiter\u0027s lofty promises, or were drawn in by the prospect of a life of action.",
+                              "skills":  "Athletics, Intimidation",
+                              "tools":  "One type of gaming set",
+                              "languages":  "Choose one of Celestial, Draconic, Goblin, or Minotaur",
+                              "feature":  "Legion Station Boros Guild Spells",
+                              "url":  "https://dnd5e.wikidot.com/background:boros-legionnaire"
+                          },
+    "Secret Identity":  {
+                            "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Secret Identity",
+                            "skills":  "Deception, Stealth",
+                            "tools":  "",
+                            "languages":  "",
+                            "feature":  "Background Feature",
+                            "url":  "https://dnd5e.wikidot.com/background:secret-identity"
+                        },
+    "Acolyte":  {
+                    "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Acolyte Fold Unfold Table of Contents Features Shelter of the Faithful Suggested Characteristics Personality Traits Ideals Bonds Flaws You have spent your life in the service of a temple to a specific god or pantheon of gods. You act as an intermediary between the realm of the holy and the mortal world, performing sacred rites and offering sacrifices in order to conduct worshipers into the presence of the divine. You are not necessarily a cleric –\u0026nbsp;performing sacred rites is not the same thing as channeling divine power. Choose a god, a pantheon of gods, or some other quasi-divine being, and work with your DM to detail the nature of your religious service. Were you a lesser functionary in a temple, raised from childhood to assist the priests in the sacred rites? Or were you a high priest who suddenly experienced a call to serve your god in a different way? Perhaps you were the leader of a small cult outside of any established temple structure, or even an occult group that served a fiendish master that you now deny.",
+                    "skills":  "Insight, Religion",
+                    "tools":  "None",
+                    "languages":  "Two of your choice",
+                    "feature":  "Shelter of the Faithful",
+                    "url":  "https://dnd5e.wikidot.com/background:acolyte"
+                },
+    "Volstrucker Agent":  {
+                              "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Volstrucker Agent Fold Unfold Table of Contents Proficiencies Features Tragedy Shadow Network Suggested Characteristics Personality Traits Ideals Bonds Flaws The Volstrucker are a clandestine organization of arcane assassins and enforcers in the service of the Cerberus Assembly. Their operatives bear no official title, but are referred to in hushed tones as \u0026quot;scourgers\u0026quot; by residents of large Dwendalian cities such as Zadash and Rexxentrum. You are a Volstrucker agent. Your duty is to silence dissidents who would undermine the will of King Dwendal - and more importantly, the will of the Assembly.",
+                              "skills":  "Deception, Stealth",
+                              "tools":  "Poisoner\u0027s Kit",
+                              "languages":  "One of your choice",
+                              "feature":  "Tragedy Shadow Network",
+                              "url":  "https://dnd5e.wikidot.com/background:volstrucker-agent"
+                          },
+    "Folk Hero":  {
+                      "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Folk Hero Fold Unfold Table of Contents Features Defining Event Rustic Hospitality Suggested Characteristics Personality Traits Ideals Bonds Flaw You come from a humble social rank, but you are destined for so much more. Already the people of your home village regard you as their champion, and your destiny calls you to stand against the tyrants and monsters that threaten the common folk everywhere.",
+                      "skills":  "Animal Handling, Survival",
+                      "tools":  "One type of artisan\u0027s tools, vehicles (land)",
+                      "languages":  "None",
+                      "feature":  "Defining Event Rustic Hospitality",
+                      "url":  "https://dnd5e.wikidot.com/background:folk-hero"
+                  },
+    "Dissenter":  {
+                      "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Dissenter",
+                      "skills":  "",
+                      "tools":  "",
+                      "languages":  "",
+                      "feature":  "Background Feature",
+                      "url":  "https://dnd5e.wikidot.com/background:dissenter"
+                  },
+    "Sage":  {
+                 "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Sage Fold Unfold Table of Contents Features Specialty Researcher Suggested Characteristics Personality Traits Ideals Bonds Flaws You spent years learning the lore of the multiverse. You scoured manuscripts, studied scrolls, and listened to the greatest experts on the subjects that interest you. Your efforts have made you a master in your fields of study.",
+                 "skills":  "Arcana, History",
+                 "tools":  "None",
+                 "languages":  "Two of your choice",
+                 "feature":  "Specialty Researcher",
+                 "url":  "https://dnd5e.wikidot.com/background:sage"
+             },
+    "Rival Intern":  {
+                         "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Rival Intern",
+                         "skills":  "History, Investigation",
+                         "tools":  "One type of artisan\u0027s tools",
+                         "languages":  "Any one of your choice",
+                         "feature":  "Background Feature",
+                         "url":  "https://dnd5e.wikidot.com/background:rival-intern"
+                     },
+    "Knight of the Order":  {
+                                "description":  "",
+                                "skills":  "Persuasion, plus one from among Arcana, History, Nature, and Religion, as appropriate for your order",
+                                "tools":  "One type of gaming set or musical instrument",
+                                "languages":  "One of your choice",
+                                "feature":  "Background Feature",
+                                "url":  "https://dnd5e.wikidot.com/background:knight-of-the-order"
+                            },
+    "Uthgardt Tribe Member":  {
+                                  "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Uthgardt Tribe Member Fold Unfold Table of Contents Features Barbarian Tribes of Faerûn Uthgardt Tribes and Their Territories Blue Bear Black Lion and Red Tiger Sky Pony Tree Ghost Great Worm Black Raven Elk Thunderbeast Gray Wolf Griffon Red Pony and Golden Eagle Uthgardt Heritage Suggested Characteristics Though you might have only recently arrived in civilized lands, you are no stranger to the values of cooperation and group effort when striving for supremacy. You learned these principles, and much more, as a member of an Uthgardt tribe. Your people have always tried to hold to the old ways. Tradition and taboo have kept the Uthgardt strong while the kingdoms of others have collapsed into chaos and ruin. But for the last few generations, some bands among the tribes were tempted to settle, make peace, trade, and even to build towns. Perhaps this is why Uthgar chose to raise up the totems among the people as living embodiments of his power. Perhaps they needed a reminder of who they were and from whence they came. The Chosen of Uthgar led bands back to the old ways, and most of your people abandoned the soft ways of civilization. You might have grown up in one of the tribes that had decided to settle down, and now that they have abandoned that path, you find yourself adrift. Or you might come from a segment of the Uthgardt that adheres to tradition, but you seek to bring glory to your tribe by achieving great things as a formidable adventurer. See the \u0026quot;Uthgardt Tribes and Their Territories\u0026quot; section below for details on each tribe\u0027s territory and its activities that will help you choose your affiliation.",
+                                  "skills":  "Athletics, Survival",
+                                  "tools":  "One type of musical instrument or artisan\u0027s tools",
+                                  "languages":  "One of your choice",
+                                  "feature":  "Background Feature",
+                                  "url":  "https://dnd5e.wikidot.com/background:uthgardt-tribe-member"
+                              },
+    "Silverquill Student":  {
+                                "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Silverquill Student Fold Unfold Table of Contents Feature Silverquill Initiate Building a Silverquill Character Silverquill Personality Traits Silverquill Trinkets You have spent years practicing your writing and oration in the hope of becoming a student of Silverquill College. Your studies focus on language, literature, and the power of words, both magical and otherwise. The metaphorical power of words to illuminate or conceal is joined with the literal ability of magic to do the same in your academic pursuits.",
+                                "skills":  "",
+                                "tools":  "",
+                                "languages":  "Two of your choice",
+                                "feature":  "Background Feature",
+                                "url":  "https://dnd5e.wikidot.com/background:silverquill-student"
+                            },
+    "Urban Bounty Hunter":  {
+                                "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Urban Bounty Hunter Fold Unfold Table of Contents Features Ear to the Ground Suggested Characteristics Before you became an adventurer, your life was already full of conflict and excitement, because you made a living tracking down people for pay. Unlike some people who collect bounties, though, you aren\u0027t a savage who follows quarry into or through the wilderness. You\u0027re involved in a lucrative trade, in the place where you live, that routinely tests your skills and survival instincts. What\u0027s more, you aren\u0027t alone, as a bounty hunter in the wild would be: you routinely interact with both the criminal subculture and other bounty hunters, maintaining contacts in both areas to help you succeed. You might be a cunning thief-catcher, prowling the rooftops to catch one of the myriad burglars of the city. Perhaps you are someone who has your ear to the street, aware of the doings of thieves\u0027 guilds and street gangs. You might be a \u0026quot;velvet mask\u0026quot; bounty hunter, one who blends in with high society and noble circles in order to catch the criminals that prey on the rich, whether pickpockets or con artists. The community where you plied your trade might have been one of Faenûn\u0027s great metropolises, such as Waterdeep or Baldur\u0027s Gate, or a less populous location, perhaps Luskan or Yartar –\u0026nbsp;any place that\u0027s large enough to have a steady supply of potential quarries. As a member of an adventuring party, you might find it more difficult to pursue a personal agenda that doesn\u0027t fit with the group\u0027s objectives – but on the other hand, you can take down much more formidable targets with the help of your companions.",
+                                "skills":  "Choose two from among Deception, Insight, Persuasion, and Stealth",
+                                "tools":  "Choose two from among one type of gaming set, one musical instrument, and thieves\u0027 tools",
+                                "languages":  "None",
+                                "feature":  "Ear to the Ground",
+                                "url":  "https://dnd5e.wikidot.com/background:urban-bounty-hunter"
+                            },
+    "Archaeologist":  {
+                          "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Archaeologist Fold Unfold Table of Contents Features Dust Digger Historical Knowledge Suggested Characteristics Personality Traits Ideals Bonds Flaws An archaeologist learns about the long-lost and fallen cultures of the past by studying their remains –\u0026nbsp;their bones, their ruins, their surviving masterworks, and their tombs. Those who practice archaeology travel to the far corners of the world to root through crumbled cities and lost dungeons, digging in search of artifacts that might tell the stories of monarchs and high priests, wars and cataclysms.",
+                          "skills":  "History, Survival",
+                          "tools":  "Cartographer\u0027s tools or navigator\u0027s tools",
+                          "languages":  "One of your choice",
+                          "feature":  "Dust Digger Historical Knowledge",
+                          "url":  "https://dnd5e.wikidot.com/background:archaeologist"
+                      },
+    "Gruul Anarch":  {
+                         "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Gruul Anarch Fold Unfold Table of Contents Features Rubblebelt Refuge Gruul Guild Spells Suggested Characteristics Personality Traits Ideals Bonds Flaws Contacts Gruul Contacts Non-Gruul Contacts The entire world of Ravnica is a sprawling metropolis, but you are a native of the wild areas that still exist - the abandoned districts, the rubblebelts, the overgrown parks, and the crumbling ruins. You are part of a savage society that clings desperately to the Old Ways - attuned to nature, full of primal rage, and given short shrift by a world consumed with continuing civilization\u0027s march of progress.",
+                         "skills":  "Animal Handling, Athletics",
+                         "tools":  "Herbalism Kit",
+                         "languages":  "Choose one of Draconic, Giant, Goblin, or Sylvan",
+                         "feature":  "Rubblebelt Refuge Gruul Guild Spells",
+                         "url":  "https://dnd5e.wikidot.com/background:gruul-anarch"
+                     },
+    "Mage of High Sorcery":  {
+                                 "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Mage of High Sorcery Fold Unfold Table of Contents Feature Initiate of High Sorcery Building a Mage of High Sorcery Character Mage of High Sorcery Trinkets Prerequisite: Dragonlance Campaign Your talent for magic came to the attention of the Mages of High Sorcery, an organization of spellcasters that studies magic and prevent its misuse. You\u0027ve trained among the Mages, but whether you\u0027ll face the dangerous tests required to become a full member of the group remains to be determined. Your passion for studying magic has likely already predisposed you toward one of the organization\u0027s three orders: the benevolent Order of the White Robes, the balance-pursuing Order of the Red Robes, or the ruthless Order of the Black Robes. In the world of Krynn, many refer to the Mages of High Sorcery as the Wizards of High Sorcery. The organization accepts more than wizards, though, with sorcerers, warlocks, and other spellcasters included among their ranks.",
+                                 "skills":  "",
+                                 "tools":  "",
+                                 "languages":  "Two of your choice",
+                                 "feature":  "Background Feature",
+                                 "url":  "https://dnd5e.wikidot.com/background:mage-of-high-sorcery"
+                             },
+    "Witherbloom Student":  {
+                                "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Witherbloom Student Fold Unfold Table of Contents Feature Witherbloom Initiate Building a Witherbloom Character Witherbloom Personality Traits Witherbloom Trinkets You filled your childhood with rudimentary alchemical experiments, all in the hope of becoming a student of Witherbloom College. The life sciences are the focus of your reading, which include biology and necromancy. Brewing strange concoctions with medicinal properties, exploring the anatomies of monsters, and cataloging swamp flora are the kinds of studies you might pursue at Witherbloom College.",
+                                "skills":  "Nature, Survival",
+                                "tools":  "Herbalism Kit",
+                                "languages":  "One of your choice",
+                                "feature":  "Background Feature",
+                                "url":  "https://dnd5e.wikidot.com/background:witherbloom-student"
+                            },
+    "Ticklebelly Nomad":  {
+                              "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Ticklebelly Nomad",
+                              "skills":  "Nature, Animal Handling",
+                              "tools":  "Herbalism kit",
+                              "languages":  "Giant",
+                              "feature":  "Background Feature",
+                              "url":  "https://dnd5e.wikidot.com/background:ticklebelly-nomad"
+                          },
+    "Prismari Student":  {
+                             "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Prismari Student Fold Unfold Table of Contents Feature Prismari Initiate Building a Prismari Character Prismari Personality Traits Prismari Trinkets You are an artist, and you have been preparing to hone your craft according to the traditions of Prismari College. Whatever your medium-sculpture, dance, paint, music, drama, architecture, or any other field-you have grand visions of bringing your art to life in a fusion of magic and creativity.",
+                             "skills":  "Acrobatics, Performance",
+                             "tools":  "One type of musical instrument or artisan\u0027s tools",
+                             "languages":  "One of your choice",
+                             "feature":  "Background Feature",
+                             "url":  "https://dnd5e.wikidot.com/background:prismari-student"
+                         },
+    "Harborfolk":  {
+                       "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Harborfolk",
+                       "skills":  "Athletics, Sleight of Hand",
+                       "tools":  "",
+                       "languages":  "",
+                       "feature":  "Background Feature",
+                       "url":  "https://dnd5e.wikidot.com/background:harborfolk"
+                   },
+    "Mulmaster Aristocrat":  {
+                                 "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Mulmaster Aristocrat",
+                                 "skills":  "Deception, Performance",
+                                 "tools":  "",
+                                 "languages":  "",
+                                 "feature":  "Background Feature",
+                                 "url":  "https://dnd5e.wikidot.com/background:mulmaster-aristocrat"
+                             },
+    "Wildspacer":  {
+                       "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Wildspacer Fold Unfold Table of Contents Features Close Encounter Wildspace Adaptation You were raised in the void of Wildspace—home to asteroid miners, moon farmers, and other hardy folk. Perhaps you grew up in a far-flung settlement such as the Rock of Bral, or you spent your early years on the crew of a spelljamming ship, performing helpful chores such as swabbing the deck, loading and offloading cargo, and scraping barnacles off the hull. Whatever your history, life in Wildspace has toughened you so well that you are as brave as a miniature giant space hamster when it comes to facing the terrors and other challenges of the airless night.",
+                       "skills":  "Athletics, Survival",
+                       "tools":  "",
+                       "languages":  "",
+                       "feature":  "Background Feature",
+                       "url":  "https://dnd5e.wikidot.com/background:wildspacer"
+                   },
+    "Noble":  {
+                  "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Noble Fold Unfold Table of Contents Variants Noble: Knight Variant Feature: Retainers Features Position of Privilege Suggested Characteristics Personality Traits Ideals Bonds Flaws You understand wealth, power, and privilege. You carry a noble title, and your family owns land, collects taxes, and wields significant political influence. You might be a pampered aristocrat unfamiliar with work or discomfort, a former merchant just elevated to the nobility, or a disinherited scoundrel with a disproportionate sense of entitlement. Or you could be an honest, hard-working landowner who cares deeply about the people who live and work on your land, keenly aware of your responsibility to them. Work with your DM to come up with an appropriate title and determine how much authority that title carries. A noble title doesn\u0027t stand on its own-it\u0027s connected to an entire family, and whatever title you hold, you will pass it down to your own children. Not only do you need to determine your noble title, but you should also work with the DM to describe your family and their influence on you. Is your family old and established, or was your title only recently bestowed? How much influence do they wield, and over what area? What kind of reputation does your family have among the other aristocrats of the region? How do the common people regard them? What\u0027s your position in the family? Are you the heir to the head of the family? Have you already inherited the title? How do you feel about that responsibility? Or are you so far down the line of inheritance that no one cares what you do, as long as you don\u0027t embarrass the family? How does the head of your family feel about your adventuring career? Are you in your family\u0027s good graces, or shunned by the rest of your family? Does your family have a coat of arms? An insignia you might wear on a signet ring? Particular colors you wear all the time? An animal you regard as a symbol of your line or even a spiritual member of the family? These details help establish your family and your title as features of the world of the campaign.",
+                  "skills":  "History, Persuasion",
+                  "tools":  "One type of gaming set",
+                  "languages":  "One of your choice",
+                  "feature":  "Position of Privilege",
+                  "url":  "https://dnd5e.wikidot.com/background:noble"
+              },
+    "Rakdos Cultist":  {
+                           "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Rakdos Cultist Fold Unfold Table of Contents Features A Flair for the Dramatic Fearsome Reputation Rakdos Guild Spells Suggested Characteristics Personality Traits Ideals Bonds Flaws Contacts Rakdos Contacts Non-Rakdos Contacts You\u0027re an entertainer at heart, a performer with a flair for the dramatic and a love of the spotlight. You\u0027ve spent years honing your craft, mastering a demanding set of skills so you can perform them with panache and make them look easy. The wild applause, the screams of the crowds, the mayhem and terror spreading into the streets - this is what you live for. You\u0027re also a member of a cult devoted to an ancient demon who delights in violence and chaos. It just so happens that Rakdos loves a good show, and your highest aspiration is to please the Defiler, the Lord of Riots, with your own performance.",
+                           "skills":  "Acrobatics, Performance",
+                           "tools":  "One type of musical instrument",
+                           "languages":  "Choose one of either Abyssal or Giant",
+                           "feature":  "A Flair for the Dramatic Fearsome Reputation Rakdos Guild Spells",
+                           "url":  "https://dnd5e.wikidot.com/background:rakdos-cultist"
+                       },
+    "Izzet Engineer":  {
+                           "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Izzet Engineer Fold Unfold Table of Contents Features Urban Infrastructure Izzet Guild Spells Suggested Characteristics Personality Traits Ideals Bonds Flaws Contacts Izzet Contacts Non-Izzet Contacts Armed with an inventive intellect, a love of magical technology, and an unquenchable energy, you are an enthusiastic participant in the research work of the Izzet League. Though you\u0027re likely to begin your career as a mere attendant, you can aspire to become a skilled mage or alchemist, a laboratory supervisor, or even a flamethrower-wielding scorchbringer tasked with defending Izzet laboratories. The Izzet are obsessive, brilliant, inspired, and an unpredictable force of chaos in Ravnica, and you epitomize all of those qualities.",
+                           "skills":  "Arcana, Investigation",
+                           "tools":  "One type of artisan\u0027s tools",
+                           "languages":  "Choose one of Draconic, Goblin, or Vedalken",
+                           "feature":  "Urban Infrastructure Izzet Guild Spells",
+                           "url":  "https://dnd5e.wikidot.com/background:izzet-engineer"
+                       },
+    "Lorehold Student":  {
+                             "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Lorehold Student Fold Unfold Table of Contents Feature Lorehold Initiate Building a Lorehold Character Lorehold Personality Traits Lorehold Trinkets You have spent your youth preparing to be a student of Lorehold College, reading every book on the college\u0027s recommended reading list for prospective students. Your academic passions are in the broad field of history. You might dream of using magic to contact great historical figures or your own ancestors or of recreating the mighty magic of a distant age.",
+                             "skills":  "",
+                             "tools":  "",
+                             "languages":  "Two of your choice",
+                             "feature":  "Background Feature",
+                             "url":  "https://dnd5e.wikidot.com/background:lorehold-student"
+                         },
+    "Ruined":  {
+                   "description":  "",
+                   "skills":  "Stealth, Survival Languages: One of your choice",
+                   "tools":  "",
+                   "languages":  "One of your choice Tool Proficiencies: One gaming set of your choice (such as playing cards or three-dragon ante cards)",
+                   "feature":  "Background Feature",
+                   "url":  "https://dnd5e.wikidot.com/background:ruined"
+               },
+    "Cormanthor Refugee":  {
+                               "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Cormanthor Refugee",
+                               "skills":  "Nature, Survival Language Proficiencies: Elven",
+                               "tools":  "",
+                               "languages":  "",
+                               "feature":  "Background Feature",
+                               "url":  "https://dnd5e.wikidot.com/background:cormanthor-refugee"
+                           },
+    "Dragon Casualty":  {
+                            "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Dragon Casualty",
+                            "skills":  "Intimidation, Survival",
+                            "tools":  "Special (see origin below)",
+                            "languages":  "Draconic",
+                            "feature":  "Background Feature",
+                            "url":  "https://dnd5e.wikidot.com/background:dragon-casualty"
+                        },
+    "Dimir Operative":  {
+                            "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Dimir Operative Fold Unfold Table of Contents Features False Identity Dimir Guild Spells Suggested Characteristics Personality Traits Ideals Bonds Flaws Contacts Dimir Contacts You\u0027re a spy. Secrets and misinformation are your stock in trade. You skulk in the shadows, infiltrate other guilds, and steal the most precious secrets, whether they\u0027re written in locked journals or hidden away in someone\u0027s mind. Even you might not be aware of all the reasons behind the missions you carry out. Sometimes a mission\u0027s sole purpose is to conceal the motivation behind another strike performed in a different part of the city, or simply to spread fear. As part of your covert work for House Dimir, you maintain a false identity as a member of another guild. You can choose your secondary guild or roll to determine it randomly. This secondary guild membership determines a portion of your starting equipment and is also where most of your contacts come from. You infiltrate your secondary guild to learn its secrets, keep tabs on its activities, or perhaps undermine it from within.",
+                            "skills":  "Deception, Stealth",
+                            "tools":  "Disguise kit",
+                            "languages":  "One of your choice",
+                            "feature":  "False Identity Dimir Guild Spells",
+                            "url":  "https://dnd5e.wikidot.com/background:dimir-operative"
+                        },
+    "Hillsfar Smuggler":  {
+                              "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Hillsfar Smuggler",
+                              "skills":  "Perception, Stealth Language Proficiencies: One racial language",
+                              "tools":  "",
+                              "languages":  "",
+                              "feature":  "Background Feature",
+                              "url":  "https://dnd5e.wikidot.com/background:hillsfar-smuggler"
+                          },
+    "Cloistered Scholar":  {
+                               "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Cloistered Scholar Fold Unfold Table of Contents Features Library Access Suggested Characteristics As a child, you were inquisitive when your playmates were possessive or raucous. In your formative years, you found your way to one of Faerûn\u0027s great institutes of learning, where you were apprenticed and taught that knowledge is a more valuable treasure than gold or gems. Now you are ready to leave your home – not to abandon it, but to quest for new lore to add to its storehouse of knowledge. The most well-known of Faerûn\u0027s fonts of knowledge is Candlekeep. The great library is always in need of workers and attendants, some of whom rise through the ranks to assume roles of greater responsibility and prominence. You might be one of Candlekeep\u0027s own, dedicated to the curatorship of what is likely the most complete body of lore and history in all the world. Perhaps instead you were taken in by the scholars of the Vault of the Sages or the Map House in Silverymoon, and now you have struck out to increase your knowledge and to make yourself available to help those in other places who seek your expertise. You might be one of the few who aid Herald\u0027s Holdfast, helping to catalogue and maintain records of the information that arrives daily from across Faerûn.",
+                               "skills":  "History, plus your choice of one from among Arcana, Nature, and Religion",
+                               "tools":  "None",
+                               "languages":  "Two of your choice",
+                               "feature":  "Library Access",
+                               "url":  "https://dnd5e.wikidot.com/background:cloistered-scholar"
+                           },
+    "Smuggler":  {
+                     "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Smuggler",
+                     "skills":  "Athletics, Deception",
+                     "tools":  "",
+                     "languages":  "",
+                     "feature":  "Background Feature",
+                     "url":  "https://dnd5e.wikidot.com/background:smuggler"
+                 },
+    "Courtier":  {
+                     "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Courtier Fold Unfold Table of Contents Features Court Functionary Suggested Characteristics In your earlier days, you were a personage of some significance in a noble court or a bureaucratic organization. You might or might not come from an upper-class family; your talents, rather than the circumstances of your birth, could have secured you this position. You might have been one of the many functionaries, attendants, and other hangers-on in the Court of Silverymoon, or perhaps you traveled in Waterdeep\u0027s baroque and sometimes cutthroat conglomeration of guilds, nobles, adventurers, and secret societies. You might have been one of the behind-the-scenes law-keepers or functionaries in Baldur\u0027s Gate or Neverwinter, or you might have grown up in and around the castle of Daggerford. Even if you are no longer a full-fledged member of the group that gave you your start in life, your relationships with your former fellows can be an advantage for you and your adventuring comrades. You might undertake missions with your new companions that further the interest of the organization that gave you your start in life. In any event, the abilities that you honed while serving as a courtier will stand you in good stead as an adventurer.",
+                     "skills":  "Insight, Persuasion",
+                     "tools":  "None",
+                     "languages":  "Two of your choice",
+                     "feature":  "Court Functionary",
+                     "url":  "https://dnd5e.wikidot.com/background:courtier"
+                 },
+    "Waterdhavian Noble":  {
+                               "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Waterdhavian Noble Fold Unfold Table of Contents Features Kept in Style Suggested Characteristics You are a scion of one of the great noble families of Waterdeep. Human families who jealously guard their privilege and place in the City of Splendors, Waterdhavian nobles have a reputation across Faerûn for being eccentric, spoiled, venal, and, above all else, rich. Whether you are a shining example of the reason for this reputation or one who proves the rule by being an exception, people expect things of you when they know your surname and what it means. Your reasons for taking up adventuring likely involve your family in some way: Are you the family rebel, who prefers delving in filthy dungeons to sipping zzar at a ball? Or have you taken up sword or spell on your family\u0027s behalf, ensuring that they have someone of renown to see to their legacy? Work with your DM to come up with the family you are part of – there are around seventy-five lineages in Waterdeep, each with its own financial interests, specialties, and schemes. You might be part of the main line of your family, possibly in line to become its leader one day. Or you might be one of any number of cousins, with less prestige but also less responsibility.",
+                               "skills":  "History, Persuasion",
+                               "tools":  "One type of gaming set or one musical instrument",
+                               "languages":  "One of your choice",
+                               "feature":  "Kept in Style",
+                               "url":  "https://dnd5e.wikidot.com/background:waterdhavian-noble"
+                           },
+    "Iron Route Bandit":  {
+                              "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Iron Route Bandit",
+                              "skills":  "Stealth, Animal Handling",
+                              "tools":  "",
+                              "languages":  "",
+                              "feature":  "Background Feature",
+                              "url":  "https://dnd5e.wikidot.com/background:iron-route-bandit"
+                          },
+    "Shipwright":  {
+                       "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Shipwright",
+                       "skills":  "History, Perception",
+                       "tools":  "",
+                       "languages":  "",
+                       "feature":  "Background Feature",
+                       "url":  "https://dnd5e.wikidot.com/background:shipwright"
+                   },
+    "Athlete":  {
+                    "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Athlete",
+                    "skills":  "Acrobatics, Athletics Languages: One of your choice",
+                    "tools":  "",
+                    "languages":  "One of your choice Tool Proficiencies: Vehicles (Land)",
+                    "feature":  "Background Feature",
+                    "url":  "https://dnd5e.wikidot.com/background:athlete"
+                },
+    "Phlan Insurgent":  {
+                            "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Phlan Insurgent",
+                            "skills":  "Stealth, Survival",
+                            "tools":  "",
+                            "languages":  "",
+                            "feature":  "Background Feature",
+                            "url":  "https://dnd5e.wikidot.com/background:phlan-insurgent"
+                        },
+    "Outlander":  {
+                      "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Outlander Fold Unfold Table of Contents Features Origin Wanderer Suggested Characteristics Personality Traits Ideals Bonds Flaws You grew up in the wilds, far from civilization and the comforts of town and technology. You\u0027ve witnessed the migration of herds larger than forests, survived weather more extreme than any city-dweller could comprehend, and enjoyed the solitude of being the only thinking creature for miles in any direction. The wilds are in your blood, whether you were a nomad, an explorer, a recluse, a hunter-gatherer, or even a marauder. Even in places where you don\u0027t know the specific features of the terrain, you know the ways of the wild.",
+                      "skills":  "Athletics, Survival",
+                      "tools":  "One type of musical instrument",
+                      "languages":  "One of your choice",
+                      "feature":  "Origin Wanderer",
+                      "url":  "https://dnd5e.wikidot.com/background:outlander"
+                  },
+    "Caravan Specialist":  {
+                               "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Caravan Specialist",
+                               "skills":  "Animal Handling, Survival",
+                               "tools":  "Land Vehicles",
+                               "languages":  "One of your choice",
+                               "feature":  "Background Feature",
+                               "url":  "https://dnd5e.wikidot.com/background:caravan-specialist"
+                           },
+    "Giant Foundling":  {
+                            "description":  "",
+                            "skills":  "",
+                            "tools":  "",
+                            "languages":  "Giant and one other language of your choice",
+                            "feature":  "Background Feature",
+                            "url":  "https://dnd5e.wikidot.com/background:giant-foundling"
+                        },
+    "Sailor":  {
+                   "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Sailor Fold Unfold Table of Contents Variants Pirate Features Ship\u0027s Passage Alternative: Bad Reputation Suggested Characteristics Personality Traits Ideals Bonds Flaws You sailed on a seagoing vessel for years. In that time, you faced down mighty storms, monsters of the deep, and those who wanted to sink your craft to the bottomless depths. Your first love is the distant line of the horizon, but the time has come to try your hand at something new. Discuss the nature of the ship you previously sailed with your DM. Was it a merchant ship, a naval vessel, a ship of discovery, or a pirate ship? How famous (or infamous) is it? Is it widely traveled? Is it still sailing, or is it missing and presumed lost with all hands? What were your duties on board – boatswain, captain, navigator, cook, or some other position? Who were the captain and first mate? Did you leave your ship on good terms with your fellows, or on the run?",
+                   "skills":  "Athletics, Perception",
+                   "tools":  "Navigator\u0027s tools, vehicles (water)",
+                   "languages":  "None",
+                   "feature":  "Ship\u0027s Passage Alternative: Bad Reputation",
+                   "url":  "https://dnd5e.wikidot.com/background:sailor"
+               },
+    "City Watch":  {
+                       "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: City Watch Fold Unfold Table of Contents Variants Investigator Features Watcher\u0027s Eye Suggested Characteristics You have served the community where you grew up, standing as its first line of defense against crime. You aren\u0027t a soldier, directing your gaze outward at possible enemies. Instead, your service to your hometown was to help police its populace, protecting the citizenry from lawbreakers and malefactors of every stripe. You might have been part of the City Watch of Waterdeep, the baton-wielding police force of the City of Splendors, protecting the common folk from thieves and rowdy nobility alike. Or you might have been one of the valiant defenders of Silverymoon, a member of the Silverwatch or even one of the magic-wielding Spellguard. Perhaps you hail from Neverwinter and have served as one of its Wintershield watchmen, the newly founded branch of guards who vow to keep safe the City of Skilled Hands. Even if you\u0027re not city-born or city-bred, this background can describe your early years as a member of law enforcement. Most settlements of any size have their own constables and police forces, and even smaller communities have sheriffs and bailiffs who stand ready to protect their community.",
+                       "skills":  "Athletics, Insight",
+                       "tools":  "None",
+                       "languages":  "Two of your choice",
+                       "feature":  "Watcher\u0027s Eye",
+                       "url":  "https://dnd5e.wikidot.com/background:city-watch"
+                   },
+    "Trade Sheriff":  {
+                          "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Trade Sheriff",
+                          "skills":  "Investigation, Persuasion",
+                          "tools":  "Thieves\u0027 tools",
+                          "languages":  "Elven",
+                          "feature":  "Background Feature",
+                          "url":  "https://dnd5e.wikidot.com/background:trade-sheriff"
+                      },
+    "Grinner":  {
+                    "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Grinner Fold Unfold Table of Contents Proficiencies Features Code-Songs Ballad of the Grinning Fool Suggested Characteristics Personality Traits Ideals Bonds Flaws The Golden Grin began in the far-off land of Tal\u0027Dorei trading secret messages through a network of bards and minstrels to undermine an iron-fisted king\u0027s authoritarian rule. Today, Tal\u0027Dorei is a relatively peaceful republic, and some Grinners have grown restless while waiting for tyranny to raise its ugly head again. A contingent of such Grinners traveled to the Menagerie Coast and set up a network of secret bases in the cities of the Clovis Concord, from which they are presently working their way into the highest echelons of the Dwendalian Empire. You are a Grinner. Your goals are to spread freedom and inspire hope - or, in time, revolution - in the hearts of the oppressed.",
+                    "skills":  "Deception, Performance",
+                    "tools":  "One type of musical instrument, thieves\u0027 tools",
+                    "languages":  "None",
+                    "feature":  "Code-Songs Ballad of the Grinning Fool",
+                    "url":  "https://dnd5e.wikidot.com/background:grinner"
+                },
+    "Vizier":  {
+                   "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Vizier Fold Unfold Table of Contents Features Voice of Authority Suggested Characteristics Personality Traits Ideals Bonds Flaws You are a vizier, a servant of your god. You perform tasks that are essential to facilitating the initiates’ journey, so the gods reward you with entry into the afterlife with the God-Pharaoh’s blessing. You hope to achieve the most honored status in the afterlife by being the best possible servant to your god. As a vizier, you can have any class, but you are especially likely to be a cleric, a druid (particularly if you serve Rhonas), or a paladin.",
+                   "skills":  "History, Religion",
+                   "tools":  "",
+                   "languages":  "",
+                   "feature":  "Voice of Authority",
+                   "url":  "https://dnd5e.wikidot.com/background:vizier"
+               },
+    "Orzhov Representative":  {
+                                  "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Orzhov Representative Fold Unfold Table of Contents Features Leverage Orzhov Guild Spells Suggested Characteristics Personality Traits Ideals Bonds Flaws Contacts Orzhov Contacts Non-Orzhov Contacts The prospect of immense wealth is the promise of membership in the Orzhov Syndicate. All of the guild\u0027s endeavors channel wealth from Ravnican society into the ranks of the Orzhov - and concentrates the spoils at the top of the hierarchy. As a functionary in that system, your best hope is to claim as much as possible of the money that passes through your hands on its way up, so that you can work your way into a more prominent position. Regardless of your past and the wealth of your family, your initial status with the guild is near the bottom, until you have proven your value.",
+                                  "skills":  "",
+                                  "tools":  "",
+                                  "languages":  "Two of your choice",
+                                  "feature":  "Leverage Orzhov Guild Spells",
+                                  "url":  "https://dnd5e.wikidot.com/background:orzhov-representative"
+                              },
+    "Astral Drifter":  {
+                           "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Astral Drifter Fold Unfold Table of Contents Features Longevity Divine Contact For longer than you can remember, you have traversed the Astral Sea. There, you experienced firsthand the wonders of the Silver Void: you stopped aging and no longer felt hunger or thirst. Driven by wanderlust, you drifted from one part of the Astral Sea to another, like a mote of dust on the wind. You have lost count of the decades that have passed since you arrived here. In your travels, you have camped on the petrified hulks of dead gods and narrowly escaped the psychic winds that sweep across the Astral Sea while also avoiding prolonged contact with the plane’s most dangerous denizens.",
+                           "skills":  "",
+                           "tools":  "",
+                           "languages":  "Two of your choice (Celestial or Gith recommended)",
+                           "feature":  "Background Feature",
+                           "url":  "https://dnd5e.wikidot.com/background:astral-drifter"
+                       },
+    "Soldier":  {
+                    "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Soldier Fold Unfold Table of Contents Features Specialty Military Rank Suggested Characteristics Personality Traits Ideals Bonds Flaws War has been your life for as long as you care to remember. You trained as a youth, studied the use of weapons and armor, learned basic survival techniques, including how to stay alive on the battlefield. You might have been part of a standing national army or a mercenary company, or perhaps a member of a local militia who rose to prominence during a recent war. When you choose this background, work with your DM to determine which military organization you were a part of, how far through its ranks you progressed, and what kind of experiences you had during your military career. Was it a standing army, a town guard, or a village militia? Or it might have been a noble\u0027s or merchant\u0027s private army, or a mercenary company.",
+                    "skills":  "Athletics, Intimidation",
+                    "tools":  "One type of gaming set, vehicles (land)",
+                    "languages":  "None",
+                    "feature":  "Specialty Military Rank",
+                    "url":  "https://dnd5e.wikidot.com/background:soldier"
+                },
+    "Clan Crafter":  {
+                         "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Clan Crafter Fold Unfold Table of Contents Features Respect of the Stout Folk Suggested Characteristics The Stout Folk are well known for their artisanship and the worth of their handiworks, and you have been trained in that ancient tradition. For years you labored under a dwarf master of the craft, enduring long hours and dismissive, sour-tempered treatment in order to gain the fine skills you possess today. You are most likely a dwarf, but not necessarily- particularly in the North, the shield dwarf clans learned long ago that only proud fools who are more concerned for their egos than their craft turn away promising apprentices, even those of other races. If you aren\u0027t a dwarf, however, you have taken a solemn oath never to take on an apprentice in the craft: it is not for non-dwarves to pass on the skills of Moradin\u0027s favored children. You would have no difficulty, however, finding a dwarf master who was willing to receive potential apprentices who came with your recommendation.",
+                         "skills":  "History, Insight",
+                         "tools":  "One type of artisan\u0027s tools",
+                         "languages":  "Dwarvish or one other of your choice if you already speak Dwarvish",
+                         "feature":  "Respect of the Stout Folk",
+                         "url":  "https://dnd5e.wikidot.com/background:clan-crafter"
+                     },
+    "Guild Merchant":  {
+                           "description":  "",
+                           "skills":  "",
+                           "tools":  "",
+                           "languages":  "",
+                           "feature":  "Background Feature",
+                           "url":  "https://dnd5e.wikidot.com/background:guild-merchant"
+                       },
+    "Investigator (VRGR)":  {
+                                "description":  "",
+                                "skills":  "",
+                                "tools":  "",
+                                "languages":  "",
+                                "feature":  "Background Feature",
+                                "url":  "https://dnd5e.wikidot.com/background:investigator-vrgr"
+                            },
+    "Faction Agent":  {
+                          "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Faction Agent Fold Unfold Table of Contents Features Factions of the Sword Coast The Harpers The Order of the Gauntlet The Emerald Enclave The Lords\u0027 Alliance The Zhentarim Safe Haven Suggested Characteristics Many organizations active in the North and across the face of Faerûn aren\u0027t bound by strictures of geography. These factions pursue their agendas without regard for political boundaries, and their members operate anywhere the organization deems necessary. These groups employ listeners, rumormongers, smugglers, sellswords, cache-holders (people who guard caches of wealth or magic for use by the faction\u0027s operatives), haven keepers, and message drop minders, to name a few. At the core of every faction are those who don\u0027t merely fulfill a small function for that organization, but who serve as its hands, head, and heart. As a prelude to your adventuring career (and in preparation for it), you served as an agent of a particular faction in Faerûn. You might have operated openly or secretly, depending on the faction and its goals, as well as how those goals mesh with your own. Becoming an adventurer doesn\u0027t necessarily require you to relinquish membership in your faction (though you can choose to do so), and it might enhance your status in the faction.",
+                          "skills":  "Insight and one Intelligence, Wisdom, or Charisma skill of your choice, as appropriate to your faction",
+                          "tools":  "None",
+                          "languages":  "Two of your choice",
+                          "feature":  "Background Feature",
+                          "url":  "https://dnd5e.wikidot.com/background:faction-agent"
+                      },
+    "Selesnya Initiate":  {
+                              "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Selesnya Initiate Fold Unfold Table of Contents Features Conclave\u0027s Shelter Selesnya Guild Spells Suggested Characteristics Personality Traits Ideals Bonds Flaws Contacts Selesnya Contacts Non-Selesnya Contacts You are a member of a blessed community, built on the ideals of harmony. Here, nature and civilization coexist peacefully, living and growing in accordance with the will of the Worldsoul, Mat\u0027Selesnya. As a member of the Selesnya Conclave, you are surrounded by people and other creatures who share your worldview and your longing for deeper spiritual communion with the world, and you have a fervent desire to share the joy you have experienced with Ravnica. Along with the rest of the conclave, you are committed to resisting the ambitions of the other guilds- with military force if necessary.",
+                              "skills":  "Nature, Persuasion",
+                              "tools":  "One type of artisan\u0027s tools or one musical instrument",
+                              "languages":  "Choose one of Elvish, Loxodon, or Sylvan",
+                              "feature":  "Conclave\u0027s Shelter Selesnya Guild Spells",
+                              "url":  "https://dnd5e.wikidot.com/background:selesnya-initiate"
+                          },
+    "Gambler":  {
+                    "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Gambler",
+                    "skills":  "Deception, Insight",
+                    "tools":  "One gaming set",
+                    "languages":  "Any one of your choice",
+                    "feature":  "Background Feature",
+                    "url":  "https://dnd5e.wikidot.com/background:gambler"
+                },
+    "Gate Urchin":  {
+                        "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Gate Urchin",
+                        "skills":  "Deception, Sleight of Hand",
+                        "tools":  "",
+                        "languages":  "",
+                        "feature":  "Background Feature",
+                        "url":  "https://dnd5e.wikidot.com/background:gate-urchin"
+                    },
+    "Failed Merchant":  {
+                            "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Failed Merchant",
+                            "skills":  "Investigation, Persuasion",
+                            "tools":  "One type of artisan\u0027s tools",
+                            "languages":  "Any one of your choice",
+                            "feature":  "Background Feature",
+                            "url":  "https://dnd5e.wikidot.com/background:failed-merchant"
+                        },
+    "Pirate":  {
+                   "description":  "",
+                   "skills":  "",
+                   "tools":  "",
+                   "languages":  "",
+                   "feature":  "Background Feature",
+                   "url":  "https://dnd5e.wikidot.com/background:pirate"
+               },
+    "Black Fist Double Agent":  {
+                                    "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Black Fist Double Agent",
+                                    "skills":  "Deception, Insight",
+                                    "tools":  "",
+                                    "languages":  "",
+                                    "feature":  "Background Feature",
+                                    "url":  "https://dnd5e.wikidot.com/background:black-fist-double-agent"
+                                },
+    "Gate Warden":  {
+                        "description":  "",
+                        "skills":  "",
+                        "tools":  "",
+                        "languages":  "Two of your choice (Abyssal, Celestial, or Infernal recommended)",
+                        "feature":  "Background Feature",
+                        "url":  "https://dnd5e.wikidot.com/background:gate-warden"
+                    },
+    "Knight":  {
+                   "description":  "",
+                   "skills":  "",
+                   "tools":  "",
+                   "languages":  "",
+                   "feature":  "Background Feature",
+                   "url":  "https://dnd5e.wikidot.com/background:knight"
+               },
+    "Fisher":  {
+                   "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Fisher",
+                   "skills":  "",
+                   "tools":  "",
+                   "languages":  "One of your choice",
+                   "feature":  "Background Feature",
+                   "url":  "https://dnd5e.wikidot.com/background:fisher"
+               },
+    "Mercenary Veteran":  {
+                              "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Mercenary Veteran Fold Unfold Table of Contents Features Mercenaries of the North The Chill Silent Rain The Bloodaxes Mercenary Life Suggested Characteristics As a sell-sword who fought battles for coin, you\u0027re well acquainted with risking life and limb for a chance at a share of treasure. Now, you look forward to fighting foes and reaping even greater rewards as an adventurer. Your experience makes you familiar with the ins and outs of mercenary life, and you likely have harrowing stories of events on the battlefield. You might have served with a large outfit such as the Zhentarim or the soldiers of Mintarn, or a smaller band of sell-swords, maybe even more than one. See the \u0026quot;Mercenaries of the North\u0026quot; section below for a collection of possibilities. Now you\u0027re looking for something else, perhaps greater reward for the risks you take, or the freedom to choose your own activities. For whatever reason, you\u0027re leaving behind the life of a soldier for hire, but your skills are undeniably suited for battle, so now you fight on in a different way.",
+                              "skills":  "Athletics, Persuasion",
+                              "tools":  "One type of gaming set, vehicles (land)",
+                              "languages":  "None",
+                              "feature":  "Mercenaries of the North The Chill Silent Rain The Bloodaxes Mercenary Life",
+                              "url":  "https://dnd5e.wikidot.com/background:mercenary-veteran"
+                          },
+    "Knight of Solamnia":  {
+                               "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Knight of Solamnia Fold Unfold Table of Contents Feature Squire of Solamnia Building a Knight of Solamnia Character Knight of Solamnia Trinkets Prerequisite: Dragonlance Campaign You have trained to be a valorous warrior known as a Knight of Solamnia. Strict rules guide your every action, and you work to uphold them as you strive to defend the weak and oppose evil. Your honor is as important to you as your life.",
+                               "skills":  "",
+                               "tools":  "",
+                               "languages":  "Two of your choice",
+                               "feature":  "Background Feature",
+                               "url":  "https://dnd5e.wikidot.com/background:knight-of-solamnia"
+                           },
+    "Charlatan":  {
+                      "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Charlatan Fold Unfold Table of Contents Features Favorite Schemes False Identity Suggested Characteristics Personality Traits Ideals Bonds Flaws You have always had a way with people. You know what makes them tick, you can tease out their hearts\u0027 desires after a few minutes of conversation, and with a few leading questions you can read them like they were children\u0027s books. It\u0027s a useful talent, and one that you\u0027re perfectly willing to use for your advantage. You know what people want and you deliver, or rather, you promise to deliver. Common sense should steer people away from things that sound too good to be true, but common sense seems to be in short supply when you\u0027re around. The bottle of pink colored liquid will surely cure that unseemly rash, this ointment –\u0026nbsp;nothing more than a bit of fat with a sprinkle of silver dust can restore youth and vigor, and there\u0027s a bridge in the city that just happens to be for sale. These marvels sound implausible, but you make them sound like the real deal.",
+                      "skills":  "Deception, Sleight of Hand",
+                      "tools":  "Disguise kit, forgery kit",
+                      "languages":  "None",
+                      "feature":  "Favorite Schemes False Identity",
+                      "url":  "https://dnd5e.wikidot.com/background:charlatan"
+                  },
+    "Planar Philosopher":  {
+                               "description":  "",
+                               "skills":  "",
+                               "tools":  "",
+                               "languages":  "Two of your choice",
+                               "feature":  "Background Feature",
+                               "url":  "https://dnd5e.wikidot.com/background:planar-philosopher"
+                           },
+    "Guild Artisan":  {
+                          "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Guild Artisan Fold Unfold Table of Contents Variants Guild Merchant Guild Business Guild Business Guild Membership Suggested Characteristics Personality Traits Ideals Bonds Flaws You are a member of an artisan\u0027s guild, skilled in a particular field and closely associated with other artisans. You are a well-established part of the mercantile world, freed by talent and wealth from the constraints of a feudal social order. You learned your skills as an apprentice to a master artisan, under the sponsorship of your guild, until you became a master in your own right.",
+                          "skills":  "Insight, Persuasion",
+                          "tools":  "One type of artisan\u0027s tools",
+                          "languages":  "One of your choice",
+                          "feature":  "Background Feature",
+                          "url":  "https://dnd5e.wikidot.com/background:guild-artisan"
+                      },
+    "Witchlight Hand":  {
+                            "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Witchlight Hand Fold Unfold Table of Contents Features Carnival Companion Carnival Fixture Suggested Characteristics Personality Traits Ideals Bonds Flaws You crept into the Witchlight Carnival as a child or youth and never looked back, earning a place among those who work behind the scenes to keep the carnival in business. As a hand, you work hard and party hard. The carnival has borne you to many fantastic worlds, circling back around to your home world once every eight years, but you know almost nothing about these worlds because you spend all your time in the carnival. You know the other hands well, but the carnival\u0027s owners-Mister Witch and Mister Light-remain mysterious to you even after all these years. Maybe you joined the carnival to escape a dismal life at home, or maybe you were enchanted by the idea of visiting new places or the dream of becoming one of the carnival\u0027s star attractions. Now that you\u0027re older, carnival life has lost some of its appeal. The daily routine has grown tedious, the cyclical nature of the carnival\u0027s journey monotonous. The carnival no longer fills your heart with a sense of wonder. Perhaps greater adventures await you beyond the carnival\u0027s gates.",
+                            "skills":  "Performance, Sleight of Hand",
+                            "tools":  "Disguise kit or one type of musical instrument",
+                            "languages":  "One of your choice",
+                            "feature":  "Carnival Companion Carnival Fixture",
+                            "url":  "https://dnd5e.wikidot.com/background:witchlight-hand"
+                        },
+    "Haunted One":  {
+                        "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Haunted One Fold Unfold Table of Contents Features Harrowing Event Heart of Darkness Suggested Characteristics Personality Traits Ideals Bonds Flaws You are haunted by something so terrible that you dare not speak of it. You’ve tried to bury it and run away from it, to no avail. Whatever this thing is that haunts you can’t be slain with a sword or banished with a spell. It might come to you as a shadow on the wall, a bloodcurdling nightmare, a memory that refuses to die, or a demonic whisper in the dark. The burden has taken its toll, isolating you from most people and making you question your sanity. You must find a way to overcome it before it destroys you.",
+                        "skills":  "Choose two of Arcana, Investigation, Religion, or Survival",
+                        "tools":  "None",
+                        "languages":  "Choose two languages, one of which being an exotic language (Abyssal, Celestial, Deep Speech, Draconic, Infernal, Primordial, Sylvan, or Undercommon)",
+                        "feature":  "Harrowing Event Heart of Darkness",
+                        "url":  "https://dnd5e.wikidot.com/background:haunted-one"
+                    },
+    "Earthspur Miner":  {
+                            "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Earthspur Miner",
+                            "skills":  "",
+                            "tools":  "",
+                            "languages":  "Dwarven and Undercommon",
+                            "feature":  "Background Feature",
+                            "url":  "https://dnd5e.wikidot.com/background:earthspur-miner"
+                        },
+    "Rune Carver":  {
+                        "description":  "",
+                        "skills":  "History, Perception",
+                        "tools":  "One set of artisan\u0027s tools",
+                        "languages":  "Giant",
+                        "feature":  "Background Feature",
+                        "url":  "https://dnd5e.wikidot.com/background:rune-carver"
+                    },
+    "Gladiator":  {
+                      "description":  "",
+                      "skills":  "",
+                      "tools":  "",
+                      "languages":  "",
+                      "feature":  "Background Feature",
+                      "url":  "https://dnd5e.wikidot.com/background:gladiator"
+                  },
+    "Ashari":  {
+                   "description":  "(HB) - DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Ashari (HB) Fold Unfold Table of Contents Proficiencies Features Elemental Harmony Suggested Characteristics Personality Traits Ideals Bonds Flaws Isolated from the political struggles of urban Tal’Dorei, you are a member of the Ashari people — a society bound to an ancient covenant protecting the Material Plane from the chaos of the primordial elements. You’ve been raised to revere and protect the natural world, and to shepherd the tumultuous elemental forces that give it life. When the elements threaten to overwhelm the delicate balance of nature, it is the role of the Ashari to restore harmony. You grew up in a tight-knit society, bound to a leader who successfully returned from the traditional journey to the Elemental Planes known as an Aramante. By contrast, you might well have never traveled more than a few days from your home, and thus have closer bonds with your family and neighbors than many people of Tal’Dorei. In your early life, you likely took up one of the many roles that make up your society, whether homemaker, hunter, explorer, or protector. If you have the ability to use elemental magic, you might have had one of the most important duties of all: protecting and soothing the elemental rift at the heart of your home. And even as an adventurer now traveling far beyond that home, your loyalties still lie with the continued safety of your order. Whatever else you do as you learn about the new world around you, you’re conscious of the need to gather allies to your cause. Each Ashari is tethered to one of the four elemental orders and their settlements. You must select Pyrah (fire), Vesrah (water), Terrah (earth), or Zephrah (wind). The rifts of earth and air are both in Tal’Dorei. If you live or lived among your people, then you are familiar with the remarkable sights of Air Ashari on Skysails above the Summit Peaks, or Earth Ashari erupting from the solid stone of the Cliffkeep Mountains on their Earthboards",
+                   "skills":  "Nature, plus your choice of Arcana or Survival",
+                   "tools":  "Herbalism kit",
+                   "languages":  "Primordial (Aquan, Auran, Ignan, or Terran, depending on the elemental affinity of your tribe)",
+                   "feature":  "Elemental Harmony",
+                   "url":  "https://dnd5e.wikidot.com/background:ashari"
+               },
+    "Plaintiff":  {
+                      "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Plaintiff",
+                      "skills":  "Medicine, Persuasion",
+                      "tools":  "One type of artisan\u0027s tools",
+                      "languages":  "Any one of your choice",
+                      "feature":  "Background Feature",
+                      "url":  "https://dnd5e.wikidot.com/background:plaintiff"
+                  },
+    "Hermit":  {
+                   "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Hermit Fold Unfold Table of Contents Features Life of Seclusion Discovery Suggested Characteristics Personality Traits Ideals Bonds Flaws Other Hermits You lived in seclusion – either in a sheltered community such as a monastery, or entirely alone – for a formative part of your life. In your time apart from the clamor of society, you found quiet, solitude, and perhaps some of the answers you were looking for.",
+                   "skills":  "Medicine, Religion",
+                   "tools":  "Herbalism kit",
+                   "languages":  "One of your choice",
+                   "feature":  "Life of Seclusion Discovery",
+                   "url":  "https://dnd5e.wikidot.com/background:hermit"
+               },
+    "Golgari Agent":  {
+                          "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Golgari Agent Fold Unfold Table of Contents Features Undercity Paths Golgari Guild Spells Suggested Characteristics Personality Traits Ideals Bonds Flaws Contacts Golgari Contacts Non-Golgari Contacts You are a member of a teeming horde - one small part of a sprawling organism. Just as you are part of the swarm, the swarm is part of a larger ecosystem, a never-ending cycle of life, death, rot, and rebirth. You have spent your life in the slow churn of that ecosystem, in the dark places of the city where the messy parts of existence are on display. There is little squeamishness among the Golgari, no fear of death or taboo about the dead, just a fierce affirmation of the cycle.",
+                          "skills":  "Nature, Survival",
+                          "tools":  "Poisoner\u0027s Kit",
+                          "languages":  "Choose one of Elvish, Giant, or Kraul",
+                          "feature":  "Undercity Paths Golgari Guild Spells",
+                          "url":  "https://dnd5e.wikidot.com/background:golgari-agent"
+                      },
+    "Criminal":  {
+                     "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Criminal Fold Unfold Table of Contents Variants Spy Features Criminal Specialty Criminal Contact Suggested Characteristics Personality Traits Ideals Bonds Flaws You are an experienced criminal with a history of breaking the law. You have spent a lot of time among other criminals and still have contacts within the criminal underworld. You\u0027re far closer than most people to the world of murder, theft, and violence that pervades the underbelly of civilization, and you have survived up to this point by flouting the rules and regulations of society.",
+                     "skills":  "Deception, Stealth",
+                     "tools":  "One type of gaming set, thieves\u0027 tools",
+                     "languages":  "None",
+                     "feature":  "Criminal Specialty Criminal Contact",
+                     "url":  "https://dnd5e.wikidot.com/background:criminal"
+                 },
+    "Investigator (SCAG)":  {
+                                "description":  "",
+                                "skills":  "",
+                                "tools":  "",
+                                "languages":  "",
+                                "feature":  "Background Feature",
+                                "url":  "https://dnd5e.wikidot.com/background:investigator-scag"
+                            },
+    "Spy":  {
+                "description":  "",
+                "skills":  "",
+                "tools":  "",
+                "languages":  "",
+                "feature":  "Background Feature",
+                "url":  "https://dnd5e.wikidot.com/background:spy"
+            },
+    "Azorius Functionary":  {
+                                "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Azorius Functionary Fold Unfold Table of Contents Features Legal Authority Azorius Guild Spells Suggested Characteristics Personality Traits Ideals Bonds Flaws Contacts Azorius Contacts Non-Azorius Contacts The brutes are at the gate, chaos is looming, and the only thing standing in the way of disaster is the foundation of law and order - as embodied in the Azorius Senate. You\u0027re a proud member of the Azorius guild, which both enacts and enforces the laws that make Ravnican society function smoothly and safely.",
+                                "skills":  "",
+                                "tools":  "",
+                                "languages":  "Two of your choice",
+                                "feature":  "Legal Authority Azorius Guild Spells",
+                                "url":  "https://dnd5e.wikidot.com/background:azorius-functionary"
+                            },
+    "Stojanow Prisoner":  {
+                              "description":  "- DND 5th Edition DND 5th Edition community wiki Create account or Sign in Toggle navigation Home About \u0026nbsp; Membership \u0026nbsp; Help Docs \u0026nbsp; User Guide First Time User Quick Reference Creating Pages Editing Pages Navigation Bars Using Modules Templates CSS Themes \u0026nbsp; Site Manager Edit Top Bar Edit Side Bar CSS Manager Recent Changes List All Pages Menu You should be logged in to clone a site. Site Navigation User Guide First Time User About Contact Legal Discussion Forums Members Create a Page Background: Stojanow Prisoner",
+                              "skills":  "Deception, Perception",
+                              "tools":  "",
+                              "languages":  "",
+                              "feature":  "Background Feature",
+                              "url":  "https://dnd5e.wikidot.com/background:stojanow-prisoner"
+                          }
+}

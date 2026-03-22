@@ -1,0 +1,24 @@
+<header class="topbar panel">
+    <div class="brand-block">
+        <div class="brand-mark">DK</div>
+        <div>
+            <p class="eyebrow">Tabletop command center</p>
+            <h1>{{ store.title() }}</h1>
+        </div>
+    </div>
+
+    <nav class="nav-links">
+        <a routerLink="/dashboard" routerLinkActive="is-active">Dashboard</a>
+        <a routerLink="/campaigns" routerLinkActive="is-active">Campaigns</a>
+        <a routerLink="/characters" routerLinkActive="is-active">Characters</a>
+        <a routerLink="/campaigns/new" routerLinkActive="is-active">New Campaign</a>
+        <a routerLink="/characters/new" routerLinkActive="is-active">New Character</a>
+        <a routerLink="/sessions" routerLinkActive="is-active">Session Prep</a>
+    </nav>
+</header>
+
+<app-breadcrumb />
+
+<main class="shell">
+    <router-outlet />
+</main>

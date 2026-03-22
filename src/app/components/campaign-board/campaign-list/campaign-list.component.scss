@@ -1,0 +1,108 @@
+:host {
+    display: block;
+}
+
+.panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 28px;
+    box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(18px);
+}
+
+.stack-panel {
+    padding: 24px;
+}
+
+.panel-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.panel-heading h2,
+.campaign-card h3 {
+    margin: 0;
+    font-family: var(--display-font);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.74rem;
+    color: var(--text-soft);
+}
+
+.pill,
+.tone-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 0.84rem;
+    border: 1px solid var(--pill-border);
+    background: var(--pill-bg);
+    color: var(--text-main);
+}
+
+.campaign-list {
+    display: grid;
+    gap: 16px;
+}
+
+.campaign-card {
+    width: 100%;
+    padding: 18px;
+    text-align: left;
+    border: 1px solid var(--panel-border);
+    border-radius: 22px;
+    background: var(--surface-raised);
+    cursor: pointer;
+    transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.campaign-card:hover,
+.campaign-card.is-selected {
+    transform: translateY(-2px);
+    border-color: rgba(170, 98, 50, 0.4);
+    box-shadow: 0 18px 38px rgba(87, 51, 30, 0.12);
+}
+
+.campaign-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.campaign-summary {
+    margin: 0;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+.campaign-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    color: var(--text-soft);
+    font-size: 0.92rem;
+}
+
+@media (max-width: 720px) {
+    .stack-panel {
+        padding: 20px;
+    }
+
+    .campaign-card-top,
+    .panel-heading {
+        flex-direction: column;
+    }
+}

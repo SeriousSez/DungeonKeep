@@ -1,0 +1,152 @@
+:host {
+    display: block;
+}
+
+.panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 28px;
+    box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(18px);
+}
+
+.studio-panel {
+    padding: 24px;
+}
+
+.panel-heading,
+.form-split {
+    display: flex;
+    gap: 12px;
+}
+
+.panel-heading {
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.74rem;
+    color: var(--text-soft);
+}
+
+.panel-heading h2,
+.form-heading h3 {
+    margin: 0;
+    font-family: var(--display-font);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 0.84rem;
+    border: 1px solid var(--pill-border);
+    background: var(--pill-bg);
+    color: var(--text-main);
+}
+
+.studio-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.studio-grid.single {
+    grid-template-columns: 1fr;
+}
+
+.form-card {
+    display: grid;
+    gap: 14px;
+    padding: 20px;
+    border: 1px solid var(--panel-border);
+    border-radius: 22px;
+    background: var(--surface-raised);
+}
+
+.form-heading {
+    display: grid;
+    gap: 8px;
+}
+
+.form-heading p {
+    margin: 0;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+label {
+    display: grid;
+    gap: 8px;
+    color: var(--text-main);
+    font-size: 0.95rem;
+}
+
+input,
+textarea,
+select,
+.primary-button {
+    font: inherit;
+}
+
+input,
+textarea,
+select {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(118, 86, 63, 0.22);
+    background: rgba(255, 252, 245, 0.78);
+    color: var(--text-main);
+    outline: none;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    border-color: rgba(157, 91, 44, 0.5);
+    box-shadow: 0 0 0 4px rgba(211, 155, 87, 0.14);
+}
+
+textarea {
+    resize: vertical;
+    min-height: 96px;
+}
+
+.primary-button {
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 14px;
+    border: 1px solid transparent;
+    background: linear-gradient(135deg, #a35b29, #d99a4b);
+    color: #fff9ef;
+    cursor: pointer;
+}
+
+@media (max-width: 1180px) {
+    .studio-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .studio-panel {
+        padding: 20px;
+    }
+
+    .panel-heading,
+    .form-split {
+        flex-direction: column;
+    }
+}

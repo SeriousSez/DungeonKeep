@@ -1,0 +1,48 @@
+<main class="page-stack">
+    <section class="panel page-intro">
+        <p class="eyebrow">Character management</p>
+        <h1>Character Creation Method</h1>
+        <p>Choose how you would like to create your character.</p>
+        <a routerLink="/characters" class="back-link">← Back to Characters</a>
+    </section>
+
+    <section class="method-grid">
+        <article class="panel method-card">
+            <div class="method-media standard"></div>
+            <div class="method-body">
+                <h2>Standard</h2>
+                <p>Create a character using a step-by-step approach.</p>
+                <button type="button" class="beginner-toggle">
+                    <span class="checkbox"></span>
+                    Beginner? Show help text
+                </button>
+            </div>
+            <a routerLink="/characters/new/standard/home" class="method-action">Start Building</a>
+        </article>
+
+        <article class="panel method-card">
+            <div class="method-media premade"></div>
+            <div class="method-body">
+                <h2>Premade</h2>
+                <p>Browse ready-to-play character templates and pick one quickly.</p>
+            </div>
+            <button type="button" class="method-action">Start Browsing</button>
+        </article>
+
+        <article class="panel method-card">
+            <div class="method-body no-media">
+                <h2>Quick Build</h2>
+                <p>Choose species and class to generate a fast level 1 character.</p>
+            </div>
+            <button type="button" class="method-action">Start Building</button>
+        </article>
+
+        <article class="panel method-card">
+            <div class="method-body no-media">
+                <h2>Random</h2>
+                <p>Roll a randomized character, with optional level and class constraints.</p>
+            </div>
+            <button type="button" class="method-action">Start Building</button>
+        </article>
+    </section>
+</main>

@@ -1,0 +1,10 @@
+<main class="page-stack">
+    <section class="panel page-intro">
+        <p class="eyebrow">Campaign management</p>
+        <h1>New Campaign</h1>
+        <p>Create a campaign as a dedicated flow, then return to your boards and rosters.</p>
+        <a routerLink="/campaigns" class="back-link">← Back to Campaigns</a>
+    </section>
+
+    <app-creation-studio mode="campaign" (campaignCreated)="store.addCampaign($event)" />
+</main>

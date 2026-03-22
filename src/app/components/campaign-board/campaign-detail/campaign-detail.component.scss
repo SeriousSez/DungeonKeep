@@ -1,0 +1,194 @@
+:host {
+    display: block;
+}
+
+.panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 28px;
+    box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(18px);
+}
+
+.detail-panel {
+    padding: 24px;
+}
+
+.panel-heading,
+.detail-heading,
+.detail-badges,
+.session-title-row,
+.thread-row {
+    display: flex;
+    gap: 12px;
+}
+
+.panel-heading,
+.detail-heading,
+.session-title-row,
+.thread-row {
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.panel-heading {
+    margin-bottom: 20px;
+}
+
+.panel-heading h2,
+.detail-card h3 {
+    margin: 0;
+    font-family: var(--display-font);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.74rem;
+    color: var(--text-soft);
+}
+
+.detail-summary,
+.empty-copy {
+    margin: 0;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+.pill,
+.threat-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 0.84rem;
+    border: 1px solid var(--pill-border);
+    background: var(--pill-bg);
+    color: var(--text-main);
+}
+
+.highlight-pill {
+    background: rgba(216, 147, 75, 0.16);
+    border-color: rgba(176, 104, 54, 0.35);
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.detail-card {
+    padding: 20px;
+    border: 1px solid var(--panel-border);
+    border-radius: 22px;
+    background: var(--surface-raised);
+}
+
+.parchment-card {
+    background:
+        linear-gradient(180deg, rgba(253, 244, 224, 0.88), rgba(246, 233, 206, 0.88)),
+        var(--surface-raised);
+}
+
+.compact-card {
+    min-height: 100%;
+}
+
+.session-list,
+.thread-list,
+.tag-list {
+    display: grid;
+    gap: 16px;
+}
+
+.session-item {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 18px;
+    background: rgba(255, 248, 233, 0.56);
+    border: 1px solid rgba(140, 94, 53, 0.14);
+}
+
+.thread-row {
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(120, 88, 66, 0.12);
+}
+
+.thread-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+.thread-row p,
+.session-item p {
+    margin: 0;
+}
+
+.tag-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.tag-list li {
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(122, 76, 46, 0.08);
+    color: var(--text-main);
+}
+
+.loot-list li {
+    background: rgba(214, 158, 76, 0.12);
+}
+
+.ghost-button {
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(118, 86, 63, 0.22);
+    background: transparent;
+    color: var(--text-main);
+    cursor: pointer;
+}
+
+.threat-pill[data-threat='Low'] {
+    background: rgba(90, 138, 90, 0.14);
+}
+
+.threat-pill[data-threat='Moderate'] {
+    background: rgba(168, 133, 58, 0.16);
+}
+
+.threat-pill[data-threat='High'] {
+    background: rgba(173, 99, 51, 0.16);
+}
+
+.threat-pill[data-threat='Deadly'] {
+    background: rgba(138, 51, 51, 0.16);
+}
+
+@media (max-width: 1180px) {
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .detail-panel {
+        padding: 20px;
+    }
+
+    .session-title-row,
+    .thread-row,
+    .panel-heading,
+    .detail-heading {
+        flex-direction: column;
+    }
+}

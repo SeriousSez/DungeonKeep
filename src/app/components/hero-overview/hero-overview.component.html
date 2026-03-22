@@ -1,0 +1,34 @@
+<section class="hero panel">
+    <div class="hero-copy">
+        <p class="eyebrow">Campaign and character command</p>
+        <div class="brand-row">
+            <div class="brand-mark">DK</div>
+            <div class="brand-copy">
+                <h1>{{ title() }}</h1>
+                <p>
+                    Run your table like a living world. Track campaigns, keep parties aligned,
+                    and prep every next session without losing the threads that matter.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="hero-stats">
+        <article class="stat-card">
+            <span class="stat-value">{{ campaignCount() }}</span>
+            <span class="stat-label">Active campaigns</span>
+        </article>
+        <article class="stat-card">
+            <span class="stat-value">{{ characterCount() }}</span>
+            <span class="stat-label">Tracked characters</span>
+        </article>
+        <article class="stat-card">
+            <span class="stat-value">{{ sessionCount() }}</span>
+            <span class="stat-label">Prepared sessions</span>
+        </article>
+        <article class="stat-card accent-card">
+            <span class="stat-value">{{ readyCharacterCount() }}</span>
+            <span class="stat-label">Party members ready</span>
+        </article>
+    </div>
+</section>

@@ -1,0 +1,116 @@
+:host {
+    display: block;
+}
+
+.panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 28px;
+    box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(18px);
+}
+
+.hero {
+    display: grid;
+    grid-template-columns: 1.35fr 1fr;
+    gap: 24px;
+    padding: 32px;
+    background:
+        radial-gradient(circle at top left, rgba(228, 174, 84, 0.2), transparent 36%),
+        linear-gradient(135deg, rgba(47, 31, 24, 0.96), rgba(87, 59, 40, 0.86));
+    color: var(--paper-strong);
+}
+
+.hero-copy {
+    display: grid;
+    gap: 16px;
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.74rem;
+    color: var(--accent-soft);
+}
+
+.brand-row {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.brand-mark {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    aspect-ratio: 1;
+    border-radius: 22px;
+    background: linear-gradient(145deg, rgba(231, 188, 105, 0.95), rgba(163, 91, 41, 0.95));
+    color: #2c160f;
+    font-family: var(--display-font);
+    font-size: 1.7rem;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+}
+
+.brand-copy h1 {
+    margin: 0;
+    font-family: var(--display-font);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    font-size: clamp(2.6rem, 5vw, 4.75rem);
+}
+
+.brand-copy p {
+    margin: 0;
+    color: var(--paper-soft);
+    line-height: 1.6;
+}
+
+.hero-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.stat-card {
+    display: grid;
+    gap: 8px;
+    padding: 20px;
+    border-radius: 22px;
+    background: rgba(245, 236, 224, 0.08);
+    border: 1px solid rgba(240, 214, 164, 0.14);
+}
+
+.accent-card {
+    background: linear-gradient(145deg, rgba(214, 138, 58, 0.22), rgba(122, 59, 36, 0.28));
+}
+
+.stat-value {
+    font-family: var(--display-font);
+    font-size: 2.35rem;
+}
+
+.stat-label {
+    color: var(--paper-soft);
+}
+
+@media (max-width: 1180px) {
+    .hero {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .hero {
+        padding: 20px;
+    }
+
+    .hero-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .brand-row {
+        flex-direction: column;
+    }
+}

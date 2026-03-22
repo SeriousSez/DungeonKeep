@@ -1,0 +1,5 @@
+<section class="workspace-grid">
+    <app-campaign-list [campaigns]="campaigns()" [selectedCampaignId]="selectedCampaignId()" [openThreadCount]="openThreadCount()" (campaignSelected)="onCampaignSelected($event)" />
+
+    <app-campaign-detail [selectedCampaign]="selectedCampaign()" (threadArchived)="onThreadArchived($event)" />
+</section>

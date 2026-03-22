@@ -1,0 +1,31 @@
+<article class="panel stack-panel">
+    <div class="panel-heading">
+        <div>
+            <p class="eyebrow">Adventure board</p>
+            <h2>Campaign roster</h2>
+        </div>
+        <span class="pill">{{ openThreadCount() }} open threads</span>
+    </div>
+
+    <div class="campaign-list">
+        @for (campaign of campaigns(); track campaign.id) {
+        <button type="button" class="campaign-card" [class.is-selected]="campaign.id === selectedCampaignId()" (click)="selectCampaign(campaign.id)">
+            <div class="campaign-card-top">
+                <div>
+                    <h3>{{ campaign.name }}</h3>
+                    <p>{{ campaign.setting }}</p>
+                </div>
+                <span class="tone-chip">{{ campaign.tone }}</span>
+            </div>
+
+            <p class="campaign-summary">{{ campaign.summary }}</p>
+
+            <div class="campaign-meta">
+                <span>{{ campaign.levelRange }}</span>
+                <span>{{ campaign.partyCharacterIds.length }} party members</span>
+                <span>{{ campaign.nextSession }}</span>
+            </div>
+        </button>
+        }
+    </div>
+</article>

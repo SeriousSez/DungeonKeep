@@ -1,0 +1,552 @@
+﻿name: Deploy to Simply.com (MSDeploy)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: "8.0.x"
+  PROJECT_PATH: "SocialSez.API/SocialSez.API.csproj"
+  PUBLISH_PATH: "./publish"
+  RUNTIME_IDENTIFIER: "win-x64"
+  NODE_VERSION: "20.x"
+  ANGULAR_WORKING_DIR: "./clients/socialsez-web"
+  ANGULAR_DIST_PATH: "./clients/socialsez-web/dist/socialsez-web"
+  WEB_DEPLOY_PATH: "./web-dist"
+  WEB_SERVER_DIR: "/venli/"
+  API_HEALTH_URL: "https://venli.api.sezginsahin.dk/api/health/ping"
+  WEB_HEALTH_URL: "https://venli.sezginsahin.dk/"
+  API_USE_APP_OFFLINE: "false"
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.changes.outputs.api }}
+      web: ${{ steps.changes.outputs.web }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect file changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            api:
+              - 'SocialSez.API/**'
+              - 'SocialSez.ApplicationService/**'
+              - 'SocialSez.Infrastructure/**'
+              - 'SocialSez.Domain/**'
+              - 'Directory.Build.props'
+              - 'SocialSez.slnx'
+              - '.github/workflows/deploy-to-simply.yml'
+            web:
+              - 'clients/socialsez-web/**'
+              - '!SocialSez.API/**'
+              - '!SocialSez.ApplicationService/**'
+              - '!SocialSez.Infrastructure/**'
+              - '!SocialSez.Domain/**'
+
+  build-api:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    outputs:
+      publish-path: ${{ steps.publish.outputs.publish_path || env.PUBLISH_PATH }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Generate production appsettings from secrets
+        working-directory: ./SocialSez.API
+        shell: pwsh
+        env:
+          MYSQL_CONNECTION_STRING: ${{ secrets.MYSQL_CONNECTION_STRING }}
+        run: |
+          $required = @(
+            @{ Name = 'MYSQL_CONNECTION_STRING'; Value = $env:MYSQL_CONNECTION_STRING }
+          )
+
+          $missing = $required | Where-Object { -not $_.Value }
+          if ($missing) {
+            throw "Missing required secrets: $($missing.Name -join ', ')"
+          }
+
+          $aiProvider = if ([string]::IsNullOrWhiteSpace($env:OPENAI_API_KEY)) { "Wikipedia" } else { "OpenAI" }
+
+          $config = @{
+            ConnectionStrings = @{
+              MySql = $env:MYSQL_CONNECTION_STRING
+            }
+            Jwt = @{
+              Issuer = "SocialSez"
+              Audience = "SocialSez.Clients"
+              Key = "SocialSez-Super-Secret-Key-Replace-In-Production-2026"
+              ExpiryMinutes = 120
+              RefreshExpiryDays = 14
+            }
+            Cors = @{
+              AllowedOrigins = @(
+                "https://venli.sezginsahin.dk"
+              )
+            }
+            AllowedHosts = '*'
+          }
+
+          $json = $config | ConvertTo-Json -Depth 5
+          Set-Content -Path 'appsettings.Production.json' -Value $json -Encoding UTF8
+
+      - name: Restore and build API
+        run: |
+          dotnet restore
+          dotnet build --configuration Release --no-restore
+
+      - name: Publish API
+        id: publish
+        run: |
+          dotnet publish ${{ env.PROJECT_PATH }} `
+            --configuration Release `
+            --runtime ${{ env.RUNTIME_IDENTIFIER }} `
+            --self-contained true `
+            --output ${{ env.PUBLISH_PATH }}
+          echo "publish_path=${{ env.PUBLISH_PATH }}" >> $env:GITHUB_OUTPUT
+
+      - name: Validate published production config
+        shell: pwsh
+        run: |
+          $configPath = Join-Path "${{ env.PUBLISH_PATH }}" "appsettings.Production.json"
+
+          if (-not (Test-Path $configPath)) {
+            throw "appsettings.Production.json was not found in publish output: $configPath"
+          }
+
+          $raw = Get-Content -Path $configPath -Raw
+          if ([string]::IsNullOrWhiteSpace($raw)) {
+            throw "appsettings.Production.json is empty."
+          }
+
+          $json = $raw | ConvertFrom-Json
+          $mysql = $json.ConnectionStrings.MySql
+
+          if ([string]::IsNullOrWhiteSpace($mysql)) {
+            throw "Published appsettings.Production.json has empty ConnectionStrings.MySql."
+          }
+
+          Write-Host "Published config validation passed. ConnectionStrings.MySql is populated."
+
+      - name: Upload API artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-publish
+          path: ${{ env.PUBLISH_PATH }}/
+
+  build-web:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.web == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.ANGULAR_WORKING_DIR }}/package-lock.json
+
+      - name: Install Angular dependencies
+        working-directory: ${{ env.ANGULAR_WORKING_DIR }}
+        run: npm ci
+
+      - name: Inject Google Maps API key
+        working-directory: ${{ env.ANGULAR_WORKING_DIR }}
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets['GOOGLE_MAPS_API_KEY'] }}
+        shell: pwsh
+        run: |
+          (Get-Content src/environments/environment.prod.ts) -replace '\$\{GOOGLE_MAPS_API_KEY\}', $env:GOOGLE_MAPS_API_KEY | Set-Content src/environments/environment.prod.ts
+
+      - name: Build Angular app
+        working-directory: ${{ env.ANGULAR_WORKING_DIR }}
+        run: npm run build
+
+      - name: Ensure Angular web.config is present
+        working-directory: ${{ env.ANGULAR_WORKING_DIR }}
+        shell: pwsh
+        run: |
+          $dist = Join-Path "dist/socialsez-web" "web.config"
+          $source = "src/web.config"
+          if ((-not (Test-Path $dist)) -and (Test-Path $source)) {
+            Copy-Item $source $dist -Force
+          } else {
+            Write-Host "web.config source not found, skipping copy."
+          }
+
+      - name: Upload Web artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: ${{ env.ANGULAR_DIST_PATH }}/
+
+  deploy-api:
+    runs-on: windows-latest
+    needs: [detect-changes, build-api]
+    if: needs.detect-changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Download API artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: api-publish
+          path: ${{ env.PUBLISH_PATH }}/
+
+      - name: Create app_offline.htm
+        if: env.API_USE_APP_OFFLINE == 'true'
+        shell: pwsh
+        run: |
+          $content = @"
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Application Offline</title>
+          </head>
+          <body>
+              <h1>Application Offline</h1>
+              <p>The application is currently offline for maintenance.</p>
+          </body>
+          </html>
+          "@
+          Set-Content -Path "${{ env.PUBLISH_PATH }}/app_offline.htm" -Value $content
+
+      - name: Prepare app_offline payload
+        if: env.API_USE_APP_OFFLINE == 'true'
+        shell: pwsh
+        run: |
+          $offlinePayloadDir = "./app-offline-payload"
+          if (Test-Path $offlinePayloadDir) {
+            Remove-Item -Path $offlinePayloadDir -Recurse -Force
+          }
+          New-Item -ItemType Directory -Path $offlinePayloadDir | Out-Null
+          Copy-Item -Path "${{ env.PUBLISH_PATH }}/app_offline.htm" -Destination "$offlinePayloadDir/app_offline.htm" -Force
+
+      - name: Deploy app_offline.htm to take app offline
+        if: env.API_USE_APP_OFFLINE == 'true'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./app-offline-payload/
+          server-dir: /venli.api/
+          dangerous-clean-slate: false
+
+      - name: Wait for app to go offline
+        if: env.API_USE_APP_OFFLINE == 'true'
+        shell: pwsh
+        run: Start-Sleep -Seconds 3
+
+      - name: Deploy API using FTP (primary)
+        id: deploy_api_primary
+        continue-on-error: true
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ${{ env.PUBLISH_PATH }}/
+          server-dir: /venli.api/
+          dangerous-clean-slate: false
+          exclude: |
+            **/wwwroot/uploads/**
+            **/uploads/**
+            **/logs/**
+
+      - name: Deploy API using FTP (retry while offline)
+        if: env.API_USE_APP_OFFLINE == 'true' && steps.deploy_api_primary.outcome == 'failure'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ${{ env.PUBLISH_PATH }}/
+          server-dir: /venli.api/
+          dangerous-clean-slate: false
+          exclude: |
+            **/wwwroot/uploads/**
+            **/uploads/**
+            **/logs/**
+
+      - name: Create app_offline.htm (fallback)
+        if: env.API_USE_APP_OFFLINE != 'true' && steps.deploy_api_primary.outcome == 'failure'
+        shell: pwsh
+        run: |
+          $content = @"
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Application Offline</title>
+          </head>
+          <body>
+              <h1>Application Offline</h1>
+              <p>The application is currently offline for maintenance.</p>
+          </body>
+          </html>
+          "@
+          Set-Content -Path "${{ env.PUBLISH_PATH }}/app_offline.htm" -Value $content
+
+      - name: Prepare app_offline payload (fallback)
+        if: env.API_USE_APP_OFFLINE != 'true' && steps.deploy_api_primary.outcome == 'failure'
+        shell: pwsh
+        run: |
+          $offlinePayloadDir = "./app-offline-payload"
+          if (Test-Path $offlinePayloadDir) {
+            Remove-Item -Path $offlinePayloadDir -Recurse -Force
+          }
+          New-Item -ItemType Directory -Path $offlinePayloadDir | Out-Null
+          Copy-Item -Path "${{ env.PUBLISH_PATH }}/app_offline.htm" -Destination "$offlinePayloadDir/app_offline.htm" -Force
+
+      - name: Deploy app_offline.htm to take app offline (fallback)
+        if: env.API_USE_APP_OFFLINE != 'true' && steps.deploy_api_primary.outcome == 'failure'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./app-offline-payload/
+          server-dir: /venli.api/
+          dangerous-clean-slate: false
+
+      - name: Wait for app to go offline (fallback)
+        if: env.API_USE_APP_OFFLINE != 'true' && steps.deploy_api_primary.outcome == 'failure'
+        shell: pwsh
+        run: Start-Sleep -Seconds 3
+
+      - name: Deploy API using FTP (fallback retry)
+        if: env.API_USE_APP_OFFLINE != 'true' && steps.deploy_api_primary.outcome == 'failure'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ${{ env.PUBLISH_PATH }}/
+          server-dir: /venli.api/
+          dangerous-clean-slate: false
+          exclude: |
+            **/wwwroot/uploads/**
+            **/uploads/**
+            **/logs/**
+
+      - name: Remove app_offline.htm from server
+        if: env.API_USE_APP_OFFLINE == 'true' || (env.API_USE_APP_OFFLINE != 'true' && steps.deploy_api_primary.outcome == 'failure')
+        shell: pwsh
+        run: |
+          $server = "${{ secrets.FTP_SERVER }}"
+          $username = "${{ secrets.FTP_USERNAME }}"
+          $password = "${{ secrets.FTP_PASSWORD }}"
+
+          if ([string]::IsNullOrWhiteSpace($server) -or [string]::IsNullOrWhiteSpace($username) -or [string]::IsNullOrWhiteSpace($password)) {
+            throw "Missing FTP credentials for app_offline removal."
+          }
+
+          $uri = "ftp://$server/venli.api/app_offline.htm"
+          $request = [System.Net.FtpWebRequest]::Create($uri)
+          $request.Method = [System.Net.WebRequestMethods+Ftp]::DeleteFile
+          $request.Credentials = New-Object System.Net.NetworkCredential($username, $password)
+          $request.UseBinary = $true
+          $request.KeepAlive = $false
+
+          try {
+            $response = $request.GetResponse()
+            $response.Close()
+            Write-Host "Removed app_offline.htm from server"
+          } catch {
+            $message = $_.Exception.Message
+            if ($message -match "550") {
+              Write-Host "app_offline.htm was already removed on server"
+            } else {
+              throw
+            }
+          }
+
+      - name: Wait for app to restart
+        shell: pwsh
+        run: Start-Sleep -Seconds 8
+
+      # - name: Health check API
+      #   id: health_check
+      #   continue-on-error: true
+      #   shell: pwsh
+      #   run: |
+      #     if ([string]::IsNullOrWhiteSpace($env:API_HEALTH_URL)) {
+      #       Write-Error "API_HEALTH_URL is not set"
+      #     }
+      #     Write-Host "Checking API health..."
+      #     Start-Sleep -Seconds 5
+
+      #     $retries = 5
+      #     for ($i=1; $i -le $retries; $i++) {
+      #       try {
+      #         $resp = Invoke-WebRequest -UseBasicParsing -TimeoutSec 10 -Uri $env:API_HEALTH_URL
+      #         if ($resp.StatusCode -ge 200 -and $resp.StatusCode -lt 500) {
+      #           Write-Host "✅ API healthy (status $($resp.StatusCode))"
+      #           exit 0
+      #         }
+      #         throw "Unexpected status code $($resp.StatusCode)"
+      #       } catch {
+      #         Write-Host "Attempt $i failed: $_"
+      #         if ($i -eq $retries) { throw }
+      #         Start-Sleep -Seconds 5
+      #       }
+      #     }
+
+      # - name: Fail if health check failed
+      #   if: steps.health_check.outcome == 'failure'
+      #   shell: pwsh
+      #   run: |
+      #     Write-Error "❌ API health check failed after deployment"
+      #     exit 1
+
+      # - name: Download previous successful API artifact for rollback
+      #   if: failure()
+      #   id: download_previous_api
+      #   continue-on-error: true
+      #   uses: dawidd6/action-download-artifact@v6
+      #   with:
+      #     workflow: deploy-to-simply.yml
+      #     workflow_conclusion: success
+      #     name: api-publish
+      #     path: ./rollback-api
+
+      # - name: Roll back API using FTP
+      #   if: failure() && steps.download_previous_api.outcome == 'success'
+      #   uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      #   with:
+      #     server: ${{ secrets.FTP_SERVER }}
+      #     username: ${{ secrets.FTP_USERNAME }}
+      #     password: ${{ secrets.FTP_PASSWORD }}
+      #     local-dir: ./rollback-api/
+      #     server-dir: /venli.api/
+      #     dangerous-clean-slate: false
+
+  deploy-web:
+    runs-on: windows-latest
+    needs: [detect-changes, build-web]
+    if: needs.detect-changes.outputs.web == 'true' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Wait for API deployment if it was also changed
+        if: needs.detect-changes.outputs.api == 'true'
+        shell: pwsh
+        run: |
+          Write-Host "API and Web both changed - waiting for API deployment..."
+          $maxRetries = 120
+          $retryCount = 0
+
+          while ($retryCount -lt $maxRetries) {
+            try {
+              $resp = Invoke-WebRequest -Uri "${{ env.API_HEALTH_URL }}" -UseBasicParsing -TimeoutSec 5
+              if ($resp.StatusCode -eq 200) {
+                Write-Host "✅ API is ready for Web deployment"
+                exit 0
+              }
+            } catch {
+              # API not ready yet, continue waiting
+            }
+
+            $retryCount++
+            Start-Sleep -Seconds 2
+          }
+
+          Write-Warning "⚠️  API health check timed out - proceeding with Web deployment anyway"
+          exit 0
+
+      - name: Download Web artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: ${{ env.WEB_DEPLOY_PATH }}/
+
+      - name: Resolve web artifact root
+        id: resolve_web_root
+        shell: pwsh
+        run: |
+          $root = "${{ env.WEB_DEPLOY_PATH }}"
+          $indexFile = Get-ChildItem -Path $root -Filter index.html -Recurse -File | Select-Object -First 1
+
+          if (-not $indexFile) {
+            Write-Error "index.html not found under $root"
+            Write-Host "Directory snapshot for debugging:"
+            Get-ChildItem -Path $root -Recurse | Select-Object FullName
+            exit 1
+          }
+
+          $deployDir = $indexFile.DirectoryName
+          Write-Host "✅ Resolved deploy directory: $deployDir"
+          Get-ChildItem $deployDir | Select-Object Name, Length
+          "deploy_dir=$deployDir" >> $env:GITHUB_OUTPUT
+
+      - name: Deploy Angular using FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ${{ steps.resolve_web_root.outputs.deploy_dir }}/
+          server-dir: ${{ env.WEB_SERVER_DIR }}
+          dangerous-clean-slate: false
+
+      - name: Health check Web
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WEB_HEALTH_URL)) {
+            Write-Error "WEB_HEALTH_URL is not set"
+          }
+          Write-Host "Waiting 5 seconds for Web to start..."
+          Start-Sleep -Seconds 5
+
+          $retries = 5
+          for ($i=1; $i -le $retries; $i++) {
+            try {
+              $resp = Invoke-WebRequest -UseBasicParsing -TimeoutSec 10 -Uri $env:WEB_HEALTH_URL
+              if ($resp.StatusCode -ge 200 -and $resp.StatusCode -lt 500) {
+                Write-Host "✅ Web healthy (status $($resp.StatusCode))"
+                exit 0
+              }
+              throw "Unexpected status code $($resp.StatusCode)"
+            } catch {
+              Write-Host "Attempt $i failed: $_"
+              if ($i -eq $retries) { throw }
+              Start-Sleep -Seconds 5
+            }
+          }
+
+  #     - name: Download previous successful Web artifact for rollback
+  #       if: failure()
+  #       id: download_previous_web
+  #       continue-on-error: true
+  #       uses: dawidd6/action-download-artifact@v6
+  #       with:
+  #         workflow: deploy-to-simply.yml
+  #         workflow_conclusion: success
+  #         name: web-dist
+  #         path: ./rollback-web
+
+  #     - name: Roll back Web using FTP
+  #       if: failure() && steps.download_previous_web.outcome == 'success'
+  #       uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+  #       with:
+  #         server: ${{ secrets.FTP_SERVER }}
+  #         username: ${{ secrets.FTP_USERNAME }}
+  #         password: ${{ secrets.FTP_PASSWORD }}
+  #         local-dir: ./rollback-web/
+  #         server-dir: /venli/
+  #         dangerous-clean-slate: false
