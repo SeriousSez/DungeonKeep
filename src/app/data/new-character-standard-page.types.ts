@@ -1,0 +1,80 @@
+export type InfoModalType = 'class' | 'species';
+
+export interface BuilderInfo {
+    name: string;
+    source: string;
+    summary: string;
+    highlights: string[];
+    speciesDetails?: SpeciesDetail;
+    details?: {
+        tagline: string;
+        primaryAbility: string;
+        hitPointDie: string;
+        saves: string;
+        levelOneGains: string[];
+        coreTraits: Array<{ label: string; value: string }>;
+        levelMilestones: Array<{ title: string; summary: string; details: string }>;
+        featureNotes: Array<{ title: string; summary: string; details: string }>;
+    };
+}
+
+export interface ActiveInfoModal {
+    type: InfoModalType;
+    info: BuilderInfo;
+}
+
+export interface BackgroundChoice {
+    key: string;
+    title: string;
+    subtitle: string;
+    description?: string;
+    options: string[];
+}
+
+export interface BackgroundDetail {
+    description: string;
+    skillProficiencies: string;
+    toolProficiencies: string;
+    languages: string;
+    choices: BackgroundChoice[];
+    sourceUrl: string;
+}
+
+export interface SpeciesDetail {
+    tagline: string;
+    creatureType: string;
+    size: string;
+    speed: string;
+    sourceUrl: string;
+    coreTraits: Array<{ label: string; value: string }>;
+    traitNotes: Array<{ title: string; summary: string; details: string }>;
+}
+
+export interface EquipmentSource {
+    label: string;
+    url: string;
+    category: string;
+}
+
+export interface EquipmentItem {
+    name: string;
+    category: string;
+    sourceUrl: string;
+}
+
+export interface InventoryEntry {
+    name: string;
+    category: string;
+    quantity: number;
+    sourceUrl?: string;
+}
+
+export interface CurrencyState {
+    pp: number;
+    gp: number;
+    ep: number;
+    sp: number;
+    cp: number;
+}
+
+
