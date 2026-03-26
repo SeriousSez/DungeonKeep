@@ -1,0 +1,161 @@
+<div class="modal-backdrop" (click)="close()">
+    <article class="panel info-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+        <header class="info-modal-header">
+            <div>
+                <p class="eyebrow">{{ modal().type === 'class' ? 'Class Details' : 'Species Details' }}</p>
+                <h3>{{ modal().info.name }}</h3>
+                <p class="source">{{ modal().info.source }}</p>
+            </div>
+            <button type="button" class="close-modal" (click)="close()" aria-label="Close">×</button>
+        </header>
+
+        <div class="info-modal-body">
+            <p class="modal-summary">{{ modal().info.summary }}</p>
+
+            @if (modal().type === 'class' && modal().info.details; as details) {
+            <section class="details-block">
+                <h4>{{ details.tagline }}</h4>
+                <div class="fact-grid">
+                    <div><span>Primary Ability</span><strong>{{ details.primaryAbility }}</strong></div>
+                    <div><span>Hit Point Die</span><strong>{{ details.hitPointDie }}</strong></div>
+                    <div><span>Saves</span><strong>{{ details.saves }}</strong></div>
+                </div>
+            </section>
+
+            <section class="details-block">
+                <h4>As a Level 1 Character</h4>
+                <ul class="highlight-list">
+                    @for (entry of details.levelOneGains; track entry) {
+                    <li>{{ entry }}</li>
+                    }
+                </ul>
+            </section>
+
+            <section class="details-block core-traits-block">
+                <h4>Core Traits</h4>
+                <div class="traits-table">
+                    @for (trait of details.coreTraits; track trait.label) {
+                    <div class="trait-row">
+                        <span>{{ trait.label }}</span>
+                        <strong>{{ trait.value }}</strong>
+                    </div>
+                    }
+                </div>
+            </section>
+
+            <section class="details-block">
+                <h4>Progression Highlights</h4>
+                <p class="section-meta">
+                    Showing {{ visibleMilestoneCount(details.levelMilestones.length) }} of {{ details.levelMilestones.length }}. Click a row to view more details.
+                </p>
+                <ul class="highlight-list interactive-list">
+                    @for (milestone of details.levelMilestones; track milestone.title; let i = $index) {
+                    @if (showExtendedInfo() || i < 6) { <li>
+                        <button type="button" class="detail-row" (click)="toggleMilestone(i)">
+                            <span class="detail-row-title">{{ milestone.title }}</span>
+                            <span class="detail-row-summary">{{ milestone.summary }}</span>
+                        </button>
+                        @if (isMilestoneExpanded(i)) {
+                        <div class="detail-expand">{{ milestone.details }}</div>
+                        }
+                        </li>
+                        }
+                        }
+                </ul>
+                @if (details.levelMilestones.length > 6) {
+                <button type="button" class="show-more section-show-more" (click)="toggleExtendedInfo()">
+                    {{ showExtendedInfo() ? 'Show fewer progression highlights' : 'Show ' + (details.levelMilestones.length - 6) + ' more progression highlights' }}
+                </button>
+                }
+            </section>
+
+            <section class="details-block">
+                <h4>Feature Notes</h4>
+                <p class="section-meta">
+                    Showing {{ visibleFeatureNoteCount(details.featureNotes.length) }} of {{ details.featureNotes.length }}. Click a row to view more details.
+                </p>
+                <ul class="highlight-list interactive-list">
+                    @for (note of details.featureNotes; track note.title; let i = $index) {
+                    @if (showExtendedInfo() || i < 4) { <li>
+                        <button type="button" class="detail-row" (click)="toggleFeatureNote(i)">
+                            <span class="detail-row-title">{{ note.title }}</span>
+                            <span class="detail-row-summary">{{ note.summary }}</span>
+                        </button>
+                        @if (isFeatureNoteExpanded(i)) {
+                        <div class="detail-expand">{{ note.details }}</div>
+                        }
+                        </li>
+                        }
+                        }
+                </ul>
+                @if (details.featureNotes.length > 4) {
+                <button type="button" class="show-more section-show-more" (click)="toggleExtendedInfo()">
+                    {{ showExtendedInfo() ? 'Show fewer feature notes' : 'Show ' + (details.featureNotes.length - 4) + ' more feature notes' }}
+                </button>
+                }
+            </section>
+            }
+
+            @if (modal().type === 'species' && modal().info.speciesDetails; as speciesDetails) {
+            <section class="details-block">
+                <h4>{{ speciesDetails.tagline }}</h4>
+                <div class="fact-grid">
+                    <div><span>Creature Type</span><strong>{{ speciesDetails.creatureType }}</strong></div>
+                    <div><span>Size</span><strong>{{ speciesDetails.size }}</strong></div>
+                    <div><span>Speed</span><strong>{{ speciesDetails.speed }}</strong></div>
+                </div>
+                <a class="inline-action" [href]="speciesDetails.sourceUrl" target="_blank" rel="noopener noreferrer">Open lineage reference</a>
+            </section>
+
+            <section class="details-block core-traits-block">
+                <h4>Core Lineage Traits</h4>
+                <div class="traits-table">
+                    @for (trait of speciesDetails.coreTraits; track trait.label) {
+                    <div class="trait-row">
+                        <span>{{ trait.label }}</span>
+                        <strong>{{ trait.value }}</strong>
+                    </div>
+                    }
+                </div>
+            </section>
+
+            <section class="details-block">
+                <h4>Lineage Notes</h4>
+                <p class="section-meta">
+                    Showing {{ visibleFeatureNoteCount(speciesDetails.traitNotes.length) }} of {{ speciesDetails.traitNotes.length }}. Click a row to view more details.
+                </p>
+                <ul class="highlight-list interactive-list">
+                    @for (note of speciesDetails.traitNotes; track note.title; let i = $index) {
+                    @if (showExtendedInfo() || i < 4) { <li>
+                        <button type="button" class="detail-row" (click)="toggleFeatureNote(i)">
+                            <span class="detail-row-title">{{ note.title }}</span>
+                            <span class="detail-row-summary">{{ note.summary }}</span>
+                        </button>
+                        @if (isFeatureNoteExpanded(i)) {
+                        <div class="detail-expand">{{ note.details }}</div>
+                        }
+                        </li>
+                        }
+                        }
+                </ul>
+                @if (speciesDetails.traitNotes.length > 4) {
+                <button type="button" class="show-more section-show-more" (click)="toggleExtendedInfo()">
+                    {{ showExtendedInfo() ? 'Show fewer lineage notes' : 'Show ' + (speciesDetails.traitNotes.length - 4) + ' more lineage notes' }}
+                </button>
+                }
+            </section>
+            }
+
+            <ul class="highlight-list">
+                @for (highlight of modal().info.highlights; track highlight) {
+                <li>{{ highlight }}</li>
+                }
+            </ul>
+        </div>
+
+        <footer class="info-modal-footer">
+            <button type="button" class="btn-secondary" (click)="close()">Cancel</button>
+            <button type="button" class="btn-primary" (click)="confirm()">Confirm Selection</button>
+        </footer>
+    </article>
+</div>

@@ -46,8 +46,15 @@ export interface SpeciesDetail {
     size: string;
     speed: string;
     sourceUrl: string;
+    traits: string[];
     coreTraits: Array<{ label: string; value: string }>;
-    traitNotes: Array<{ title: string; summary: string; details: string }>;
+    traitNotes: Array<{
+        title: string;
+        summary: string;
+        details: string;
+        choices?: number;
+        choiceLabel?: string;
+    }>;
 }
 
 export interface EquipmentSource {

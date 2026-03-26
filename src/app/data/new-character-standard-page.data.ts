@@ -419,7 +419,59 @@ export const backgroundStartingPackages = {
 export const validSteps = new Set(['home', 'class', 'background', 'species', 'abilities', 'equipment', 'whats-next']);
 
 export const classInfoMap: Record<string, BuilderInfo> = {
-    Artificer: { name: 'Artificer', source: "Eberron / Tasha's", summary: 'Inventive half-caster using infusions, tools, and magical engineering.', highlights: ['Primary focus: Intelligence', 'Core feature: Infuse Item', 'Flexible support, utility, and magical item synergy'] },
+    Artificer: {
+        name: 'Artificer',
+        source: "Eberron / Tasha's",
+        summary: 'Inventive half-caster using infusions, tools, and magical engineering to empower a party through preparation and magical gear.',
+        highlights: ['Primary focus: Intelligence', 'Core feature: Infuse Item', 'Flexible support, utility, and magical item synergy'],
+        details: {
+            tagline: 'A Magical Inventor Who Builds Power Through Tools and Infusions',
+            primaryAbility: 'Intelligence',
+            hitPointDie: 'd8 per Artificer level',
+            saves: 'Constitution and Intelligence',
+            levelOneGains: [
+                'Gain Magical Tinkering plus Spellcasting support tools, with utility effects that reward creative problem-solving.',
+                'Start with light armor, medium armor, shields, simple weapons, and thieves\' tools and artisan tool proficiency.',
+                'Choose your equipment package and establish your role as a flexible support, utility, or control specialist.'
+            ],
+            coreTraits: [
+                { label: 'Primary Ability', value: 'Intelligence' },
+                { label: 'Hit Point Die', value: 'd8 per Artificer level' },
+                { label: 'Saving Throw Proficiencies', value: 'Constitution and Intelligence' },
+                { label: 'Skill Proficiencies', value: 'Choose 2: Arcana, History, Investigation, Medicine, Nature, Perception, Sleight of Hand' },
+                { label: 'Armor Training', value: 'Light armor, medium armor, shields' },
+                { label: 'Weapon Proficiencies', value: 'Simple weapons' },
+                { label: 'Tool Proficiencies', value: 'Thieves\' tools, tinkers\' tools, and one type of artisan\'s tools' },
+                { label: 'Spellcasting Profile', value: 'Half-caster using Intelligence; prepared spells from the Artificer list' }
+            ],
+            levelMilestones: [
+                { title: 'Level 1', summary: 'Magical Tinkering, Spellcasting foundation', details: 'You begin as a utility-focused caster with practical magical effects and a strong baseline for problem-solving through tools.' },
+                { title: 'Level 2', summary: 'Infuse Item, replicated item access', details: 'Infusions become your signature system, letting you turn ordinary gear into reliable magic-enhanced equipment for yourself or allies.' },
+                { title: 'Level 3', summary: 'Artificer Specialist, The Right Tool for the Job', details: 'Subclass identity starts here (Alchemist, Armorer, Artillerist, or Battle Smith), shaping whether you lean support, durability, or offense.' },
+                { title: 'Level 4', summary: 'Ability Score Improvement', details: 'First major optimization point: usually Intelligence scaling, concentration resilience, or feat-based utility.' },
+                { title: 'Level 5', summary: '2nd-level spells, specialist feature', details: 'Core power jump with stronger spell options and subclass scaling that defines your round-to-round impact.' },
+                { title: 'Level 6', summary: 'Tool Expertise', details: 'Double proficiency on chosen tool checks significantly improves downtime, crafting, and technical problem-solving.' },
+                { title: 'Level 7', summary: 'Flash of Genius', details: 'You can add Intelligence modifier to key ability checks or saving throws, creating high-impact clutch support moments.' },
+                { title: 'Level 9', summary: '3rd-level spells, specialist feature', details: 'Mid-tier spell access and subclass advancement increase tactical options, especially in control and sustained utility play.' },
+                { title: 'Level 10', summary: 'Magic Item Adept', details: 'Attunement capacity and crafting speed improve, reinforcing your role as the party\'s magical equipment architect.' },
+                { title: 'Level 11', summary: 'Spell-Storing Item', details: 'You can store a lower-level spell for repeated group use, dramatically improving action economy and team flexibility.' },
+                { title: 'Level 14', summary: 'Magic Item Savant', details: 'Attunement and item-use restrictions loosen further, letting you leverage a wider range of magical tools than most classes.' },
+                { title: 'Level 15', summary: 'Specialist feature', details: 'Subclass capstone tier arrives, often defining your late-game identity around defense, damage support, or battlefield control.' },
+                { title: 'Level 18', summary: 'Magic Item Master', details: 'High attunement capacity turns your equipment loadout into a major source of durability, utility, and encounter shaping.' },
+                { title: 'Level 20', summary: 'Soul of Artifice', details: 'Your capstone ties survivability and saves to attunement, making magical item planning central to endgame resilience.' }
+            ],
+            featureNotes: [
+                { title: 'Infusion Economy', summary: 'Known infusions and active infusions are separate limits.', details: 'Prepare infusions that match your party plan each day; choose active infusions carefully because only some can remain active at once.' },
+                { title: 'Prepared Casting Rhythm', summary: 'Prepared spell list scales with level and Intelligence.', details: 'Artificer rewards daily planning: swap utility and encounter tools between rests instead of locking into a fixed known-spell profile.' },
+                { title: 'Concentration and Positioning', summary: 'Many top artificer spells rely on sustained concentration.', details: 'Build and play around concentration protection through Constitution saves, safe positioning, and action economy discipline.' },
+                { title: 'Tool Identity in Play', summary: 'Tool proficiencies are a mechanical pillar, not just flavor.', details: 'Skill challenges, crafting, trap solutions, and technical checks all improve when you actively leverage your tool package.' },
+                { title: 'Subclass Role Signals', summary: 'Alchemist, Armorer, Artillerist, and Battle Smith each change your combat loop.', details: 'Choose subclass based on table needs: healing/utility support, defensive frontline, ranged pressure, or weapon-centric companion play.' },
+                { title: 'Magic Item Synergy', summary: 'Later levels convert attunement into direct class strength.', details: 'Your power curve scales with good item planning; attunement slots become strategic resources tied to defense and reliability.' },
+                { title: 'Flash of Genius Timing', summary: 'Best used on high-stakes saves and pivotal checks.', details: 'Use it reactively to prevent failed concentration saves, lock in mission-critical skill checks, or protect allies from encounter-defining effects.' },
+                { title: 'Spell-Storing Item Value', summary: 'Extends core utility across the party.', details: 'Pick spells with repeat impact so allies can trigger value without consuming your main action each turn.' }
+            ]
+        }
+    },
     Barbarian: {
         name: 'Barbarian',
         source: "Player's Handbook",
@@ -1626,115 +1678,487 @@ export const classSubclassSnapshots: Record<string, { summary: string; details: 
     }
 };
 
-const makeSpeciesInfo = (
+const langTrait = (knownLangs: string, choices = 2, choiceLabel = 'Origin') => ({
+    title: 'Languages',
+    summary: choices === 0
+        ? knownLangs
+        : `${knownLangs} plus ${choices} ${choices === 1 ? 'of your choice' : 'of your choice'}.`,
+    details: choices === 0
+        ? `Your character knows ${knownLangs}.`
+        : `Your character knows ${knownLangs}. You also know ${choices === 1 ? 'one additional language' : `${choices} additional languages`} of your choice${choiceLabel ? `, determined by your ${choiceLabel}` : ''}.`,
+    choices: choices || undefined,
+    choiceLabel: choices ? choiceLabel : undefined
+});
+
+const phbSpeciesDetails: Record<string, BuilderInfo> = {
+    'Dragonborn': {
+        name: 'Dragonborn',
+        source: "Player's Handbook 2024",
+        summary: 'The ancestors of dragonborn hatched from the eggs of chromatic and metallic dragons.',
+        highlights: ['Breath Weapon', 'Draconic Ancestry', 'Draconic Flight'],
+        speciesDetails: {
+            tagline: 'Dragonborn Lineage Overview',
+            creatureType: 'Humanoid',
+            size: 'Medium',
+            speed: '30 ft.',
+            sourceUrl: 'https://dnd5e.wikidot.com/lineage:dragonborn',
+            traits: ['Draconic Ancestry', 'Breath Weapon', 'Damage Resistance', 'Darkvision', 'Draconic Flight', 'Languages'],
+            coreTraits: [
+                { label: 'Creature Type', value: 'Humanoid' },
+                { label: 'Size', value: 'Medium' },
+                { label: 'Speed', value: '30 ft.' }
+            ],
+            traitNotes: [
+                {
+                    title: 'Draconic Ancestry',
+                    summary: 'Choose your dragon type and damage element.',
+                    details: 'You have draconic ancestry of a particular type of dragon. Choose one: Black (Acid), Blue (Lightning), Brass (Fire), Bronze (Lightning), Copper (Acid), Gold (Fire), Green (Poison), Red (Fire), Silver (Cold), White (Cold). This determines the damage type of your Breath Weapon and your Damage Resistance.',
+                    choices: 1
+                },
+                {
+                    title: 'Breath Weapon',
+                    summary: 'Exhale destructive elemental energy during an attack.',
+                    details: 'When you take the Attack action on your turn, you can replace one of your attacks with an exhalation of magical energy in a 30-foot line (5 ft. wide) or a 15-foot cone. Each creature in that area makes a Dexterity saving throw (DC = 8 + CON modifier + proficiency bonus). On a failure, each target takes 1d10 damage of your ancestry type; half on a success. Scales: 2d10 at 5th, 3d10 at 11th, 4d10 at 17th. Uses equal to your proficiency bonus per long rest.'
+                },
+                {
+                    title: 'Damage Resistance',
+                    summary: 'Resist your ancestry\'s damage type.',
+                    details: 'You have Resistance to the damage type determined by your Draconic Ancestry.'
+                },
+                {
+                    title: 'Darkvision',
+                    summary: 'See in dim light and darkness within 60 ft.',
+                    details: 'You have Darkvision with a range of 60 feet. Within that range, you can see in dim light as if it were bright light, and in darkness as if it were dim light. You discern colors in darkness only as shades of gray.'
+                },
+                {
+                    title: 'Draconic Flight',
+                    summary: 'Sprout spectral wings and fly (5th level).',
+                    details: 'When you reach 5th level, you can channel your draconic magic to give yourself temporary wings. As a Bonus Action, you sprout spectral wings on your back that last for 10 minutes or until you retract them as a Bonus Action. While the wings are present, you have a Fly Speed equal to your Speed.'
+                },
+                langTrait('Common and Draconic')
+            ]
+        }
+    },
+    'Dwarf': {
+        name: 'Dwarf',
+        source: "Player's Handbook",
+        summary: 'Dwarves are known for their skill in warfare, mining, and stonework, with unmatched endurance and loyalty to clan.',
+        highlights: ['Dwarven Resilience', 'Darkvision', 'Stonecunning'],
+        speciesDetails: {
+            tagline: 'Dwarf Lineage Overview',
+            creatureType: 'Humanoid',
+            size: 'Medium',
+            speed: '30 ft.',
+            sourceUrl: 'https://dnd5e.wikidot.com/lineage:dwarf',
+            traits: ['Darkvision', 'Dwarven Resilience', 'Dwarven Toughness', 'Stonecunning', 'Languages'],
+            coreTraits: [
+                { label: 'Creature Type', value: 'Humanoid' },
+                { label: 'Size', value: 'Medium' },
+                { label: 'Speed', value: '30 ft.' }
+            ],
+            traitNotes: [
+                {
+                    title: 'Darkvision',
+                    summary: 'See in dim light and darkness within 120 ft.',
+                    details: 'Accustomed to life underground, you have Darkvision with a range of 120 feet. You can see in dim light as if it were bright light, and in darkness as if it were dim light. You discern colors in darkness only as shades of gray.'
+                },
+                {
+                    title: 'Dwarven Resilience',
+                    summary: 'Advantage against poison; resistance to poison damage.',
+                    details: 'You have Advantage on saving throws you make to avoid or end the Poisoned condition on yourself. You also have Resistance to Poison damage.'
+                },
+                {
+                    title: 'Dwarven Toughness',
+                    summary: '+1 hit point maximum per level.',
+                    details: 'Your hit point maximum increases by 1, and it increases by 1 again whenever you gain a level.'
+                },
+                {
+                    title: 'Stonecunning',
+                    summary: 'Tremorsense and stonework expertise.',
+                    details: 'As a Bonus Action, you can gain Tremorsense with a range of 60 feet for 10 minutes. You must be on a surface or in a liquid that is connected to the ground for this Tremorsense to work. You can use this Bonus Action a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest.'
+                },
+                langTrait('Common and Dwarvish')
+            ]
+        }
+    },
+    'Elf': {
+        name: 'Elf',
+        source: "Player's Handbook",
+        summary: 'Elves are a magical people of otherworldly grace, living in places of ethereal beauty amid ancient forests and faerie light.',
+        highlights: ['Elven Lineage', 'Fey Ancestry', 'Trance'],
+        speciesDetails: {
+            tagline: 'Elf Lineage Overview',
+            creatureType: 'Humanoid',
+            size: 'Medium',
+            speed: '30 ft.',
+            sourceUrl: 'https://dnd5e.wikidot.com/lineage:elf',
+            traits: ['Darkvision', 'Elven Lineage', 'Fey Ancestry', 'Keen Senses', 'Trance', 'Languages'],
+            coreTraits: [
+                { label: 'Creature Type', value: 'Humanoid' },
+                { label: 'Size', value: 'Medium' },
+                { label: 'Speed', value: '30 ft.' }
+            ],
+            traitNotes: [
+                {
+                    title: 'Darkvision',
+                    summary: 'See in dim light and darkness within 60 ft.',
+                    details: 'You have Darkvision with a range of 60 feet. You can see in dim light as if it were bright light, and in darkness as if it were dim light. You discern colors in darkness only as shades of gray.'
+                },
+                {
+                    title: 'Elven Lineage',
+                    summary: 'Choose your elven subrace and innate spells.',
+                    details: 'You are part of an elven lineage that grants you additional traits. Choose one of the following: Drow (Darkvision 120 ft., Drow Magic spells), High Elf (Cantrip from Wizard spell list, +1 language), Wood Elf (Speed 35 ft., Mask of the Wild). Each lineage also grants additional spells as you level up.',
+                    choices: 1
+                },
+                {
+                    title: 'Fey Ancestry',
+                    summary: 'Advantage against being charmed; immune to magical sleep.',
+                    details: 'You have Advantage on saving throws you make to avoid or end the Charmed condition on yourself. Magic can\'t put you to sleep.'
+                },
+                {
+                    title: 'Keen Senses',
+                    summary: 'Proficiency in the Perception skill.',
+                    details: 'You have proficiency in the Perception skill.'
+                },
+                {
+                    title: 'Trance',
+                    summary: 'Meditate 4 hours instead of sleeping 8.',
+                    details: 'Elves don\'t need to sleep. Instead, they meditate deeply for 4 hours a day. After resting this way, you gain the same benefit a human does from 8 hours of sleep. While meditating, you remain semiconscious and can perceive your surroundings.'
+                },
+                langTrait('Common and Elvish')
+            ]
+        }
+    },
+    'Gnome': {
+        name: 'Gnome',
+        source: "Player's Handbook",
+        summary: 'Gnomes are quick of mind and fleet of foot, with an inventive spirit and a natural affinity for the arcane.',
+        highlights: ['Gnomish Lineage', 'Gnomish Cunning', 'Darkvision'],
+        speciesDetails: {
+            tagline: 'Gnome Lineage Overview',
+            creatureType: 'Humanoid',
+            size: 'Small',
+            speed: '30 ft.',
+            sourceUrl: 'https://dnd5e.wikidot.com/lineage:gnome',
+            traits: ['Darkvision', 'Gnomish Cunning', 'Gnomish Lineage', 'Languages'],
+            coreTraits: [
+                { label: 'Creature Type', value: 'Humanoid' },
+                { label: 'Size', value: 'Small' },
+                { label: 'Speed', value: '30 ft.' }
+            ],
+            traitNotes: [
+                {
+                    title: 'Darkvision',
+                    summary: 'See in dim light and darkness within 60 ft.',
+                    details: 'You have Darkvision with a range of 60 feet. You can see in dim light as if it were bright light, and in darkness as if it were dim light. You discern colors in darkness only as shades of gray.'
+                },
+                {
+                    title: 'Gnomish Cunning',
+                    summary: 'Advantage on Intelligence, Wisdom, and Charisma saves vs. magic.',
+                    details: 'You have Advantage on Intelligence, Wisdom, and Charisma saving throws against spells and other magical effects.'
+                },
+                {
+                    title: 'Gnomish Lineage',
+                    summary: 'Choose your gnomish subrace and specialty.',
+                    details: 'You are part of a gnomish lineage that grants additional traits. Choose one: Forest Gnome (Minor Illusion cantrip, speak with small animals), Rock Gnome (Artificer\'s Lore, Tinker — create small clockwork devices), Deep Gnome (Darkvision 120 ft., Svirfneblin Magic spells, Superior Stealth).',
+                    choices: 1
+                },
+                langTrait('Common and Gnomish')
+            ]
+        }
+    },
+    'Half-Elf': {
+        name: 'Half-Elf',
+        source: "Player's Handbook",
+        summary: 'Half-elves combine the adaptability of humans with the grace and long sight of their elven heritage.',
+        highlights: ['Fey Ancestry', 'Skill Versatility', 'Adaptability'],
+        speciesDetails: {
+            tagline: 'Half-Elf Lineage Overview',
+            creatureType: 'Humanoid',
+            size: 'Medium',
+            speed: '30 ft.',
+            sourceUrl: 'https://dnd5e.wikidot.com/lineage:half-elf',
+            traits: ['Darkvision', 'Fey Ancestry', 'Skill Versatility', 'Languages'],
+            coreTraits: [
+                { label: 'Creature Type', value: 'Humanoid' },
+                { label: 'Size', value: 'Medium' },
+                { label: 'Speed', value: '30 ft.' }
+            ],
+            traitNotes: [
+                {
+                    title: 'Darkvision',
+                    summary: 'See in dim light and darkness within 60 ft.',
+                    details: 'Thanks to your elven heritage, you have Darkvision with a range of 60 feet. You can see in dim light as if it were bright light, and in darkness as if it were dim light. You discern colors in darkness only as shades of gray.'
+                },
+                {
+                    title: 'Fey Ancestry',
+                    summary: 'Advantage against being charmed; immune to magical sleep.',
+                    details: 'You have Advantage on saving throws you make to avoid or end the Charmed condition on yourself. Magic can\'t put you to sleep.'
+                },
+                {
+                    title: 'Skill Versatility',
+                    summary: 'Proficiency in two skills of your choice.',
+                    details: 'You gain proficiency in two skills of your choice from any list.',
+                    choices: 2
+                },
+                langTrait('Common and Elvish')
+            ]
+        }
+    },
+    'Half-Orc': {
+        name: 'Half-Orc',
+        source: "Player's Handbook",
+        summary: 'Half-orcs inherit physical power from their orc bloodline, making them formidable warriors and enduring survivors.',
+        highlights: ['Relentless Endurance', 'Savage Attacks', 'Darkvision'],
+        speciesDetails: {
+            tagline: 'Half-Orc Lineage Overview',
+            creatureType: 'Humanoid',
+            size: 'Medium',
+            speed: '30 ft.',
+            sourceUrl: 'https://dnd5e.wikidot.com/lineage:half-orc',
+            traits: ['Darkvision', 'Menacing', 'Relentless Endurance', 'Savage Attacks', 'Languages'],
+            coreTraits: [
+                { label: 'Creature Type', value: 'Humanoid' },
+                { label: 'Size', value: 'Medium' },
+                { label: 'Speed', value: '30 ft.' }
+            ],
+            traitNotes: [
+                {
+                    title: 'Darkvision',
+                    summary: 'See in dim light and darkness within 60 ft.',
+                    details: 'Thanks to your orc blood, you have Darkvision with a range of 60 feet. You can see in dim light as if it were bright light, and in darkness as if it were dim light. You discern colors in darkness only as shades of gray.'
+                },
+                {
+                    title: 'Menacing',
+                    summary: 'Proficiency in the Intimidation skill.',
+                    details: 'You gain proficiency in the Intimidation skill.'
+                },
+                {
+                    title: 'Relentless Endurance',
+                    summary: 'Drop to 1 HP instead of 0 once per long rest.',
+                    details: 'When you are reduced to 0 hit points but not killed outright, you can drop to 1 hit point instead. You can\'t use this feature again until you finish a Long Rest.'
+                },
+                {
+                    title: 'Savage Attacks',
+                    summary: 'Roll one extra damage die on critical hits with melee weapons.',
+                    details: 'When you score a Critical Hit with a melee weapon attack, you can roll one of the weapon\'s damage dice one additional time and add it to the extra damage of the Critical Hit.'
+                },
+                langTrait('Common and Orc')
+            ]
+        }
+    },
+    'Halfling': {
+        name: 'Halfling',
+        source: "Player's Handbook",
+        summary: 'Halflings are small, lucky folk who survive peril through pluck, friendship, and uncanny fortune.',
+        highlights: ['Lucky', 'Brave', 'Halfling Nimbleness'],
+        speciesDetails: {
+            tagline: 'Halfling Lineage Overview',
+            creatureType: 'Humanoid',
+            size: 'Small',
+            speed: '30 ft.',
+            sourceUrl: 'https://dnd5e.wikidot.com/lineage:halfling',
+            traits: ['Brave', 'Halfling Nimbleness', 'Lucky', 'Naturally Stealthy', 'Languages'],
+            coreTraits: [
+                { label: 'Creature Type', value: 'Humanoid' },
+                { label: 'Size', value: 'Small' },
+                { label: 'Speed', value: '30 ft.' }
+            ],
+            traitNotes: [
+                {
+                    title: 'Brave',
+                    summary: 'Advantage against being frightened.',
+                    details: 'You have Advantage on saving throws you make to avoid or end the Frightened condition on yourself.'
+                },
+                {
+                    title: 'Halfling Nimbleness',
+                    summary: 'Move through the space of larger creatures.',
+                    details: 'You can move through the space of any creature that is of a size larger than yours.'
+                },
+                {
+                    title: 'Lucky',
+                    summary: 'Reroll ones on attack rolls, ability checks, and saving throws.',
+                    details: 'When you roll a 1 on the d20 for an attack roll, ability check, or saving throw, you can reroll the die and must use the new roll.'
+                },
+                {
+                    title: 'Naturally Stealthy',
+                    summary: 'Hide even when obscured only by a larger creature.',
+                    details: 'You can take the Hide action even when you are obscured only by a creature that is larger than you.'
+                },
+                langTrait('Common and Halfling')
+            ]
+        }
+    },
+    'Human': {
+        name: 'Human',
+        source: "Player's Handbook",
+        summary: 'Humans are the most adaptable and ambitious people among the common races, found in every corner of the known world.',
+        highlights: ['Resourceful', 'Skillful', 'Versatile'],
+        speciesDetails: {
+            tagline: 'Human Lineage Overview',
+            creatureType: 'Humanoid',
+            size: 'Medium or Small',
+            speed: '30 ft.',
+            sourceUrl: 'https://dnd5e.wikidot.com/lineage:human',
+            traits: ['Resourceful', 'Skillful', 'Versatile', 'Languages'],
+            coreTraits: [
+                { label: 'Creature Type', value: 'Humanoid' },
+                { label: 'Size', value: 'Medium or Small (your choice)' },
+                { label: 'Speed', value: '30 ft.' }
+            ],
+            traitNotes: [
+                {
+                    title: 'Resourceful',
+                    summary: 'Gain Heroic Inspiration after each Long Rest.',
+                    details: 'You gain Heroic Inspiration whenever you finish a Long Rest. Heroic Inspiration lets you reroll any die immediately after a roll, before the outcome is determined.'
+                },
+                {
+                    title: 'Skillful',
+                    summary: 'Proficiency in one additional skill of your choice.',
+                    details: 'You gain proficiency in one skill of your choice.',
+                    choices: 1
+                },
+                {
+                    title: 'Versatile',
+                    summary: 'Gain one Origin Feat of your choice.',
+                    details: 'You gain one Origin Feat of your choice. Origin Feats include Alert, Crafter, Healer, Lucky, Magic Initiate, Musician, Savage Attacker, Sentinel, Sharpshooter, Skilled, Tavern Brawler, and Tough.',
+                    choices: 1
+                },
+                langTrait('Common', 1, 'Species')
+            ]
+        }
+    },
+    'Tiefling': {
+        name: 'Tiefling',
+        source: "Player's Handbook",
+        summary: 'Tieflings bear in their souls the taint of a fiendish pact, giving them otherworldly power and a dark gift.',
+        highlights: ['Fiendish Legacy', 'Otherworldly Presence', 'Darkvision'],
+        speciesDetails: {
+            tagline: 'Tiefling Lineage Overview',
+            creatureType: 'Humanoid',
+            size: 'Medium',
+            speed: '30 ft.',
+            sourceUrl: 'https://dnd5e.wikidot.com/lineage:tiefling',
+            traits: ['Darkvision', 'Fiendish Legacy', 'Otherworldly Presence', 'Languages'],
+            coreTraits: [
+                { label: 'Creature Type', value: 'Humanoid' },
+                { label: 'Size', value: 'Medium' },
+                { label: 'Speed', value: '30 ft.' }
+            ],
+            traitNotes: [
+                {
+                    title: 'Darkvision',
+                    summary: 'See in dim light and darkness within 60 ft.',
+                    details: 'You have Darkvision with a range of 60 feet. You can see in dim light as if it were bright light, and in darkness as if it were dim light. You discern colors in darkness only as shades of gray.'
+                },
+                {
+                    title: 'Fiendish Legacy',
+                    summary: 'Choose your fiendish lineage and innate spells.',
+                    details: 'You are the recipient of a fiendish legacy that grants you supernatural abilities. Choose one of the following legacies: Abyssal (demonic power — Poison Spray, Ray of Sickness, Hold Person, Darkness), Chthonic (underworld power — Chill Touch, False Life, Ray of Enfeeblement, Darkness), or Infernal (devilish power — Fire Bolt, Hellish Rebuke, Darkness). You learn spells from your legacy at 1st, 3rd, and 5th levels, using Charisma as your spellcasting ability.',
+                    choices: 1
+                },
+                {
+                    title: 'Otherworldly Presence',
+                    summary: 'Know the Thaumaturgy cantrip.',
+                    details: 'You know the Thaumaturgy cantrip. When you cast it, you can use Charisma as your spellcasting ability for it.'
+                },
+                langTrait('Common and Infernal')
+            ]
+        }
+    }
+};
+
+const makeGenericSpeciesInfo = (
     name: string,
     summary: string,
     hallmark: string,
-    buildAngle: string,
-    mobility: string,
     slug: string,
-    speed = '30 ft'
+    size: string,
+    speed: string
 ): BuilderInfo => ({
     name,
-    source: "Player's Handbook / Expanded Lineages",
+    source: "Expanded Lineages",
     summary,
-    highlights: [`Hallmark: ${hallmark}`, `Build angle: ${buildAngle}`, `Mobility profile: ${mobility}`],
+    highlights: [hallmark],
     speciesDetails: {
         tagline: `${name} Lineage Overview`,
         creatureType: 'Humanoid',
-        size: 'Medium or Small (lineage dependent)',
+        size,
         speed,
         sourceUrl: `https://dnd5e.wikidot.com/lineage:${slug}`,
+        traits: ['Lineage Traits', 'Languages'],
         coreTraits: [
             { label: 'Creature Type', value: 'Humanoid' },
-            { label: 'Size', value: 'Medium or Small (lineage dependent)' },
-            { label: 'Speed', value: speed },
-            { label: 'Signature Identity', value: hallmark },
-            { label: 'Build Notes', value: buildAngle }
+            { label: 'Size', value: size },
+            { label: 'Speed', value: speed }
         ],
         traitNotes: [
             {
                 title: 'Lineage Identity',
                 summary: hallmark,
-                details: `${name} provides a distinct lineage package that affects roleplay, exploration, and tactical decisions across a full campaign.`
+                details: `${name} provides a distinct lineage package that affects roleplay, exploration, and tactical decisions. Consult the source book for exact feature details.`
             },
-            {
-                title: 'Mobility and Survival',
-                summary: mobility,
-                details: `${name} movement and defensive profile can shape target access, positioning safety, and encounter pacing in both combat and travel.`
-            },
-            {
-                title: 'Build Synergy',
-                summary: buildAngle,
-                details: `${name} is strongest when class and feat choices amplify its unique lineage strengths rather than overlapping them.`
-            }
+            langTrait('Common', 1, 'Species')
         ]
     }
 });
 
-const speciesCatalog: Array<{ name: string; slug: string; hallmark: string; speed?: string }> = [
-    { name: 'Dragonborn', slug: 'dragonborn', hallmark: 'Breath weapon and draconic ancestry' },
-    { name: 'Dwarf', slug: 'dwarf', hallmark: 'Defensive resilience and durability' },
-    { name: 'Elf', slug: 'elf', hallmark: 'Keen senses and agile utility' },
-    { name: 'Gnome', slug: 'gnome', hallmark: 'Cunning defense and trick utility' },
-    { name: 'Half-Elf', slug: 'half-elf', hallmark: 'Adaptive social flexibility' },
-    { name: 'Half-Orc', slug: 'half-orc', hallmark: 'Relentless martial momentum' },
-    { name: 'Halfling', slug: 'halfling', hallmark: 'Luck-based consistency' },
-    { name: 'Human', slug: 'human', hallmark: 'Broad build adaptability' },
-    { name: 'Tiefling', slug: 'tiefling', hallmark: 'Fiend-touched innate magic' },
-    { name: 'Aarakocra', slug: 'aarakocra', hallmark: 'Aerial positioning profile', speed: '30 ft (with flight features)' },
-    { name: 'Aasimar', slug: 'aasimar', hallmark: 'Celestial-themed power' },
+const speciesCatalog: Array<{ name: string; slug: string; hallmark: string; size?: string; speed?: string }> = [
+    { name: 'Aarakocra', slug: 'aarakocra', hallmark: 'Aerial positioning and flight', speed: '25 ft. (fly 50 ft.)' },
+    { name: 'Aasimar', slug: 'aasimar', hallmark: 'Celestial radiance and healing' },
     { name: 'Changeling', slug: 'changeling', hallmark: 'Shapeshifting social utility' },
-    { name: 'Deep Gnome', slug: 'deep-gnome', hallmark: 'Subterranean stealth resilience' },
-    { name: 'Duergar', slug: 'duergar', hallmark: 'Stoic underdark durability' },
-    { name: 'Eladrin', slug: 'eladrin', hallmark: 'Fey teleport expression' },
-    { name: 'Fairy', slug: 'fairy', hallmark: 'Fey flight and mobility', speed: '30 ft (with flight features)' },
-    { name: 'Firbolg', slug: 'firbolg', hallmark: 'Nature-giant utility profile' },
-    { name: 'Genasi (Air)', slug: 'genasi-air', hallmark: 'Air-aspected mobility' },
-    { name: 'Genasi (Earth)', slug: 'genasi-earth', hallmark: 'Earth-aspected toughness' },
-    { name: 'Genasi (Fire)', slug: 'genasi-fire', hallmark: 'Fire-aspected pressure' },
-    { name: 'Genasi (Water)', slug: 'genasi-water', hallmark: 'Water-aspected adaptability' },
-    { name: 'Githyanki', slug: 'githyanki', hallmark: 'Astral martial discipline' },
-    { name: 'Githzerai', slug: 'githzerai', hallmark: 'Psionic defensive focus' },
-    { name: 'Goliath', slug: 'goliath', hallmark: 'Athletic endurance' },
-    { name: 'Harengon', slug: 'harengon', hallmark: 'Burst reposition mobility' },
-    { name: 'Kenku', slug: 'kenku', hallmark: 'Stealth and trick utility' },
-    { name: 'Locathah', slug: 'locathah', hallmark: 'Aquatic survival profile' },
-    { name: 'Owlin', slug: 'owlin', hallmark: 'Nocturnal aerial scouting', speed: '30 ft (with flight features)' },
-    { name: 'Satyr', slug: 'satyr', hallmark: 'Fey social disruption' },
-    { name: 'Sea Elf', slug: 'sea-elf', hallmark: 'Marine elven adaptability' },
-    { name: 'Shadar-Kai', slug: 'shadar-kai', hallmark: 'Shadowfell repositioning' },
-    { name: 'Tabaxi', slug: 'tabaxi', hallmark: 'Sprint and scouting mobility' },
-    { name: 'Tortle', slug: 'tortle', hallmark: 'Natural shell defense' },
-    { name: 'Triton', slug: 'triton', hallmark: 'Sea-guardian utility' },
-    { name: 'Verdan', slug: 'verdan', hallmark: 'Adaptive growth traits' },
-    { name: 'Bugbear', slug: 'bugbear', hallmark: 'Ambush pressure profile' },
-    { name: 'Centaur', slug: 'centaur', hallmark: 'Charge-oriented movement', speed: '40 ft' },
-    { name: 'Goblin', slug: 'goblin', hallmark: 'Nimble skirmish utility' },
-    { name: 'Grung', slug: 'grung', hallmark: 'Amphibious poison identity' },
-    { name: 'Hobgoblin', slug: 'hobgoblin', hallmark: 'Coordinated martial discipline' },
-    { name: 'Kobold', slug: 'kobold', hallmark: 'Pack-style trickster play' },
-    { name: 'Lizardfolk', slug: 'lizardfolk', hallmark: 'Primal survival durability' },
-    { name: 'Minotaur', slug: 'minotaur', hallmark: 'Heavy melee momentum' },
-    { name: 'Orc', slug: 'orc', hallmark: 'Aggressive frontline cadence' },
-    { name: 'Shifter', slug: 'shifter', hallmark: 'Transformation combat windows' },
-    { name: 'Yuan-Ti', slug: 'yuan-ti', hallmark: 'Serpentine mystical resilience' }
+    { name: 'Deep Gnome', slug: 'deep-gnome', hallmark: 'Subterranean stealth and resilience', size: 'Small' },
+    { name: 'Duergar', slug: 'duergar', hallmark: 'Stoic underdark durability', size: 'Medium' },
+    { name: 'Eladrin', slug: 'eladrin', hallmark: 'Fey teleportation by season' },
+    { name: 'Fairy', slug: 'fairy', hallmark: 'Fey flight and innate magic', size: 'Small', speed: '30 ft. (fly 30 ft.)' },
+    { name: 'Firbolg', slug: 'firbolg', hallmark: 'Nature-giant connection and magic' },
+    { name: 'Genasi (Air)', slug: 'genasi-air', hallmark: 'Air-aspected mobility and spells' },
+    { name: 'Genasi (Earth)', slug: 'genasi-earth', hallmark: 'Earth-aspected toughness and spells' },
+    { name: 'Genasi (Fire)', slug: 'genasi-fire', hallmark: 'Fire-aspected damage and pressure' },
+    { name: 'Genasi (Water)', slug: 'genasi-water', hallmark: 'Water-aspected adaptability and swimming' },
+    { name: 'Githyanki', slug: 'githyanki', hallmark: 'Astral martial discipline and psionics' },
+    { name: 'Githzerai', slug: 'githzerai', hallmark: 'Psionic defensive focus and clarity' },
+    { name: 'Goliath', slug: 'goliath', hallmark: 'Athletic giant endurance' },
+    { name: 'Harengon', slug: 'harengon', hallmark: 'Rabbit-folk burst mobility and initiative' },
+    { name: 'Kenku', slug: 'kenku', hallmark: 'Mimicry, stealth, and trickery' },
+    { name: 'Locathah', slug: 'locathah', hallmark: 'Aquatic survival and natural armor' },
+    { name: 'Owlin', slug: 'owlin', hallmark: 'Silent nocturnal flight and stealth', speed: '30 ft. (fly 30 ft.)' },
+    { name: 'Satyr', slug: 'satyr', hallmark: 'Fey magic resistance and social disruption' },
+    { name: 'Sea Elf', slug: 'sea-elf', hallmark: 'Marine elven adaptability and swimming' },
+    { name: 'Shadar-Kai', slug: 'shadar-kai', hallmark: 'Shadowfell teleportation and necrotic resistance' },
+    { name: 'Tabaxi', slug: 'tabaxi', hallmark: 'Feline sprint, claws, and scouting mobility' },
+    { name: 'Tortle', slug: 'tortle', hallmark: 'Natural shell defense and hold breath' },
+    { name: 'Triton', slug: 'triton', hallmark: 'Sea-guardian utility and water breathing' },
+    { name: 'Verdan', slug: 'verdan', hallmark: 'Adaptive growth and telepathy', size: 'Small or Medium' },
+    { name: 'Bugbear', slug: 'bugbear', hallmark: 'Ambush reach and surprise pressure' },
+    { name: 'Centaur', slug: 'centaur', hallmark: 'Charge-oriented movement and carry capacity', speed: '40 ft.' },
+    { name: 'Goblin', slug: 'goblin', hallmark: 'Nimble skirmish utility and fury', size: 'Small' },
+    { name: 'Grung', slug: 'grung', hallmark: 'Amphibious poison skin identity', size: 'Small' },
+    { name: 'Hobgoblin', slug: 'hobgoblin', hallmark: 'Coordinated martial discipline and saving throws' },
+    { name: 'Kobold', slug: 'kobold', hallmark: 'Pack-style tactics and draconic heritage', size: 'Small' },
+    { name: 'Lizardfolk', slug: 'lizardfolk', hallmark: 'Primal survival, natural armor, and swimming' },
+    { name: 'Minotaur', slug: 'minotaur', hallmark: 'Horns, heavy melee momentum, and navigation' },
+    { name: 'Orc', slug: 'orc', hallmark: 'Aggressive frontline cadence and endurance' },
+    { name: 'Shifter', slug: 'shifter', hallmark: 'Beast-touched transformation combat windows' },
+    { name: 'Yuan-Ti', slug: 'yuan-ti', hallmark: 'Serpentine magic resistance and innate spells' }
 ];
 
-export const speciesInfoMap: Record<string, BuilderInfo> = Object.fromEntries(
-    speciesCatalog.map((species) => [
-        species.name,
-        makeSpeciesInfo(
+export const speciesInfoMap: Record<string, BuilderInfo> = {
+    ...phbSpeciesDetails,
+    ...Object.fromEntries(
+        speciesCatalog.map((species) => [
             species.name,
-            `${species.name} lineage with a ${species.hallmark.toLowerCase()} focus.`,
-            species.hallmark,
-            'Supports multiple class archetypes.',
-            'See lineage reference for exact movement and feature rules.',
-            species.slug,
-            species.speed ?? '30 ft'
-        )
-    ])
-) as Record<string, BuilderInfo>;
+            makeGenericSpeciesInfo(
+                species.name,
+                `${species.name} lineage with a ${species.hallmark.toLowerCase()} focus.`,
+                species.hallmark,
+                species.slug,
+                species.size ?? 'Medium',
+                species.speed ?? '30 ft.'
+            )
+        ])
+    )
+};
 
 export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 'sourceUrl'>> = {
     Acolyte: {
@@ -1849,22 +2273,22 @@ export const backgroundOptions: ReadonlyArray<{ name: string; url: string }> = [
     { name: 'Fisher', url: 'https://dnd5e.wikidot.com/background:fisher' },
     { name: 'Folk Hero', url: 'https://dnd5e.wikidot.com/background:folk-hero' },
     { name: 'Giant Foundling', url: 'https://dnd5e.wikidot.com/background:giant-foundling' },
-    { name: 'Gladiator', url: 'https://dnd5e.wikidot.com/background:gladiator' },
+    { name: 'Gladiator', url: 'https://dnd5e.wikidot.com/background:entertainer#toc1' },
     { name: 'Guild Artisan', url: 'https://dnd5e.wikidot.com/background:guild-artisan' },
-    { name: 'Guild Merchant', url: 'https://dnd5e.wikidot.com/background:guild-merchant' },
+    { name: 'Guild Merchant', url: 'https://dnd5e.wikidot.com/background:guild-artisan#toc1' },
     { name: 'Haunted One', url: 'https://dnd5e.wikidot.com/background:haunted-one' },
     { name: 'Hermit', url: 'https://dnd5e.wikidot.com/background:hermit' },
     { name: 'House Agent', url: 'https://dnd5e.wikidot.com/background:house-agent' },
     { name: 'Inheritor', url: 'https://dnd5e.wikidot.com/background:inheritor' },
-    { name: 'Investigator (SCAG)', url: 'https://dnd5e.wikidot.com/background:investigator-scag' },
-    { name: 'Investigator (VRGR)', url: 'https://dnd5e.wikidot.com/background:investigator-vrgr' },
-    { name: 'Knight', url: 'https://dnd5e.wikidot.com/background:knight' },
+    { name: 'Investigator (SCAG)', url: 'https://dnd5e.wikidot.com/background:investigator' },
+    { name: 'Investigator (VRGR)', url: 'https://dnd5e.wikidot.com/background:investigator' },
+    { name: 'Knight', url: 'https://dnd5e.wikidot.com/background:noble#toc1' },
     { name: 'Knight of the Order', url: 'https://dnd5e.wikidot.com/background:knight-of-the-order' },
     { name: 'Marine', url: 'https://dnd5e.wikidot.com/background:marine' },
     { name: 'Mercenary Veteran', url: 'https://dnd5e.wikidot.com/background:mercenary-veteran' },
     { name: 'Noble', url: 'https://dnd5e.wikidot.com/background:noble' },
     { name: 'Outlander', url: 'https://dnd5e.wikidot.com/background:outlander' },
-    { name: 'Pirate', url: 'https://dnd5e.wikidot.com/background:pirate' },
+    { name: 'Pirate', url: 'https://dnd5e.wikidot.com/background:sailor#toc1' },
     { name: 'Rewarded', url: 'https://dnd5e.wikidot.com/background:rewarded' },
     { name: 'Ruined', url: 'https://dnd5e.wikidot.com/background:ruined' },
     { name: 'Rune Carver', url: 'https://dnd5e.wikidot.com/background:rune-carver' },
@@ -1873,7 +2297,7 @@ export const backgroundOptions: ReadonlyArray<{ name: string; url: string }> = [
     { name: 'Shipwright', url: 'https://dnd5e.wikidot.com/background:shipwright' },
     { name: 'Smuggler', url: 'https://dnd5e.wikidot.com/background:smuggler' },
     { name: 'Soldier', url: 'https://dnd5e.wikidot.com/background:soldier' },
-    { name: 'Spy', url: 'https://dnd5e.wikidot.com/background:spy' },
+    { name: 'Spy', url: 'https://dnd5e.wikidot.com/background:criminal#toc1' },
     { name: 'Urban Bounty Hunter', url: 'https://dnd5e.wikidot.com/background:urban-bounty-hunter' },
     { name: 'Urchin', url: 'https://dnd5e.wikidot.com/background:urchin' },
     { name: 'Uthgardt Tribe Member', url: 'https://dnd5e.wikidot.com/background:uthgardt-tribe-member' },
