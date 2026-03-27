@@ -131,6 +131,7 @@ export interface CharacterDraft {
     role: PartyRole;
     background: string;
     notes: string;
+    campaignId?: string;
     abilityScores?: AbilityScores;
     skills?: SkillProficiencies;
     armorClass?: number;

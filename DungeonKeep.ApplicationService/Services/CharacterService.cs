@@ -20,23 +20,36 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
             .ToList();
     }
 
-    public async Task<CharacterDto> CreateAsync(Guid campaignId, CreateCharacterRequest request, AuthenticatedUser user, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<CharacterDto>> GetUnassignedOwnedAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var isMember = await campaignRepository.IsActiveMemberAsync(campaignId, user.Id, cancellationToken);
-        if (!isMember)
-        {
-            throw new UnauthorizedAccessException("You are not a member of this campaign.");
-        }
+        var characters = await characterRepository.GetUnassignedOwnedByUserIdAsync(userId, cancellationToken);
+        return characters
+            .Select(character => MapCharacter(character, userId))
+            .ToList();
+    }
 
-        if (await campaignRepository.GetByIdAsync(campaignId, cancellationToken) is null)
+    public async Task<CharacterDto> CreateAsync(Guid? campaignId, CreateCharacterRequest request, AuthenticatedUser user, CancellationToken cancellationToken = default)
+    {
+        var normalizedCampaignId = campaignId.GetValueOrDefault(Guid.Empty);
+
+        if (normalizedCampaignId != Guid.Empty)
         {
-            throw new InvalidOperationException("Campaign not found.");
+            var isMember = await campaignRepository.IsActiveMemberAsync(normalizedCampaignId, user.Id, cancellationToken);
+            if (!isMember)
+            {
+                throw new UnauthorizedAccessException("You are not a member of this campaign.");
+            }
+
+            if (await campaignRepository.GetByIdAsync(normalizedCampaignId, cancellationToken) is null)
+            {
+                throw new InvalidOperationException("Campaign not found.");
+            }
         }
 
         var character = new Character
         {
             Id = Guid.NewGuid(),
-            CampaignId = campaignId,
+            CampaignId = normalizedCampaignId,
             OwnerUserId = user.Id,
             Name = request.Name.Trim(),
             PlayerName = request.PlayerName.Trim(),
@@ -51,6 +64,38 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
 
         var saved = await characterRepository.AddAsync(character, cancellationToken);
         return MapCharacter(saved, user.Id);
+    }
+
+    public async Task<CharacterDto?> UpdateCampaignAsync(Guid characterId, UpdateCharacterCampaignRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var existing = await characterRepository.GetByIdAsync(characterId, cancellationToken);
+        if (existing is null)
+        {
+            return null;
+        }
+
+        if (existing.OwnerUserId != userId)
+        {
+            throw new UnauthorizedAccessException("Only the character owner can change campaign assignment.");
+        }
+
+        var normalizedCampaignId = request.CampaignId.GetValueOrDefault(Guid.Empty);
+        if (normalizedCampaignId != Guid.Empty)
+        {
+            var isMember = await campaignRepository.IsActiveMemberAsync(normalizedCampaignId, userId, cancellationToken);
+            if (!isMember)
+            {
+                throw new UnauthorizedAccessException("You are not a member of this campaign.");
+            }
+
+            if (await campaignRepository.GetByIdAsync(normalizedCampaignId, cancellationToken) is null)
+            {
+                return null;
+            }
+        }
+
+        var updated = await characterRepository.UpdateCampaignAsync(characterId, normalizedCampaignId, cancellationToken);
+        return updated is null ? null : MapCharacter(updated, userId);
     }
 
     public async Task<GenerateCharacterBackstoryResponse> GenerateBackstoryAsync(GenerateCharacterBackstoryRequest request, Guid userId, CancellationToken cancellationToken = default)

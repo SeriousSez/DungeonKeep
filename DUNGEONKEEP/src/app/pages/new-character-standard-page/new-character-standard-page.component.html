@@ -21,7 +21,7 @@
     @case ('home') {
     <section class="panel step-panel">
         <h2>Standard Builder Home</h2>
-        <p>Use the step bar above to move through Class, Background, Species, Abilities, Equipment, and What’s Next.</p>
+        <p>Use the step bar above to move through Class, Species, Background, Abilities, Equipment, and What's Next.</p>
         <a class="inline-action" [routerLink]="['/characters/new/standard', 'class']">Go to 1. Class</a>
     </section>
     }
@@ -145,7 +145,10 @@
                     <h4>Languages</h4>
                     <div class="languages-section">
                         <p class="language-proficiencies">{{ details.languages }}</p>
-                        <app-multi-select-dropdown [groups]="languageGroups" [value]="selectedLanguages()" [maxSelections]="2" placeholder="Choose additional languages..." (changed)="selectedLanguages.set($event)"></app-multi-select-dropdown>
+                        @if (!backgroundLanguageChoiceInChoices() && backgroundLanguageChoiceCount() > 0) {
+                        <app-multi-select-dropdown [groups]="languageGroups" [value]="selectedLanguages()" [disabledOptions]="backgroundLanguageDisabledOptions()" [maxSelections]="backgroundLanguageChoiceCount()" placeholder="Choose additional languages..."
+                            (changed)="onBackgroundLanguagesChanged($event)"></app-multi-select-dropdown>
+                        }
                     </div>
                 </div>
             </div>
@@ -154,7 +157,7 @@
 
             <div class="background-choice-list">
                 @for (choice of details.choices; track choice.key) {
-                <details>
+                <details name="background-choice">
                     @if (choice.key === 'magic-initiate-ability') {
                     <summary class="choice-summary">
                         <span class="choice-summary-title">{{ choice.title }}</span>
@@ -213,7 +216,7 @@
                     @if (choice.description) {
                     <p class="choice-description">{{ choice.description }}</p>
                     }
-                    <app-multi-select-dropdown [groups]="singleSelectGroupsFromStrings(choice.options)" [value]="singleSelectValue(getBackgroundChoiceSelection(choice.key))" selectionMode="single" placeholder="- Choose an Option -"
+                    <app-multi-select-dropdown [groups]="singleSelectGroupsFromStrings(choice.options)" [value]="singleSelectValue(getBackgroundChoiceSelection(choice.key))" [disabledOptions]="getBackgroundChoiceDisabledOptions(choice.key)" selectionMode="single" placeholder="- Choose an Option -"
                         (changed)="onBackgroundChoiceSelectedFromMultiSelect(choice.key, $event)"></app-multi-select-dropdown>
                     }
                 </details>
@@ -229,7 +232,7 @@
                     <label>Alignment
                         <app-dropdown [value]="selectedAlignment()" [options]="alignmentOptions" [searchable]="true" [placeholder]="'-- Choose an Option --'" size="wide" (changed)="selectedAlignment.set($any($event))"></app-dropdown>
                     </label>
-                    <label>Faith <input type="text" /></label>
+                    <label>Faith <input type="text" [value]="selectedFaith()" (input)="onFaithChanged($any($event.target).value)" /></label>
                     <label>Lifestyle
                         <app-dropdown [value]="selectedLifestyle()" [options]="lifestyleOptions" [searchable]="true" [placeholder]="'-- Choose an Option --'" size="wide" (changed)="selectedLifestyle.set($any($event))"></app-dropdown>
                     </label>
@@ -450,7 +453,11 @@
                         <p class="trait-accordion-copy">{{ trait.details }}</p>
                         @if (trait.title === 'Languages' && trait.choices) {
                         <div class="trait-language-picker">
-                            <app-multi-select-dropdown [groups]="languageGroups" [value]="selectedSpeciesLanguages()" [maxSelections]="trait.choices" [placeholder]="speciesLanguagePlaceholder()" (changed)="selectedSpeciesLanguages.set($event)"></app-multi-select-dropdown>
+                            @if (speciesKnownLanguages().length > 0) {
+                            <p class="muted">Known by default: {{ speciesKnownLanguages().join(', ') }}</p>
+                            }
+                            <app-multi-select-dropdown [groups]="languageGroups" [value]="selectedSpeciesLanguages()" [disabledOptions]="speciesLanguageDisabledOptions()" [maxSelections]="trait.choices" [placeholder]="speciesLanguagePlaceholder()"
+                                (changed)="onSpeciesLanguagesChanged($event)"></app-multi-select-dropdown>
                         </div>
                         }
                     </div>
@@ -745,18 +752,35 @@
     @case ('whats-next') {
     <section class="panel step-panel">
         <h2>What's Next</h2>
-        <label>Character Name <input class="wide-input" type="text" placeholder="Enter character name" /></label>
+        <label>
+            Character Name
+            <input class="wide-input" type="text" [value]="completionCharacterName()" (input)="onCompletionCharacterNameChanged($any($event.target).value)" placeholder="Enter character name" />
+        </label>
+        <label>
+            Player Name
+            <input class="wide-input" type="text" [value]="completionPlayerName()" (input)="onCompletionPlayerNameChanged($any($event.target).value)" [placeholder]="suggestedPlayerName() || 'Enter player name'" />
+        </label>
+
+        <label class="assign-campaign-toggle">
+            <input type="checkbox" [checked]="assignToCurrentCampaignOnCreate()" [disabled]="!store.selectedCampaign()" (change)="onAssignToCurrentCampaignChanged($any($event.target).checked)" />
+            <span>Assign to current campaign ({{ store.selectedCampaign()?.name || 'No campaign selected' }})</span>
+        </label>
+
+        @if (completionError()) {
+        <p class="muted">{{ completionError() }}</p>
+        }
+
         <div class="next-actions">
-            <button type="button">View Character Sheet</button>
-            <button type="button">Export to PDF</button>
+            <button type="button" class="primary-button" [disabled]="!canCompleteCharacter() || isCompletingCharacter()" (click)="completeCharacterCreation()">{{ isCompletingCharacter() ? 'Completing...' : 'Complete & View Character Sheet' }}</button>
+            <button type="button" class="ghost-button">Export to PDF</button>
         </div>
-        <p class="muted">Complete your character and then continue to campaign setup.</p>
+        <p class="muted">Complete your character now, then assign or change campaign placement at any time.</p>
     </section>
     }
     }
 
     @if (activeCharacteristicModal()) {
-    <app-characteristics-modal [characteristicType]="activeCharacteristicModal()!" (onClose)="closeCharacteristicModal()" (onSubmit)="onCharacteristicSubmit($event)"></app-characteristics-modal>
+    <app-characteristics-modal [characteristicType]="activeCharacteristicModal()!" [selectedValues]="getActiveCharacteristicValues()" (onClose)="closeCharacteristicModal()" (onSubmit)="onCharacteristicSubmit($event)"></app-characteristics-modal>
     }
 
     @if (activeInfoModal(); as modal) {

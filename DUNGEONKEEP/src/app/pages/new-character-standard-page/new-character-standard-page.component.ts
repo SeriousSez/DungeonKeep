@@ -2,12 +2,13 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs/operators';
 
 import { classLevelOneFeatures, classOptions as sharedClassOptions, type ClassFeature, type ClassFeaturesForLevel } from '../../data/class-features.data';
 import type { ActiveInfoModal, BackgroundDetail, BuilderInfo, CurrencyState, EquipmentItem, InventoryEntry } from '../../data/new-character-standard-page.types';
 import { backgroundDescriptionFallbacks, backgroundDetailOverrides, backgroundLanguagesFallbacks, backgroundOptions as sharedBackgroundOptions, backgroundSkillProficienciesFallbacks, backgroundStartingPackages, backgroundToolProficienciesFallbacks, classDetailFallbacks, classInfoMap, classStartingPackages, classSubclassSnapshots, equipmentCatalog, equipmentSourceLinks, magicInitiateSpellsByAbility, speciesInfoMap, validSteps } from '../../data/new-character-standard-page.data';
+import type { CharacterDraft } from '../../models/dungeon.models';
 import { OptionMenuFilterComponent } from '../../components/option-menu-filter/option-menu-filter.component';
 import { NewCharacterInfoModalComponent } from '../../components/new-character-info-modal/new-character-info-modal.component';
 import { CharacteristicsModalComponent } from '../../components/characteristics-modal/characteristics-modal.component';
@@ -15,8 +16,9 @@ import { DropdownComponent, type DropdownOption } from '../../components/dropdow
 import { MultiSelectDropdownComponent, type MultiSelectOptionGroup } from '../../components/multi-select-dropdown/multi-select-dropdown.component';
 import { DungeonApiService } from '../../state/dungeon-api.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
+import { SessionService } from '../../state/session.service';
 
-type StandardStep = 'home' | 'class' | 'background' | 'species' | 'abilities' | 'equipment' | 'whats-next';
+type StandardStep = 'home' | 'class' | 'species' | 'background' | 'abilities' | 'equipment' | 'whats-next';
 type AbilityGenerationMethod = '' | 'standard-array' | 'manual-rolled' | 'point-buy';
 type ClassSortMode = 'primary-ability' | 'party-role' | 'power-source' | 'complexity' | 'spellcasting' | 'armor';
 type SpeciesSortMode = 'lineage' | 'movement' | 'world' | 'complexity';
@@ -32,6 +34,8 @@ export class NewCharacterStandardPageComponent {
     readonly store = inject(DungeonStoreService);
     private readonly api = inject(DungeonApiService);
     private readonly route = inject(ActivatedRoute);
+    private readonly router = inject(Router);
+    private readonly session = inject(SessionService);
     private readonly cdr = inject(ChangeDetectorRef);
 
     private readonly routeStep = toSignal(
@@ -103,8 +107,8 @@ export class NewCharacterStandardPageComponent {
     readonly standardSteps: ReadonlyArray<{ key: StandardStep; label: string; shortLabel?: string }> = [
         { key: 'home', label: 'Home' },
         { key: 'class', label: 'Class' },
-        { key: 'background', label: 'Background' },
         { key: 'species', label: 'Species' },
+        { key: 'background', label: 'Background' },
         { key: 'abilities', label: 'Abilities' },
         { key: 'equipment', label: 'Equipment' },
         { key: 'whats-next', label: "What's Next" }
@@ -213,6 +217,11 @@ export class NewCharacterStandardPageComponent {
     readonly allLanguages = [...this.commonLanguages, ...this.exoticLanguages, ...this.otherLanguages];
     readonly selectedLanguages = signal<string[]>([]);
     readonly selectedSpeciesLanguages = signal<string[]>([]);
+    readonly completionCharacterName = signal('');
+    readonly completionPlayerName = signal('');
+    readonly assignToCurrentCampaignOnCreate = signal(false);
+    readonly completionError = signal('');
+    readonly isCompletingCharacter = signal(false);
 
     // Magic Initiate feat state
     readonly magicInitiateAbility = signal('');
@@ -313,6 +322,7 @@ export class NewCharacterStandardPageComponent {
         { value: 'true-neutral', label: 'True Neutral' }
     ];
     readonly selectedAlignment = signal('');
+    readonly selectedFaith = signal('');
     readonly lifestyleOptions: ReadonlyArray<DropdownOption> = [
         { value: 'wretched', label: 'Wretched (free, but miserable)' },
         { value: 'squalid', label: 'Squalid (1 SP/day)' },
@@ -605,10 +615,27 @@ export class NewCharacterStandardPageComponent {
     readonly selectedSpeciesLanguageTrait = computed(() =>
         this.selectedSpeciesInfo()?.speciesDetails?.traitNotes.find((trait) => trait.title === 'Languages') ?? null
     );
+    readonly speciesKnownLanguages = computed(() => this.extractKnownLanguages(this.selectedSpeciesLanguageTrait()?.details ?? ''));
     readonly speciesLanguageChoiceCount = computed(() => this.selectedSpeciesLanguageTrait()?.choices ?? 0);
     readonly speciesLanguagePlaceholder = computed(() =>
         this.speciesLanguageChoiceCount() === 1 ? 'Choose additional language...' : 'Choose additional languages...'
     );
+    readonly backgroundLanguageChoiceCount = computed(() => this.getLanguageChoiceCount(this.selectedBackgroundDetail()?.languages ?? ''));
+    readonly backgroundLanguageChoiceInChoices = computed(() =>
+        this.selectedBackgroundDetail()?.choices.some((c) => this.isLanguageChoiceKey(c.key)) ?? false
+    );
+    readonly speciesLanguageDisabledOptions = computed(() =>
+        this.selectedLanguages().filter((language) => !this.selectedSpeciesLanguages().includes(language))
+    );
+    readonly backgroundLanguageDisabledOptions = computed(() =>
+        this.selectedSpeciesLanguages().filter((language) => !this.selectedLanguages().includes(language))
+    );
+    readonly suggestedPlayerName = computed(() => this.session.currentUser()?.displayName ?? '');
+    readonly canCompleteCharacter = computed(() => {
+        const hasName = this.completionCharacterName().trim().length > 0;
+        const hasClass = this.getPrimaryClassName().length > 0;
+        return hasName && hasClass;
+    });
 
     selectSpecies(name: string): void {
         this.selectedSpeciesName.set(name);
@@ -802,6 +829,7 @@ export class NewCharacterStandardPageComponent {
     onBackgroundSelected(url: string): void {
         this.selectedBackgroundUrl.set(url);
         this.backgroundChoiceSelections.set({});
+        this.selectedLanguages.set([]);
         this.magicInitiateAbility.set('');
         this.magicInitiateCantrip1.set('');
         this.magicInitiateCantrip2.set('');
@@ -832,6 +860,11 @@ export class NewCharacterStandardPageComponent {
             ...current,
             [compositeKey]: value
         }));
+
+        if (this.isLanguageChoiceKey(choiceKey)) {
+            const normalized = value.trim();
+            this.onBackgroundLanguagesChanged(normalized ? [normalized] : []);
+        }
     }
 
     onEquipmentSearchChanged(value: string): void {
@@ -1201,25 +1234,45 @@ export class NewCharacterStandardPageComponent {
         this.activeCharacteristicModal.set(null);
     };
 
-    readonly onCharacteristicSubmit = (value: string) => {
+    readonly getActiveCharacteristicValues = (): string[] => {
         const type = this.activeCharacteristicModal();
-        if (!type || !value.trim()) {
-            this.closeCharacteristicModal();
-            return;
+        if (!type) {
+            return [];
         }
 
         switch (type) {
             case 'traits':
-                this.personalityTraits.update((current) => [...current, value]);
+                return this.personalityTraits();
+            case 'ideals':
+                return this.ideals();
+            case 'bonds':
+                return this.bonds();
+            case 'flaws':
+                return this.flaws();
+        }
+    };
+
+    readonly onCharacteristicSubmit = (values: string[]) => {
+        const type = this.activeCharacteristicModal();
+        if (!type) {
+            this.closeCharacteristicModal();
+            return;
+        }
+
+        const normalizedValues = Array.from(new Set((values ?? []).map((value) => value.trim()).filter((value) => value.length > 0)));
+
+        switch (type) {
+            case 'traits':
+                this.personalityTraits.set(normalizedValues);
                 break;
             case 'ideals':
-                this.ideals.update((current) => [...current, value]);
+                this.ideals.set(normalizedValues);
                 break;
             case 'bonds':
-                this.bonds.update((current) => [...current, value]);
+                this.bonds.set(normalizedValues);
                 break;
             case 'flaws':
-                this.flaws.update((current) => [...current, value]);
+                this.flaws.set(normalizedValues);
                 break;
         }
 
@@ -1244,7 +1297,13 @@ export class NewCharacterStandardPageComponent {
     };
 
     readonly toggleBackstoryGenerator = () => {
-        this.showBackstoryGenerator.update((current) => !current);
+        const nextOpen = !this.showBackstoryGenerator();
+        this.showBackstoryGenerator.set(nextOpen);
+
+        if (nextOpen && !this.backstoryPromptDetails().trim()) {
+            this.backstoryPromptDetails.set(this.buildAutoBackstoryDirection());
+        }
+
         this.backstoryGenerationError.set('');
         this.backstorySaveMessage.set('');
     };
@@ -1330,6 +1389,98 @@ export class NewCharacterStandardPageComponent {
         return 'Unknown class';
     }
 
+    private getPrimaryClassName(): string {
+        const selected = this.selectedClass();
+        if (selected && selected !== '__MULTICLASS_SELECTOR__') {
+            return selected;
+        }
+
+        const classes = Object.keys(this.multiclassList());
+        return classes[0]?.trim() ?? '';
+    }
+
+    private getPrimaryClassLevel(): number {
+        const primaryClass = this.getPrimaryClassName();
+        if (!primaryClass) {
+            return 1;
+        }
+
+        const level = this.multiclassList()[primaryClass];
+        return level && level > 0 ? level : 1;
+    }
+
+    private buildCompletionDraft(): CharacterDraft | null {
+        const characterName = this.completionCharacterName().trim();
+        const playerName = this.completionPlayerName().trim() || this.suggestedPlayerName().trim();
+        const className = this.getPrimaryClassName();
+
+        if (!characterName || !playerName || !className) {
+            return null;
+        }
+
+        const background = this.selectedBackgroundName() || this.selectedBackground()?.name || 'Freshly arrived adventurer';
+        const faith = this.selectedFaith().trim();
+        const notesParts = [this.generatedBackstory().trim(), this.backstoryPromptDetails().trim()];
+        if (faith) {
+            notesParts.push(`Faith: ${faith}`);
+        }
+
+        const notes = notesParts.filter((part) => part.length > 0).join('\n\n') || 'No field notes yet.';
+        const selectedCampaignId = this.store.selectedCampaign()?.id;
+
+        return {
+            name: characterName,
+            playerName,
+            race: this.selectedSpeciesName() || 'Human',
+            className,
+            level: this.getPrimaryClassLevel(),
+            role: 'Striker',
+            background,
+            notes,
+            campaignId: this.assignToCurrentCampaignOnCreate() ? selectedCampaignId : undefined
+        };
+    }
+
+    readonly onCompletionCharacterNameChanged = (value: string) => {
+        this.completionCharacterName.set(value);
+        this.completionError.set('');
+    };
+
+    readonly onCompletionPlayerNameChanged = (value: string) => {
+        this.completionPlayerName.set(value);
+        this.completionError.set('');
+    };
+
+    readonly completeCharacterCreation = async () => {
+        if (this.isCompletingCharacter()) {
+            return;
+        }
+
+        const draft = this.buildCompletionDraft();
+        if (!draft) {
+            this.completionError.set('Add a character name, player name, and class before completing creation.');
+            return;
+        }
+
+        this.isCompletingCharacter.set(true);
+        this.completionError.set('');
+
+        try {
+            const createdCharacter = await this.store.createCharacter(draft);
+            if (!createdCharacter) {
+                this.completionError.set('Unable to complete character creation right now.');
+                return;
+            }
+
+            await this.router.navigate(['/character', createdCharacter.id]);
+        } catch {
+            this.completionError.set('Unable to complete character creation right now.');
+        } finally {
+            this.isCompletingCharacter.set(false);
+            this.cdr.detectChanges();
+        }
+    };
+
     private getBackstoryGenerationErrorMessage(error: unknown): string {
         if (error instanceof HttpErrorResponse) {
             if (typeof error.error === 'string' && error.error.trim()) {
@@ -1346,6 +1497,62 @@ export class NewCharacterStandardPageComponent {
         }
 
         return error instanceof Error ? error.message : 'Unable to generate a backstory right now.';
+    }
+
+    private buildAutoBackstoryDirection(): string {
+        const target = this.backstoryTargetCharacter();
+        const lines: string[] = [];
+
+        if (target) {
+            lines.push(`Character: ${target.name}`);
+            lines.push(`Current class and level: ${target.className} ${target.level}`);
+            lines.push(`Known background: ${target.background || 'Unknown background'}`);
+            if (target.notes?.trim()) {
+                lines.push(`Existing notes to honor: ${target.notes.trim()}`);
+            }
+        }
+
+        lines.push(`Builder class focus: ${this.getCurrentClassSummary()}`);
+
+        if (this.selectedSpeciesName()) {
+            lines.push(`Species focus: ${this.selectedSpeciesName()}`);
+        }
+
+        if (this.selectedBackgroundName()) {
+            lines.push(`Background focus: ${this.selectedBackgroundName()}`);
+        }
+
+        if (this.selectedAlignment()) {
+            lines.push(`Alignment direction: ${this.selectedAlignment()}`);
+        }
+
+        if (this.selectedLifestyle()) {
+            lines.push(`Lifestyle direction: ${this.selectedLifestyle()}`);
+        }
+
+        const traits = this.personalityTraits().slice(0, 3);
+        if (traits.length > 0) {
+            lines.push(`Emphasize these personality traits: ${traits.join('; ')}`);
+        }
+
+        const ideals = this.ideals().slice(0, 2);
+        if (ideals.length > 0) {
+            lines.push(`Include these ideals: ${ideals.join('; ')}`);
+        }
+
+        const bonds = this.bonds().slice(0, 2);
+        if (bonds.length > 0) {
+            lines.push(`Include these bonds: ${bonds.join('; ')}`);
+        }
+
+        const flaws = this.flaws().slice(0, 2);
+        if (flaws.length > 0) {
+            lines.push(`Reflect these flaws: ${flaws.join('; ')}`);
+        }
+
+        lines.push('Keep details grounded in campaign play and avoid contradicting known notes.');
+
+        return lines.join('\n');
     }
 
     getPointBuyDropdownOptions(ability: string): DropdownOption[] {
@@ -1412,6 +1619,22 @@ export class NewCharacterStandardPageComponent {
 
     onSpeciesSearchChanged(value: string): void {
         this.speciesSearchTerm.set(value);
+    }
+
+    onBackgroundLanguagesChanged(values: string[]): void {
+        const blockedBySpecies = new Set(this.selectedSpeciesLanguages());
+        const maxCount = this.backgroundLanguageChoiceCount() || 1;
+        const nextValues = values
+            .filter((value) => !blockedBySpecies.has(value))
+            .slice(0, maxCount);
+
+        this.selectedLanguages.set(nextValues);
+        this.syncBackgroundLanguageChoiceSelections(nextValues);
+    }
+
+    onSpeciesLanguagesChanged(values: string[]): void {
+        const blockedByBackground = new Set(this.selectedLanguages());
+        this.selectedSpeciesLanguages.set(values.filter((value) => !blockedByBackground.has(value)));
     }
 
     onClassSortModeChanged(value: string | number): void {
@@ -1503,6 +1726,92 @@ export class NewCharacterStandardPageComponent {
         }
 
         return 'Other';
+    }
+
+    isLanguageChoiceKey(choiceKey: string): boolean {
+        return choiceKey.toLowerCase().includes('language');
+    }
+
+    getBackgroundChoiceDisabledOptions(choiceKey: string): string[] {
+        if (!this.isLanguageChoiceKey(choiceKey)) {
+            return [];
+        }
+
+        const current = this.getBackgroundChoiceSelection(choiceKey);
+        const blockedBySpecies = this.selectedSpeciesLanguages();
+        return this.selectedLanguages()
+            .filter((language) => language !== current)
+            .concat(blockedBySpecies.filter((language) => language !== current));
+    }
+
+    onAssignToCurrentCampaignChanged(isChecked: boolean): void {
+        this.assignToCurrentCampaignOnCreate.set(isChecked);
+    }
+
+    onFaithChanged(value: string): void {
+        this.selectedFaith.set(value);
+    }
+
+    private syncBackgroundLanguageChoiceSelections(values: string[]): void {
+        const selected = this.selectedBackground();
+        const detail = this.selectedBackgroundDetail();
+        if (!selected || !detail) {
+            return;
+        }
+
+        const languageChoice = detail.choices.find((choice) => this.isLanguageChoiceKey(choice.key));
+        if (!languageChoice) {
+            return;
+        }
+
+        const compositeKey = `${selected.name}:${languageChoice.key}`;
+        this.backgroundChoiceSelections.update((current) => {
+            const next = values[0] ?? '';
+            if ((current[compositeKey] ?? '') === next) {
+                return current;
+            }
+
+            return {
+                ...current,
+                [compositeKey]: next
+            };
+        });
+    }
+
+    private getLanguageChoiceCount(languageRule: string): number {
+        const normalized = languageRule.toLowerCase();
+        if (normalized.includes('two')) {
+            return 2;
+        }
+
+        if (normalized.includes('three')) {
+            return 3;
+        }
+
+        if (normalized.includes('one')) {
+            return 1;
+        }
+
+        return 1;
+    }
+
+    private extractKnownLanguages(details: string): string[] {
+        const normalized = details.trim();
+        if (!normalized) {
+            return [];
+        }
+
+        const knownMatch = normalized.match(/Your character knows\s+(.+?)\./i);
+        const rawKnown = (knownMatch?.[1] ?? '').trim();
+        if (!rawKnown) {
+            return [];
+        }
+
+        return rawKnown
+            .replace(/\s+and\s+/gi, ',')
+            .split(',')
+            .map((value) => value.trim())
+            .filter((value) => value.length > 0);
     }
 
 }

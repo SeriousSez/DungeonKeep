@@ -2074,7 +2074,10 @@ const makeGenericSpeciesInfo = (
     hallmark: string,
     slug: string,
     size: string,
-    speed: string
+    speed: string,
+    knownLanguages = 'Common',
+    languageChoices = 1,
+    languageChoiceLabel = 'Species'
 ): BuilderInfo => ({
     name,
     source: "Expanded Lineages",
@@ -2098,12 +2101,12 @@ const makeGenericSpeciesInfo = (
                 summary: hallmark,
                 details: `${name} provides a distinct lineage package that affects roleplay, exploration, and tactical decisions. Consult the source book for exact feature details.`
             },
-            langTrait('Common', 1, 'Species')
+            langTrait(knownLanguages, languageChoices, languageChoiceLabel)
         ]
     }
 });
 
-const speciesCatalog: Array<{ name: string; slug: string; hallmark: string; size?: string; speed?: string }> = [
+const speciesCatalog: Array<{ name: string; slug: string; hallmark: string; size?: string; speed?: string; knownLanguages?: string; languageChoices?: number; languageChoiceLabel?: string }> = [
     { name: 'Aarakocra', slug: 'aarakocra', hallmark: 'Aerial positioning and flight', speed: '25 ft. (fly 50 ft.)' },
     { name: 'Aasimar', slug: 'aasimar', hallmark: 'Celestial radiance and healing' },
     { name: 'Changeling', slug: 'changeling', hallmark: 'Shapeshifting social utility' },
@@ -2133,7 +2136,7 @@ const speciesCatalog: Array<{ name: string; slug: string; hallmark: string; size
     { name: 'Bugbear', slug: 'bugbear', hallmark: 'Ambush reach and surprise pressure' },
     { name: 'Centaur', slug: 'centaur', hallmark: 'Charge-oriented movement and carry capacity', speed: '40 ft.' },
     { name: 'Goblin', slug: 'goblin', hallmark: 'Nimble skirmish utility and fury', size: 'Small' },
-    { name: 'Grung', slug: 'grung', hallmark: 'Amphibious poison skin identity', size: 'Small' },
+    { name: 'Grung', slug: 'grung', hallmark: 'Amphibious poison skin identity', size: 'Small', knownLanguages: 'Grung', languageChoices: 0, languageChoiceLabel: '' },
     { name: 'Hobgoblin', slug: 'hobgoblin', hallmark: 'Coordinated martial discipline and saving throws' },
     { name: 'Kobold', slug: 'kobold', hallmark: 'Pack-style tactics and draconic heritage', size: 'Small' },
     { name: 'Lizardfolk', slug: 'lizardfolk', hallmark: 'Primal survival, natural armor, and swimming' },
@@ -2154,7 +2157,10 @@ export const speciesInfoMap: Record<string, BuilderInfo> = {
                 species.hallmark,
                 species.slug,
                 species.size ?? 'Medium',
-                species.speed ?? '30 ft.'
+                species.speed ?? '30 ft.',
+                species.knownLanguages ?? 'Common',
+                species.languageChoices ?? 1,
+                species.languageChoiceLabel ?? 'Species'
             )
         ])
     )
@@ -2672,12 +2678,6 @@ export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 's
                 title: 'Gaming Set',
                 subtitle: 'Choose 1 type',
                 options: ['Dice Set', 'Dragonchess', 'Playing Cards', 'Three-Dragon Ante']
-            },
-            {
-                key: 'language',
-                title: 'Languages',
-                subtitle: 'Background Language',
-                options: ['Elvish', 'Dwarvish', 'Draconic', 'Sylvan', 'Infernal', 'Celestial']
             },
             {
                 key: 'noble-feature',

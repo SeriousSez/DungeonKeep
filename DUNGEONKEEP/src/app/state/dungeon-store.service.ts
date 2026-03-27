@@ -7,6 +7,8 @@ import { SessionService } from './session.service';
 
 @Injectable({ providedIn: 'root' })
 export class DungeonStoreService {
+    private static readonly UNASSIGNED_CAMPAIGN_ID = '00000000-0000-0000-0000-000000000000';
+
     readonly title = signal('DungeonKeep');
     readonly campaigns = signal<Campaign[]>([]);
     readonly characters = signal<Character[]>([]);
@@ -79,6 +81,55 @@ export class DungeonStoreService {
         void this.addCharacterFromApi(draft);
     }
 
+    async createCharacter(draft: CharacterDraft): Promise<Character | null> {
+        return await this.addCharacterFromApi(draft);
+    }
+
+    async setCharacterCampaign(characterId: string, campaignId: string | null): Promise<boolean> {
+        const current = this.characters().find((character) => character.id === characterId);
+        if (!current || current.canEdit === false) {
+            return false;
+        }
+
+        try {
+            const updated = await this.api.updateCharacterCampaign(characterId, campaignId);
+            this.characters.update((characters) =>
+                characters.map((character) =>
+                    character.id === characterId
+                        ? { ...character, campaignId: updated.campaignId }
+                        : character
+                )
+            );
+
+            this.campaigns.update((campaigns) =>
+                campaigns.map((campaign) => {
+                    const isCurrentCampaign = campaign.partyCharacterIds.includes(characterId);
+                    const shouldContain = campaign.id === updated.campaignId;
+
+                    if (isCurrentCampaign && !shouldContain) {
+                        return {
+                            ...campaign,
+                            partyCharacterIds: campaign.partyCharacterIds.filter((id) => id !== characterId)
+                        };
+                    }
+
+                    if (!isCurrentCampaign && shouldContain) {
+                        return {
+                            ...campaign,
+                            partyCharacterIds: [...campaign.partyCharacterIds, characterId]
+                        };
+                    }
+
+                    return campaign;
+                })
+            );
+
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     archiveThread(thread: string): void {
         void this.archiveThreadFromApi(thread);
     }
@@ -136,48 +187,47 @@ export class DungeonStoreService {
         }
     }
 
-    private async addCharacterFromApi(draft: CharacterDraft): Promise<void> {
-        const selectedCampaign = this.selectedCampaign();
-
-        if (!selectedCampaign || !draft.name || !draft.playerName || !draft.className) {
-            return;
+    private async addCharacterFromApi(draft: CharacterDraft): Promise<Character | null> {
+        if (!draft.name || !draft.playerName || !draft.className) {
+            return null;
         }
 
         try {
-            const created = await this.api.createCharacter(selectedCampaign.id, {
+            const created = await this.api.createCharacter({
                 name: draft.name,
                 playerName: draft.playerName,
                 className: draft.className,
                 level: Math.max(1, draft.level),
                 background: draft.background || 'Freshly arrived adventurer',
-                notes: draft.notes || 'No field notes yet.'
+                notes: draft.notes || 'No field notes yet.',
+                campaignId: draft.campaignId
             });
 
             const character = this.mapCharacterFromApi(created, draft);
             this.characters.update((characters) => [character, ...characters]);
-            this.campaigns.update((campaigns) =>
-                campaigns.map((campaign) =>
-                    campaign.id === selectedCampaign.id
-                        ? {
-                            ...campaign,
-                            partyCharacterIds: [...campaign.partyCharacterIds, character.id]
-                        }
-                        : campaign
-                )
-            );
+
+            if (character.campaignId && character.campaignId !== DungeonStoreService.UNASSIGNED_CAMPAIGN_ID) {
+                this.campaigns.update((campaigns) =>
+                    campaigns.map((campaign) =>
+                        campaign.id === character.campaignId
+                            ? {
+                                ...campaign,
+                                partyCharacterIds: [...campaign.partyCharacterIds, character.id]
+                            }
+                            : campaign
+                    )
+                );
+            }
+
+            return character;
         } catch {
-            return;
+            return null;
         }
     }
 
     private async hydrateFromApi(): Promise<void> {
         try {
             const campaignDtos = await this.api.getCampaigns();
-
-            if (!campaignDtos.length) {
-                this.clearState();
-                return;
-            }
 
             const characterPairs = await Promise.all(
                 campaignDtos.map(async (campaign) => {
@@ -186,6 +236,7 @@ export class DungeonStoreService {
                 })
             );
 
+            const unassignedDtos = await this.api.getUnassignedCharacters();
             const characterLookup = new Map<string, ApiCharacterDto[]>(characterPairs);
             const allCharacters: Character[] = [];
 
@@ -196,6 +247,13 @@ export class DungeonStoreService {
 
                 return this.mapCampaignFromApi(campaignDto, mappedCharacters.map((character) => character.id));
             });
+
+            const knownCharacterIds = new Set(allCharacters.map((character) => character.id));
+            for (const unassignedDto of unassignedDtos) {
+                if (!knownCharacterIds.has(unassignedDto.id)) {
+                    allCharacters.push(this.mapCharacterFromApi(unassignedDto));
+                }
+            }
 
             this.characters.set(allCharacters);
             this.campaigns.set(mappedCampaigns);

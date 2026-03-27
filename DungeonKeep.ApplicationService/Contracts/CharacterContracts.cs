@@ -23,7 +23,8 @@ public sealed record CreateCharacterRequest(
     string ClassName,
     int Level,
     string Background,
-    string Notes
+    string Notes,
+    Guid? CampaignId = null
 );
 
 public sealed record GenerateCharacterBackstoryRequest(
@@ -43,3 +44,4 @@ public sealed record GenerateCharacterBackstoryResponse(string Backstory);
 
 public sealed record UpdateCharacterBackstoryRequest(string Backstory);
 public sealed record UpdateCharacterStatusRequest(string Status);
+public sealed record UpdateCharacterCampaignRequest(Guid? CampaignId);

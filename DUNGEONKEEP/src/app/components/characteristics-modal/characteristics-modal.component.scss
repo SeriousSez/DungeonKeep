@@ -148,10 +148,29 @@
             line-height: 1.4;
             transition: all 0.2s ease;
 
+            .selection-indicator {
+                display: inline-block;
+                margin-right: 8px;
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.4px;
+                text-transform: uppercase;
+                color: var(--text-muted);
+            }
+
             &:hover {
                 background: var(--surface-raised);
                 border-color: var(--accent-primary);
                 color: var(--accent-primary);
+            }
+
+            &.selected {
+                background: color-mix(in srgb, var(--accent-primary) 12%, var(--surface-raised-solid));
+                border-color: var(--accent-primary);
+
+                .selection-indicator {
+                    color: var(--accent-primary);
+                }
             }
 
             &:active {
@@ -164,6 +183,32 @@
             text-align: center;
             color: var(--text-muted);
             font-size: 13px;
+        }
+    }
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 8px;
+
+    .submit-btn {
+        padding: 10px 16px;
+        background: var(--accent-primary);
+        color: var(--surface-raised-solid);
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+
+        &:hover {
+            filter: brightness(1.06);
+        }
+
+        &:active {
+            transform: scale(0.98);
         }
     }
 }

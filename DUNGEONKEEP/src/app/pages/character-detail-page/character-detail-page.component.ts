@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
+import { DropdownComponent, type DropdownOption } from '../../components/dropdown/dropdown.component';
 import { races } from '../../data/races';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
@@ -13,13 +14,16 @@ type ActionFilter = 'all' | 'attack' | 'action' | 'bonus-action' | 'reaction' | 
 
 @Component({
     selector: 'app-character-detail-page',
-    imports: [CommonModule, RouterLink],
+    imports: [CommonModule, RouterLink, DropdownComponent],
     templateUrl: './character-detail-page.component.html',
     styleUrl: './character-detail-page.component.scss'
 })
 export class CharacterDetailPageComponent {
+    private static readonly UNASSIGNED_CAMPAIGN_ID = '00000000-0000-0000-0000-000000000000';
+
     private readonly store = inject(DungeonStoreService);
     private readonly route = inject(ActivatedRoute);
+    private readonly cdr = inject(ChangeDetectorRef);
 
     private readonly raceLookup = new Map(
         races.flatMap((race) => [
@@ -290,6 +294,9 @@ export class CharacterDetailPageComponent {
     readonly characterId = this.route.snapshot.paramMap.get('id') || '';
     readonly activeCombatTab = signal<CombatTab>('actions');
     readonly activeActionFilter = signal<ActionFilter>('all');
+    readonly selectedCampaignAssignment = signal('');
+    readonly isUpdatingCampaign = signal(false);
+    readonly campaignUpdateError = signal('');
 
     readonly combatTabs: Array<{ key: CombatTab; label: string }> = [
         { key: 'actions', label: 'Actions' },
@@ -321,8 +328,16 @@ export class CharacterDetailPageComponent {
             return 'Unknown Campaign';
         }
 
-        return this.store.campaigns().find((campaign) => campaign.id === char.campaignId)?.name ?? char.campaignId;
+        if (char.campaignId === CharacterDetailPageComponent.UNASSIGNED_CAMPAIGN_ID) {
+            return 'Unassigned';
+        }
+
+        return this.store.campaigns().find((campaign) => campaign.id === char.campaignId)?.name ?? 'Unassigned';
     });
+
+    readonly assignableCampaignOptions = computed<DropdownOption[]>(() =>
+        this.store.campaigns().map((campaign) => ({ value: campaign.id, label: campaign.name }))
+    );
 
     readonly raceInfo = computed(() => {
         const char = this.character();
@@ -707,6 +722,53 @@ export class CharacterDetailPageComponent {
 
     getAbilityModifier(score: number): number {
         return Math.floor((score - 10) / 2);
+    }
+
+    async assignCharacterToCampaign(): Promise<void> {
+        const char = this.character();
+        const targetCampaignId = this.selectedCampaignAssignment();
+
+        if (!char || !targetCampaignId || this.isUpdatingCampaign()) {
+            return;
+        }
+
+        this.isUpdatingCampaign.set(true);
+        this.campaignUpdateError.set('');
+
+        try {
+            const didUpdate = await this.store.setCharacterCampaign(char.id, targetCampaignId);
+            if (!didUpdate) {
+                this.campaignUpdateError.set('Unable to assign character to that campaign right now.');
+            }
+        } finally {
+            this.isUpdatingCampaign.set(false);
+            this.cdr.detectChanges();
+        }
+    }
+
+    async removeCharacterFromCampaign(): Promise<void> {
+        const char = this.character();
+        if (!char || this.isUpdatingCampaign()) {
+            return;
+        }
+
+        this.isUpdatingCampaign.set(true);
+        this.campaignUpdateError.set('');
+
+        try {
+            const didUpdate = await this.store.setCharacterCampaign(char.id, null);
+            if (!didUpdate) {
+                this.campaignUpdateError.set('Unable to remove character from campaign right now.');
+            }
+        } finally {
+            this.isUpdatingCampaign.set(false);
+            this.cdr.detectChanges();
+        }
+    }
+
+    onCampaignAssignmentChanged(value: string | number): void {
+        this.selectedCampaignAssignment.set(String(value));
+        this.campaignUpdateError.set('');
     }
 
     setCombatTab(tab: CombatTab): void {

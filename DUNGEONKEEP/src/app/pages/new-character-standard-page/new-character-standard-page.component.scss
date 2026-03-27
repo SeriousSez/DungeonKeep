@@ -1166,10 +1166,11 @@ input {
     background: var(--surface-raised);
     padding: 10px 12px;
     position: relative;
+    overflow: visible;
 }
 
 .background-choice-list details[open] {
-    z-index: 200;
+    z-index: 6;
 }
 
 .background-choice-list summary {
@@ -1183,6 +1184,18 @@ input {
 
 .accordion-list details[open] {
     z-index: 3;
+}
+
+.assign-campaign-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-main);
+
+    input {
+        width: 16px;
+        height: 16px;
+    }
 }
 
 .background-choice-list details[open] p {

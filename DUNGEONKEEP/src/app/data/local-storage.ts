@@ -6,8 +6,15 @@ interface StoredState {
     selectedCampaignId: string;
 }
 
+export interface StoredSessionUser {
+    id: string;
+    email: string;
+    displayName: string;
+}
+
 const STORAGE_KEY = 'dungeonkeep.state.v1';
 const SESSION_STORAGE_KEY = 'dungeonkeep.session-token.v1';
+const SESSION_USER_STORAGE_KEY = 'dungeonkeep.session-user.v1';
 
 const defaultAbilityScores: AbilityScores = {
     strength: 10,
@@ -138,6 +145,56 @@ export function saveSessionToken(token: string): void {
     }
 }
 
+export function loadSessionUser(): StoredSessionUser | null {
+    if (!hasBrowserStorage()) {
+        return null;
+    }
+
+    const raw = window.localStorage.getItem(SESSION_USER_STORAGE_KEY);
+    if (!raw) {
+        return null;
+    }
+
+    try {
+        const parsed = JSON.parse(raw) as Partial<StoredSessionUser>;
+        if (!parsed || typeof parsed.id !== 'string' || typeof parsed.email !== 'string' || typeof parsed.displayName !== 'string') {
+            return null;
+        }
+
+        return {
+            id: parsed.id,
+            email: parsed.email,
+            displayName: parsed.displayName
+        };
+    } catch {
+        return null;
+    }
+}
+
+export function saveSessionUser(user: StoredSessionUser): void {
+    if (!hasBrowserStorage()) {
+        return;
+    }
+
+    try {
+        window.localStorage.setItem(SESSION_USER_STORAGE_KEY, JSON.stringify(user));
+    } catch {
+        return;
+    }
+}
+
+export function clearSessionUser(): void {
+    if (!hasBrowserStorage()) {
+        return;
+    }
+
+    try {
+        window.localStorage.removeItem(SESSION_USER_STORAGE_KEY);
+    } catch {
+        return;
+    }
+}
+
 export function clearSessionToken(): void {
     if (!hasBrowserStorage()) {
         return;
@@ -145,6 +202,7 @@ export function clearSessionToken(): void {
 
     try {
         window.localStorage.removeItem(SESSION_STORAGE_KEY);
+        window.localStorage.removeItem(SESSION_USER_STORAGE_KEY);
     } catch {
         return;
     }

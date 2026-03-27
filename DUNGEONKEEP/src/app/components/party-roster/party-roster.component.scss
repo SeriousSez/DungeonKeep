@@ -122,14 +122,14 @@
 
 .primary-button {
     border: 1px solid transparent;
-    background: linear-gradient(135deg, #a35b29, #d99a4b);
-    color: #fff9ef;
+    background: var(--gradient-primary);
+    color: var(--surface-raised-solid);
 }
 
 .ghost-button {
-    border: 1px solid rgba(118, 86, 63, 0.22);
-    background: transparent;
-    color: var(--text-main);
+    border: 1px solid var(--color-border-strong);
+    background: color-mix(in srgb, var(--color-surface-solid) 70%, transparent);
+    color: var(--color-text);
 }
 
 .status-pill[data-status='Ready'] {

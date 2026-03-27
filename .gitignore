@@ -52,6 +52,7 @@ __screenshots__/
 # .NET backend
 **/bin/
 **/obj/
+**/appsettings.*.Local.json
 **/*.db
 **/*.db-shm
 **/*.db-wal

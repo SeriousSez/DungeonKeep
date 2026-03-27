@@ -7,6 +7,20 @@
                 <p class="eyebrow">Character Sheet</p>
                 <h1>{{ char.name }}</h1>
                 <p class="subheader">{{ char.race }} {{ char.className }} · Level {{ char.level }} · {{ campaignName() }}</p>
+                @if (char.canEdit) {
+                <div class="campaign-assignment-controls">
+                    <app-dropdown [value]="selectedCampaignAssignment()" [options]="assignableCampaignOptions()" [placeholder]="'Choose campaign...'" size="compact" (changed)="onCampaignAssignmentChanged($event)"></app-dropdown>
+                    <button type="button" class="assign-btn" [disabled]="isUpdatingCampaign() || !selectedCampaignAssignment()" (click)="assignCharacterToCampaign()">
+                        {{ isUpdatingCampaign() ? 'Updating...' : 'Assign' }}
+                    </button>
+                    <button type="button" class="remove-btn" [disabled]="isUpdatingCampaign() || campaignName() === 'Unassigned'" (click)="removeCharacterFromCampaign()">
+                        Remove from Campaign
+                    </button>
+                </div>
+                @if (campaignUpdateError()) {
+                <p class="campaign-error">{{ campaignUpdateError() }}</p>
+                }
+                }
             </div>
             <span class="status-pill" [attr.data-status]="char.status">{{ char.status }}</span>
         </div>

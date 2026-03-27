@@ -90,33 +90,34 @@
 }
 
 .info-modal-footer .btn-primary {
-    background: linear-gradient(135deg, #2c7ceb 0%, #1e5db8 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(28, 93, 184, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.1);
+    background: var(--gradient-primary);
+    color: var(--surface-raised-solid);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 35%, transparent), inset 0 -2px 0 rgba(0, 0, 0, 0.1);
     font-weight: 800;
     letter-spacing: 0.5px;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-    border: 1px solid #1e5db8;
+    border: 1px solid var(--color-primary-strong);
 
     &:hover {
-        background: linear-gradient(135deg, #1e5db8 0%, #154399 100%);
-        box-shadow: 0 6px 16px rgba(28, 93, 184, 0.4), inset 0 -2px 0 rgba(0, 0, 0, 0.15);
+        background: linear-gradient(135deg, var(--color-primary-strong) 0%, var(--color-primary) 100%);
+        box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary) 45%, transparent), inset 0 -2px 0 rgba(0, 0, 0, 0.15);
         transform: translateY(-2px);
     }
 
     &:active {
         transform: translateY(0);
-        box-shadow: 0 2px 4px rgba(28, 93, 184, 0.2), inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 4px color-mix(in srgb, var(--color-primary) 28%, transparent), inset 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 }
 
 .info-modal-footer .btn-secondary {
-    background: var(--surface-raised);
-    color: var(--text-main);
-    border-color: var(--panel-border);
+    background: color-mix(in srgb, var(--color-surface-solid) 70%, transparent);
+    color: var(--color-text);
+    border-color: var(--color-border-strong);
 
     &:hover {
-        background: color-mix(in srgb, var(--surface-raised) 80%, var(--text-main) 20%);
+        background: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface-solid));
+        border-color: color-mix(in srgb, var(--color-primary) 62%, var(--color-border-strong));
     }
 }
 

@@ -1,6 +1,7 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 
-import { clearSessionToken, loadSessionToken, saveSessionToken } from '../data/local-storage';
+import { clearSessionToken, clearSessionUser, loadSessionToken, loadSessionUser, saveSessionToken, saveSessionUser } from '../data/local-storage';
 import { ApiAuthSessionDto, ApiAuthUserDto, DungeonApiService } from './dungeon-api.service';
 
 @Injectable({ providedIn: 'root' })
@@ -8,7 +9,7 @@ export class SessionService {
     private readonly api = inject(DungeonApiService);
 
     readonly token = signal(loadSessionToken());
-    readonly currentUser = signal<ApiAuthUserDto | null>(null);
+    readonly currentUser = signal<ApiAuthUserDto | null>(loadSessionUser());
     readonly initialized = signal(false);
 
     constructor() {
@@ -39,6 +40,7 @@ export class SessionService {
 
     logout(): void {
         clearSessionToken();
+        clearSessionUser();
         this.token.set('');
         this.currentUser.set(null);
         this.initialized.set(true);
@@ -53,10 +55,14 @@ export class SessionService {
         try {
             const user = await this.api.getCurrentSession();
             this.currentUser.set(user);
-        } catch {
-            clearSessionToken();
-            this.token.set('');
-            this.currentUser.set(null);
+            saveSessionUser(user);
+        } catch (error) {
+            if (error instanceof HttpErrorResponse && (error.status === 401 || error.status === 403)) {
+                clearSessionToken();
+                clearSessionUser();
+                this.token.set('');
+                this.currentUser.set(null);
+            }
         } finally {
             this.initialized.set(true);
         }
@@ -64,6 +70,7 @@ export class SessionService {
 
     private applySession(session: ApiAuthSessionDto): void {
         saveSessionToken(session.token);
+        saveSessionUser(session.user);
         this.token.set(session.token);
         this.currentUser.set(session.user);
     }

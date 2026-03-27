@@ -8,6 +8,75 @@ namespace DungeonKeep.API.Controllers;
 [Route("api/[controller]")]
 public sealed class CharactersController(ICharacterService characterService, IAuthService authService) : ControllerBase
 {
+    [HttpGet("mine/unassigned")]
+    public async Task<ActionResult<IReadOnlyList<CharacterDto>>> GetUnassignedOwned(CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var characters = await characterService.GetUnassignedOwnedAsync(user.Id, cancellationToken);
+        return Ok(characters);
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<CharacterDto>> Create([FromBody] CreateCharacterRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.ClassName))
+        {
+            return BadRequest("Character name and class are required.");
+        }
+
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var created = await characterService.CreateAsync(request.CampaignId, request, user, cancellationToken);
+            return CreatedAtAction(nameof(Create), new { id = created.Id }, created);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+        catch (InvalidOperationException)
+        {
+            return NotFound("Campaign was not found.");
+        }
+    }
+
+    [HttpPut("{characterId:guid}/campaign")]
+    public async Task<ActionResult<CharacterDto>> UpdateCampaign(Guid characterId, [FromBody] UpdateCharacterCampaignRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        CharacterDto? updated;
+        try
+        {
+            updated = await characterService.UpdateCampaignAsync(characterId, request, user.Id, cancellationToken);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+
+        if (updated is null)
+        {
+            return NotFound("Character or campaign was not found.");
+        }
+
+        return Ok(updated);
+    }
+
     [HttpPost("backstory/generate")]
     public async Task<ActionResult<GenerateCharacterBackstoryResponse>> GenerateBackstory([FromBody] GenerateCharacterBackstoryRequest request, CancellationToken cancellationToken)
     {

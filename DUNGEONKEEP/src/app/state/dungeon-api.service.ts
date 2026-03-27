@@ -93,15 +93,24 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.get<ApiCharacterDto[]>(`${this.baseUrl}/campaigns/${campaignId}/characters`));
     }
 
-    async createCharacter(campaignId: string, payload: {
+    async getUnassignedCharacters(): Promise<ApiCharacterDto[]> {
+        return await firstValueFrom(this.http.get<ApiCharacterDto[]>(`${this.baseUrl}/characters/mine/unassigned`));
+    }
+
+    async createCharacter(payload: {
         name: string;
         playerName: string;
         className: string;
         level: number;
         background: string;
         notes: string;
+        campaignId?: string;
     }): Promise<ApiCharacterDto> {
-        return await firstValueFrom(this.http.post<ApiCharacterDto>(`${this.baseUrl}/campaigns/${campaignId}/characters`, payload));
+        return await firstValueFrom(this.http.post<ApiCharacterDto>(`${this.baseUrl}/characters`, payload));
+    }
+
+    async updateCharacterCampaign(characterId: string, campaignId: string | null): Promise<ApiCharacterDto> {
+        return await firstValueFrom(this.http.put<ApiCharacterDto>(`${this.baseUrl}/characters/${characterId}/campaign`, { campaignId }));
     }
 
     async generateCharacterBackstory(payload: ApiGenerateCharacterBackstoryRequest): Promise<ApiGenerateCharacterBackstoryResponse> {

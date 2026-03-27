@@ -20,6 +20,7 @@ export class MultiSelectDropdownComponent {
 
     readonly groups = input.required<ReadonlyArray<MultiSelectOptionGroup>>();
     readonly value = input<string[]>([]);
+    readonly disabledOptions = input<string[]>([]);
     readonly placeholder = input<string>('Select...');
     readonly maxSelections = input<number | null>(null);
     readonly selectionMode = input<'single' | 'multiple'>('multiple');
@@ -109,6 +110,10 @@ export class MultiSelectDropdownComponent {
     }
 
     isOptionDisabled(option: string): boolean {
+        if (this.disabledOptions().includes(option) && !this.isSelected(option)) {
+            return true;
+        }
+
         if (this.isSingleSelect()) {
             return false;
         }

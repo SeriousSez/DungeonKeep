@@ -16,6 +16,15 @@ public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : IChara
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Character>> GetUnassignedOwnedByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Characters
+            .Include(c => c.OwnerUser)
+            .Where(c => c.OwnerUserId == userId && c.CampaignId == Guid.Empty)
+            .OrderByDescending(c => c.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<Character> AddAsync(Character character, CancellationToken cancellationToken = default)
     {
         dbContext.Characters.Add(character);
@@ -28,6 +37,20 @@ public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : IChara
         return await dbContext.Characters
             .Include(c => c.OwnerUser)
             .FirstOrDefaultAsync(c => c.Id == characterId, cancellationToken);
+    }
+
+    public async Task<Character?> UpdateCampaignAsync(Guid characterId, Guid campaignId, CancellationToken cancellationToken = default)
+    {
+        var character = await dbContext.Characters.FirstOrDefaultAsync(c => c.Id == characterId, cancellationToken);
+        if (character is null)
+        {
+            return null;
+        }
+
+        character.CampaignId = campaignId;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await dbContext.Entry(character).Reference(c => c.OwnerUser).LoadAsync(cancellationToken);
+        return character;
     }
 
     public async Task<Character?> UpdateBackstoryAsync(Guid characterId, string backstory, CancellationToken cancellationToken = default)

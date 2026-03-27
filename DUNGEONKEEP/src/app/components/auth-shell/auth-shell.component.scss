@@ -101,8 +101,8 @@
 
 .primary-button {
     border: 1px solid transparent;
-    background: linear-gradient(135deg, #a35b29, #d99a4b);
-    color: #fff9ef;
+    background: var(--gradient-primary);
+    color: var(--surface-raised-solid);
 }
 
 .primary-button:disabled {

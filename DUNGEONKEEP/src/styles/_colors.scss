@@ -1,0 +1,72 @@
+:root {
+    --display-font: 'Cinzel', serif;
+    --body-font: 'Manrope', sans-serif;
+
+    --color-primary: #a35b29;
+    --color-primary-strong: #7f4322;
+    --color-primary-soft: #d99a4b;
+    --color-danger: #8f3a2f;
+
+    --color-text: #342117;
+    --color-text-soft: #6f5342;
+    --color-text-muted: #816251;
+
+    --color-border: rgba(112, 81, 58, 0.16);
+    --color-border-strong: rgba(118, 86, 63, 0.28);
+
+    --color-surface: rgba(255, 250, 242, 0.84);
+    --color-surface-alt: rgba(255, 252, 246, 0.92);
+    --color-surface-solid: rgb(255, 252, 246);
+
+    --gradient-primary: linear-gradient(135deg, var(--color-primary), var(--color-primary-soft));
+    --gradient-surface: linear-gradient(180deg, #f5ecdf, #e7d9c6);
+
+    --page-bg: #f5ecdf;
+    --page-bg-deep: #e7d9c6;
+    --panel-bg: var(--color-surface);
+    --surface-raised: var(--color-surface-alt);
+    --surface-raised-solid: var(--color-surface-solid);
+    --panel-border: var(--color-border);
+    --panel-shadow: 0 26px 70px rgba(78, 50, 32, 0.14);
+    --pill-bg: rgba(130, 91, 57, 0.08);
+    --pill-border: rgba(130, 91, 57, 0.18);
+    --text-main: var(--color-text);
+    --text-soft: var(--color-text-soft);
+    --text-muted: var(--color-text-muted);
+    --scrollbar-thumb: color-mix(in srgb, var(--text-muted) 36%, transparent);
+    --scrollbar-thumb-hover: color-mix(in srgb, var(--text-muted) 52%, transparent);
+    --paper-strong: #fff7ea;
+    --paper-soft: rgba(255, 247, 234, 0.76);
+    --accent-soft: #f1c676;
+    --accent-primary: var(--color-primary);
+}
+
+:root.theme-dark {
+    --color-primary: #d6a167;
+    --color-primary-strong: #b57f49;
+    --color-primary-soft: #f0c88f;
+    --color-danger: #d07a6f;
+
+    --color-text: #f6e9d8;
+    --color-text-soft: #e4cdb2;
+    --color-text-muted: #cfb292;
+
+    --color-border: rgba(228, 205, 178, 0.24);
+    --color-border-strong: rgba(228, 205, 178, 0.4);
+
+    --color-surface: rgba(44, 31, 23, 0.88);
+    --color-surface-alt: rgba(57, 41, 30, 0.94);
+    --color-surface-solid: rgb(57, 41, 30);
+
+    --gradient-primary: linear-gradient(135deg, var(--color-primary), var(--color-primary-soft));
+    --gradient-surface: linear-gradient(180deg, #1f1611, #2b1f17);
+
+    --page-bg: #1f1611;
+    --page-bg-deep: #2b1f17;
+    --panel-shadow: 0 26px 70px rgba(0, 0, 0, 0.36);
+    --pill-bg: rgba(214, 161, 103, 0.14);
+    --pill-border: rgba(214, 161, 103, 0.3);
+    --paper-strong: #3a2a1f;
+    --paper-soft: rgba(58, 42, 31, 0.76);
+    --accent-soft: #e8bb7b;
+}
