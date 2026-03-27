@@ -4,6 +4,7 @@ import { ChangeDetectorRef, Component, computed, inject, signal } from '@angular
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs/operators';
+import { marked } from 'marked';
 
 import { classLevelOneFeatures, classOptions as sharedClassOptions, type ClassFeature, type ClassFeaturesForLevel } from '../../data/class-features.data';
 import type { ActiveInfoModal, BackgroundDetail, BuilderInfo, CurrencyState, EquipmentItem, InventoryEntry } from '../../data/new-character-standard-page.types';
@@ -1320,13 +1321,7 @@ export class NewCharacterStandardPageComponent {
     };
 
     formatBackstoryRichText(text: string): string {
-        const escaped = text
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-
-        const withBold = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-        return withBold.replace(/\r?\n/g, '<br />');
+        return marked.parse(text, { gfm: true, breaks: true }) as string;
     }
 
     readonly clearGeneratedBackstory = () => {

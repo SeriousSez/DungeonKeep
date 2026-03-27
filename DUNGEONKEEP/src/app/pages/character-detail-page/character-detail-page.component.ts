@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { marked } from 'marked';
 
 import { DropdownComponent, type DropdownOption } from '../../components/dropdown/dropdown.component';
 import { races } from '../../data/races';
@@ -968,12 +969,6 @@ export class CharacterDetailPageComponent {
     }
 
     private formatBackstoryRichText(text: string): string {
-        const escaped = text
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-
-        const withBold = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-        return withBold.replace(/\r?\n/g, '<br />');
+        return marked.parse(text, { gfm: true, breaks: true }) as string;
     }
 }

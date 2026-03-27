@@ -902,6 +902,57 @@ input {
     margin: 0;
     line-height: 1.5;
 
+    h1,
+    h2,
+    h3,
+    p,
+    ul {
+        margin: 0;
+    }
+
+    h1,
+    h2,
+    h3 {
+        color: var(--text-main);
+        font-family: var(--display-font);
+        line-height: 1.25;
+    }
+
+    h1 {
+        font-size: 1.06rem;
+    }
+
+    h2 {
+        font-size: 1rem;
+    }
+
+    h3 {
+        font-size: 0.94rem;
+    }
+
+    p,
+    ul {
+        color: var(--text-muted);
+    }
+
+    ul {
+        padding-left: 18px;
+    }
+
+    li {
+        margin: 0;
+    }
+
+    hr {
+        border: 0;
+        border-top: 1px solid var(--panel-border);
+        margin: 2px 0;
+    }
+
+    .backstory-space {
+        height: 8px;
+    }
+
     strong {
         color: var(--text-main);
         font-weight: 700;
