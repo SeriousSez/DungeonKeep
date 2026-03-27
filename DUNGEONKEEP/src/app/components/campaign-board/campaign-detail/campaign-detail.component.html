@@ -1,0 +1,109 @@
+<article class="panel detail-panel">
+    @if (selectedCampaign(); as campaign) {
+    <div class="panel-heading detail-heading">
+        <div>
+            <p class="eyebrow">Selected campaign</p>
+            <h2>{{ campaign.name }}</h2>
+            <p class="detail-summary">{{ campaign.hook }}</p>
+        </div>
+
+        <div class="detail-badges">
+            <span class="pill">{{ campaign.setting }}</span>
+            <span class="pill">{{ campaign.levelRange }}</span>
+            <span class="pill highlight-pill">Next: {{ campaign.nextSession }}</span>
+        </div>
+    </div>
+
+    <div class="detail-grid">
+        <section class="detail-card parchment-card">
+            <h3>Session prep</h3>
+            <div class="session-list">
+                @for (session of campaign.sessions; track session.id) {
+                <article class="session-item">
+                    <div class="session-title-row">
+                        <div>
+                            <h4>{{ session.title }}</h4>
+                            <p>{{ session.location }} · {{ session.date }}</p>
+                        </div>
+                        <span class="threat-pill" [attr.data-threat]="session.threat">{{ session.threat }}</span>
+                    </div>
+                    <p>{{ session.objective }}</p>
+                </article>
+                }
+
+                @if (!campaign.sessions.length) {
+                <p class="empty-copy">No sessions prepped yet. Start by setting the first objective.</p>
+                }
+            </div>
+        </section>
+
+        <section class="detail-card">
+            <h3>Open threads</h3>
+            <div class="thread-list">
+                @for (thread of campaign.openThreads; track thread) {
+                <div class="thread-row">
+                    <p>{{ thread }}</p>
+                    @if (campaign.currentUserRole === 'Owner') {
+                    <button type="button" class="ghost-button" (click)="archiveThread(thread)">Archive</button>
+                    }
+                </div>
+                }
+
+                @if (!campaign.openThreads.length) {
+                <p class="empty-copy">All open threads are resolved. Add a new complication before the next session.</p>
+                }
+            </div>
+        </section>
+
+        <section class="detail-card compact-card">
+            <h3>Key NPCs</h3>
+            <ul class="tag-list">
+                @for (npc of campaign.npcs; track npc) {
+                <li>{{ npc }}</li>
+                }
+            </ul>
+        </section>
+
+        <section class="detail-card compact-card">
+            <h3>Recent loot</h3>
+            <ul class="tag-list loot-list">
+                @for (item of campaign.loot; track item) {
+                <li>{{ item }}</li>
+                }
+            </ul>
+        </section>
+
+        <section class="detail-card">
+            <div class="member-heading">
+                <h3>Campaign members</h3>
+                <span class="pill">{{ campaign.members?.length ?? 0 }} total</span>
+            </div>
+
+            <div class="member-list">
+                @for (member of campaign.members ?? []; track member.email) {
+                <div class="member-row">
+                    <div>
+                        <strong>{{ member.displayName }}</strong>
+                        <p>{{ member.email }}</p>
+                    </div>
+                    <div class="member-meta">
+                        <span class="pill">{{ member.role }}</span>
+                        <span class="pill" [class.pending-pill]="member.status === 'Pending'">{{ member.status }}</span>
+                    </div>
+                </div>
+                }
+            </div>
+
+            @if (campaign.currentUserRole === 'Owner') {
+            <div class="invite-box">
+                <label class="invite-label" for="invite-email">Invite player by email</label>
+                <div class="invite-row">
+                    <input id="invite-email" type="email" [value]="inviteEmail()" (input)="updateInviteEmail($any($event.target).value)" />
+                    <button type="button" class="ghost-button" (click)="inviteMember()">Send Invite</button>
+                </div>
+            </div>
+            }
+        </section>
+    </div>
+    }
+</article>

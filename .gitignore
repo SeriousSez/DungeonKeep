@@ -5,18 +5,27 @@
 /tmp
 /out-tsc
 /bazel-out
+/DUNGEONKEEP/dist
+/DUNGEONKEEP/tmp
+/DUNGEONKEEP/out-tsc
+/DUNGEONKEEP/bazel-out
 
 # Node
 /node_modules
+/DUNGEONKEEP/node_modules
 npm-debug.log
 yarn-error.log
 
 # IDEs and editors
 .idea/
+.vs/
 .project
 .classpath
 .c9/
 *.launch
+*.user
+*.suo
+*.csproj.user
 .settings/
 *.sublime-workspace
 
@@ -31,6 +40,7 @@ yarn-error.log
 
 # Miscellaneous
 /.angular/cache
+/DUNGEONKEEP/.angular/cache
 .sass-cache/
 /connect.lock
 /coverage
@@ -38,6 +48,13 @@ yarn-error.log
 testem.log
 /typings
 __screenshots__/
+
+# .NET backend
+**/bin/
+**/obj/
+**/*.db
+**/*.db-shm
+**/*.db-wal
 
 # System files
 .DS_Store

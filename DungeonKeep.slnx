@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="DungeonKeep.API/DungeonKeep.API.csproj" />
+  <Project Path="DungeonKeep.ApplicationService/DungeonKeep.ApplicationService.csproj" />
+  <Project Path="DungeonKeep.Domain/DungeonKeep.Domain.csproj" />
+  <Project Path="DungeonKeep.Infrastructure/DungeonKeep.Infrastructure.csproj" />
+</Solution>

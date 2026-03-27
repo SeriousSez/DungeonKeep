@@ -5,6 +5,7 @@
     {
       "type": "npm",
       "script": "start",
+      "path": "DUNGEONKEEP",
       "isBackground": true,
       "problemMatcher": {
         "owner": "typescript",
@@ -23,6 +24,7 @@
     {
       "type": "npm",
       "script": "test",
+      "path": "DUNGEONKEEP",
       "isBackground": true,
       "problemMatcher": {
         "owner": "typescript",
@@ -37,6 +39,19 @@
           }
         }
       }
+    },
+    {
+      "label": "backend: run",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "run"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/DungeonKeep.API"
+      },
+      "group": "build",
+      "problemMatcher": []
     }
   ]
 }

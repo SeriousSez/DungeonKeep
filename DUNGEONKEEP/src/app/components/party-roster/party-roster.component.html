@@ -1,0 +1,49 @@
+<article class="panel roster-panel">
+    <div class="panel-heading">
+        <div>
+            <p class="eyebrow">Party roster</p>
+            <h2>Characters in play</h2>
+        </div>
+        <span class="pill">{{ selectedParty().length }} assigned</span>
+    </div>
+
+    <div class="character-grid">
+        @for (character of selectedParty(); track character.id) {
+        <article class="character-card" [routerLink]="['/character', character.id]">
+            <div class="character-card-top">
+                <div>
+                    <h3>{{ character.name }}</h3>
+                    <p>{{ character.race }} {{ character.className }} · Level {{ character.level }}</p>
+                </div>
+                <span class="status-pill" [attr.data-status]="character.status">{{ character.status }}</span>
+            </div>
+
+            <div class="character-meta">
+                <span>{{ character.playerName }}</span>
+                <span>{{ character.role }}</span>
+                <span>Owner: {{ character.ownerDisplayName || character.playerName }}</span>
+                <span>AC {{ character.armorClass }} · HP {{ character.hitPoints }}/{{ character.maxHitPoints }} · PP {{ getPassivePerception(character) }}</span>
+            </div>
+
+            <p class="character-background">{{ character.background }}</p>
+            <p class="character-notes">{{ character.notes }}</p>
+
+            <div class="character-actions">
+                @if (character.canEdit !== false) {
+                <button type="button" class="ghost-button" (click)="$event.stopPropagation(); cycleStatus(character.id)">Cycle status</button>
+                <button type="button" class="primary-button" (click)="$event.stopPropagation(); promoteCharacter(character.id)">Level up</button>
+                } @else {
+                <span class="readonly-note">View only</span>
+                }
+            </div>
+        </article>
+        }
+
+        @if (!selectedParty().length) {
+        <div class="empty-state">
+            <h3>No party members assigned</h3>
+            <p>Add a character below to give this campaign a roster.</p>
+        </div>
+        }
+    </div>
+</article>

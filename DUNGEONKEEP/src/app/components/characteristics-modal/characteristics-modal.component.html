@@ -1,0 +1,40 @@
+<div class="characteristics-modal-overlay" (click)="close()">
+    <div class="characteristics-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+            <h2>{{ displayTitle }}</h2>
+            <button type="button" class="close-btn" (click)="close()" aria-label="Close modal">
+                <i class="fa-duotone fa-thin fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <div class="search-section">
+                <input type="text" placeholder="Search suggestions..." [(ngModel)]="searchQuery" class="search-input" />
+            </div>
+
+            <div class="suggestions-section">
+                <h3>Suggestions</h3>
+                <div class="suggestions-list">
+                    @for (suggestion of filteredSuggestions; track suggestion.text) {
+                    <button type="button" class="suggestion-btn" (click)="selectSuggestion(suggestion)">
+                        {{ suggestion.text }}
+                    </button>
+                    }
+                    @if (filteredSuggestions.length === 0) {
+                    <p class="no-results">No suggestions found</p>
+                    }
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="custom-entry-section">
+                <h3>Or write your own</h3>
+                <textarea [(ngModel)]="customEntry" placeholder="Enter your custom {{ displayTitle | lowercase }}..." class="custom-input" rows="4"></textarea>
+                <button type="button" class="submit-btn" (click)="submitCustomEntry()" [disabled]="!customEntry.trim()">
+                    Submit
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

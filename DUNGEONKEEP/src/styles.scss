@@ -1,0 +1,82 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Manrope:wght@400;500;600;700&display=swap');
+
+:root {
+    --display-font: 'Cinzel', serif;
+    --body-font: 'Manrope', sans-serif;
+    --page-bg: #f5ecdf;
+    --page-bg-deep: #e7d9c6;
+    --panel-bg: rgba(255, 250, 242, 0.84);
+    --surface-raised: rgba(255, 252, 246, 0.92);
+    --surface-raised-solid: rgb(255, 252, 246);
+    --panel-border: rgba(112, 81, 58, 0.16);
+    --panel-shadow: 0 26px 70px rgba(78, 50, 32, 0.14);
+    --pill-bg: rgba(130, 91, 57, 0.08);
+    --pill-border: rgba(130, 91, 57, 0.18);
+    --text-main: #342117;
+    --text-soft: #6f5342;
+    --text-muted: #816251;
+    --scrollbar-thumb: color-mix(in srgb, var(--text-muted) 36%, transparent);
+    --scrollbar-thumb-hover: color-mix(in srgb, var(--text-muted) 52%, transparent);
+    --paper-strong: #fff7ea;
+    --paper-soft: rgba(255, 247, 234, 0.76);
+    --accent-soft: #f1c676;
+}
+
+* {
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+*::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+    background-clip: padding-box;
+}
+
+html {
+    min-height: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: var(--body-font);
+    color: var(--text-main);
+    background:
+        radial-gradient(circle at top left, rgba(219, 181, 120, 0.22), transparent 25%),
+        radial-gradient(circle at right 20%, rgba(133, 78, 45, 0.18), transparent 24%),
+        linear-gradient(180deg, var(--page-bg), var(--page-bg-deep));
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image: linear-gradient(rgba(90, 60, 42, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(90, 60, 42, 0.02) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: radial-gradient(circle at center, black 55%, transparent 100%);
+}
+
+button,
+input,
+textarea,
+select {
+    font: inherit;
+}

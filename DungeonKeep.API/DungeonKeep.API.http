@@ -1,0 +1,6 @@
+@DungeonKeep.API_HostAddress = http://localhost:5098
+
+GET {{DungeonKeep.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

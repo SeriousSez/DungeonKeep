@@ -1,0 +1,43 @@
+@if (searchable()) {
+<div [class]="'app-dropdown-menu ' + (size() === 'wide' ? 'app-dropdown--wide' : 'app-dropdown--compact') + (isOpen() ? ' app-dropdown-menu--open' : '')">
+    <button type="button" [attr.id]="id()" [attr.aria-label]="ariaLabel()" [attr.aria-expanded]="isOpen()" [disabled]="disabled()" class="app-dropdown app-dropdown-trigger" (click)="toggleOpen()">
+        <span>{{ triggerLabel() }}</span>
+        <i class="fa-duotone fa-thin fa-chevron-down" aria-hidden="true"></i>
+    </button>
+
+    @if (isOpen()) {
+    <div class="app-dropdown-panel" role="listbox">
+        <input type="text" class="app-dropdown-search" [value]="searchTerm()" [placeholder]="searchPlaceholder()" (input)="onSearchInput($any($event.target).value)" />
+        <div class="app-dropdown-options">
+            @if (filteredOptions().length === 0) {
+            <p class="app-dropdown-empty">No matches found.</p>
+            } @else {
+            @for (grouped of groupedFilteredOptions(); track grouped.label) {
+            @if (showGroupHeaders()) {
+            <p class="app-dropdown-group">{{ grouped.label }}</p>
+            }
+            @for (option of grouped.options; track option.value) {
+            <button type="button" role="option" class="app-dropdown-option" [class.active]="isOptionSelected(option)" [disabled]="option.disabled || false" (click)="onOptionPicked(option.value)">
+                <span>{{ option.label }}</span>
+                @if (isOptionSelected(option)) {
+                <i class="fa-duotone fa-thin fa-check" aria-hidden="true"></i>
+                }
+            </button>
+            }
+            }
+            }
+        </div>
+    </div>
+    }
+</div>
+} @else {
+<select [attr.id]="id()" [attr.aria-label]="ariaLabel()" [value]="value()" (change)="onValueChange($any($event.target).value)" [class]="'app-dropdown app-dropdown--select ' + (size() === 'wide' ? 'app-dropdown--wide' : (size() === 'narrow' ? 'app-dropdown--narrow' : 'app-dropdown--compact'))"
+    [disabled]="disabled()">
+    @if (placeholder(); as ph) {
+    <option value="" [disabled]="true">{{ ph }}</option>
+    }
+    @for (option of options(); track option.value) {
+    <option [value]="option.value" [disabled]="option.disabled || false">{{ option.label }}</option>
+    }
+</select>
+}

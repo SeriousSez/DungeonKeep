@@ -1,0 +1,95 @@
+using DungeonKeep.ApplicationService.Extensions;
+using DungeonKeep.Infrastructure.Extensions;
+using DungeonKeep.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDungeonKeepInfrastructure(builder.Configuration);
+builder.Services.AddDungeonKeepApplication();
+
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("ClientApps", policy =>
+    {
+        policy.WithOrigins("http://localhost:4200", "https://localhost:4200")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
+var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<DungeonKeepDbContext>();
+    dbContext.Database.EnsureCreated();
+
+    try
+    {
+        dbContext.Database.ExecuteSqlRaw("CREATE TABLE IF NOT EXISTS AppUsers (Id TEXT NOT NULL CONSTRAINT PK_AppUsers PRIMARY KEY, Email TEXT NOT NULL, DisplayName TEXT NOT NULL, PasswordHash TEXT NOT NULL, CreatedAtUtc TEXT NOT NULL);");
+        dbContext.Database.ExecuteSqlRaw("CREATE UNIQUE INDEX IF NOT EXISTS IX_AppUsers_Email ON AppUsers (Email);");
+    }
+    catch
+    {
+    }
+
+    try
+    {
+        dbContext.Database.ExecuteSqlRaw("CREATE TABLE IF NOT EXISTS AuthSessions (Id TEXT NOT NULL CONSTRAINT PK_AuthSessions PRIMARY KEY, UserId TEXT NOT NULL, Token TEXT NOT NULL, CreatedAtUtc TEXT NOT NULL, ExpiresAtUtc TEXT NOT NULL);");
+        dbContext.Database.ExecuteSqlRaw("CREATE UNIQUE INDEX IF NOT EXISTS IX_AuthSessions_Token ON AuthSessions (Token);");
+    }
+    catch
+    {
+    }
+
+    try
+    {
+        dbContext.Database.ExecuteSqlRaw("CREATE TABLE IF NOT EXISTS CampaignMemberships (Id TEXT NOT NULL CONSTRAINT PK_CampaignMemberships PRIMARY KEY, CampaignId TEXT NOT NULL, UserId TEXT NULL, Email TEXT NOT NULL, Role TEXT NOT NULL DEFAULT 'Member', Status TEXT NOT NULL DEFAULT 'Pending', InvitedByUserId TEXT NULL, CreatedAtUtc TEXT NOT NULL);");
+        dbContext.Database.ExecuteSqlRaw("CREATE UNIQUE INDEX IF NOT EXISTS IX_CampaignMemberships_CampaignId_Email ON CampaignMemberships (CampaignId, Email);");
+    }
+    catch
+    {
+    }
+
+    try
+    {
+        dbContext.Database.ExecuteSqlRaw("ALTER TABLE Campaigns ADD COLUMN OpenThreadsJson TEXT NOT NULL DEFAULT '[]';");
+    }
+    catch
+    {
+    }
+
+    try
+    {
+        dbContext.Database.ExecuteSqlRaw("ALTER TABLE Characters ADD COLUMN Status TEXT NOT NULL DEFAULT 'Ready';");
+    }
+    catch
+    {
+    }
+
+    try
+    {
+        dbContext.Database.ExecuteSqlRaw("ALTER TABLE Characters ADD COLUMN OwnerUserId TEXT NULL;");
+    }
+    catch
+    {
+    }
+}
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+app.UseCors("ClientApps");
+
+app.MapControllers();
+
+app.Run();

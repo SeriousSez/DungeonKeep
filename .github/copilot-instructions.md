@@ -7,6 +7,7 @@ DungeonKeep is an Angular 21 web app for managing D&D campaigns, party rosters, 
 ## Angular and Component Rules
 
 - Use standalone components with explicit `imports: [...]`.
+- All Angular components must use dedicated `templateUrl` and `styleUrl` files; do not use inline `template` or `styles` in component decorators.
 - Use `inject()` for dependency injection; never add constructor parameters.
 - Use `DestroyRef` + `takeUntilDestroyed(destroyRef)` to clean up subscriptions.
 - Always use `ChangeDetectorRef` and `this.cdr.detectChanges();` after async operations that update view state.
