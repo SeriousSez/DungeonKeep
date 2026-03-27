@@ -31,7 +31,7 @@
 }
 
 .app-dropdown-menu--open {
-    z-index: 200;
+    z-index: 1600;
 }
 
 .app-dropdown-trigger {
@@ -52,7 +52,7 @@
     top: calc(100% + 6px);
     left: 0;
     width: 100%;
-    z-index: 50;
+    z-index: 1700;
     border: 1px solid var(--panel-border);
     border-radius: 10px;
     background: var(--surface-raised-solid);

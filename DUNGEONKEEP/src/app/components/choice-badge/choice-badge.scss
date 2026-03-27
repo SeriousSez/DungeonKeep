@@ -1,0 +1,13 @@
+:host {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--accent-primary);
+    background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent);
+    border-radius: 20px;
+    padding: 2px 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}

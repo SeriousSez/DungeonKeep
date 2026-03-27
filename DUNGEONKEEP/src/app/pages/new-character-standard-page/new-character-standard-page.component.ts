@@ -13,6 +13,7 @@ import type { Character, CharacterDraft } from '../../models/dungeon.models';
 import { OptionMenuFilterComponent } from '../../components/option-menu-filter/option-menu-filter.component';
 import { NewCharacterInfoModalComponent } from '../../components/new-character-info-modal/new-character-info-modal.component';
 import { CharacteristicsModalComponent } from '../../components/characteristics-modal/characteristics-modal.component';
+import { ChoiceBadgeComponent } from '../../components/choice-badge/choice-badge';
 import { DropdownComponent, type DropdownOption } from '../../components/dropdown/dropdown.component';
 import { MultiSelectDropdownComponent, type MultiSelectOptionGroup } from '../../components/multi-select-dropdown/multi-select-dropdown.component';
 import { DungeonApiService } from '../../state/dungeon-api.service';
@@ -26,7 +27,7 @@ type SpeciesSortMode = 'lineage' | 'movement' | 'world' | 'complexity';
 
 @Component({
     selector: 'app-new-character-standard-page',
-    imports: [CommonModule, RouterLink, NewCharacterInfoModalComponent, CharacteristicsModalComponent, DropdownComponent, MultiSelectDropdownComponent, OptionMenuFilterComponent],
+    imports: [CommonModule, RouterLink, NewCharacterInfoModalComponent, CharacteristicsModalComponent, ChoiceBadgeComponent, DropdownComponent, MultiSelectDropdownComponent, OptionMenuFilterComponent],
     templateUrl: './new-character-standard-page.component.html',
     styleUrl: './new-character-standard-page.component.scss'
 })
@@ -781,6 +782,61 @@ export class NewCharacterStandardPageComponent {
 
     getFeatureChoiceIndexes(count: number): number[] {
         return Array.from({ length: Math.max(1, count) }, (_, index) => index);
+    }
+
+    getFeatureChoiceStatusText(className: string, feature: ClassFeature): string {
+        const choices = feature.choices;
+        if (!choices) {
+            return '';
+        }
+
+        const key = this.getFeatureSelectionKey(className, feature);
+        const selected = this.classFeatureSelections()[key] ?? [];
+        const selectedCount = selected.length;
+        const targetCount = choices.count;
+
+        if (selectedCount === 0) {
+            return `Selected 0/${targetCount}`;
+        }
+
+        const summary = selected.join(', ');
+        return `Selected ${Math.min(selectedCount, targetCount)}/${targetCount}: ${summary}`;
+    }
+
+    getFeatureChoiceInfoText(feature: ClassFeature): string {
+        switch (feature.name) {
+            case 'Weapon Mastery':
+                return 'Choose weapons your Paladin regularly uses so your mastery options stay relevant in combat.';
+            case 'Fighting Style':
+                return 'Pick Blessed Warrior for cantrips, or Fighting Style Feat for martial specialization.';
+            case 'Blessed Warrior Cantrips':
+                return 'These cantrips count as Paladin spells for you, and Charisma is your spellcasting ability.';
+            case 'Fighting Style Feat':
+                return 'Pick the style that best matches your primary weapon setup.';
+            case 'Paladin Subclass':
+                return 'Your Sacred Oath defines subclass features at levels 3, 7, 15, and 20.';
+            case 'Ability Score Improvement':
+                return 'You can pick a feat or take a standard Ability Score Improvement.';
+            case 'Epic Boon':
+                return 'Epic Boons are high-level feats with strong late-game bonuses.';
+            default:
+                return '';
+        }
+    }
+
+    getFeatureChoiceSourceUrl(feature: ClassFeature): string {
+        switch (feature.name) {
+            case 'Weapon Mastery':
+                return 'https://roll20.net/compendium/dnd5e/Weapons#content';
+            case 'Paladin Subclass':
+                return 'https://www.dndbeyond.com/classes/paladin';
+            case 'Ability Score Improvement':
+            case 'Epic Boon':
+            case 'Fighting Style Feat':
+                return 'https://www.dndbeyond.com/feats';
+            default:
+                return '';
+        }
     }
 
     getFeatureChoiceValue(className: string, feature: ClassFeature, choiceIndex: number): string {

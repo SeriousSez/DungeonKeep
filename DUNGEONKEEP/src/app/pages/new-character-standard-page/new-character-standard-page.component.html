@@ -71,7 +71,7 @@
                 <h3>{{ className }}</h3>
                 <div class="level-selector-group">
                     <label [for]="'level-' + className">Level:</label>
-                    <app-dropdown [id]="'level-' + className" [value]="multiclassList()[className]" [options]="levelOptions" size="compact" (changed)="onClassLevelChanged(className, $event)"></app-dropdown>
+                    <app-dropdown [id]="'level-' + className" [value]="multiclassList()[className]" [options]="levelOptions" [minWidth]="132" size="compact" (changed)="onClassLevelChanged(className, $event)"></app-dropdown>
                 </div>
                 <button type="button" class="btn-remove-class" (click)="removeClass(className)" title="Remove class">✕</button>
             </div>
@@ -81,9 +81,14 @@
                 <div class="class-features-wrapper">
                     @for (featureLevel of getClassFeatures(className, multiclassList()[className]); track featureLevel.level) {
                     @for (feature of featureLevel.features; track feature.name) {
-                    <details class="feature-detail">
+                    <details class="feature-detail" [class.feature-has-choice]="!!feature.choices">
                         <summary>
-                            <span class="feature-name">{{ feature.name }}</span>
+                            <div class="feature-header-content">
+                                <span class="feature-name">{{ feature.name }}</span>
+                                @if (feature.choices) {
+                                <app-choice-badge [count]="feature.choices.count"></app-choice-badge>
+                                }
+                            </div>
                             <span class="feature-level">Level {{ feature.level }}</span>
                         </summary>
                         @if (feature.description) {
@@ -92,6 +97,13 @@
                         @if (feature.choices) {
                         <div class="feature-choices">
                             <label class="choice-label">{{ feature.choices.title }}</label>
+                            <p class="choice-meta">{{ getFeatureChoiceStatusText(className, feature) }}</p>
+                            @if (getFeatureChoiceInfoText(feature); as choiceInfoText) {
+                            <p class="choice-meta">{{ choiceInfoText }}</p>
+                            }
+                            @if (getFeatureChoiceSourceUrl(feature); as choiceSourceUrl) {
+                            <a class="inline-action choice-source-link" [href]="choiceSourceUrl" target="_blank" rel="noopener noreferrer">View source reference</a>
+                            }
                             <div class="choice-select-group">
                                 @for (choiceIndex of getFeatureChoiceIndexes(feature.choices.count); track choiceIndex) {
                                 <app-dropdown [id]="getFeatureChoiceDropdownId(className, feature, choiceIndex)" [value]="getFeatureChoiceValue(className, feature, choiceIndex)" [options]="getFeatureChoiceDropdownOptions(className, feature, choiceIndex)" [placeholder]="'- Choose an Option -'"
@@ -439,10 +451,7 @@
                         <div class="trait-header-content">
                             <span class="trait-name">{{ trait.title }}</span>
                             @if (trait.choices) {
-                            <span class="trait-choice-badge">
-                                {{ trait.choices }} Choice{{ trait.choices > 1 ? 's' : '' }}
-                                @if (trait.choiceLabel) { &bull; {{ trait.choiceLabel }} }
-                            </span>
+                            <app-choice-badge [count]="trait.choices" [label]="trait.choiceLabel ?? ''"></app-choice-badge>
                             }
                         </div>
                         <i class="fa-duotone fa-thin fa-chevron-down trait-chevron"></i>

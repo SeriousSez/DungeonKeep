@@ -648,6 +648,24 @@ input {
     border-radius: 8px;
     padding: 12px;
     background: var(--surface-raised);
+    position: relative;
+}
+
+.feature-detail.feature-has-choice {
+    border-left: 3px solid var(--accent-primary);
+}
+
+.feature-detail[open] {
+    z-index: 24;
+}
+
+/* When a dropdown menu is open inside a card, lift that specific card above siblings. */
+.feature-detail:has(.app-dropdown-menu--open),
+.background-choice-list details:has(.app-dropdown-menu--open),
+.trait-accordion:has(.app-dropdown-menu--open),
+.equipment-section:has(.app-dropdown-menu--open) {
+    position: relative;
+    z-index: 2200;
 }
 
 .feature-detail summary {
@@ -659,6 +677,14 @@ input {
     gap: 12px;
     font-weight: 500;
     color: var(--text-main);
+}
+
+.feature-header-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
 }
 
 .feature-detail summary:hover {
@@ -705,6 +731,17 @@ input {
     display: block;
 }
 
+.choice-meta {
+    margin: 0;
+    font-size: 0.86rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+}
+
+.choice-source-link {
+    font-size: 0.86rem;
+}
+
 .choice-select-group {
     display: grid;
     gap: 8px;
@@ -727,17 +764,6 @@ input {
 }
 
 .choice-checkbox input[type="checkbox"] {
-    cursor: pointer;
-    width: 16px;
-    height: 16px;
-}
-
-.form-grid {
-    display: grid;
-    gap: 10px;
-}
-
-.form-grid.two-col {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -1789,18 +1815,6 @@ input {
     font-size: 0.95rem;
     font-weight: 600;
     color: var(--text-main);
-}
-
-.trait-choice-badge {
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--accent-primary);
-    background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
-    border: 1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent);
-    border-radius: 20px;
-    padding: 2px 8px;
-    white-space: nowrap;
-    flex-shrink: 0;
 }
 
 .trait-chevron {

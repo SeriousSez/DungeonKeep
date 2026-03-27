@@ -27,6 +27,7 @@ export class DropdownComponent {
     readonly value = input<string | number>('');
     readonly options = input.required<ReadonlyArray<DropdownOption>>();
     readonly placeholder = input<string>('');
+    readonly minWidth = input<number | null>(null);
     readonly size = input<'wide' | 'compact' | 'narrow'>('compact');
     readonly disabled = input<boolean>(false);
     readonly searchable = input<boolean>(false);
@@ -101,7 +102,7 @@ export class DropdownComponent {
     }
 
     onDocumentClick(event: MouseEvent): void {
-        if (!this.searchable() || !this.isOpen()) {
+        if (!this.isOpen()) {
             return;
         }
 
