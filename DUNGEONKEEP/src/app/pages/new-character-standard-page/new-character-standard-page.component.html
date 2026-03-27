@@ -241,13 +241,13 @@
             <details>
                 <summary>Physical Characteristics</summary>
                 <div class="form-grid two-col">
-                    <label>Hair <input type="text" /></label>
-                    <label>Skin <input type="text" /></label>
-                    <label>Eyes <input type="text" /></label>
-                    <label>Height <input type="text" /></label>
-                    <label>Weight <input type="text" /></label>
-                    <label>Age <input type="text" /></label>
-                    <label>Gender <input type="text" /></label>
+                    <label>Hair <input type="text" [value]="physicalHair()" (input)="onPhysicalCharacteristicChanged('hair', $any($event.target).value)" /></label>
+                    <label>Skin <input type="text" [value]="physicalSkin()" (input)="onPhysicalCharacteristicChanged('skin', $any($event.target).value)" /></label>
+                    <label>Eyes <input type="text" [value]="physicalEyes()" (input)="onPhysicalCharacteristicChanged('eyes', $any($event.target).value)" /></label>
+                    <label>Height <input type="text" [value]="physicalHeight()" (input)="onPhysicalCharacteristicChanged('height', $any($event.target).value)" /></label>
+                    <label>Weight <input type="text" [value]="physicalWeight()" (input)="onPhysicalCharacteristicChanged('weight', $any($event.target).value)" /></label>
+                    <label>Age <input type="text" [value]="physicalAge()" (input)="onPhysicalCharacteristicChanged('age', $any($event.target).value)" /></label>
+                    <label>Gender <input type="text" [value]="physicalGender()" (input)="onPhysicalCharacteristicChanged('gender', $any($event.target).value)" /></label>
                 </div>
             </details>
             <details>
@@ -348,7 +348,7 @@
 
                             @if (generatedBackstory()) {
                             <div class="backstory-result">
-                                <p>{{ generatedBackstory() }}</p>
+                                <div class="backstory-rich-text" [innerHTML]="formatBackstoryRichText(generatedBackstory())"></div>
                                 <div class="backstory-result-actions">
                                     @if (backstoryTargetCharacter(); as targetCharacter) {
                                     <button type="button" [disabled]="isSavingGeneratedBackstory()" (click)="saveGeneratedBackstoryToCharacter()">

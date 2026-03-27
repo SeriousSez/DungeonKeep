@@ -396,6 +396,18 @@
     line-height: 1.5;
 }
 
+.backstory-rich-text {
+    margin: 6px 0 0;
+    color: var(--text-muted);
+    font-size: 0.84rem;
+    line-height: 1.65;
+
+    strong {
+        color: var(--text-main);
+        font-weight: 700;
+    }
+}
+
 .feature-list li p {
     margin: 6px 0 0;
     font-size: 0.82rem;

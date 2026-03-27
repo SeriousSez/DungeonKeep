@@ -2,6 +2,7 @@ using DungeonKeep.ApplicationService.Extensions;
 using DungeonKeep.Infrastructure.Extensions;
 using DungeonKeep.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -101,6 +102,8 @@ using (var scope = app.Services.CreateScope())
     catch
     {
     }
+
+    EnsureCharactersCampaignIdIsNullable(dbContext);
 }
 
 if (app.Environment.IsDevelopment())
@@ -118,3 +121,75 @@ app.UseCors("ClientApps");
 app.MapControllers();
 
 app.Run();
+
+static void EnsureCharactersCampaignIdIsNullable(DungeonKeepDbContext dbContext)
+{
+    const string emptyGuid = "00000000-0000-0000-0000-000000000000";
+
+    try
+    {
+        using var connection = dbContext.Database.GetDbConnection();
+        if (connection.State != ConnectionState.Open)
+        {
+            connection.Open();
+        }
+
+        using var pragmaCommand = connection.CreateCommand();
+        pragmaCommand.CommandText = "SELECT \"notnull\" FROM pragma_table_info('Characters') WHERE name = 'CampaignId' LIMIT 1;";
+        var campaignIdNotNull = Convert.ToInt32(pragmaCommand.ExecuteScalar() ?? 0);
+        if (campaignIdNotNull == 0)
+        {
+            return;
+        }
+
+        dbContext.Database.ExecuteSqlRaw("PRAGMA foreign_keys = OFF;");
+        dbContext.Database.ExecuteSqlRaw(@"
+            CREATE TABLE IF NOT EXISTS Characters__new (
+                Id TEXT NOT NULL CONSTRAINT PK_Characters PRIMARY KEY,
+                CampaignId TEXT NULL,
+                OwnerUserId TEXT NULL,
+                Name TEXT NOT NULL,
+                PlayerName TEXT NULL,
+                ClassName TEXT NOT NULL,
+                Level INTEGER NOT NULL,
+                Status TEXT NOT NULL DEFAULT 'Ready',
+                Background TEXT NULL,
+                Notes TEXT NULL,
+                Backstory TEXT NULL,
+                CreatedAtUtc TEXT NOT NULL,
+                CONSTRAINT FK_Characters_Campaigns_CampaignId FOREIGN KEY (CampaignId) REFERENCES Campaigns (Id) ON DELETE SET NULL,
+                CONSTRAINT FK_Characters_AppUsers_OwnerUserId FOREIGN KEY (OwnerUserId) REFERENCES AppUsers (Id) ON DELETE SET NULL
+            );
+        ");
+        dbContext.Database.ExecuteSqlRaw(@"
+            INSERT INTO Characters__new (Id, CampaignId, OwnerUserId, Name, PlayerName, ClassName, Level, Status, Background, Notes, Backstory, CreatedAtUtc)
+            SELECT Id,
+                   CASE WHEN CampaignId = {0} THEN NULL ELSE CampaignId END,
+                   OwnerUserId,
+                   Name,
+                   PlayerName,
+                   ClassName,
+                   Level,
+                   COALESCE(Status, 'Ready'),
+                   Background,
+                   Notes,
+                   COALESCE(Backstory, ''),
+                   CreatedAtUtc
+            FROM Characters;
+        ", emptyGuid);
+        dbContext.Database.ExecuteSqlRaw("DROP TABLE Characters;");
+        dbContext.Database.ExecuteSqlRaw("ALTER TABLE Characters__new RENAME TO Characters;");
+        dbContext.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS IX_Characters_CampaignId ON Characters (CampaignId);");
+        dbContext.Database.ExecuteSqlRaw("PRAGMA foreign_keys = ON;");
+    }
+    catch
+    {
+        try
+        {
+            dbContext.Database.ExecuteSqlRaw("PRAGMA foreign_keys = ON;");
+        }
+        catch
+        {
+        }
+    }
+}

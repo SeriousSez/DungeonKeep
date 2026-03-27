@@ -333,6 +333,13 @@ export class NewCharacterStandardPageComponent {
         { value: 'aristocratic', label: 'Aristocratic (10+ GP/day)' }
     ];
     readonly selectedLifestyle = signal('');
+    readonly physicalHair = signal('');
+    readonly physicalSkin = signal('');
+    readonly physicalEyes = signal('');
+    readonly physicalHeight = signal('');
+    readonly physicalWeight = signal('');
+    readonly physicalAge = signal('');
+    readonly physicalGender = signal('');
     readonly selectedSpeciesSortMode = signal<SpeciesSortMode>('lineage');
     readonly speciesSortOptions: ReadonlyArray<DropdownOption> = [
         { value: 'lineage', label: 'Lineage Group' },
@@ -1312,6 +1319,16 @@ export class NewCharacterStandardPageComponent {
         this.backstoryPromptDetails.set(value);
     };
 
+    formatBackstoryRichText(text: string): string {
+        const escaped = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        const withBold = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        return withBold.replace(/\r?\n/g, '<br />');
+    }
+
     readonly clearGeneratedBackstory = () => {
         this.generatedBackstory.set('');
         this.backstorySaveMessage.set('');
@@ -1528,6 +1545,20 @@ export class NewCharacterStandardPageComponent {
 
         if (this.selectedLifestyle()) {
             lines.push(`Lifestyle direction: ${this.selectedLifestyle()}`);
+        }
+
+        const physicalDetails = [
+            ['Gender', this.physicalGender().trim()],
+            ['Age', this.physicalAge().trim()],
+            ['Height', this.physicalHeight().trim()],
+            ['Weight', this.physicalWeight().trim()],
+            ['Hair', this.physicalHair().trim()],
+            ['Eyes', this.physicalEyes().trim()],
+            ['Skin', this.physicalSkin().trim()]
+        ].filter(([, value]) => value.length > 0);
+
+        if (physicalDetails.length > 0) {
+            lines.push(`Physical characteristics: ${physicalDetails.map(([label, value]) => `${label}: ${value}`).join('; ')}`);
         }
 
         const traits = this.personalityTraits().slice(0, 3);
@@ -1750,6 +1781,32 @@ export class NewCharacterStandardPageComponent {
 
     onFaithChanged(value: string): void {
         this.selectedFaith.set(value);
+    }
+
+    onPhysicalCharacteristicChanged(field: 'hair' | 'skin' | 'eyes' | 'height' | 'weight' | 'age' | 'gender', value: string): void {
+        switch (field) {
+            case 'hair':
+                this.physicalHair.set(value);
+                break;
+            case 'skin':
+                this.physicalSkin.set(value);
+                break;
+            case 'eyes':
+                this.physicalEyes.set(value);
+                break;
+            case 'height':
+                this.physicalHeight.set(value);
+                break;
+            case 'weight':
+                this.physicalWeight.set(value);
+                break;
+            case 'age':
+                this.physicalAge.set(value);
+                break;
+            case 'gender':
+                this.physicalGender.set(value);
+                break;
+        }
     }
 
     private syncBackgroundLanguageChoiceSelections(values: string[]): void {

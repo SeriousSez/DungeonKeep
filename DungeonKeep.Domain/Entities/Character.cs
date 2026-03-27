@@ -3,7 +3,7 @@ namespace DungeonKeep.Domain.Entities;
 public sealed class Character
 {
     public Guid Id { get; set; }
-    public Guid CampaignId { get; set; }
+    public Guid? CampaignId { get; set; }
     public Guid? OwnerUserId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string PlayerName { get; set; } = string.Empty;

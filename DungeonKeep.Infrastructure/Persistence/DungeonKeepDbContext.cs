@@ -51,7 +51,7 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
             entity.HasMany(c => c.Characters)
                 .WithOne(c => c.Campaign)
                 .HasForeignKey(c => c.CampaignId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasMany(c => c.Memberships)
                 .WithOne(membership => membership.Campaign)

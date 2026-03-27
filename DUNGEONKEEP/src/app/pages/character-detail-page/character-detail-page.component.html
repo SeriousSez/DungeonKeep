@@ -363,6 +363,16 @@
                     </div>
                 </div>
                 }
+
+                <h3 class="subsection-title">Appearance</h3>
+                <div class="info-rows">
+                    @for (item of appearanceRows(); track item.label) {
+                    <div class="info-row">
+                        <span class="label">{{ item.label }}</span>
+                        <span class="value">{{ item.value }}</span>
+                    </div>
+                    }
+                </div>
                 } @else if (activeCombatTab() === 'notes') {
                 <h3 class="subsection-title">Notes</h3>
                 <div class="action-filter-row">
@@ -384,7 +394,11 @@
                         <p>Add enemies as needed</p>
                     </div>
                     <div class="training-block"><span class="label">Backstory</span>
-                        <p>{{ char.notes || 'No additional notes yet.' }}</p>
+                        @if (formattedBackstoryHtml()) {
+                        <div class="backstory-rich-text" [innerHTML]="formattedBackstoryHtml()"></div>
+                        } @else {
+                        <p>No additional notes yet.</p>
+                        }
                     </div>
                 </div>
                 } @else {

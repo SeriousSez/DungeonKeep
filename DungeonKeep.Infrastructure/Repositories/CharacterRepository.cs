@@ -20,7 +20,7 @@ public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : IChara
     {
         return await dbContext.Characters
             .Include(c => c.OwnerUser)
-            .Where(c => c.OwnerUserId == userId && c.CampaignId == Guid.Empty)
+            .Where(c => c.OwnerUserId == userId && c.CampaignId == null)
             .OrderByDescending(c => c.CreatedAtUtc)
             .ToListAsync(cancellationToken);
     }
@@ -39,7 +39,7 @@ public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : IChara
             .FirstOrDefaultAsync(c => c.Id == characterId, cancellationToken);
     }
 
-    public async Task<Character?> UpdateCampaignAsync(Guid characterId, Guid campaignId, CancellationToken cancellationToken = default)
+    public async Task<Character?> UpdateCampaignAsync(Guid characterId, Guid? campaignId, CancellationToken cancellationToken = default)
     {
         var character = await dbContext.Characters.FirstOrDefaultAsync(c => c.Id == characterId, cancellationToken);
         if (character is null)

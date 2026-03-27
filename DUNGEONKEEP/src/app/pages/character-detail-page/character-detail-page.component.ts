@@ -354,13 +354,30 @@ export class CharacterDetailPageComponent {
             return [];
         }
 
+        const noteContext = this.noteContext();
+
         return [
             { label: 'Name', value: char.name },
             { label: 'Class & Level', value: `${char.className} ${char.level}` },
             { label: 'Race', value: char.race },
             { label: 'Background', value: char.background || 'Not set' },
-            { label: 'Alignment', value: 'Unaligned' },
+            { label: 'Alignment', value: noteContext.alignment || 'Unaligned' },
+            { label: 'Lifestyle', value: noteContext.lifestyle || 'Not set' },
+            { label: 'Faith', value: noteContext.faith || 'Not set' },
             { label: 'Experience', value: `${this.getXpForLevel(char.level).toLocaleString()} XP` }
+        ];
+    });
+
+    readonly appearanceRows = computed(() => {
+        const context = this.noteContext();
+        return [
+            { label: 'Gender', value: context.physical.gender || 'Not set' },
+            { label: 'Age', value: context.physical.age || 'Not set' },
+            { label: 'Height', value: context.physical.height || 'Not set' },
+            { label: 'Weight', value: context.physical.weight || 'Not set' },
+            { label: 'Hair', value: context.physical.hair || 'Not set' },
+            { label: 'Eyes', value: context.physical.eyes || 'Not set' },
+            { label: 'Skin', value: context.physical.skin || 'Not set' }
         ];
     });
 
@@ -705,18 +722,75 @@ export class CharacterDetailPageComponent {
         return (this.classFeatureMap[char.className] ?? []).filter((feature) => char.level >= feature.minLevel);
     });
 
+    readonly displayBackstoryText = computed(() => {
+        const char = this.character();
+        if (!char) {
+            return '';
+        }
+
+        const persistedBackstory = char.notes?.trim() ?? '';
+        const notes = persistedBackstory;
+        if (!notes) {
+            return '';
+        }
+
+        const builderMarker = notes.search(/(?:^|\n)\s*(Builder class focus:|Species focus:|Alignment direction:|Lifestyle direction:|Emphasize these personality traits:|Include these ideals:|Include these bonds:|Reflect these flaws:|Physical characteristics:|Faith:)/i);
+        if (builderMarker > 0) {
+            return notes.slice(0, builderMarker).trim();
+        }
+
+        return notes;
+    });
+
+    readonly formattedBackstoryHtml = computed(() => {
+        const backstory = this.displayBackstoryText();
+        if (!backstory) {
+            return '';
+        }
+
+        return this.formatBackstoryRichText(backstory);
+    });
+
     readonly roleplay = computed(() => {
         const char = this.character();
         if (!char) {
             return null;
         }
 
+        const context = this.noteContext();
+
         return {
-            personality: 'Stoic under pressure, warm with companions.',
-            ideals: 'Protect the innocent and uphold the party oath.',
-            bonds: `Bound to the fate of ${this.campaignName()}.`,
-            flaws: 'Carries guilt from a past failure.',
+            personality: context.personality || 'Not set',
+            ideals: context.ideals || 'Not set',
+            bonds: context.bonds || 'Not set',
+            flaws: context.flaws || 'Not set',
             backstory: char.notes || 'Backstory not yet documented.'
+        };
+    });
+
+    readonly noteContext = computed(() => {
+        const notes = this.character()?.notes ?? '';
+
+        const alignment = this.extractNoteValue(notes, /(^|\n)Alignment direction:\s*(.+?)(?=\n|$)/i);
+        const lifestyle = this.extractNoteValue(notes, /(^|\n)Lifestyle direction:\s*(.+?)(?=\n|$)/i);
+        const faith = this.extractNoteValue(notes, /(^|\n)Faith:\s*(.+?)(?=\n|$)/i);
+        const personality = this.extractNoteValue(notes, /(^|\n)Emphasize these personality traits:\s*(.+?)(?=\n|$)/i);
+        const ideals = this.extractNoteValue(notes, /(^|\n)Include these ideals:\s*(.+?)(?=\n|$)/i);
+        const bonds = this.extractNoteValue(notes, /(^|\n)Include these bonds:\s*(.+?)(?=\n|$)/i);
+        const flaws = this.extractNoteValue(notes, /(^|\n)Reflect these flaws:\s*(.+?)(?=\n|$)/i);
+
+        const physicalRaw = this.extractNoteValue(notes, /(^|\n)Physical characteristics:\s*(.+?)(?=\n|$)/i);
+        const physical = this.parsePhysicalCharacteristics(physicalRaw);
+
+        return {
+            alignment,
+            lifestyle,
+            faith,
+            personality,
+            ideals,
+            bonds,
+            flaws,
+            physical
         };
     });
 
@@ -853,5 +927,53 @@ export class CharacterDetailPageComponent {
         const cappedLevel = Math.min(Math.max(level, 1), 20);
         const effectiveLevel = casterType === 'half' ? Math.max(1, Math.floor(cappedLevel / 2)) : cappedLevel;
         return fullCasterSlots[effectiveLevel - 1] ?? [];
+    }
+
+    private extractNoteValue(notes: string, pattern: RegExp): string {
+        const match = notes.match(pattern);
+        return match?.[2]?.trim() ?? '';
+    }
+
+    private parsePhysicalCharacteristics(input: string): {
+        gender: string;
+        age: string;
+        height: string;
+        weight: string;
+        hair: string;
+        eyes: string;
+        skin: string;
+    } {
+        const parsed: Record<string, string> = {};
+
+        for (const segment of input.split(';')) {
+            const [rawKey, ...valueParts] = segment.split(':');
+            const key = rawKey?.trim().toLowerCase();
+            const value = valueParts.join(':').trim();
+            if (!key || !value) {
+                continue;
+            }
+
+            parsed[key] = value;
+        }
+
+        return {
+            gender: parsed['gender'] ?? '',
+            age: parsed['age'] ?? '',
+            height: parsed['height'] ?? '',
+            weight: parsed['weight'] ?? '',
+            hair: parsed['hair'] ?? '',
+            eyes: parsed['eyes'] ?? '',
+            skin: parsed['skin'] ?? ''
+        };
+    }
+
+    private formatBackstoryRichText(text: string): string {
+        const escaped = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        const withBold = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        return withBold.replace(/\r?\n/g, '<br />');
     }
 }
