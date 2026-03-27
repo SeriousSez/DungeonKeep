@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs/operators';
@@ -9,7 +9,7 @@ import { marked } from 'marked';
 import { classLevelOneFeatures, classOptions as sharedClassOptions, type ClassFeature, type ClassFeaturesForLevel } from '../../data/class-features.data';
 import type { ActiveInfoModal, BackgroundDetail, BuilderInfo, CurrencyState, EquipmentItem, InventoryEntry } from '../../data/new-character-standard-page.types';
 import { backgroundDescriptionFallbacks, backgroundDetailOverrides, backgroundLanguagesFallbacks, backgroundOptions as sharedBackgroundOptions, backgroundSkillProficienciesFallbacks, backgroundStartingPackages, backgroundToolProficienciesFallbacks, classDetailFallbacks, classInfoMap, classStartingPackages, classSubclassSnapshots, equipmentCatalog, equipmentSourceLinks, magicInitiateSpellsByAbility, speciesInfoMap, validSteps } from '../../data/new-character-standard-page.data';
-import type { CharacterDraft } from '../../models/dungeon.models';
+import type { Character, CharacterDraft } from '../../models/dungeon.models';
 import { OptionMenuFilterComponent } from '../../components/option-menu-filter/option-menu-filter.component';
 import { NewCharacterInfoModalComponent } from '../../components/new-character-info-modal/new-character-info-modal.component';
 import { CharacteristicsModalComponent } from '../../components/characteristics-modal/characteristics-modal.component';
@@ -43,11 +43,52 @@ export class NewCharacterStandardPageComponent {
         this.route.paramMap.pipe(map((params) => params.get('step') as StandardStep | null)),
         { initialValue: null }
     );
+    private readonly routeCharacterIdParam = toSignal(
+        this.route.paramMap.pipe(map((params) => params.get('id') ?? '')),
+        { initialValue: '' }
+    );
+    private readonly routeCharacterId = toSignal(
+        this.route.queryParamMap.pipe(map((params) => params.get('characterId') ?? '')),
+        { initialValue: '' }
+    );
+    private readonly hydratedCharacterId = signal('');
+    private readonly navigationEditLevel = signal<number | null>(this.resolveNavigationEditLevel());
 
     readonly activeStandardStep = computed<StandardStep>(() => {
         const step = this.routeStep();
         return step && validSteps.has(step) ? step : 'home';
     });
+    readonly activeBuilderCharacterId = computed(() => this.routeCharacterIdParam() || this.routeCharacterId());
+
+    constructor() {
+        effect(() => {
+            const characterId = this.activeBuilderCharacterId();
+            if (!characterId) {
+                return;
+            }
+
+            if (this.hydratedCharacterId() === characterId) {
+                return;
+            }
+
+            const character = this.store.characters().find((entry) => entry.id === characterId && entry.canEdit !== false);
+            if (!character) {
+                return;
+            }
+
+            this.hydrateBuilderFromCharacter(character, this.navigationEditLevel() ?? Number.NaN);
+            this.hydratedCharacterId.set(characterId);
+        });
+    }
+
+    getBuilderStepRoute(step: StandardStep): string[] {
+        const characterId = this.activeBuilderCharacterId();
+        if (characterId) {
+            return ['/characters', characterId, 'builder', step, 'manage'];
+        }
+
+        return ['/characters/new/standard', step];
+    }
 
     readonly activeInfoModal = signal<ActiveInfoModal | null>(null);
     readonly selectedClass = signal<string>('');
@@ -738,6 +779,84 @@ export class NewCharacterStandardPageComponent {
         });
     }
 
+    getFeatureChoiceIndexes(count: number): number[] {
+        return Array.from({ length: Math.max(1, count) }, (_, index) => index);
+    }
+
+    getFeatureChoiceValue(className: string, feature: ClassFeature, choiceIndex: number): string {
+        const key = this.getFeatureSelectionKey(className, feature);
+        return this.classFeatureSelections()[key]?.[choiceIndex] ?? '';
+    }
+
+    getFeatureChoiceDropdownId(className: string, feature: ClassFeature, choiceIndex: number): string {
+        const normalizedClass = className.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        const normalizedName = feature.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        return `feature-choice-${normalizedClass}-${feature.level}-${normalizedName}-${choiceIndex}`;
+    }
+
+    getFeatureChoiceDropdownOptions(className: string, feature: ClassFeature, choiceIndex: number): DropdownOption[] {
+        const choices = feature.choices;
+        if (!choices) {
+            return [];
+        }
+
+        const key = this.getFeatureSelectionKey(className, feature);
+        const selectedValues = this.classFeatureSelections()[key] ?? [];
+        const currentValue = selectedValues[choiceIndex] ?? '';
+        const selectedElsewhere = new Set(
+            selectedValues.filter((value, index) => index !== choiceIndex && value)
+        );
+
+        return choices.options.map((option) => ({
+            value: option,
+            label: option,
+            disabled: selectedElsewhere.has(option) && option !== currentValue
+        }));
+    }
+
+    onFeatureChoiceDropdownChanged(className: string, feature: ClassFeature, choiceIndex: number, value: string | number): void {
+        const choices = feature.choices;
+        if (!choices) {
+            return;
+        }
+
+        const key = this.getFeatureSelectionKey(className, feature);
+        const normalized = String(value ?? '').trim();
+
+        this.classFeatureSelections.update((current) => {
+            const nextSelections = [...(current[key] ?? [])];
+
+            if (!normalized) {
+                nextSelections.splice(choiceIndex, 1);
+            } else {
+                const duplicateIndex = nextSelections.findIndex((entry, index) => entry === normalized && index !== choiceIndex);
+                if (duplicateIndex >= 0) {
+                    nextSelections.splice(duplicateIndex, 1);
+                }
+                nextSelections[choiceIndex] = normalized;
+            }
+
+            const compactSelections = nextSelections
+                .map((entry) => entry?.trim())
+                .filter((entry): entry is string => !!entry)
+                .slice(0, choices.count);
+
+            if (!compactSelections.length) {
+                const { [key]: _, ...rest } = current;
+                return rest;
+            }
+
+            return {
+                ...current,
+                [key]: compactSelections
+            };
+        });
+    }
+
+    private getFeatureSelectionKey(className: string, feature: ClassFeature): string {
+        return `${className}:${feature.level}:${feature.name}`;
+    }
+
     getClassFeatures(className: string, maxLevel: number = 1): ClassFeaturesForLevel[] {
         const seededFeatures = classLevelOneFeatures[className] || [];
         const hasSeededProgression = seededFeatures.some((featureGroup) => featureGroup.level > 1);
@@ -825,9 +944,15 @@ export class NewCharacterStandardPageComponent {
     }
 
     updateClassLevel(className: string, level: number): void {
-        const current = this.multiclassList();
-        current[className] = level;
-        this.multiclassList.set({ ...current });
+        if (!Number.isFinite(level)) {
+            return;
+        }
+
+        const normalizedLevel = Math.min(20, Math.max(1, Math.trunc(level)));
+        this.multiclassList.update((current) => ({
+            ...current,
+            [className]: normalizedLevel
+        }));
     }
 
     startMulticlass(): void {
@@ -1509,6 +1634,46 @@ export class NewCharacterStandardPageComponent {
         }
 
         return error instanceof Error ? error.message : 'Unable to generate a backstory right now.';
+    }
+
+    private hydrateBuilderFromCharacter(character: Character, levelOverride: number = Number.NaN): void {
+        const resolvedLevel = Number.isFinite(levelOverride)
+            ? Math.min(20, Math.max(1, Math.trunc(levelOverride)))
+            : Math.max(character.level, 1);
+
+        this.completionCharacterName.set(character.name);
+        this.completionPlayerName.set(character.playerName);
+        this.multiclassList.set({ [character.className]: resolvedLevel });
+        this.characterLevel.set(resolvedLevel);
+        this.selectedClass.set('');
+
+        this.selectedSpeciesName.set(character.race);
+
+        const backgroundName = character.background.trim();
+        if (backgroundName) {
+            this.selectedBackgroundName.set(backgroundName);
+            const option = this.backgroundOptions.find((entry) => entry.name.toLowerCase() === backgroundName.toLowerCase());
+            this.selectedBackgroundUrl.set(option?.url ?? '');
+        }
+
+        const notes = character.notes?.trim() ?? '';
+        this.generatedBackstory.set(notes);
+        this.selectedFaith.set(this.extractFaithFromNotes(notes));
+    }
+
+    private resolveNavigationEditLevel(): number | null {
+        const state = window.history.state as { editLevel?: unknown } | null;
+        const raw = state?.editLevel;
+        if (typeof raw !== 'number' || !Number.isFinite(raw)) {
+            return null;
+        }
+
+        return Math.min(20, Math.max(1, Math.trunc(raw)));
+    }
+
+    private extractFaithFromNotes(notes: string): string {
+        const match = notes.match(/(?:^|\n)Faith:\s*(.+?)(?:\n|$)/i);
+        return match?.[1]?.trim() ?? '';
     }
 
     private buildAutoBackstoryDirection(): string {

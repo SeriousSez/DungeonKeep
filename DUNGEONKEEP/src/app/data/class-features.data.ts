@@ -18,6 +18,41 @@ export const classOptions: ReadonlyArray<string> = [
     'Artificer', 'Barbarian', 'Blood Hunter', 'Bard', 'Cleric', 'Druid', 'Fighter',
     'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard'
 ];
+
+const paladinWeaponMasteryOptions: ReadonlyArray<string> = [
+    'Club', 'Dagger', 'Greatclub', 'Handaxe', 'Javelin', 'Light Hammer', 'Mace', 'Quarterstaff', 'Sickle', 'Spear',
+    'Crossbow, Light', 'Dart', 'Shortbow', 'Sling',
+    'Battleaxe', 'Flail', 'Glaive', 'Greataxe', 'Greatsword', 'Halberd', 'Lance', 'Longsword', 'Maul', 'Morningstar',
+    'Pike', 'Rapier', 'Scimitar', 'Shortsword', 'Trident', 'War Pick', 'Warhammer', 'Whip',
+    'Blowgun', 'Crossbow, Hand', 'Crossbow, Heavy', 'Longbow', 'Net',
+    'Antimatter Rifle', 'Automatic Rifle', 'Hunting Rifle', 'Laser Pistol', 'Laser Rifle', 'Musket', 'Pistol', 'Revolver', 'Shotgun'
+];
+
+const paladinClericCantripOptions: ReadonlyArray<string> = [
+    'Guidance', 'Light', 'Mending', 'Resistance', 'Sacred Flame', 'Spare the Dying', 'Thaumaturgy'
+];
+
+const paladinFightingStyleFeatOptions: ReadonlyArray<string> = [
+    'Archery', 'Defense', 'Dueling', 'Great Weapon Fighting', 'Interception', 'Protection', 'Thrown Weapon Fighting', 'Two-Weapon Fighting', 'Unarmed Fighting'
+];
+
+const paladinSubclassOptions: ReadonlyArray<string> = [
+    'Oath of Devotion', 'Oath of Glory', 'Oath of the Ancients', 'Oath of Vengeance', 'Oath of Conquest',
+    'Oath of Redemption', 'Oath of the Crown', 'Oath of the Watchers', 'Oathbreaker', 'Oath of the Open Sea (TCSR)'
+];
+
+const paladinFeatOptions: ReadonlyArray<string> = [
+    'Ability Score Improvement', 'Alert', 'Athlete', 'Charger', 'Defensive Duelist', 'Dual Wielder', 'Elemental Adept',
+    'Great Weapon Master', 'Heavy Armor Master', 'Inspiring Leader', 'Mage Slayer', 'Magic Initiate', 'Mounted Combatant',
+    'Polearm Master', 'Resilient', 'Savage Attacker', 'Sentinel', 'Shield Master', 'Skill Expert', 'Skulker', 'Slasher',
+    'Speedy', 'Spell Sniper', 'Tavern Brawler', 'Tough', 'War Caster', 'Weapon Master'
+];
+
+const paladinEpicBoonOptions: ReadonlyArray<string> = [
+    'Boon of Combat Prowess', 'Boon of Dimensional Travel', 'Boon of Energy Resistance', 'Boon of Fate', 'Boon of Fortitude',
+    'Boon of Irresistible Offense', 'Boon of Recovery', 'Boon of Skill', 'Boon of Speed', 'Boon of Spell Recall', 'Boon of the Night Spirit', 'Boon of Truesight'
+];
+
 export const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
     Artificer: [
         {
@@ -792,24 +827,80 @@ export const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
                 },
                 { name: 'Lay On Hands', level: 1, description: 'Restore hit points from your Lay On Hands pool.' },
                 { name: 'Spellcasting', level: 1, description: 'Cast spells using Charisma.' },
-                { name: 'Weapon Mastery', level: 1, description: 'Gain mastery options for selected weapons.' }
+                {
+                    name: 'Weapon Mastery',
+                    level: 1,
+                    description: 'Gain mastery options for selected weapons.',
+                    choices: {
+                        title: 'Choose 2 Weapon Masteries',
+                        count: 2,
+                        options: [...paladinWeaponMasteryOptions]
+                    }
+                }
             ]
         },
         {
             level: 2, features: [
-                { name: 'Fighting Style', level: 2, description: 'Choose your holy combat style.' },
+                {
+                    name: 'Fighting Style',
+                    level: 2,
+                    description: 'Choose your holy combat style.',
+                    choices: {
+                        title: 'Choose 1 Fighting Style Option',
+                        count: 1,
+                        options: ['Blessed Warrior', 'Fighting Style Feat']
+                    }
+                },
+                {
+                    name: 'Blessed Warrior Cantrips',
+                    level: 2,
+                    description: 'If you choose Blessed Warrior, choose two Cleric cantrips.',
+                    choices: {
+                        title: 'Choose 2 Cleric Cantrips',
+                        count: 2,
+                        options: [...paladinClericCantripOptions]
+                    }
+                },
+                {
+                    name: 'Fighting Style Feat',
+                    level: 2,
+                    description: 'If you choose Fighting Style Feat, select one Fighting Style feat.',
+                    choices: {
+                        title: 'Choose 1 Fighting Style Feat',
+                        count: 1,
+                        options: [...paladinFightingStyleFeatOptions]
+                    }
+                },
                 { name: 'Paladin\'s Smite', level: 2, description: 'Enhance weapon strikes with divine smites.' }
             ]
         },
         {
             level: 3, features: [
                 { name: 'Channel Divinity', level: 3, description: 'Gain sacred channel divinity options.' },
-                { name: 'Paladin Subclass', level: 3, description: 'Choose your Sacred Oath subclass.' }
+                {
+                    name: 'Paladin Subclass',
+                    level: 3,
+                    description: 'Choose your Sacred Oath subclass.',
+                    choices: {
+                        title: 'Choose 1 Sacred Oath',
+                        count: 1,
+                        options: [...paladinSubclassOptions]
+                    }
+                }
             ]
         },
         {
             level: 4, features: [
-                { name: 'Ability Score Improvement', level: 4, description: 'Increase your ability scores or take a feat.' }
+                {
+                    name: 'Ability Score Improvement',
+                    level: 4,
+                    description: 'Increase your ability scores or take a feat.',
+                    choices: {
+                        title: 'Choose 1 Feat or Ability Score Improvement',
+                        count: 1,
+                        options: [...paladinFeatOptions]
+                    }
+                }
             ]
         },
         {
@@ -830,7 +921,16 @@ export const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
         },
         {
             level: 8, features: [
-                { name: 'Ability Score Improvement', level: 8, description: 'Increase your ability scores or take a feat.' }
+                {
+                    name: 'Ability Score Improvement',
+                    level: 8,
+                    description: 'Increase your ability scores or take a feat.',
+                    choices: {
+                        title: 'Choose 1 Feat or Ability Score Improvement',
+                        count: 1,
+                        options: [...paladinFeatOptions]
+                    }
+                }
             ]
         },
         {
@@ -850,7 +950,16 @@ export const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
         },
         {
             level: 12, features: [
-                { name: 'Ability Score Improvement', level: 12, description: 'Increase your ability scores or take a feat.' }
+                {
+                    name: 'Ability Score Improvement',
+                    level: 12,
+                    description: 'Increase your ability scores or take a feat.',
+                    choices: {
+                        title: 'Choose 1 Feat or Ability Score Improvement',
+                        count: 1,
+                        options: [...paladinFeatOptions]
+                    }
+                }
             ]
         },
         {
@@ -865,7 +974,16 @@ export const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
         },
         {
             level: 16, features: [
-                { name: 'Ability Score Improvement', level: 16, description: 'Increase your ability scores or take a feat.' }
+                {
+                    name: 'Ability Score Improvement',
+                    level: 16,
+                    description: 'Increase your ability scores or take a feat.',
+                    choices: {
+                        title: 'Choose 1 Feat or Ability Score Improvement',
+                        count: 1,
+                        options: [...paladinFeatOptions]
+                    }
+                }
             ]
         },
         {
@@ -875,7 +993,16 @@ export const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
         },
         {
             level: 19, features: [
-                { name: 'Epic Boon', level: 19, description: 'Gain a powerful epic boon.' }
+                {
+                    name: 'Epic Boon',
+                    level: 19,
+                    description: 'Gain a powerful epic boon.',
+                    choices: {
+                        title: 'Choose 1 Epic Boon',
+                        count: 1,
+                        options: [...paladinEpicBoonOptions]
+                    }
+                }
             ]
         },
         {

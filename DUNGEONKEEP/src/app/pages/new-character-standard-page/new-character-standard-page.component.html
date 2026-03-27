@@ -9,7 +9,7 @@
     <section class="panel standard-steps-shell">
         <div class="step-rail" role="tablist" aria-label="Character Builder Steps">
             @for (step of standardSteps; track step.key) {
-            <a class="step-pill" [class.active]="activeStandardStep() === step.key" [attr.aria-selected]="activeStandardStep() === step.key" [routerLink]="['/characters/new/standard', step.key]" [attr.title]="step.label">
+            <a class="step-pill" [class.active]="activeStandardStep() === step.key" [attr.aria-selected]="activeStandardStep() === step.key" [routerLink]="getBuilderStepRoute(step.key)" queryParamsHandling="preserve" [attr.title]="step.label">
                 <span class="step-pill-desktop">{{ step.label }}</span>
                 <span class="step-pill-mobile">{{ step.shortLabel || step.label }}</span>
             </a>
@@ -22,7 +22,7 @@
     <section class="panel step-panel">
         <h2>Standard Builder Home</h2>
         <p>Use the step bar above to move through Class, Species, Background, Abilities, Equipment, and What's Next.</p>
-        <a class="inline-action" [routerLink]="['/characters/new/standard', 'class']">Go to 1. Class</a>
+        <a class="inline-action" [routerLink]="getBuilderStepRoute('class')" queryParamsHandling="preserve">Go to 1. Class</a>
     </section>
     }
 
@@ -76,7 +76,7 @@
                 <button type="button" class="btn-remove-class" (click)="removeClass(className)" title="Remove class">✕</button>
             </div>
 
-            <details class="class-details-toggle">
+            <details class="class-details-toggle" [attr.open]="Object.keys(multiclassList()).length === 1 ? '' : null">
                 <summary>CLASS FEATURES</summary>
                 <div class="class-features-wrapper">
                     @for (featureLevel of getClassFeatures(className, multiclassList()[className]); track featureLevel.level) {
@@ -93,11 +93,10 @@
                         <div class="feature-choices">
                             <label class="choice-label">{{ feature.choices.title }}</label>
                             <div class="choice-select-group">
-                                @for (option of feature.choices.options; track option) {
-                                <label class="choice-checkbox">
-                                    <input type="checkbox" [checked]="(classFeatureSelections()[feature.name] || []).includes(option)" (change)="onFeatureChoiceChange(feature.name, option, $any($event.target).checked, feature.choices.count)">
-                                    <span>{{ option }}</span>
-                                </label>
+                                @for (choiceIndex of getFeatureChoiceIndexes(feature.choices.count); track choiceIndex) {
+                                <app-dropdown [id]="getFeatureChoiceDropdownId(className, feature, choiceIndex)" [value]="getFeatureChoiceValue(className, feature, choiceIndex)" [options]="getFeatureChoiceDropdownOptions(className, feature, choiceIndex)" [placeholder]="'- Choose an Option -'"
+                                    [searchable]="feature.choices.options.length > 10" size="wide" (changed)="onFeatureChoiceDropdownChanged(className, feature, choiceIndex, $event)">
+                                </app-dropdown>
                                 }
                             </div>
                         </div>

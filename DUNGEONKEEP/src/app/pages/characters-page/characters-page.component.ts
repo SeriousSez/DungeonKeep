@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { PartyRosterComponent } from '../../components/party-roster/party-roster.component';
@@ -13,4 +13,5 @@ import { DungeonStoreService } from '../../state/dungeon-store.service';
 })
 export class CharactersPageComponent {
     readonly store = inject(DungeonStoreService);
+    readonly ownedCharacters = computed(() => this.store.characters().filter((character) => character.canEdit !== false));
 }

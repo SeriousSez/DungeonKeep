@@ -50,6 +50,21 @@ export const routes: Routes = [
         data: { title: 'Standard Character Builder', breadcrumb: 'Standard Builder' }
     },
     {
+        path: 'characters/:id/builder',
+        component: NewCharacterStandardPageComponent,
+        data: { title: 'Character Builder', breadcrumb: 'Character Builder' }
+    },
+    {
+        path: 'characters/:id/builder/:step',
+        component: NewCharacterStandardPageComponent,
+        data: { title: 'Character Builder', breadcrumb: 'Character Builder' }
+    },
+    {
+        path: 'characters/:id/builder/:step/:mode',
+        component: NewCharacterStandardPageComponent,
+        data: { title: 'Character Builder', breadcrumb: 'Character Builder' }
+    },
+    {
         path: 'sessions',
         component: SessionsPageComponent,
         data: { title: 'Session Prep', breadcrumb: 'Sessions' }

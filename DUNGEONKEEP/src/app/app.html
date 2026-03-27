@@ -24,7 +24,7 @@
             <span></span>
         </button>
 
-        <div class="user-block">
+        <div class="user-block desktop-user-block">
             <span class="user-pill">{{ currentUser()?.displayName }}</span>
             <button type="button" class="logout-btn" (click)="logout()">Log Out</button>
         </div>
@@ -37,6 +37,11 @@
         <a routerLink="/campaigns/new" routerLinkActive="is-active" (click)="closeMobileNav()">New Campaign</a>
         <a routerLink="/characters/new" routerLinkActive="is-active" (click)="closeMobileNav()">New Character</a>
         <a routerLink="/sessions" routerLinkActive="is-active" (click)="closeMobileNav()">Session Prep</a>
+
+        <div class="user-block mobile-user-block">
+            <span class="user-pill">{{ currentUser()?.displayName }}</span>
+            <button type="button" class="logout-btn" (click)="logout()">Log Out</button>
+        </div>
     </nav>
 </header>
 

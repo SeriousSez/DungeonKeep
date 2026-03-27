@@ -16,7 +16,8 @@
         </div>
     </section>
 
-    <app-party-roster [selectedParty]="store.selectedParty()" (statusCycled)="store.cycleStatus($event)" (characterPromoted)="store.promoteCharacter($event)" />
+    <app-party-roster [selectedParty]="ownedCharacters()" [eyebrow]="'Character vault'" [title]="'Your Characters'" [countLabel]="'total'" [emptyTitle]="'No characters created yet'" [emptyMessage]="'Create a character below to start building your roster.'" (statusCycled)="store.cycleStatus($event)"
+        (characterPromoted)="store.promoteCharacter($event)" />
 
     <a routerLink="/characters/new" class="create-link">+ New Character</a>
 </main>

@@ -12,6 +12,11 @@ import { Character } from '../../models/dungeon.models';
 })
 export class PartyRosterComponent {
     readonly selectedParty = input.required<Character[]>();
+    readonly eyebrow = input('Party roster');
+    readonly title = input('Characters in play');
+    readonly countLabel = input('assigned');
+    readonly emptyTitle = input('No party members assigned');
+    readonly emptyMessage = input('Add a character below to give this campaign a roster.');
 
     readonly statusCycled = output<string>();
     readonly characterPromoted = output<string>();
