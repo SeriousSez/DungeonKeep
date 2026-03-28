@@ -441,7 +441,21 @@
                     <label>Alignment
                         <app-dropdown [value]="selectedAlignment()" [options]="alignmentOptions" [searchable]="true" [placeholder]="'-- Choose an Option --'" size="wide" (changed)="selectedAlignment.set($any($event))"></app-dropdown>
                     </label>
-                    <label>Faith <input type="text" [value]="selectedFaith()" (input)="onFaithChanged($any($event.target).value)" /></label>
+                    <label>Faith
+                        <div class="faith-combobox">
+                            <input type="text" [value]="selectedFaith()" (input)="onFaithChanged($any($event.target).value)" (blur)="onFaithBlur()" placeholder="Deity or custom faith…" autocomplete="off" />
+                            @if (faithDropdownOpen() && faithSuggestions().length > 0) {
+                            <ul class="deity-suggestions" role="listbox">
+                                @for (deity of faithSuggestions(); track deity.name) {
+                                <li role="option" (mousedown)="selectDeity(deity.name)">
+                                    <span class="deity-name">{{ deity.name }}</span>
+                                    <span class="deity-domain">{{ deity.domain }}</span>
+                                </li>
+                                }
+                            </ul>
+                            }
+                        </div>
+                    </label>
                     <label>Lifestyle
                         <app-dropdown [value]="selectedLifestyle()" [options]="lifestyleOptions" [searchable]="true" [placeholder]="'-- Choose an Option --'" size="wide" (changed)="selectedLifestyle.set($any($event))"></app-dropdown>
                     </label>

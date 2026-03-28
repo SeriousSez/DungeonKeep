@@ -21,6 +21,7 @@ import { DungeonStoreService } from '../../state/dungeon-store.service';
 import { SessionService } from '../../state/session.service';
 import { classSpellCatalog, type ClassSpellOption, spellcastingProgressionByClass, type SpellcastingProgression } from '../../data/class-spells.data';
 import { spellDetailsMap, type SpellDetail } from '../../data/spell-details.data';
+import { deitiesList } from '../../data/deities.data';
 
 type StandardStep = 'home' | 'class' | 'species' | 'background' | 'abilities' | 'equipment' | 'whats-next';
 type AbilityGenerationMethod = '' | 'standard-array' | 'manual-rolled' | 'point-buy';
@@ -377,6 +378,14 @@ export class NewCharacterStandardPageComponent {
     ];
     readonly selectedAlignment = signal('');
     readonly selectedFaith = signal('');
+    readonly faithDropdownOpen = signal(false);
+    readonly faithSuggestions = computed(() => {
+        const query = this.selectedFaith().trim().toLowerCase();
+        if (!query) return [];
+        return deitiesList
+            .filter((d) => d.name.toLowerCase().includes(query) || d.domain.toLowerCase().includes(query))
+            .slice(0, 8);
+    });
     readonly lifestyleOptions: ReadonlyArray<DropdownOption> = [
         { value: 'wretched', label: 'Wretched (free, but miserable)' },
         { value: 'squalid', label: 'Squalid (1 SP/day)' },
@@ -2253,6 +2262,17 @@ export class NewCharacterStandardPageComponent {
 
     onFaithChanged(value: string): void {
         this.selectedFaith.set(value);
+        this.faithDropdownOpen.set(true);
+    }
+
+    selectDeity(name: string): void {
+        this.selectedFaith.set(name);
+        this.faithDropdownOpen.set(false);
+    }
+
+    onFaithBlur(): void {
+        // Delay so mousedown on a suggestion fires before blur closes the list
+        setTimeout(() => this.faithDropdownOpen.set(false), 150);
     }
 
     onPhysicalCharacteristicChanged(field: 'hair' | 'skin' | 'eyes' | 'height' | 'weight' | 'age' | 'gender', value: string): void {
