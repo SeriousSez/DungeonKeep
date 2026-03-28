@@ -85,6 +85,32 @@ export class DungeonStoreService {
         return await this.addCharacterFromApi(draft);
     }
 
+    async updateCharacter(characterId: string, draft: CharacterDraft): Promise<Character | null> {
+        if (!draft.name || !draft.playerName || !draft.className) {
+            return null;
+        }
+
+        try {
+            const updated = await this.api.updateCharacter(characterId, {
+                name: draft.name,
+                playerName: draft.playerName,
+                className: draft.className,
+                level: Math.max(1, draft.level),
+                background: draft.background || 'Freshly arrived adventurer',
+                notes: draft.notes || 'No field notes yet.',
+                campaignId: draft.campaignId
+            });
+
+            const character = this.mapCharacterFromApi(updated, draft);
+            this.characters.update((characters) =>
+                characters.map((c) => (c.id === characterId ? character : c))
+            );
+            return character;
+        } catch {
+            return null;
+        }
+    }
+
     async setCharacterCampaign(characterId: string, campaignId: string | null): Promise<boolean> {
         const current = this.characters().find((character) => character.id === characterId);
         if (!current || current.canEdit === false) {

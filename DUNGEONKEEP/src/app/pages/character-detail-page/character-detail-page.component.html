@@ -251,7 +251,10 @@
                 <h3 class="subsection-title">1st Level</h3>
                 <div class="slot-list">
                     @for (slot of spell.slots; track slot.level) {
-                    <span class="slot-pill">L{{ slot.level }}: {{ slot.count }}</span>
+                    <button type="button" class="slot-pill" [class.slot-pill--used]="getUsedSpellSlots(slot.level, slot.count) > 0" [class.slot-pill--empty]="getUsedSpellSlots(slot.level, slot.count) === 0" [class.slot-pill--full]="getUsedSpellSlots(slot.level, slot.count) === slot.count"
+                        (click)="cycleUsedSpellSlots(slot.level, slot.count)">
+                        Level {{ slot.level }}: {{ getUsedSpellSlots(slot.level, slot.count) }}/{{ slot.count }} used
+                    </button>
                     }
                 </div>
                 <div class="actions-table-scroll">

@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { ChangeDetectorRef, Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -19,11 +19,14 @@ import { MultiSelectDropdownComponent, type MultiSelectOptionGroup } from '../..
 import { DungeonApiService } from '../../state/dungeon-api.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 import { SessionService } from '../../state/session.service';
+import { classSpellCatalog, type ClassSpellOption, spellcastingProgressionByClass, type SpellcastingProgression } from '../../data/class-spells.data';
+import { spellDetailsMap, type SpellDetail } from '../../data/spell-details.data';
 
 type StandardStep = 'home' | 'class' | 'species' | 'background' | 'abilities' | 'equipment' | 'whats-next';
 type AbilityGenerationMethod = '' | 'standard-array' | 'manual-rolled' | 'point-buy';
 type ClassSortMode = 'primary-ability' | 'party-role' | 'power-source' | 'complexity' | 'spellcasting' | 'armor';
 type SpeciesSortMode = 'lineage' | 'movement' | 'world' | 'complexity';
+type ClassPanelTab = 'class-features' | 'spells';
 
 @Component({
     selector: 'app-new-character-standard-page',
@@ -39,6 +42,7 @@ export class NewCharacterStandardPageComponent {
     private readonly router = inject(Router);
     private readonly session = inject(SessionService);
     private readonly cdr = inject(ChangeDetectorRef);
+    private readonly document = inject(DOCUMENT);
 
     private readonly routeStep = toSignal(
         this.route.paramMap.pipe(map((params) => params.get('step') as StandardStep | null)),
@@ -102,6 +106,9 @@ export class NewCharacterStandardPageComponent {
     readonly speciesSearchTerm = signal('');
     readonly openTraitKeys = signal<Set<string>>(new Set<string>());
     readonly classFeatureSelections = signal<Record<string, string[]>>({});
+    readonly classPanelTabsByClass = signal<Record<string, ClassPanelTab>>({});
+    readonly classPreparedSpells = signal<Record<string, string[]>>({});
+    readonly selectedSpellByClass = signal<Record<string, string>>({});
     readonly backgroundChoiceSelections = signal<Record<string, string>>({});
     readonly selectedAbilityMethod = signal<AbilityGenerationMethod>('');
     readonly abilityBaseScores = signal<Record<string, number>>({
@@ -220,6 +227,10 @@ export class NewCharacterStandardPageComponent {
             }))
             .filter((category) => category.classes.length > 0);
     });
+
+    private readonly spellcastingProgressionByClass = spellcastingProgressionByClass;
+
+    private readonly classSpellCatalog = classSpellCatalog;
 
     readonly currentBgAbilityScores = computed<readonly string[]>(() => {
         const name = this.selectedBackground()?.name ?? '';
@@ -748,6 +759,8 @@ export class NewCharacterStandardPageComponent {
             ...current,
             [className]: 1
         });
+        this.setClassPanelTab(className, 'class-features');
+        this.syncPreparedSpellsForClass(className, 1);
         this.selectedClass.set('');
         this.closeInfoModal();
     }
@@ -988,6 +1001,8 @@ export class NewCharacterStandardPageComponent {
             ...current,
             [className]: level
         });
+        this.setClassPanelTab(className, 'class-features');
+        this.syncPreparedSpellsForClass(className, level);
         this.selectedClass.set('');
         this.characterLevel.set(1);
     }
@@ -997,6 +1012,16 @@ export class NewCharacterStandardPageComponent {
         const updated = { ...current };
         delete updated[className];
         this.multiclassList.set(updated);
+        this.classPanelTabsByClass.update((tabs) => {
+            const next = { ...tabs };
+            delete next[className];
+            return next;
+        });
+        this.classPreparedSpells.update((entries) => {
+            const next = { ...entries };
+            delete next[className];
+            return next;
+        });
     }
 
     updateClassLevel(className: string, level: number): void {
@@ -1009,6 +1034,154 @@ export class NewCharacterStandardPageComponent {
             ...current,
             [className]: normalizedLevel
         }));
+        this.syncPreparedSpellsForClass(className, normalizedLevel);
+    }
+
+    getActiveClassPanelTab(className: string): ClassPanelTab {
+        return this.classPanelTabsByClass()[className] ?? 'class-features';
+    }
+
+    setClassPanelTab(className: string, tab: ClassPanelTab): void {
+        this.classPanelTabsByClass.update((current) => ({
+            ...current,
+            [className]: tab
+        }));
+    }
+
+    classSupportsSpells(className: string, classLevel: number): boolean {
+        return this.getKnownClassSpells(className, classLevel).length > 0;
+    }
+
+    getKnownClassSpells(className: string, classLevel: number): ClassSpellOption[] {
+        const catalog = this.classSpellCatalog[className] ?? [];
+        if (!catalog.length) {
+            return [];
+        }
+
+        const maxSpellLevel = this.getMaxSpellLevelForClass(className, classLevel);
+        return catalog.filter((spell) => spell.level === 0 || spell.level <= maxSpellLevel);
+    }
+
+    getPreparedClassSpells(className: string, classLevel: number): ClassSpellOption[] {
+        const knownByName = new Map(this.getKnownClassSpells(className, classLevel).map((spell) => [spell.name, spell]));
+        const prepared = this.classPreparedSpells()[className] ?? [];
+
+        return prepared
+            .map((spellName) => knownByName.get(spellName))
+            .filter((spell): spell is ClassSpellOption => !!spell);
+    }
+
+    getKnownUnpreparedClassSpells(className: string, classLevel: number): ClassSpellOption[] {
+        const prepared = new Set(this.getPreparedClassSpells(className, classLevel).map((spell) => spell.name));
+        return this.getKnownClassSpells(className, classLevel).filter((spell) => !prepared.has(spell.name));
+    }
+
+    getSpellLevels(spells: readonly ClassSpellOption[]): number[] {
+        return [...new Set(spells.map((spell) => spell.level))].sort((left, right) => left - right);
+    }
+
+    getSpellsForLevel(spells: readonly ClassSpellOption[], level: number): ClassSpellOption[] {
+        return spells.filter((spell) => spell.level === level);
+    }
+
+    learnClassSpell(className: string, classLevel: number, spellName: string): void {
+        const known = new Set(this.getKnownClassSpells(className, classLevel).map((spell) => spell.name));
+        if (!known.has(spellName)) {
+            return;
+        }
+
+        this.classPreparedSpells.update((current) => {
+            const prepared = current[className] ?? [];
+            if (prepared.includes(spellName)) {
+                return current;
+            }
+
+            return {
+                ...current,
+                [className]: [...prepared, spellName]
+            };
+        });
+    }
+
+    unprepareClassSpell(className: string, spellName: string): void {
+        this.classPreparedSpells.update((current) => {
+            const prepared = current[className] ?? [];
+            const nextPrepared = prepared.filter((entry) => entry !== spellName);
+            if (!nextPrepared.length) {
+                const { [className]: _, ...rest } = current;
+                return rest;
+            }
+
+            return {
+                ...current,
+                [className]: nextPrepared
+            };
+        });
+    }
+
+    getSpellLevelLabel(level: number): string {
+        if (level <= 0) {
+            return 'Cantrip';
+        }
+
+        if (level === 1) {
+            return '1st-level';
+        }
+
+        if (level === 2) {
+            return '2nd-level';
+        }
+
+        if (level === 3) {
+            return '3rd-level';
+        }
+
+        return `${level}th-level`;
+    }
+
+    getSpellDetail(spellName: string): SpellDetail | null {
+        return spellDetailsMap[spellName] ?? null;
+    }
+
+    getSelectedSpellForClass(className: string): string {
+        return this.selectedSpellByClass()[className] ?? '';
+    }
+
+    getSpellItemId(className: string, spellName: string, listType: 'prepared' | 'known'): string {
+        const slug = `${className}-${spellName}-${listType}`
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+
+        return `spell-item-${slug}`;
+    }
+
+    toggleSpellDetail(className: string, spellName: string, listType: 'prepared' | 'known'): void {
+        const isClosing = this.selectedSpellByClass()[className] === spellName;
+        this.selectedSpellByClass.update((current) => {
+            const same = current[className] === spellName;
+            return { ...current, [className]: same ? '' : spellName };
+        });
+
+        if (isClosing) {
+            return;
+        }
+
+        this.cdr.detectChanges();
+
+        requestAnimationFrame(() => {
+            const target = this.document.getElementById(this.getSpellItemId(className, spellName, listType));
+            if (!(target instanceof HTMLElement)) {
+                return;
+            }
+
+            target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            const detailPane = target.querySelector('.spell-detail-pane.spell-detail-pane--open');
+            if (detailPane instanceof HTMLElement) {
+                detailPane.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
     }
 
     startMulticlass(): void {
@@ -1200,6 +1373,19 @@ export class NewCharacterStandardPageComponent {
     }
 
     onAbilityScoreInput(ability: string, value: string): void {
+        const parsed = Number.parseInt(value, 10);
+        if (Number.isNaN(parsed)) {
+            return;
+        }
+
+        // Allow natural typing (e.g. entering 17) without immediate clamping.
+        this.abilityBaseScores.update((current) => ({
+            ...current,
+            [ability]: parsed
+        }));
+    }
+
+    onAbilityScoreCommit(ability: string, value: string): void {
         const parsed = Number.parseInt(value, 10);
         if (Number.isNaN(parsed)) {
             return;
@@ -1659,13 +1845,17 @@ export class NewCharacterStandardPageComponent {
         this.completionError.set('');
 
         try {
-            const createdCharacter = await this.store.createCharacter(draft);
-            if (!createdCharacter) {
+            const existingId = this.activeBuilderCharacterId();
+            const resultCharacter = existingId
+                ? await this.store.updateCharacter(existingId, draft)
+                : await this.store.createCharacter(draft);
+
+            if (!resultCharacter) {
                 this.completionError.set('Unable to complete character creation right now.');
                 return;
             }
 
-            await this.router.navigate(['/character', createdCharacter.id]);
+            await this.router.navigate(['/character', resultCharacter.id]);
         } catch {
             this.completionError.set('Unable to complete character creation right now.');
         } finally {
@@ -1700,6 +1890,8 @@ export class NewCharacterStandardPageComponent {
         this.completionCharacterName.set(character.name);
         this.completionPlayerName.set(character.playerName);
         this.multiclassList.set({ [character.className]: resolvedLevel });
+        this.setClassPanelTab(character.className, 'class-features');
+        this.syncPreparedSpellsForClass(character.className, resolvedLevel);
         this.characterLevel.set(resolvedLevel);
         this.selectedClass.set('');
 
@@ -1800,6 +1992,70 @@ export class NewCharacterStandardPageComponent {
         lines.push('Keep details grounded in campaign play and avoid contradicting known notes.');
 
         return lines.join('\n');
+    }
+
+    private getMaxSpellLevelForClass(className: string, classLevel: number): number {
+        const normalizedLevel = Math.min(20, Math.max(1, Math.trunc(classLevel)));
+        const progression = this.spellcastingProgressionByClass[className] ?? 'none';
+
+        if (progression === 'none') {
+            return 0;
+        }
+
+        if (progression === 'full') {
+            return Math.min(9, Math.max(1, Math.ceil(normalizedLevel / 2)));
+        }
+
+        if (progression === 'pact') {
+            if (normalizedLevel >= 9) return 5;
+            if (normalizedLevel >= 7) return 4;
+            if (normalizedLevel >= 5) return 3;
+            if (normalizedLevel >= 3) return 2;
+            return 1;
+        }
+
+        if (progression === 'half') {
+            if (normalizedLevel >= 17) return 5;
+            if (normalizedLevel >= 13) return 4;
+            if (normalizedLevel >= 9) return 3;
+            if (normalizedLevel >= 5) return 2;
+            return 1;
+        }
+
+        if (normalizedLevel < 2) {
+            return 0;
+        }
+        if (normalizedLevel >= 17) return 5;
+        if (normalizedLevel >= 13) return 4;
+        if (normalizedLevel >= 9) return 3;
+        if (normalizedLevel >= 5) return 2;
+        return 1;
+    }
+
+    private syncPreparedSpellsForClass(className: string, classLevel: number): void {
+        this.classPreparedSpells.update((current) => {
+            const prepared = current[className] ?? [];
+            if (!prepared.length) {
+                return current;
+            }
+
+            const known = new Set(this.getKnownClassSpells(className, classLevel).map((spell) => spell.name));
+            const nextPrepared = prepared.filter((spellName) => known.has(spellName));
+
+            if (nextPrepared.length === prepared.length) {
+                return current;
+            }
+
+            if (!nextPrepared.length) {
+                const { [className]: _, ...rest } = current;
+                return rest;
+            }
+
+            return {
+                ...current,
+                [className]: nextPrepared
+            };
+        });
     }
 
     getPointBuyDropdownOptions(ability: string): DropdownOption[] {

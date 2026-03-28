@@ -50,6 +50,38 @@ public sealed class CharactersController(ICharacterService characterService, IAu
         }
     }
 
+    [HttpPut("{characterId:guid}")]
+    public async Task<ActionResult<CharacterDto>> Update(Guid characterId, [FromBody] UpdateCharacterRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.ClassName))
+        {
+            return BadRequest("Character name and class are required.");
+        }
+
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        CharacterDto? updated;
+        try
+        {
+            updated = await characterService.UpdateAsync(characterId, request, user.Id, cancellationToken);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+
+        if (updated is null)
+        {
+            return NotFound("Character or campaign was not found.");
+        }
+
+        return Ok(updated);
+    }
+
     [HttpPut("{characterId:guid}/campaign")]
     public async Task<ActionResult<CharacterDto>> UpdateCampaign(Guid characterId, [FromBody] UpdateCharacterCampaignRequest request, CancellationToken cancellationToken)
     {

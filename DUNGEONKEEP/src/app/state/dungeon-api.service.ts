@@ -109,6 +109,18 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.post<ApiCharacterDto>(`${this.baseUrl}/characters`, payload));
     }
 
+    async updateCharacter(characterId: string, payload: {
+        name: string;
+        playerName: string;
+        className: string;
+        level: number;
+        background: string;
+        notes: string;
+        campaignId?: string;
+    }): Promise<ApiCharacterDto> {
+        return await firstValueFrom(this.http.put<ApiCharacterDto>(`${this.baseUrl}/characters/${characterId}`, payload));
+    }
+
     async updateCharacterCampaign(characterId: string, campaignId: string | null): Promise<ApiCharacterDto> {
         return await firstValueFrom(this.http.put<ApiCharacterDto>(`${this.baseUrl}/characters/${characterId}/campaign`, { campaignId }));
     }

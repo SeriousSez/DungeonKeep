@@ -352,12 +352,39 @@
 }
 
 .slot-pill {
+    appearance: none;
+    cursor: pointer;
     padding: 6px 10px;
     border-radius: 999px;
     border: 1px solid var(--panel-border);
     background: var(--surface-raised);
     color: var(--text-main);
     font-size: 0.78rem;
+    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+
+    &:hover {
+        border-color: color-mix(in srgb, var(--accent-primary) 50%, var(--panel-border));
+    }
+
+    &:focus-visible {
+        outline: 2px solid color-mix(in srgb, var(--accent-primary) 70%, transparent);
+        outline-offset: 2px;
+    }
+}
+
+.slot-pill--empty {
+    opacity: 0.9;
+}
+
+.slot-pill--used {
+    background: color-mix(in srgb, var(--accent-primary) 16%, var(--surface-raised));
+    border-color: color-mix(in srgb, var(--accent-primary) 40%, var(--panel-border));
+}
+
+.slot-pill--full {
+    background: color-mix(in srgb, var(--accent-primary) 24%, var(--surface-raised));
+    border-color: color-mix(in srgb, var(--accent-primary) 65%, var(--panel-border));
+    color: var(--text-main);
 }
 
 .mini-list {

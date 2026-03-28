@@ -76,6 +76,18 @@
                 <button type="button" class="btn-remove-class" (click)="removeClass(className)" title="Remove class">✕</button>
             </div>
 
+            <div class="class-subtabs" role="tablist" [attr.aria-label]="className + ' class section tabs'">
+                <button type="button" class="class-subtab" [class.active]="getActiveClassPanelTab(className) === 'class-features'" (click)="setClassPanelTab(className, 'class-features')">
+                    Class Features
+                </button>
+                @if (classSupportsSpells(className, multiclassList()[className])) {
+                <button type="button" class="class-subtab" [class.active]="getActiveClassPanelTab(className) === 'spells'" (click)="setClassPanelTab(className, 'spells')">
+                    Spells
+                </button>
+                }
+            </div>
+
+            @if (getActiveClassPanelTab(className) === 'class-features') {
             <details class="class-details-toggle" [attr.open]="Object.keys(multiclassList()).length === 1 ? '' : null">
                 <summary>CLASS FEATURES</summary>
                 <div class="class-features-wrapper">
@@ -118,6 +130,192 @@
                     }
                 </div>
             </details>
+            }
+
+            @if (getActiveClassPanelTab(className) === 'spells' && classSupportsSpells(className, multiclassList()[className])) {
+            <section class="class-spells-panel">
+                <div class="spell-summary-row">
+                    <div class="spell-summary-card">
+                        <h4>Prepared Spells</h4>
+                        <p>{{ getPreparedClassSpells(className, multiclassList()[className]).length }}</p>
+                    </div>
+                    <div class="spell-summary-card">
+                        <h4>Known Spells</h4>
+                        <p>{{ getKnownClassSpells(className, multiclassList()[className]).length }}</p>
+                    </div>
+                </div>
+
+                <div class="spell-columns">
+                    <section class="spell-column">
+                        <h4>Prepared Spells</h4>
+                        @if (getPreparedClassSpells(className, multiclassList()[className]); as preparedSpells) {
+                        @if (preparedSpells.length === 0) {
+                        <p class="spell-empty">No prepared spells yet. Learn a spell from the Known list.</p>
+                        } @else {
+                        <div class="spell-list">
+                            @for (level of getSpellLevels(preparedSpells); track level) {
+                            <section class="spell-level-group">
+                                <div class="spell-level-heading">
+                                    <span>{{ getSpellLevelLabel(level) }}</span>
+                                    <span class="spell-level-count">{{ getSpellsForLevel(preparedSpells, level).length }}</span>
+                                </div>
+                                <ul class="spell-level-list">
+                                    @for (spell of getSpellsForLevel(preparedSpells, level); track spell.name) {
+                                    <li class="spell-item" [attr.id]="getSpellItemId(className, spell.name, 'prepared')" [class.spell-item--expanded]="getSelectedSpellForClass(className) === spell.name">
+                                        <div class="spell-item-row">
+                                            <button type="button" class="spell-name-btn" (click)="toggleSpellDetail(className, spell.name, 'prepared')">
+                                                <span class="spell-expand-icon">{{ getSelectedSpellForClass(className) === spell.name ? '▾' : '▸' }}</span>
+                                                <span class="spell-name-text">
+                                                    <strong>{{ spell.name }}</strong>
+                                                    <span>{{ getSpellLevelLabel(spell.level) }}</span>
+                                                </span>
+                                            </button>
+                                            <button type="button" class="spell-action-btn spell-action-btn--remove" (click)="unprepareClassSpell(className, spell.name)">
+                                                Remove
+                                            </button>
+                                        </div>
+                                        @if (getSpellDetail(spell.name); as detail) {
+                                        <div class="spell-detail-pane" [class.spell-detail-pane--open]="getSelectedSpellForClass(className) === spell.name" [attr.aria-hidden]="getSelectedSpellForClass(className) !== spell.name">
+                                            <div class="spell-detail-school">{{ detail.school }}{{ detail.ritual ? ' · Ritual' : '' }}{{ detail.concentration ? ' · Concentration' : '' }}</div>
+                                            <dl class="spell-detail-stats">
+                                                <div>
+                                                    <dt>Casting Time</dt>
+                                                    <dd>{{ detail.castingTime }}</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Range / Area</dt>
+                                                    <dd>{{ detail.range }}</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Components</dt>
+                                                    <dd>{{ detail.components }}</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Duration</dt>
+                                                    <dd>{{ detail.duration }}</dd>
+                                                </div>
+                                                @if (detail.attackSave) {
+                                                <div>
+                                                    <dt>Attack / Save</dt>
+                                                    <dd>{{ detail.attackSave }}</dd>
+                                                </div>
+                                                }
+                                                @if (detail.damageEffect) {
+                                                <div>
+                                                    <dt>Damage / Effect</dt>
+                                                    <dd>{{ detail.damageEffect }}</dd>
+                                                </div>
+                                                }
+                                            </dl>
+                                            <p class="spell-detail-desc">{{ detail.description }}</p>
+                                            @if (detail.higherLevels) {
+                                            <p class="spell-detail-higher"><strong>At Higher Levels.</strong> {{ detail.higherLevels }}</p>
+                                            }
+                                            @if (detail.tags && detail.tags.length > 0) {
+                                            <div class="spell-detail-tags">
+                                                @for (tag of detail.tags; track tag) {
+                                                <span class="spell-tag">{{ tag }}</span>
+                                                }
+                                            </div>
+                                            }
+                                        </div>
+                                        } @else {
+                                        <p class="spell-detail-missing">Full details not yet available for this spell.</p>
+                                        }
+                                    </li>
+                                    }
+                                </ul>
+                            </section>
+                            }
+                        </div>
+                        }
+                        }
+                    </section>
+
+                    <section class="spell-column">
+                        <h4>Known Spells</h4>
+                        @if (getKnownUnpreparedClassSpells(className, multiclassList()[className]); as knownSpells) {
+                        <div class="spell-list">
+                            @for (level of getSpellLevels(knownSpells); track level) {
+                            <section class="spell-level-group">
+                                <div class="spell-level-heading">
+                                    <span>{{ getSpellLevelLabel(level) }}</span>
+                                    <span class="spell-level-count">{{ getSpellsForLevel(knownSpells, level).length }}</span>
+                                </div>
+                                <ul class="spell-level-list">
+                                    @for (spell of getSpellsForLevel(knownSpells, level); track spell.name) {
+                                    <li class="spell-item" [attr.id]="getSpellItemId(className, spell.name, 'known')" [class.spell-item--expanded]="getSelectedSpellForClass(className) === spell.name">
+                                        <div class="spell-item-row">
+                                            <button type="button" class="spell-name-btn" (click)="toggleSpellDetail(className, spell.name, 'known')">
+                                                <span class="spell-expand-icon">{{ getSelectedSpellForClass(className) === spell.name ? '▾' : '▸' }}</span>
+                                                <span class="spell-name-text">
+                                                    <strong>{{ spell.name }}</strong>
+                                                    <span>{{ getSpellLevelLabel(spell.level) }}</span>
+                                                </span>
+                                            </button>
+                                            <button type="button" class="spell-action-btn" (click)="learnClassSpell(className, multiclassList()[className], spell.name)">
+                                                Learn
+                                            </button>
+                                        </div>
+                                        @if (getSpellDetail(spell.name); as detail) {
+                                        <div class="spell-detail-pane" [class.spell-detail-pane--open]="getSelectedSpellForClass(className) === spell.name" [attr.aria-hidden]="getSelectedSpellForClass(className) !== spell.name">
+                                            <div class="spell-detail-school">{{ detail.school }}{{ detail.ritual ? ' · Ritual' : '' }}{{ detail.concentration ? ' · Concentration' : '' }}</div>
+                                            <dl class="spell-detail-stats">
+                                                <div>
+                                                    <dt>Casting Time</dt>
+                                                    <dd>{{ detail.castingTime }}</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Range / Area</dt>
+                                                    <dd>{{ detail.range }}</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Components</dt>
+                                                    <dd>{{ detail.components }}</dd>
+                                                </div>
+                                                <div>
+                                                    <dt>Duration</dt>
+                                                    <dd>{{ detail.duration }}</dd>
+                                                </div>
+                                                @if (detail.attackSave) {
+                                                <div>
+                                                    <dt>Attack / Save</dt>
+                                                    <dd>{{ detail.attackSave }}</dd>
+                                                </div>
+                                                }
+                                                @if (detail.damageEffect) {
+                                                <div>
+                                                    <dt>Damage / Effect</dt>
+                                                    <dd>{{ detail.damageEffect }}</dd>
+                                                </div>
+                                                }
+                                            </dl>
+                                            <p class="spell-detail-desc">{{ detail.description }}</p>
+                                            @if (detail.higherLevels) {
+                                            <p class="spell-detail-higher"><strong>At Higher Levels.</strong> {{ detail.higherLevels }}</p>
+                                            }
+                                            @if (detail.tags && detail.tags.length > 0) {
+                                            <div class="spell-detail-tags">
+                                                @for (tag of detail.tags; track tag) {
+                                                <span class="spell-tag">{{ tag }}</span>
+                                                }
+                                            </div>
+                                            }
+                                        </div>
+                                        } @else {
+                                        <p class="spell-detail-missing">Full details not yet available for this spell.</p>
+                                        }
+                                    </li>
+                                    }
+                                </ul>
+                            </section>
+                            }
+                        </div>
+                        }
+                    </section>
+                </div>
+            </section>
+            }
         </section>
         }
         }
@@ -540,7 +738,7 @@
                 <div style="display:flex;flex-direction:column;gap:4px;min-width:80px">
                     <span style="font-weight:700;font-size:.75rem;text-transform:uppercase">{{ abilityAbbreviations[ability] }}</span>
                     <input type="number" min="3" max="20" style="min-height:30px;font:inherit;border:1px solid var(--panel-border);border-radius:6px;background:var(--surface-raised);color:var(--text-main);padding:0 6px" [value]="getAbilityBaseScore(ability) || ''"
-                        (input)="onAbilityScoreInput(ability, $any($event.target).value)" />
+                        (input)="onAbilityScoreInput(ability, $any($event.target).value)" (blur)="onAbilityScoreCommit(ability, $any($event.target).value)" (change)="onAbilityScoreCommit(ability, $any($event.target).value)" />
                     <span style="font-size:.78rem;font-weight:700">TOTAL: {{ getAbilityBaseScore(ability) || '--' }}</span>
                 </div>
                 }

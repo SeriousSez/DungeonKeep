@@ -66,6 +66,49 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
         return MapCharacter(saved, user.Id);
     }
 
+    public async Task<CharacterDto?> UpdateAsync(Guid characterId, UpdateCharacterRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var existing = await characterRepository.GetByIdAsync(characterId, cancellationToken);
+        if (existing is null)
+        {
+            return null;
+        }
+
+        if (existing.OwnerUserId != userId)
+        {
+            throw new UnauthorizedAccessException("Only the character owner can edit this character.");
+        }
+
+        var normalizedCampaignId = NormalizeCampaignId(request.CampaignId);
+        if (normalizedCampaignId is not null)
+        {
+            var isMember = await campaignRepository.IsActiveMemberAsync(normalizedCampaignId.Value, userId, cancellationToken);
+            if (!isMember)
+            {
+                throw new UnauthorizedAccessException("You are not a member of this campaign.");
+            }
+
+            if (await campaignRepository.GetByIdAsync(normalizedCampaignId.Value, cancellationToken) is null)
+            {
+                return null;
+            }
+        }
+
+        var updated = await characterRepository.UpdateAsync(
+            characterId,
+            request.Name.Trim(),
+            request.PlayerName.Trim(),
+            request.ClassName.Trim(),
+            Math.Max(1, request.Level),
+            request.Background.Trim(),
+            request.Notes.Trim(),
+            normalizedCampaignId,
+            cancellationToken
+        );
+
+        return updated is null ? null : MapCharacter(updated, userId);
+    }
+
     public async Task<CharacterDto?> UpdateCampaignAsync(Guid characterId, UpdateCharacterCampaignRequest request, Guid userId, CancellationToken cancellationToken = default)
     {
         var existing = await characterRepository.GetByIdAsync(characterId, cancellationToken);

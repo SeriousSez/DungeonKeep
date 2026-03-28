@@ -184,6 +184,16 @@ export class CharacterDetailPageComponent {
         ]
     };
 
+    private readonly knownCantripNames = new Set<string>([
+        'Vicious Mockery',
+        'Sacred Flame',
+        'Produce Flame',
+        'Fire Bolt',
+        'Ray of Frost',
+        'Eldritch Blast',
+        'Chill Touch'
+    ]);
+
     private readonly classBonusActionMap: Record<string, string> = {
         Barbarian: 'Enter Rage',
         Bard: 'Bardic Inspiration',
@@ -298,6 +308,7 @@ export class CharacterDetailPageComponent {
     readonly selectedCampaignAssignment = signal('');
     readonly isUpdatingCampaign = signal(false);
     readonly campaignUpdateError = signal('');
+    readonly usedSpellSlotsByLevel = signal<Record<number, number>>({});
 
     readonly combatTabs: Array<{ key: CombatTab; label: string }> = [
         { key: 'actions', label: 'Actions' },
@@ -567,8 +578,22 @@ export class CharacterDetailPageComponent {
         };
     });
 
-    readonly spellCantrips = computed(() => this.actionRows().slice(0, 2));
-    readonly spellLevelOne = computed(() => this.actionRows().slice(2));
+    readonly spellCantrips = computed(() => {
+        const rows = this.actionRows();
+        return rows.filter((row) => this.knownCantripNames.has(row.name));
+    });
+
+    readonly spellLevelOne = computed(() => {
+        const rows = this.actionRows();
+        return rows.filter((row) => {
+            if (this.knownCantripNames.has(row.name)) {
+                return false;
+            }
+
+            // Spell rows include save-based spells and explicit spell attacks.
+            return row.type === 'save' || /spell/i.test(row.note);
+        });
+    });
 
     readonly defenses = computed(() => {
         const char = this.character();
@@ -852,6 +877,26 @@ export class CharacterDetailPageComponent {
 
     setActionFilter(filter: ActionFilter): void {
         this.activeActionFilter.set(filter);
+    }
+
+    getUsedSpellSlots(level: number, maxSlots: number): number {
+        const current = this.usedSpellSlotsByLevel()[level] ?? 0;
+        return Math.min(Math.max(current, 0), Math.max(maxSlots, 0));
+    }
+
+    cycleUsedSpellSlots(level: number, maxSlots: number): void {
+        if (maxSlots <= 0) {
+            return;
+        }
+
+        this.usedSpellSlotsByLevel.update((current) => {
+            const used = this.getUsedSpellSlots(level, maxSlots);
+            const nextUsed = used >= maxSlots ? 0 : used + 1;
+            return {
+                ...current,
+                [level]: nextUsed
+            };
+        });
     }
 
     private formatSigned(value: number): string {
