@@ -1,15 +1,15 @@
-<div [class]="'app-dropdown-menu ' + (size() === 'wide' ? 'app-dropdown--wide' : (size() === 'narrow' ? 'app-dropdown--narrow' : 'app-dropdown--compact')) + (isOpen() ? ' app-dropdown-menu--open' : '')" [style.min-width.px]="minWidth() ?? null">
+<div [class]="'app-dropdown-menu ' + (size() === 'wide' ? 'app-dropdown--wide' : (size() === 'narrow' ? 'app-dropdown--narrow' : 'app-dropdown--compact')) + (isOpen() ? ' app-dropdown-menu--open' : '') + (opensUpward() ? ' app-dropdown-menu--up' : '')" [style.min-width.px]="minWidth() ?? null">
     <button type="button" [attr.id]="id()" [attr.aria-label]="ariaLabel()" [attr.aria-expanded]="isOpen()" [disabled]="disabled()" class="app-dropdown app-dropdown-trigger" (click)="toggleOpen()">
         <span>{{ triggerLabel() }}</span>
         <i class="fa-duotone fa-thin fa-chevron-down" aria-hidden="true"></i>
     </button>
 
     @if (isOpen()) {
-    <div class="app-dropdown-panel" role="listbox">
+    <div class="app-dropdown-panel" [style.max-height.px]="panelMaxHeight()" role="listbox">
         @if (searchable()) {
         <input type="text" class="app-dropdown-search" [value]="searchTerm()" [placeholder]="searchPlaceholder()" (input)="onSearchInput($any($event.target).value)" />
         }
-        <div class="app-dropdown-options">
+        <div class="app-dropdown-options" [style.max-height.px]="getOptionsMaxHeight()">
             @if (filteredOptions().length === 0) {
             <p class="app-dropdown-empty">No matches found.</p>
             } @else {

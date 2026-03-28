@@ -13,6 +13,7 @@ import type { Character, CharacterDraft } from '../../models/dungeon.models';
 import { OptionMenuFilterComponent } from '../../components/option-menu-filter/option-menu-filter.component';
 import { NewCharacterInfoModalComponent } from '../../components/new-character-info-modal/new-character-info-modal.component';
 import { CharacteristicsModalComponent } from '../../components/characteristics-modal/characteristics-modal.component';
+import { DeityPickerModalComponent } from '../../components/deity-picker-modal/deity-picker-modal.component';
 import { ChoiceBadgeComponent } from '../../components/choice-badge/choice-badge';
 import { DropdownComponent, type DropdownOption } from '../../components/dropdown/dropdown.component';
 import { MultiSelectDropdownComponent, type MultiSelectOptionGroup } from '../../components/multi-select-dropdown/multi-select-dropdown.component';
@@ -28,10 +29,75 @@ type AbilityGenerationMethod = '' | 'standard-array' | 'manual-rolled' | 'point-
 type ClassSortMode = 'primary-ability' | 'party-role' | 'power-source' | 'complexity' | 'spellcasting' | 'armor';
 type SpeciesSortMode = 'lineage' | 'movement' | 'world' | 'complexity';
 type ClassPanelTab = 'class-features' | 'spells';
+type AbilityScoreImprovementMode = '' | 'plus-two' | 'plus-one-plus-one';
+
+interface AbilityScoreImprovementChoice {
+    mode: AbilityScoreImprovementMode;
+    primaryAbility: string;
+    secondaryAbility: string;
+}
+
+interface FeatFollowUpChoice {
+    abilityIncreaseAbility: string;
+    grapplerAbility: string;
+    magicInitiateAbility: string;
+    skilledSelections: string[];
+}
+
+interface AbilityScoreImprovementFeatBenefit {
+    title: string;
+    description: string;
+}
+
+interface AbilityScoreImprovementFeatDetail {
+    classification: string;
+    intro: string;
+    benefits: ReadonlyArray<AbilityScoreImprovementFeatBenefit>;
+}
+
+interface PersistedBuilderState {
+    selectedBackgroundName: string;
+    selectedBackgroundUrl: string;
+    selectedAlignment: string;
+    selectedFaith: string;
+    selectedLifestyle: string;
+    selectedLanguages: string[];
+    selectedSpeciesLanguages: string[];
+    classFeatureSelections: Record<string, string[]>;
+    abilityScoreImprovementChoices: Record<string, AbilityScoreImprovementChoice>;
+    featFollowUpChoices: Record<string, FeatFollowUpChoice>;
+    backgroundChoiceSelections: Record<string, string>;
+    selectedAbilityMethod: AbilityGenerationMethod;
+    abilityBaseScores: Record<string, number>;
+    abilityOtherModifiers: Record<string, number | null>;
+    abilityOverrideScores: Record<string, number | null>;
+    standardArraySelections: Record<string, number | null>;
+    rolledValues: Array<number | null>;
+    rolledAssignments: Record<number, string>;
+    manualRollGroupCount: number;
+    bgAbilityMode: string;
+    bgAbilityScoreFor2: string;
+    bgAbilityScoreFor1: string;
+    selectedClassStartingOption: 'A' | 'B' | '';
+    selectedBackgroundStartingOption: 'A' | 'B' | '';
+    inventoryEntries: InventoryEntry[];
+    currency: CurrencyState;
+    personalityTraits: string[];
+    ideals: string[];
+    bonds: string[];
+    flaws: string[];
+    physicalHair: string;
+    physicalSkin: string;
+    physicalEyes: string;
+    physicalHeight: string;
+    physicalWeight: string;
+    physicalAge: string;
+    physicalGender: string;
+}
 
 @Component({
     selector: 'app-new-character-standard-page',
-    imports: [CommonModule, RouterLink, NewCharacterInfoModalComponent, CharacteristicsModalComponent, ChoiceBadgeComponent, DropdownComponent, MultiSelectDropdownComponent, OptionMenuFilterComponent],
+    imports: [CommonModule, RouterLink, NewCharacterInfoModalComponent, CharacteristicsModalComponent, DeityPickerModalComponent, ChoiceBadgeComponent, DropdownComponent, MultiSelectDropdownComponent, OptionMenuFilterComponent],
     templateUrl: './new-character-standard-page.component.html',
     styleUrl: './new-character-standard-page.component.scss'
 })
@@ -44,6 +110,9 @@ export class NewCharacterStandardPageComponent {
     private readonly session = inject(SessionService);
     private readonly cdr = inject(ChangeDetectorRef);
     private readonly document = inject(DOCUMENT);
+    private faithInputElement: HTMLInputElement | null = null;
+    private readonly builderStateStartTag = '[DK_BUILDER_STATE_START]';
+    private readonly builderStateEndTag = '[DK_BUILDER_STATE_END]';
 
     private readonly routeStep = toSignal(
         this.route.paramMap.pipe(map((params) => params.get('step') as StandardStep | null)),
@@ -85,6 +154,29 @@ export class NewCharacterStandardPageComponent {
             this.hydrateBuilderFromCharacter(character, this.navigationEditLevel() ?? Number.NaN);
             this.hydratedCharacterId.set(characterId);
         });
+
+        effect((onCleanup) => {
+            if (!this.faithDropdownOpen()) {
+                return;
+            }
+
+            const view = this.document.defaultView;
+            if (!view) {
+                return;
+            }
+
+            const update = () => this.updateFaithSuggestionOverlayPosition();
+            const frameId = view.requestAnimationFrame(update);
+
+            view.addEventListener('resize', update);
+            this.document.addEventListener('scroll', update, true);
+
+            onCleanup(() => {
+                view.cancelAnimationFrame(frameId);
+                view.removeEventListener('resize', update);
+                this.document.removeEventListener('scroll', update, true);
+            });
+        });
     }
 
     getBuilderStepRoute(step: StandardStep): string[] {
@@ -107,6 +199,8 @@ export class NewCharacterStandardPageComponent {
     readonly speciesSearchTerm = signal('');
     readonly openTraitKeys = signal<Set<string>>(new Set<string>());
     readonly classFeatureSelections = signal<Record<string, string[]>>({});
+    readonly abilityScoreImprovementChoices = signal<Record<string, AbilityScoreImprovementChoice>>({});
+    readonly featFollowUpChoices = signal<Record<string, FeatFollowUpChoice>>({});
     readonly classPanelTabsByClass = signal<Record<string, ClassPanelTab>>({});
     readonly classPreparedSpells = signal<Record<string, string[]>>({});
     readonly selectedSpellByClass = signal<Record<string, string>>({});
@@ -142,6 +236,7 @@ export class NewCharacterStandardPageComponent {
     readonly diceRollGroupOpen = signal(true);
 
     readonly activeCharacteristicModal = signal<'traits' | 'ideals' | 'bonds' | 'flaws' | null>(null);
+    readonly deityPickerOpen = signal(false);
     readonly personalityTraits = signal<string[]>([]);
     readonly ideals = signal<string[]>([]);
     readonly bonds = signal<string[]>([]);
@@ -376,9 +471,42 @@ export class NewCharacterStandardPageComponent {
         { value: 'neutral-evil', label: 'Neutral Evil' },
         { value: 'true-neutral', label: 'True Neutral' }
     ];
+    private readonly alignmentDescriptions: Readonly<Record<string, string>> = {
+        'chaotic-evil': 'Driven by personal desire and domination, with little respect for law or mercy.',
+        'chaotic-good': 'Values freedom and compassion, helping others while resisting oppressive authority.',
+        'chaotic-neutral': 'Follows personal conviction and independence above order, duty, or strict morality.',
+        'lawful-evil': 'Uses order, hierarchy, and rules as tools to gain control and personal power.',
+        'lawful-good': 'Acts with honor, fairness, and duty to protect others and uphold just laws.',
+        'lawful-neutral': 'Believes structure, tradition, and consistency matter more than personal sentiment.',
+        'neutral-good': 'Tries to do what is right and kind without being bound to law or rebellion.',
+        neutral: 'Pragmatic and balanced, avoiding ideological extremes in both morality and order.',
+        'neutral-evil': 'Pursues self-interest without loyalty to law or chaos and without concern for harm caused.',
+        'true-neutral': 'Seeks balance or simply lives without strong pull toward moral or ethical extremes.'
+    };
     readonly selectedAlignment = signal('');
+    readonly selectedAlignmentDescription = computed(() => this.alignmentDescriptions[this.selectedAlignment()] ?? '');
     readonly selectedFaith = signal('');
+    readonly allDeities = deitiesList;
+    readonly selectedFaithDescription = computed(() => {
+        const faith = this.selectedFaith().trim();
+        if (!faith) {
+            return '';
+        }
+
+        const deity = this.allDeities.find((entry) => entry.name.toLowerCase() === faith.toLowerCase());
+        if (!deity) {
+            return 'A personal belief, philosophy, or lesser power that influences your character\'s values and choices.';
+        }
+
+        if (deity.summary?.trim()) {
+            return deity.summary;
+        }
+
+        return `${deity.name} is associated with ${deity.domain} in the ${deity.pantheon} pantheon.`;
+    });
     readonly faithDropdownOpen = signal(false);
+    readonly faithOpensUpward = signal(false);
+    readonly faithSuggestionsStyle = signal<Record<string, string>>({});
     readonly faithSuggestions = computed(() => {
         const query = this.selectedFaith().trim().toLowerCase();
         if (!query) return [];
@@ -395,7 +523,17 @@ export class NewCharacterStandardPageComponent {
         { value: 'wealthy', label: 'Wealthy (4 GP/day)' },
         { value: 'aristocratic', label: 'Aristocratic (10+ GP/day)' }
     ];
+    private readonly lifestyleDescriptions: Readonly<Record<string, string>> = {
+        wretched: 'No real cost, but you endure harsh conditions, instability, and constant discomfort.',
+        squalid: 'You survive in filthy, unsafe surroundings with only the barest essentials.',
+        poor: 'Simple meals and rough lodging keep you going, but comfort and privacy are limited.',
+        modest: 'A steady common lifestyle with reliable food, shelter, and basic social standing.',
+        comfortable: 'You maintain good lodging, quality meals, and enough means to avoid daily hardship.',
+        wealthy: 'You enjoy fine accommodations, quality goods, and influence among well-off circles.',
+        aristocratic: 'Lavish living, elite expectations, and expensive appearances define your daily life.'
+    };
     readonly selectedLifestyle = signal('');
+    readonly selectedLifestyleDescription = computed(() => this.lifestyleDescriptions[this.selectedLifestyle()] ?? '');
     readonly physicalHair = signal('');
     readonly physicalSkin = signal('');
     readonly physicalEyes = signal('');
@@ -531,6 +669,623 @@ export class NewCharacterStandardPageComponent {
             .filter((category) => category.species.length > 0);
     });
     readonly abilityTiles = ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'];
+    readonly abilityScoreImprovementOptions = this.buildAbilityScoreImprovementFeatOptions();
+    private readonly abilityScoreImprovementFeatDescriptions: Readonly<Record<string, string>> = {
+        'Ability Score Improvement': 'Increase one ability score by 2, or increase two ability scores by 1 each. You cannot raise a score above 20 with this feat.',
+        'Alert': 'You gain +5 initiative, can swap initiative with a willing ally at the start of combat, and no longer grant advantage to unseen attackers.',
+        'Athlete': 'Increase Strength or Dexterity by 1 (max 20), gain better climbing and jumping mobility, and stand from prone with less movement.',
+        'Charger': 'When you Dash, your movement powers up your next strike this turn with extra damage or forced movement options.',
+        'Defensive Duelist': 'When wielding a finesse weapon, you can use your reaction to increase AC against one melee hit and potentially cause it to miss.',
+        'Dual Wielder': 'You gain a boost while dual-wielding and can draw or stow two one-handed weapons more efficiently.',
+        'Elemental Adept': 'Pick an element and your spells with that damage type ignore resistance; damage dice rolls of 1 are treated as 2.',
+        'Grappler': 'Increase Strength or Dexterity by 1 (max 20), gain advantage on attack rolls against a creature you are grappling, and improve your grapple control.',
+        'Great Weapon Master': 'Gain a heavy-weapon combat rider that rewards committed offense with stronger damage output and extra pressure.',
+        'Healer': 'Gain stronger use of healer kits and improve emergency nonmagical healing for yourself and allies.',
+        'Heavy Armor Master': 'Increase Strength or Constitution by 1 (max 20) and gain damage reduction against nonmagical physical hits while in heavy armor.',
+        'Inspiring Leader': 'After a short speech, grant temporary hit points to your party based on your level and Charisma modifier.',
+        'Mage Slayer': 'Gain anti-caster tools that help you pressure enemy spellcasters in close combat and disrupt their magic.',
+        'Magic Initiate (Cleric)': 'Choose cantrips and a 1st-level Cleric spell to learn; the spell can be cast once for free per long rest and then with spell slots.',
+        'Magic Initiate (Druid)': 'Choose cantrips and a 1st-level Druid spell to learn; the spell can be cast once for free per long rest and then with spell slots.',
+        'Magic Initiate (Wizard)': 'Choose cantrips and a 1st-level Wizard spell to learn; the spell can be cast once for free per long rest and then with spell slots.',
+        'Mounted Combatant': 'Gain offensive and defensive mounted benefits, including better control over your mount in dangerous combat.',
+        'Polearm Master': 'Gain extra action economy and battlefield control when fighting with polearms and similar reach weapons.',
+        'Resilient': 'Increase one ability score by 1 (max 20) and gain proficiency in saving throws for that same ability.',
+        'Savage Attacker': 'Once per turn, reroll your weapon damage and use either total, making your key hits more consistent.',
+        'Sentinel': 'Lock enemies down in melee with stronger opportunity attacks and movement denial when they try to escape.',
+        'Shield Master': 'Gain defensive shield benefits and tactical shove options that improve frontline control and survivability.',
+        'Skilled': 'Gain proficiency in three different skills or tools of your choice.',
+        'Skill Expert': 'Increase one ability score by 1 (max 20), gain one skill proficiency, and gain expertise in one skill you are proficient with.',
+        'Skulker': 'Improve your stealth in combat with stronger concealment interactions and stealth persistence after ranged attacks.',
+        'Slasher': 'Increase Strength or Dexterity by 1 (max 20) and apply movement-slowing or crit-based pressure when dealing slashing damage.',
+        'Speedy': 'Increase mobility with a speed boost and movement-related benefits for faster battlefield positioning.',
+        'Spell Sniper': 'Improve long-range spell attacks and ignore certain cover while casting attack spells at distant targets.',
+        'Tavern Brawler': 'Increase Strength or Constitution by 1 (max 20), improve improvised/unarmed combat, and gain bonus grapple pressure after a hit.',
+        'Tough': 'Increase maximum hit points by 2 per level to significantly improve your durability.',
+        'War Caster': 'Strengthen concentration and reaction casting, making it easier to sustain spells in melee combat.',
+        'Weapon Master': 'Increase Strength or Dexterity by 1 (max 20) and gain mastery with additional weapon options.'
+    };
+    private readonly abilityScoreImprovementFeatDetails: Readonly<Record<string, AbilityScoreImprovementFeatDetail>> = {
+        'Ability Score Improvement': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Increase One Score',
+                    description: 'Increase one ability score by 2, to a maximum of 20.'
+                },
+                {
+                    title: 'Increase Two Scores',
+                    description: 'Instead, increase two different ability scores by 1 each, to a maximum of 20.'
+                },
+                {
+                    title: 'Flexible Growth',
+                    description: 'Use this option to round out key modifiers, unlock multiclass targets, or stabilize weak saves.'
+                }
+            ]
+        },
+        'Alert': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Initiative Training',
+                    description: 'You gain stronger initiative performance, helping you act earlier in combat.'
+                },
+                {
+                    title: 'Initiative Swap',
+                    description: 'You can trade initiative placement with a willing ally to optimize turn order.'
+                },
+                {
+                    title: 'Hard To Ambush',
+                    description: 'Enemies do not get easy advantage from being unseen when attacking you.'
+                }
+            ]
+        },
+        'Athlete': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Climb Speed',
+                    description: 'You gain improved climbing movement to navigate terrain more reliably.'
+                },
+                {
+                    title: 'Jump And Recovery',
+                    description: 'Your jumping and stand-up movement become more efficient in tactical situations.'
+                }
+            ]
+        },
+        'Charger': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Improved Dash',
+                    description: 'Your Dash action sets up stronger offensive pressure in the same turn.'
+                },
+                {
+                    title: 'Charge Attack',
+                    description: 'After building momentum, you can convert movement into bonus damage or battlefield control.'
+                }
+            ]
+        },
+        'Defensive Duelist': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Dexterity score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Parry Reaction',
+                    description: 'While wielding a finesse weapon, you can react to a melee hit by boosting AC against that attack.'
+                },
+                {
+                    title: 'Dueling Defense',
+                    description: 'This feat improves survivability for agile frontliners who rely on reaction timing.'
+                }
+            ]
+        },
+        'Dual Wielder': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Enhanced Dual Wielding',
+                    description: 'You gain stronger combat efficiency when using a weapon in each hand.'
+                },
+                {
+                    title: 'Quick Draw',
+                    description: 'You can draw or stow two one-handed weapons in the same interaction window.'
+                }
+            ]
+        },
+        'Elemental Adept': {
+            classification: 'General Feat (Prerequisite: Level 4+, Repeatable)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Intelligence, Wisdom, or Charisma score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Energy Mastery',
+                    description: 'Choose an energy type to specialize in and improve reliability with spells using that damage type.'
+                },
+                {
+                    title: 'Repeatable Choice',
+                    description: 'You can take this feat again to gain mastery with an additional energy type.'
+                }
+            ]
+        },
+        'Grappler': {
+            classification: 'General Feat (Prerequisite: Level 4+, Strength or Dexterity 13+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Punch and Grab',
+                    description: 'When you hit a creature with an Unarmed Strike as part of your Attack action, you can apply both the Damage and Grapple options. You can do this once per turn.'
+                },
+                {
+                    title: 'Attack Advantage',
+                    description: 'You have Advantage on attack rolls against a creature Grappled by you.'
+                },
+                {
+                    title: 'Fast Wrestler',
+                    description: 'You ignore the usual extra movement cost for dragging a creature Grappled by you if it is your size or smaller.'
+                }
+            ]
+        },
+        'Great Weapon Master': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Strength score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Heavy Weapon Mastery',
+                    description: 'You gain stronger payoff while fighting with Heavy weapons.'
+                },
+                {
+                    title: 'Hew',
+                    description: 'Your biggest hits can chain into extra offensive pressure in the same round.'
+                }
+            ]
+        },
+        'Healer': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Battle Medic',
+                    description: 'You can deliver faster, more effective emergency treatment during encounters.'
+                },
+                {
+                    title: 'Healing Rerolls',
+                    description: 'Your healing output becomes more consistent by improving low roll outcomes.'
+                },
+                {
+                    title: 'Nonmagical Support',
+                    description: 'This feat supports parties that need durable healing without relying on spell slots.'
+                }
+            ]
+        },
+        'Heavy Armor Master': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Strength or Constitution score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Damage Reduction',
+                    description: 'While wearing Heavy armor, you reduce incoming nonmagical physical weapon damage.'
+                },
+                {
+                    title: 'Frontline Endurance',
+                    description: 'You become harder to wear down across long attrition-focused fights.'
+                }
+            ]
+        },
+        'Inspiring Leader': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Wisdom or Charisma score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Bolstering Performance',
+                    description: 'You can grant temporary hit points to allies through a brief motivating performance.'
+                },
+                {
+                    title: 'Pre-Fight Protection',
+                    description: 'Use this before dangerous scenes to soften incoming burst damage for the whole group.'
+                }
+            ]
+        },
+        'Mage Slayer': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Concentration Breaker',
+                    description: 'You gain tools to pressure enemy casters and disrupt concentration-based plans.'
+                },
+                {
+                    title: 'Guarded Mind',
+                    description: 'You become more resilient when facing magical control and hostile spell effects.'
+                }
+            ]
+        },
+        'Magic Initiate (Cleric)': {
+            classification: 'General Feat (Prerequisite: Level 4+, Repeatable)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Two Cantrips',
+                    description: 'Learn two cantrips from the Cleric spell list.'
+                },
+                {
+                    title: 'One 1st-Level Spell',
+                    description: 'Learn one 1st-level Cleric spell, with limited free casting and normal slot casting thereafter.'
+                },
+                {
+                    title: 'Spell Flexibility',
+                    description: 'This feat broadens your toolkit with utility and support magic without full multiclassing.'
+                }
+            ]
+        },
+        'Magic Initiate (Druid)': {
+            classification: 'General Feat (Prerequisite: Level 4+, Repeatable)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Two Cantrips',
+                    description: 'Learn two cantrips from the Druid spell list.'
+                },
+                {
+                    title: 'One 1st-Level Spell',
+                    description: 'Learn one 1st-level Druid spell, with limited free casting and normal slot casting thereafter.'
+                },
+                {
+                    title: 'Spell Flexibility',
+                    description: 'This feat adds nature-themed utility and control options to your core role.'
+                }
+            ]
+        },
+        'Magic Initiate (Wizard)': {
+            classification: 'General Feat (Prerequisite: Level 4+, Repeatable)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Two Cantrips',
+                    description: 'Learn two cantrips from the Wizard spell list.'
+                },
+                {
+                    title: 'One 1st-Level Spell',
+                    description: 'Learn one 1st-level Wizard spell, with limited free casting and normal slot casting thereafter.'
+                },
+                {
+                    title: 'Spell Flexibility',
+                    description: 'This feat adds arcane utility and ranged problem-solving to non-wizard builds.'
+                }
+            ]
+        },
+        'Mounted Combatant': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Strength, Dexterity, or Wisdom score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Mounted Strike',
+                    description: 'You gain improved offensive reliability while mounted.'
+                },
+                {
+                    title: 'Leap Aside And Veer',
+                    description: 'Your mount-and-rider pairing gains stronger reactive defense and repositioning options.'
+                }
+            ]
+        },
+        'Polearm Master': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Pole Strike',
+                    description: 'You gain extra attack economy using the haft or opposite end of qualifying weapons.'
+                },
+                {
+                    title: 'Reactive Strike',
+                    description: 'Enemies entering your reach can trigger stronger reaction-based pressure.'
+                }
+            ]
+        },
+        'Resilient': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase one ability score of your choice by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Saving Throw Proficiency',
+                    description: 'Gain saving throw proficiency tied to that chosen ability.'
+                },
+                {
+                    title: 'Defensive Specialization',
+                    description: 'Use this feat to patch weak saves against your campaign\'s most dangerous effects.'
+                }
+            ]
+        },
+        'Savage Attacker': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Damage Reroll',
+                    description: 'Once per turn, roll your weapon damage twice and use either result.'
+                },
+                {
+                    title: 'Reliable Burst',
+                    description: 'This improves consistency on key turns where one big hit matters most.'
+                },
+                {
+                    title: 'Simple Throughput Boost',
+                    description: 'The feat is straightforward and benefits almost any weapon-focused build.'
+                }
+            ]
+        },
+        'Sentinel': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Guardian',
+                    description: 'You can punish enemies for attacking allies near you.'
+                },
+                {
+                    title: 'Halt',
+                    description: 'Your opportunity attacks become stronger at stopping movement and controlling space.'
+                }
+            ]
+        },
+        'Shield Master': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Strength score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Shield Bash',
+                    description: 'Use your shield offensively to create pressure and battlefield control.'
+                },
+                {
+                    title: 'Interpose Shield',
+                    description: 'You gain stronger defensive reactions when protecting yourself from harmful effects.'
+                }
+            ]
+        },
+        'Skilled': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Three Proficiencies',
+                    description: 'Gain proficiency in any combination of three skills or tools.'
+                },
+                {
+                    title: 'Build Flexibility',
+                    description: 'Use this to fill missing party utility, social coverage, or crafting niches.'
+                },
+                {
+                    title: 'Broad Competence',
+                    description: 'This feat increases your out-of-combat impact and backup problem-solving depth.'
+                }
+            ]
+        },
+        'Skill Expert': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase one ability score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Skill Proficiency',
+                    description: 'Gain proficiency in one additional skill of your choice.'
+                },
+                {
+                    title: 'Expertise',
+                    description: 'Choose one skill you are proficient in and double your proficiency bonus for it.'
+                }
+            ]
+        },
+        'Skulker': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Dexterity score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Blindsight Utility',
+                    description: 'Gain limited perception benefits that improve close-range threat awareness.'
+                },
+                {
+                    title: 'Fog Of War And Sniper Pressure',
+                    description: 'You retain stronger stealth and ranged pressure when vision is obscured.'
+                }
+            ]
+        },
+        'Slasher': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Hamstring',
+                    description: 'Your slashing hits can reduce enemy movement, improving chase and kite control.'
+                },
+                {
+                    title: 'Enhanced Critical',
+                    description: 'Critical slashing hits apply additional pressure that benefits the whole party.'
+                }
+            ]
+        },
+        'Speedy': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Dexterity or Constitution score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Speed Increase',
+                    description: 'Your base movement speed increases, improving positioning every round.'
+                },
+                {
+                    title: 'Agile Movement',
+                    description: 'You gain better Dash and difficult-terrain handling for sustained mobility.'
+                }
+            ]
+        },
+        'Spell Sniper': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Intelligence, Wisdom, or Charisma score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Bypass Cover',
+                    description: 'Your spell attacks become more reliable against targets using cover.'
+                },
+                {
+                    title: 'Melee Casting And Increased Range',
+                    description: 'You gain stronger spell-attack reach and improved close-quarters casting utility.'
+                }
+            ]
+        },
+        'Tavern Brawler': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Enhanced Unarmed Strike',
+                    description: 'Your unarmed and improvised offense becomes more threatening in rough fights.'
+                },
+                {
+                    title: 'Damage Rerolls',
+                    description: 'You improve consistency on scrappy close-range damage turns.'
+                },
+                {
+                    title: 'Improvised Weaponry And Push',
+                    description: 'Use environmental objects effectively and apply displacement pressure in melee.'
+                }
+            ]
+        },
+        'Tough': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Hit Point Increase',
+                    description: 'Your hit point maximum increases significantly as you level.'
+                },
+                {
+                    title: 'Immediate Durability',
+                    description: 'You become harder to drop right away, even before additional gear upgrades.'
+                },
+                {
+                    title: 'Long-Term Scaling',
+                    description: 'The durability benefit keeps scaling and remains relevant at higher tiers.'
+                }
+            ]
+        },
+        'War Caster': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Intelligence, Wisdom, or Charisma score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Concentration Support',
+                    description: 'You gain stronger concentration performance while under pressure in combat.'
+                },
+                {
+                    title: 'Reactive And Somatic Casting',
+                    description: 'You can cast more effectively while armed and gain stronger reaction-casting options.'
+                }
+            ]
+        },
+        'Weapon Master': {
+            classification: 'General Feat (Prerequisite: Level 4+)',
+            intro: 'You gain the following benefits.',
+            benefits: [
+                {
+                    title: 'Ability Score Increase',
+                    description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.'
+                },
+                {
+                    title: 'Mastery Property Access',
+                    description: 'Gain expanded access to weapon mastery properties and tactical weapon options.'
+                },
+                {
+                    title: 'Martial Breadth',
+                    description: 'This feat improves flexibility when adapting loadouts to enemy and encounter type.'
+                }
+            ]
+        }
+    };
     readonly abilityAbbreviations: Record<string, string> = {
         Strength: 'STR',
         Dexterity: 'DEX',
@@ -776,6 +1531,8 @@ export class NewCharacterStandardPageComponent {
 
     selectBackground(backgroundName: string): void {
         this.selectedBackgroundName.set(backgroundName);
+        const option = this.backgroundOptions.find((entry) => entry.name.toLowerCase() === backgroundName.toLowerCase());
+        this.selectedBackgroundUrl.set(option?.url ?? '');
         this.closeInfoModal();
     }
 
@@ -819,6 +1576,17 @@ export class NewCharacterStandardPageComponent {
 
         if (selectedCount === 0) {
             return `Selected 0/${targetCount}`;
+        }
+
+        if (this.isAbilityScoreImprovementFeature(feature) && selected[0] === 'Ability Score Improvement') {
+            const asiChoice = this.getAbilityScoreImprovementChoice(className, feature);
+            if (asiChoice.mode === 'plus-two' && asiChoice.primaryAbility) {
+                return `Selected 1/${targetCount}: Ability Score Improvement (+2 ${asiChoice.primaryAbility})`;
+            }
+
+            if (asiChoice.mode === 'plus-one-plus-one' && asiChoice.primaryAbility && asiChoice.secondaryAbility) {
+                return `Selected 1/${targetCount}: Ability Score Improvement (+1 ${asiChoice.primaryAbility}, +1 ${asiChoice.secondaryAbility})`;
+            }
         }
 
         const summary = selected.join(', ');
@@ -929,6 +1697,414 @@ export class NewCharacterStandardPageComponent {
                 [key]: compactSelections
             };
         });
+
+        if (this.isAbilityScoreImprovementFeature(feature) && choiceIndex === 0) {
+            const selectedValue = String(value ?? '').trim();
+            if (selectedValue !== 'Ability Score Improvement') {
+                this.abilityScoreImprovementChoices.update((current) => {
+                    const { [key]: _, ...rest } = current;
+                    return rest;
+                });
+            }
+
+            if (!this.requiresFeatFollowUpChoice(selectedValue)) {
+                this.featFollowUpChoices.update((current) => {
+                    const { [key]: _, ...rest } = current;
+                    return rest;
+                });
+            } else {
+                const validAbilityOptions = this.getFeatAbilityIncreaseChoicesByFeat(selectedValue);
+                this.featFollowUpChoices.update((current) => {
+                    const existing = current[key];
+                    if (!existing) {
+                        return current;
+                    }
+
+                    const nextAbility = validAbilityOptions.includes(existing.abilityIncreaseAbility)
+                        ? existing.abilityIncreaseAbility
+                        : '';
+
+                    return {
+                        ...current,
+                        [key]: {
+                            ...existing,
+                            abilityIncreaseAbility: nextAbility
+                        }
+                    };
+                });
+            }
+        }
+    }
+
+    shouldShowAbilityScoreImprovementPickers(className: string, feature: ClassFeature): boolean {
+        if (!this.isAbilityScoreImprovementFeature(feature)) {
+            return false;
+        }
+
+        const key = this.getFeatureSelectionKey(className, feature);
+        const selectedValue = this.classFeatureSelections()[key]?.[0] ?? '';
+        return selectedValue === 'Ability Score Improvement';
+    }
+
+    getAbilityScoreImprovementModeOptions(): DropdownOption[] {
+        return [
+            { value: 'plus-two', label: '+2 to one ability score' },
+            { value: 'plus-one-plus-one', label: '+1 to two ability scores' }
+        ];
+    }
+
+    getSelectedAbilityScoreImprovementFeat(className: string, feature: ClassFeature): string {
+        const key = this.getFeatureSelectionKey(className, feature);
+        return this.classFeatureSelections()[key]?.[0] ?? '';
+    }
+
+    getSelectedAbilityScoreImprovementFeatDescription(className: string, feature: ClassFeature): string {
+        const selectedFeat = this.getSelectedAbilityScoreImprovementFeat(className, feature);
+        if (!selectedFeat) {
+            return '';
+        }
+
+        return this.abilityScoreImprovementFeatDescriptions[selectedFeat]
+            ?? `${selectedFeat}: choose this feat to add a focused combat, utility, or survivability benefit.`;
+    }
+
+    getSelectedAbilityScoreImprovementFeatClassification(className: string, feature: ClassFeature): string {
+        const selectedFeat = this.getSelectedAbilityScoreImprovementFeat(className, feature);
+        if (!selectedFeat) {
+            return '';
+        }
+
+        return this.abilityScoreImprovementFeatDetails[selectedFeat]?.classification ?? '';
+    }
+
+    getSelectedAbilityScoreImprovementFeatIntro(className: string, feature: ClassFeature): string {
+        const selectedFeat = this.getSelectedAbilityScoreImprovementFeat(className, feature);
+        if (!selectedFeat) {
+            return '';
+        }
+
+        return this.abilityScoreImprovementFeatDetails[selectedFeat]?.intro ?? '';
+    }
+
+    getSelectedAbilityScoreImprovementFeatBenefits(className: string, feature: ClassFeature): ReadonlyArray<AbilityScoreImprovementFeatBenefit> {
+        const selectedFeat = this.getSelectedAbilityScoreImprovementFeat(className, feature);
+        if (!selectedFeat) {
+            return [];
+        }
+
+        return this.abilityScoreImprovementFeatDetails[selectedFeat]?.benefits ?? [];
+    }
+
+    shouldShowGrapplerPicker(className: string, feature: ClassFeature): boolean {
+        return this.getSelectedAbilityScoreImprovementFeat(className, feature) === 'Grappler';
+    }
+
+    shouldShowFeatAbilityIncreasePicker(className: string, feature: ClassFeature): boolean {
+        const selected = this.getSelectedAbilityScoreImprovementFeat(className, feature);
+        if (!selected || selected === 'Ability Score Improvement') {
+            return false;
+        }
+
+        return this.getFeatAbilityIncreaseChoicesByFeat(selected).length > 0;
+    }
+
+    getFeatAbilityIncreasePlaceholder(className: string, feature: ClassFeature): string {
+        const selected = this.getSelectedAbilityScoreImprovementFeat(className, feature);
+        if (selected === 'Grappler') {
+            return '- Choose Strength or Dexterity -';
+        }
+
+        return '- Choose an Ability Score -';
+    }
+
+    getFeatAbilityIncreaseOptions(className: string, feature: ClassFeature): DropdownOption[] {
+        const selected = this.getSelectedAbilityScoreImprovementFeat(className, feature);
+        return this.getFeatAbilityIncreaseChoicesByFeat(selected).map((ability) => ({
+            value: ability,
+            label: `${ability} Score`
+        }));
+    }
+
+    getFeatAbilityIncreaseValue(className: string, feature: ClassFeature): string {
+        return this.getFeatFollowUpChoice(className, feature).abilityIncreaseAbility;
+    }
+
+    onFeatAbilityIncreaseChanged(className: string, feature: ClassFeature, value: string | number): void {
+        const key = this.getFeatureSelectionKey(className, feature);
+        const nextValue = String(value ?? '').trim();
+
+        this.featFollowUpChoices.update((current) => ({
+            ...current,
+            [key]: {
+                ...this.getFeatFollowUpChoice(className, feature),
+                abilityIncreaseAbility: nextValue
+            }
+        }));
+    }
+
+    shouldShowMagicInitiatePicker(className: string, feature: ClassFeature): boolean {
+        const selected = this.getSelectedAbilityScoreImprovementFeat(className, feature);
+        return selected.startsWith('Magic Initiate (');
+    }
+
+    shouldShowSkilledPickers(className: string, feature: ClassFeature): boolean {
+        return this.getSelectedAbilityScoreImprovementFeat(className, feature) === 'Skilled';
+    }
+
+    getGrapplerAbilityOptions(): DropdownOption[] {
+        return [
+            { value: 'Strength', label: 'Strength Score' },
+            { value: 'Dexterity', label: 'Dexterity Score' }
+        ];
+    }
+
+    getMagicInitiateAbilityOptions(): DropdownOption[] {
+        return [
+            { value: 'Charisma', label: 'Charisma' },
+            { value: 'Intelligence', label: 'Intelligence' },
+            { value: 'Wisdom', label: 'Wisdom' }
+        ];
+    }
+
+    getSkilledOptions(className: string, feature: ClassFeature, slotIndex: number): DropdownOption[] {
+        const selected = this.getFeatFollowUpChoice(className, feature).skilledSelections;
+        const currentValue = selected[slotIndex] ?? '';
+        const selectedElsewhere = new Set(selected.filter((entry, index) => index !== slotIndex && entry));
+
+        return this.buildSkilledSelectionOptions().map((option) => ({
+            value: option,
+            label: option,
+            disabled: selectedElsewhere.has(option) && option !== currentValue
+        }));
+    }
+
+    getGrapplerAbilityValue(className: string, feature: ClassFeature): string {
+        return this.getFeatFollowUpChoice(className, feature).grapplerAbility;
+    }
+
+    onGrapplerAbilityChanged(className: string, feature: ClassFeature, value: string | number): void {
+        const key = this.getFeatureSelectionKey(className, feature);
+        const nextValue = String(value ?? '').trim();
+
+        this.featFollowUpChoices.update((current) => ({
+            ...current,
+            [key]: {
+                ...this.getFeatFollowUpChoice(className, feature),
+                grapplerAbility: nextValue
+            }
+        }));
+    }
+
+    getMagicInitiateAbilityValue(className: string, feature: ClassFeature): string {
+        return this.getFeatFollowUpChoice(className, feature).magicInitiateAbility;
+    }
+
+    onMagicInitiateAbilityForFeatChanged(className: string, feature: ClassFeature, value: string | number): void {
+        const key = this.getFeatureSelectionKey(className, feature);
+        const nextValue = String(value ?? '').trim();
+
+        this.featFollowUpChoices.update((current) => ({
+            ...current,
+            [key]: {
+                ...this.getFeatFollowUpChoice(className, feature),
+                magicInitiateAbility: nextValue
+            }
+        }));
+    }
+
+    getSkilledValue(className: string, feature: ClassFeature, slotIndex: number): string {
+        return this.getFeatFollowUpChoice(className, feature).skilledSelections[slotIndex] ?? '';
+    }
+
+    onSkilledSelectionChanged(className: string, feature: ClassFeature, slotIndex: number, value: string | number): void {
+        const key = this.getFeatureSelectionKey(className, feature);
+        const nextValue = String(value ?? '').trim();
+
+        this.featFollowUpChoices.update((current) => {
+            const existing = this.getFeatFollowUpChoice(className, feature);
+            const nextSelections = [...existing.skilledSelections];
+
+            if (!nextValue) {
+                nextSelections.splice(slotIndex, 1);
+            } else {
+                const duplicateIndex = nextSelections.findIndex((entry, index) => entry === nextValue && index !== slotIndex);
+                if (duplicateIndex >= 0) {
+                    nextSelections.splice(duplicateIndex, 1);
+                }
+
+                nextSelections[slotIndex] = nextValue;
+            }
+
+            const compact = nextSelections
+                .map((entry) => entry?.trim())
+                .filter((entry): entry is string => !!entry)
+                .slice(0, 3);
+
+            return {
+                ...current,
+                [key]: {
+                    ...existing,
+                    skilledSelections: compact
+                }
+            };
+        });
+    }
+
+    getAbilityScoreImprovementMode(className: string, feature: ClassFeature): AbilityScoreImprovementMode {
+        return this.getAbilityScoreImprovementChoice(className, feature).mode;
+    }
+
+    onAbilityScoreImprovementModeChanged(className: string, feature: ClassFeature, value: string | number): void {
+        const key = this.getFeatureSelectionKey(className, feature);
+        const mode = String(value ?? '') as AbilityScoreImprovementMode;
+        const safeMode: AbilityScoreImprovementMode = (mode === 'plus-two' || mode === 'plus-one-plus-one') ? mode : '';
+
+        this.abilityScoreImprovementChoices.update((current) => ({
+            ...current,
+            [key]: {
+                mode: safeMode,
+                primaryAbility: '',
+                secondaryAbility: ''
+            }
+        }));
+    }
+
+    getAbilityScoreImprovementPrimaryValue(className: string, feature: ClassFeature): string {
+        return this.getAbilityScoreImprovementChoice(className, feature).primaryAbility;
+    }
+
+    getAbilityScoreImprovementSecondaryValue(className: string, feature: ClassFeature): string {
+        return this.getAbilityScoreImprovementChoice(className, feature).secondaryAbility;
+    }
+
+    onAbilityScoreImprovementPrimaryChanged(className: string, feature: ClassFeature, value: string | number): void {
+        const key = this.getFeatureSelectionKey(className, feature);
+        const nextPrimary = String(value ?? '').trim();
+
+        this.abilityScoreImprovementChoices.update((current) => {
+            const existing = current[key] ?? { mode: '', primaryAbility: '', secondaryAbility: '' };
+            const secondary = existing.secondaryAbility === nextPrimary ? '' : existing.secondaryAbility;
+            return {
+                ...current,
+                [key]: {
+                    ...existing,
+                    primaryAbility: nextPrimary,
+                    secondaryAbility: secondary
+                }
+            };
+        });
+    }
+
+    onAbilityScoreImprovementSecondaryChanged(className: string, feature: ClassFeature, value: string | number): void {
+        const key = this.getFeatureSelectionKey(className, feature);
+        const nextSecondary = String(value ?? '').trim();
+
+        this.abilityScoreImprovementChoices.update((current) => {
+            const existing = current[key] ?? { mode: '', primaryAbility: '', secondaryAbility: '' };
+            return {
+                ...current,
+                [key]: {
+                    ...existing,
+                    secondaryAbility: nextSecondary === existing.primaryAbility ? '' : nextSecondary
+                }
+            };
+        });
+    }
+
+    getAbilityScoreImprovementAbilityOptions(className: string, feature: ClassFeature, slot: 'primary' | 'secondary'): DropdownOption[] {
+        const choice = this.getAbilityScoreImprovementChoice(className, feature);
+        return this.abilityTiles.map((ability) => ({
+            value: ability,
+            label: `${ability} Score`,
+            disabled: slot === 'secondary' ? ability === choice.primaryAbility : false
+        }));
+    }
+
+    shouldShowAbilityScoreImprovementPrimary(className: string, feature: ClassFeature): boolean {
+        const mode = this.getAbilityScoreImprovementMode(className, feature);
+        return mode === 'plus-two' || mode === 'plus-one-plus-one';
+    }
+
+    shouldShowAbilityScoreImprovementSecondary(className: string, feature: ClassFeature): boolean {
+        return this.getAbilityScoreImprovementMode(className, feature) === 'plus-one-plus-one';
+    }
+
+    private isAbilityScoreImprovementFeature(feature: ClassFeature): boolean {
+        return feature.name === 'Ability Score Improvement';
+    }
+
+    private getAbilityScoreImprovementChoice(className: string, feature: ClassFeature): AbilityScoreImprovementChoice {
+        const key = this.getFeatureSelectionKey(className, feature);
+        return this.abilityScoreImprovementChoices()[key] ?? {
+            mode: '',
+            primaryAbility: '',
+            secondaryAbility: ''
+        };
+    }
+
+    private getFeatFollowUpChoice(className: string, feature: ClassFeature): FeatFollowUpChoice {
+        const key = this.getFeatureSelectionKey(className, feature);
+        return this.featFollowUpChoices()[key] ?? {
+            abilityIncreaseAbility: '',
+            grapplerAbility: '',
+            magicInitiateAbility: '',
+            skilledSelections: []
+        };
+    }
+
+    private requiresFeatFollowUpChoice(featName: string): boolean {
+        return this.getFeatAbilityIncreaseChoicesByFeat(featName).length > 0
+            || featName.startsWith('Magic Initiate (')
+            || featName === 'Skilled';
+    }
+
+    private getFeatAbilityIncreaseChoicesByFeat(featName: string): string[] {
+        switch (featName) {
+            case 'Athlete':
+            case 'Charger':
+            case 'Dual Wielder':
+            case 'Grappler':
+            case 'Mage Slayer':
+            case 'Sentinel':
+            case 'Slasher':
+            case 'Weapon Master':
+                return ['Strength', 'Dexterity'];
+            case 'Defensive Duelist':
+            case 'Skulker':
+                return ['Dexterity'];
+            case 'Elemental Adept':
+            case 'Spell Sniper':
+            case 'War Caster':
+                return ['Intelligence', 'Wisdom', 'Charisma'];
+            case 'Great Weapon Master':
+            case 'Shield Master':
+                return ['Strength'];
+            case 'Heavy Armor Master':
+            case 'Speedy':
+                return ['Strength', 'Constitution'];
+            case 'Inspiring Leader':
+                return ['Wisdom', 'Charisma'];
+            case 'Mounted Combatant':
+                return ['Strength', 'Dexterity', 'Wisdom'];
+            case 'Polearm Master':
+                return ['Dexterity', 'Strength'];
+            case 'Resilient':
+            case 'Skill Expert':
+                return ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'];
+            default:
+                return [];
+        }
+    }
+
+    private buildSkilledSelectionOptions(): string[] {
+        return [
+            'Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation', 'Investigation', 'Medicine', 'Nature', 'Perception',
+            'Performance', 'Persuasion', 'Religion', 'Sleight of Hand', 'Stealth', 'Survival',
+            "Alchemist's Supplies", "Brewer's Supplies", "Calligrapher's Supplies", "Carpenter's Tools", "Cartographer's Tools", "Cobbler's Tools", "Cook's Utensils",
+            "Glassblower's Tools", "Jeweler's Tools", "Leatherworker's Tools", "Mason's Tools", "Painter's Supplies", "Potter's Tools", "Smith's Tools", "Tinker's Tools",
+            "Weaver's Tools", "Woodcarver's Tools", 'Bagpipes', 'Drum', 'Dulcimer', 'Flute', 'Lute', 'Lyre', 'Horn', 'Pan Flute', 'Shawm', 'Viol', "Navigator's Tools",
+            "Poisoner's Kit", "Thieves' Tools", "Disguise Kit", "Forgery Kit", "Herbalism Kit", "Gaming Set (Dice)", "Gaming Set (Cards)", 'Vehicles (Land)', 'Vehicles (Water)'
+        ];
     }
 
     private getFeatureSelectionKey(className: string, feature: ClassFeature): string {
@@ -942,6 +2118,10 @@ export class NewCharacterStandardPageComponent {
         if (hasSeededProgression) {
             return [...seededFeatures]
                 .sort((a, b) => a.level - b.level)
+                .map((featureLevel) => ({
+                    ...featureLevel,
+                    features: featureLevel.features.map((feature) => this.resolveFeatureChoices(feature))
+                }))
                 .filter((featureLevel) => featureLevel.level <= maxLevel);
         }
 
@@ -951,9 +2131,10 @@ export class NewCharacterStandardPageComponent {
         for (const featureGroup of [...seededFeatures, ...milestoneFeatures]) {
             const current = mergedByLevel.get(featureGroup.level) || [];
             for (const feature of featureGroup.features) {
+                const resolvedFeature = this.resolveFeatureChoices(feature);
                 const exists = current.some((entry) => entry.name.toLowerCase() === feature.name.toLowerCase());
                 if (!exists) {
-                    current.push(feature);
+                    current.push(resolvedFeature);
                 }
             }
             mergedByLevel.set(featureGroup.level, current);
@@ -963,6 +2144,62 @@ export class NewCharacterStandardPageComponent {
             .map(([level, features]) => ({ level, features }))
             .sort((a, b) => a.level - b.level)
             .filter((featureLevel) => featureLevel.level <= maxLevel);
+    }
+
+    private resolveFeatureChoices(feature: ClassFeature): ClassFeature {
+        if (feature.choices) {
+            return feature;
+        }
+
+        if (feature.name === 'Ability Score Improvement') {
+            return {
+                ...feature,
+                choices: {
+                    title: 'Choose 1 Feat',
+                    count: 1,
+                    options: this.abilityScoreImprovementOptions
+                }
+            };
+        }
+
+        return feature;
+    }
+
+    private buildAbilityScoreImprovementFeatOptions(): string[] {
+        return [
+            'Ability Score Improvement',
+            'Alert',
+            'Athlete',
+            'Charger',
+            'Defensive Duelist',
+            'Dual Wielder',
+            'Elemental Adept',
+            'Grappler',
+            'Great Weapon Master',
+            'Healer',
+            'Heavy Armor Master',
+            'Inspiring Leader',
+            'Mage Slayer',
+            'Magic Initiate (Cleric)',
+            'Magic Initiate (Druid)',
+            'Magic Initiate (Wizard)',
+            'Mounted Combatant',
+            'Polearm Master',
+            'Resilient',
+            'Savage Attacker',
+            'Sentinel',
+            'Shield Master',
+            'Skilled',
+            'Skill Expert',
+            'Skulker',
+            'Slasher',
+            'Speedy',
+            'Spell Sniper',
+            'Tavern Brawler',
+            'Tough',
+            'War Caster',
+            'Weapon Master'
+        ];
     }
 
     private getClassFeaturesFromMilestones(className: string): ClassFeaturesForLevel[] {
@@ -1199,6 +2436,8 @@ export class NewCharacterStandardPageComponent {
 
     onBackgroundSelected(url: string): void {
         this.selectedBackgroundUrl.set(url);
+        const selected = this.backgroundOptions.find((background) => background.url === url);
+        this.selectedBackgroundName.set(selected?.name ?? '');
         this.backgroundChoiceSelections.set({});
         this.selectedLanguages.set([]);
         this.magicInitiateAbility.set('');
@@ -1807,13 +3046,7 @@ export class NewCharacterStandardPageComponent {
         }
 
         const background = this.selectedBackgroundName() || this.selectedBackground()?.name || 'Freshly arrived adventurer';
-        const faith = this.selectedFaith().trim();
-        const notesParts = [this.generatedBackstory().trim(), this.backstoryPromptDetails().trim()];
-        if (faith) {
-            notesParts.push(`Faith: ${faith}`);
-        }
-
-        const notes = notesParts.filter((part) => part.length > 0).join('\n\n') || 'No field notes yet.';
+        const notes = this.buildPersistedNotes();
         const selectedCampaignId = this.store.selectedCampaign()?.id;
 
         return {
@@ -1913,9 +3146,162 @@ export class NewCharacterStandardPageComponent {
             this.selectedBackgroundUrl.set(option?.url ?? '');
         }
 
-        const notes = character.notes?.trim() ?? '';
+        const parsedNotes = this.parsePersistedNotes(character.notes ?? '');
+        const notes = parsedNotes.cleanedNotes.trim();
         this.generatedBackstory.set(notes);
-        this.selectedFaith.set(this.extractFaithFromNotes(notes));
+
+        const persisted = parsedNotes.state;
+        if (persisted) {
+            if (persisted.selectedBackgroundName?.trim()) {
+                this.selectedBackgroundName.set(persisted.selectedBackgroundName.trim());
+            }
+
+            if (persisted.selectedBackgroundUrl?.trim()) {
+                this.selectedBackgroundUrl.set(persisted.selectedBackgroundUrl.trim());
+            }
+
+            this.selectedAlignment.set(persisted.selectedAlignment || this.selectedAlignment());
+            this.selectedLifestyle.set(persisted.selectedLifestyle || this.selectedLifestyle());
+            this.selectedFaith.set(persisted.selectedFaith || this.extractFaithFromNotes(notes));
+
+            this.selectedLanguages.set(Array.isArray(persisted.selectedLanguages) ? persisted.selectedLanguages : []);
+            this.selectedSpeciesLanguages.set(Array.isArray(persisted.selectedSpeciesLanguages) ? persisted.selectedSpeciesLanguages : []);
+
+            this.classFeatureSelections.set(persisted.classFeatureSelections ?? {});
+            this.abilityScoreImprovementChoices.set(persisted.abilityScoreImprovementChoices ?? {});
+            this.featFollowUpChoices.set(persisted.featFollowUpChoices ?? {});
+            this.backgroundChoiceSelections.set(persisted.backgroundChoiceSelections ?? {});
+
+            this.selectedAbilityMethod.set((persisted.selectedAbilityMethod as AbilityGenerationMethod) || '');
+            this.abilityBaseScores.set(persisted.abilityBaseScores ?? this.abilityBaseScores());
+            this.abilityOtherModifiers.set(persisted.abilityOtherModifiers ?? this.abilityOtherModifiers());
+            this.abilityOverrideScores.set(persisted.abilityOverrideScores ?? this.abilityOverrideScores());
+            this.standardArraySelections.set(persisted.standardArraySelections ?? this.standardArraySelections());
+            this.rolledValues.set(Array.isArray(persisted.rolledValues) ? persisted.rolledValues : this.rolledValues());
+            this.rolledAssignments.set(persisted.rolledAssignments ?? this.rolledAssignments());
+            this.manualRollGroupCount.set(
+                Number.isFinite(persisted.manualRollGroupCount)
+                    ? Math.max(1, Math.trunc(persisted.manualRollGroupCount))
+                    : this.manualRollGroupCount()
+            );
+
+            this.bgAbilityMode.set(persisted.bgAbilityMode || this.bgAbilityMode());
+            this.bgAbilityScoreFor2.set(persisted.bgAbilityScoreFor2 || this.bgAbilityScoreFor2());
+            this.bgAbilityScoreFor1.set(persisted.bgAbilityScoreFor1 || this.bgAbilityScoreFor1());
+
+            const classStartingChoice = persisted.selectedClassStartingOption;
+            this.selectedClassStartingOption.set(classStartingChoice === 'A' || classStartingChoice === 'B' ? classStartingChoice : '');
+
+            const backgroundStartingChoice = persisted.selectedBackgroundStartingOption;
+            this.selectedBackgroundStartingOption.set(backgroundStartingChoice === 'A' || backgroundStartingChoice === 'B' ? backgroundStartingChoice : '');
+
+            this.inventoryEntries.set(Array.isArray(persisted.inventoryEntries) ? persisted.inventoryEntries : []);
+
+            const nextCurrency = persisted.currency;
+            if (nextCurrency && typeof nextCurrency === 'object') {
+                this.currency.set({
+                    pp: Number(nextCurrency.pp) || 0,
+                    gp: Number(nextCurrency.gp) || 0,
+                    ep: Number(nextCurrency.ep) || 0,
+                    sp: Number(nextCurrency.sp) || 0,
+                    cp: Number(nextCurrency.cp) || 0
+                });
+            }
+
+            this.personalityTraits.set(Array.isArray(persisted.personalityTraits) ? persisted.personalityTraits : []);
+            this.ideals.set(Array.isArray(persisted.ideals) ? persisted.ideals : []);
+            this.bonds.set(Array.isArray(persisted.bonds) ? persisted.bonds : []);
+            this.flaws.set(Array.isArray(persisted.flaws) ? persisted.flaws : []);
+
+            this.physicalHair.set(persisted.physicalHair || '');
+            this.physicalSkin.set(persisted.physicalSkin || '');
+            this.physicalEyes.set(persisted.physicalEyes || '');
+            this.physicalHeight.set(persisted.physicalHeight || '');
+            this.physicalWeight.set(persisted.physicalWeight || '');
+            this.physicalAge.set(persisted.physicalAge || '');
+            this.physicalGender.set(persisted.physicalGender || '');
+        } else {
+            this.selectedFaith.set(this.extractFaithFromNotes(notes));
+        }
+    }
+
+    private buildPersistedNotes(): string {
+        const faith = this.selectedFaith().trim();
+        const notesParts = [this.generatedBackstory().trim(), this.backstoryPromptDetails().trim()];
+        if (faith) {
+            notesParts.push(`Faith: ${faith}`);
+        }
+
+        const visibleNotes = notesParts.filter((part) => part.length > 0).join('\n\n') || 'No field notes yet.';
+        const state: PersistedBuilderState = {
+            selectedBackgroundName: this.selectedBackgroundName(),
+            selectedBackgroundUrl: this.selectedBackgroundUrl(),
+            selectedAlignment: this.selectedAlignment(),
+            selectedFaith: this.selectedFaith(),
+            selectedLifestyle: this.selectedLifestyle(),
+            selectedLanguages: this.selectedLanguages(),
+            selectedSpeciesLanguages: this.selectedSpeciesLanguages(),
+            classFeatureSelections: this.classFeatureSelections(),
+            abilityScoreImprovementChoices: this.abilityScoreImprovementChoices(),
+            featFollowUpChoices: this.featFollowUpChoices(),
+            backgroundChoiceSelections: this.backgroundChoiceSelections(),
+            selectedAbilityMethod: this.selectedAbilityMethod(),
+            abilityBaseScores: this.abilityBaseScores(),
+            abilityOtherModifiers: this.abilityOtherModifiers(),
+            abilityOverrideScores: this.abilityOverrideScores(),
+            standardArraySelections: this.standardArraySelections(),
+            rolledValues: this.rolledValues(),
+            rolledAssignments: this.rolledAssignments(),
+            manualRollGroupCount: this.manualRollGroupCount(),
+            bgAbilityMode: this.bgAbilityMode(),
+            bgAbilityScoreFor2: this.bgAbilityScoreFor2(),
+            bgAbilityScoreFor1: this.bgAbilityScoreFor1(),
+            selectedClassStartingOption: this.selectedClassStartingOption(),
+            selectedBackgroundStartingOption: this.selectedBackgroundStartingOption(),
+            inventoryEntries: this.inventoryEntries(),
+            currency: this.currency(),
+            personalityTraits: this.personalityTraits(),
+            ideals: this.ideals(),
+            bonds: this.bonds(),
+            flaws: this.flaws(),
+            physicalHair: this.physicalHair(),
+            physicalSkin: this.physicalSkin(),
+            physicalEyes: this.physicalEyes(),
+            physicalHeight: this.physicalHeight(),
+            physicalWeight: this.physicalWeight(),
+            physicalAge: this.physicalAge(),
+            physicalGender: this.physicalGender()
+        };
+
+        const serialized = JSON.stringify(state);
+        return `${visibleNotes}\n\n${this.builderStateStartTag}\n${serialized}\n${this.builderStateEndTag}`;
+    }
+
+    private parsePersistedNotes(notes: string): { cleanedNotes: string; state: PersistedBuilderState | null } {
+        const raw = notes?.trim() ?? '';
+        if (!raw) {
+            return { cleanedNotes: '', state: null };
+        }
+
+        const start = raw.indexOf(this.builderStateStartTag);
+        const end = raw.indexOf(this.builderStateEndTag);
+
+        if (start === -1 || end === -1 || end < start) {
+            return { cleanedNotes: raw, state: null };
+        }
+
+        const jsonStart = start + this.builderStateStartTag.length;
+        const jsonText = raw.slice(jsonStart, end).trim();
+        const before = raw.slice(0, start).trimEnd();
+        const after = raw.slice(end + this.builderStateEndTag.length).trimStart();
+        const cleanedNotes = [before, after].filter((part) => part.length > 0).join('\n\n').trim();
+
+        try {
+            const parsed = JSON.parse(jsonText) as PersistedBuilderState;
+            return { cleanedNotes, state: parsed };
+        } catch {
+            return { cleanedNotes: raw, state: null };
+        }
     }
 
     private resolveNavigationEditLevel(): number | null {
@@ -2260,19 +3646,91 @@ export class NewCharacterStandardPageComponent {
         this.assignToCurrentCampaignOnCreate.set(isChecked);
     }
 
-    onFaithChanged(value: string): void {
+    onFaithChanged(value: string, input: HTMLInputElement): void {
+        this.faithInputElement = input;
         this.selectedFaith.set(value);
-        this.faithDropdownOpen.set(true);
+        this.faithDropdownOpen.set(value.trim().length > 0);
+        this.updateFaithSuggestionOverlayPosition();
+        this.scheduleFaithSuggestionOverlayPositionUpdate();
     }
 
     selectDeity(name: string): void {
         this.selectedFaith.set(name);
         this.faithDropdownOpen.set(false);
+        this.faithOpensUpward.set(false);
+        this.faithSuggestionsStyle.set({});
     }
 
     onFaithBlur(): void {
         // Delay so mousedown on a suggestion fires before blur closes the list
-        setTimeout(() => this.faithDropdownOpen.set(false), 150);
+        setTimeout(() => {
+            this.faithDropdownOpen.set(false);
+            this.faithOpensUpward.set(false);
+            this.faithSuggestionsStyle.set({});
+        }, 150);
+    }
+
+    openDeityPicker(): void {
+        this.faithDropdownOpen.set(false);
+        this.faithOpensUpward.set(false);
+        this.faithSuggestionsStyle.set({});
+        this.deityPickerOpen.set(true);
+    }
+
+    private updateFaithSuggestionOverlayPosition(): void {
+        const view = this.document.defaultView;
+        const input = this.faithInputElement;
+        if (!view || !input || !this.faithDropdownOpen()) {
+            return;
+        }
+
+        const viewportPadding = 10;
+        const panel = this.document.querySelector('.deity-suggestions--floating') as HTMLElement | null;
+        const measuredHeight = panel ? panel.scrollHeight : this.estimateFaithSuggestionsHeight();
+        const desiredHeight = Math.min(320, measuredHeight);
+        const rect = input.getBoundingClientRect();
+        const availableBelow = Math.max(0, view.innerHeight - rect.bottom - viewportPadding);
+        const availableAbove = Math.max(0, rect.top - viewportPadding);
+        const openUpward = desiredHeight > availableBelow && availableAbove > availableBelow;
+        const maxHeight = Math.max(96, Math.min(320, openUpward ? availableAbove - 6 : availableBelow - 6));
+        const renderedHeight = Math.min(desiredHeight, maxHeight);
+        const top = openUpward
+            ? Math.max(viewportPadding, rect.top - renderedHeight - 4)
+            : Math.min(view.innerHeight - viewportPadding - renderedHeight, rect.bottom + 4);
+        const left = Math.max(viewportPadding, Math.min(rect.left, view.innerWidth - viewportPadding - rect.width));
+
+        this.faithOpensUpward.set(openUpward);
+        this.faithSuggestionsStyle.set({
+            position: 'fixed',
+            top: `${top}px`,
+            left: `${left}px`,
+            width: `${rect.width}px`,
+            maxHeight: `${maxHeight}px`
+        });
+    }
+
+    private scheduleFaithSuggestionOverlayPositionUpdate(): void {
+        const view = this.document.defaultView;
+        if (!view || !this.faithDropdownOpen()) {
+            return;
+        }
+
+        view.requestAnimationFrame(() => this.updateFaithSuggestionOverlayPosition());
+    }
+
+    private estimateFaithSuggestionsHeight(): number {
+        const rowHeight = 58;
+        const verticalPadding = 8;
+        return verticalPadding + (this.faithSuggestions().length * rowHeight);
+    }
+
+    closeDeityPicker(): void {
+        this.deityPickerOpen.set(false);
+    }
+
+    onDeityConfirmed(deityName: string): void {
+        this.selectedFaith.set(deityName);
+        this.closeDeityPicker();
     }
 
     onPhysicalCharacteristicChanged(field: 'hair' | 'skin' | 'eyes' | 'height' | 'weight' | 'age' | 'gender', value: string): void {

@@ -56,7 +56,7 @@
 }
 
 .msd-open {
-    z-index: 250;
+    z-index: 5100;
 }
 
 .msd-open-up .msd-trigger {
@@ -95,7 +95,7 @@
     top: 100%;
     left: 0;
     right: 0;
-    z-index: 250;
+    z-index: 5200;
     background: var(--surface-raised-solid);
     border: 1px solid var(--accent-primary);
     border-top: none;

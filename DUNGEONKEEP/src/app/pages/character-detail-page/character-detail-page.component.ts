@@ -5,6 +5,7 @@ import { marked } from 'marked';
 
 import { DropdownComponent, type DropdownOption } from '../../components/dropdown/dropdown.component';
 import { races } from '../../data/races';
+import type { SkillProficiencies } from '../../models/dungeon.models';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
 type AbilityKey = 'strength' | 'dexterity' | 'constitution' | 'intelligence' | 'wisdom' | 'charisma';
@@ -12,6 +13,35 @@ type AbilityKey = 'strength' | 'dexterity' | 'constitution' | 'intelligence' | '
 type ActionType = 'attack' | 'save';
 type CombatTab = 'actions' | 'spells' | 'inventory' | 'features' | 'background' | 'notes' | 'extras';
 type ActionFilter = 'all' | 'attack' | 'action' | 'bonus-action' | 'reaction' | 'other' | 'limited-use';
+
+interface PersistedInventoryEntry {
+    name: string;
+    category: string;
+    quantity: number;
+}
+
+interface PersistedCurrencyState {
+    pp: number;
+    gp: number;
+    ep: number;
+    sp: number;
+    cp: number;
+}
+
+interface PersistedBuilderState {
+    selectedBackgroundName?: string;
+    selectedLanguages?: string[];
+    selectedSpeciesLanguages?: string[];
+    classFeatureSelections?: Record<string, string[]>;
+    backgroundChoiceSelections?: Record<string, string>;
+    abilityBaseScores?: Record<string, number>;
+    abilityOverrideScores?: Record<string, number | null>;
+    bgAbilityMode?: string;
+    bgAbilityScoreFor2?: string;
+    bgAbilityScoreFor1?: string;
+    inventoryEntries?: PersistedInventoryEntry[];
+    currency?: PersistedCurrencyState;
+}
 
 @Component({
     selector: 'app-character-detail-page',
@@ -25,6 +55,8 @@ export class CharacterDetailPageComponent {
     private readonly store = inject(DungeonStoreService);
     private readonly route = inject(ActivatedRoute);
     private readonly cdr = inject(ChangeDetectorRef);
+    private readonly builderStateStartTag = '[DK_BUILDER_STATE_START]';
+    private readonly builderStateEndTag = '[DK_BUILDER_STATE_END]';
 
     private readonly raceLookup = new Map(
         races.flatMap((race) => [
@@ -334,6 +366,68 @@ export class CharacterDetailPageComponent {
         this.store.characters().find((item) => item.id === this.characterId) || null
     );
 
+    readonly parsedNotes = computed(() => this.parsePersistedNotes(this.character()?.notes ?? ''));
+
+    readonly persistedBuilderState = computed(() => this.parsedNotes().state);
+
+    readonly displayBackground = computed(() => {
+        const fromBuilder = this.persistedBuilderState()?.selectedBackgroundName?.trim() ?? '';
+        if (fromBuilder) {
+            return fromBuilder;
+        }
+
+        return this.character()?.background || 'Not set';
+    });
+
+    readonly persistedSkillProficiencies = computed(() => {
+        const state = this.persistedBuilderState();
+        if (!state) {
+            return new Set<string>();
+        }
+
+        const collected = new Set<string>();
+        const classSelections = state.classFeatureSelections ?? {};
+
+        for (const pickedValues of Object.values(classSelections)) {
+            for (const value of pickedValues ?? []) {
+                const parsed = this.parseSkillTokens(value);
+                for (const skillKey of parsed) {
+                    collected.add(skillKey);
+                }
+            }
+        }
+
+        const backgroundSelections = state.backgroundChoiceSelections ?? {};
+        for (const pickedValue of Object.values(backgroundSelections)) {
+            for (const skillKey of this.parseSkillTokens(pickedValue)) {
+                collected.add(skillKey);
+            }
+        }
+
+        return collected;
+    });
+
+    readonly effectiveAbilityScores = computed(() => {
+        const char = this.character();
+        if (!char) {
+            return null;
+        }
+
+        const persistedScores = this.getPersistedAbilityScores(this.persistedBuilderState());
+        if (persistedScores) {
+            return persistedScores;
+        }
+
+        return char.abilityScores ?? {
+            strength: 10,
+            dexterity: 10,
+            constitution: 10,
+            intelligence: 10,
+            wisdom: 10,
+            charisma: 10
+        };
+    });
+
     readonly campaignName = computed(() => {
         const char = this.character();
         if (!char) {
@@ -372,7 +466,7 @@ export class CharacterDetailPageComponent {
             { label: 'Name', value: char.name },
             { label: 'Class & Level', value: `${char.className} ${char.level}` },
             { label: 'Race', value: char.race },
-            { label: 'Background', value: char.background || 'Not set' },
+            { label: 'Background', value: this.displayBackground() },
             { label: 'Alignment', value: noteContext.alignment || 'Unaligned' },
             { label: 'Lifestyle', value: noteContext.lifestyle || 'Not set' },
             { label: 'Faith', value: noteContext.faith || 'Not set' },
@@ -404,12 +498,12 @@ export class CharacterDetailPageComponent {
     });
 
     readonly initiative = computed(() => {
-        const char = this.character();
-        if (!char) {
+        const scores = this.effectiveAbilityScores();
+        if (!scores) {
             return 0;
         }
 
-        return this.getAbilityModifier(char.abilityScores?.dexterity ?? 10);
+        return this.getAbilityModifier(scores.dexterity);
     });
 
     readonly passivePerception = computed(() => this.getPassiveSkillValue('perception'));
@@ -439,7 +533,7 @@ export class CharacterDetailPageComponent {
         }
 
         const saveProficiencies = new Set(this.saveProficienciesByClass[char.className] ?? []);
-        const scores = char.abilityScores ?? {
+        const scores = this.effectiveAbilityScores() ?? {
             strength: 10,
             dexterity: 10,
             constitution: 10,
@@ -494,8 +588,8 @@ export class CharacterDetailPageComponent {
             { name: 'Survival', key: 'survival' }
         ].map((skill) => {
             const abilityKey = this.skillAbilityMap[skill.key as keyof typeof this.skillAbilityMap];
-            const abilityScore = char.abilityScores?.[abilityKey] ?? 10;
-            const proficient = Boolean(char.skills?.[skill.key as keyof typeof char.skills]);
+            const abilityScore = this.effectiveAbilityScores()?.[abilityKey] ?? 10;
+            const proficient = this.isSkillProficient(skill.key, char.skills);
             const modifier = this.getAbilityModifier(abilityScore) + (proficient ? char.proficiencyBonus : 0);
 
             return {
@@ -514,12 +608,12 @@ export class CharacterDetailPageComponent {
         }
 
         return [
-            { key: 'strength', abbr: 'STR', name: 'Strength', score: char.abilityScores?.strength ?? 10 },
-            { key: 'dexterity', abbr: 'DEX', name: 'Dexterity', score: char.abilityScores?.dexterity ?? 10 },
-            { key: 'constitution', abbr: 'CON', name: 'Constitution', score: char.abilityScores?.constitution ?? 10 },
-            { key: 'intelligence', abbr: 'INT', name: 'Intelligence', score: char.abilityScores?.intelligence ?? 10 },
-            { key: 'wisdom', abbr: 'WIS', name: 'Wisdom', score: char.abilityScores?.wisdom ?? 10 },
-            { key: 'charisma', abbr: 'CHA', name: 'Charisma', score: char.abilityScores?.charisma ?? 10 }
+            { key: 'strength', abbr: 'STR', name: 'Strength', score: this.effectiveAbilityScores()?.strength ?? 10 },
+            { key: 'dexterity', abbr: 'DEX', name: 'Dexterity', score: this.effectiveAbilityScores()?.dexterity ?? 10 },
+            { key: 'constitution', abbr: 'CON', name: 'Constitution', score: this.effectiveAbilityScores()?.constitution ?? 10 },
+            { key: 'intelligence', abbr: 'INT', name: 'Intelligence', score: this.effectiveAbilityScores()?.intelligence ?? 10 },
+            { key: 'wisdom', abbr: 'WIS', name: 'Wisdom', score: this.effectiveAbilityScores()?.wisdom ?? 10 },
+            { key: 'charisma', abbr: 'CHA', name: 'Charisma', score: this.effectiveAbilityScores()?.charisma ?? 10 }
         ].map((ability) => ({
             ...ability,
             modifierLabel: this.formatSigned(this.getAbilityModifier(ability.score))
@@ -537,7 +631,7 @@ export class CharacterDetailPageComponent {
             return 8 + (char.proficiencyBonus ?? 2);
         }
 
-        const mod = this.getAbilityModifier(char.abilityScores?.[castingAbility] ?? 10);
+        const mod = this.getAbilityModifier(this.effectiveAbilityScores()?.[castingAbility] ?? 10);
         return 8 + (char.proficiencyBonus ?? 2) + mod;
     });
 
@@ -548,7 +642,7 @@ export class CharacterDetailPageComponent {
         }
 
         const castingAbility = this.spellcastingAbilityByClass[char.className];
-        const abilityMod = castingAbility ? this.getAbilityModifier(char.abilityScores?.[castingAbility] ?? 10) : 0;
+        const abilityMod = castingAbility ? this.getAbilityModifier(this.effectiveAbilityScores()?.[castingAbility] ?? 10) : 0;
         return this.formatSigned((char.proficiencyBonus ?? 2) + abilityMod);
     });
 
@@ -571,7 +665,7 @@ export class CharacterDetailPageComponent {
 
         return {
             ability: this.abilityKeyMap[ability],
-            modifierLabel: this.formatSigned(this.getAbilityModifier(char.abilityScores?.[ability] ?? 10)),
+            modifierLabel: this.formatSigned(this.getAbilityModifier(this.effectiveAbilityScores()?.[ability] ?? 10)),
             saveDC: this.spellSaveDC(),
             attackBonus: this.spellAttackBonus(),
             slots
@@ -630,7 +724,22 @@ export class CharacterDetailPageComponent {
         };
     });
 
-    readonly languageList = computed(() => this.raceInfo()?.languages ?? ['Common']);
+    readonly languageList = computed(() => {
+        const persisted = this.persistedBuilderState();
+        const selected = [
+            ...(persisted?.selectedLanguages ?? []),
+            ...(persisted?.selectedSpeciesLanguages ?? [])
+        ]
+            .map((entry) => entry.trim())
+            .filter((entry) => entry.length > 0);
+
+        const uniqueSelected = [...new Set(selected)];
+        if (uniqueSelected.length > 0) {
+            return uniqueSelected;
+        }
+
+        return this.raceInfo()?.languages ?? ['Common'];
+    });
 
     readonly senses = computed(() => {
         const char = this.character();
@@ -658,6 +767,60 @@ export class CharacterDetailPageComponent {
             return null;
         }
 
+        const persisted = this.persistedBuilderState();
+        const persistedEntries = Array.isArray(persisted?.inventoryEntries)
+            ? persisted.inventoryEntries
+                .filter((entry) => entry && typeof entry.name === 'string' && typeof entry.category === 'string')
+                .map((entry) => ({
+                    name: entry.name.trim(),
+                    category: entry.category.trim(),
+                    quantity: Math.max(1, Math.trunc(Number(entry.quantity) || 1))
+                }))
+                .filter((entry) => entry.name.length > 0)
+            : [];
+
+        if (persistedEntries.length > 0) {
+            const weapons: string[] = [];
+            const armor: string[] = [];
+            const gear: string[] = [];
+
+            for (const entry of persistedEntries) {
+                const label = entry.quantity > 1 ? `${entry.name} x${entry.quantity}` : entry.name;
+                const normalizedCategory = entry.category.toLowerCase();
+
+                if (normalizedCategory.includes('weapon')) {
+                    weapons.push(label);
+                    continue;
+                }
+
+                if (normalizedCategory.includes('armor') || normalizedCategory.includes('shield')) {
+                    armor.push(label);
+                    continue;
+                }
+
+                gear.push(label);
+            }
+
+            const persistedCurrency = this.persistedBuilderState()?.currency;
+            const currency = persistedCurrency
+                ? {
+                    gp: (Number(persistedCurrency.pp) || 0) * 10 + (Number(persistedCurrency.gp) || 0) + (Number(persistedCurrency.ep) || 0) * 0.5,
+                    sp: Number(persistedCurrency.sp) || 0,
+                    cp: Number(persistedCurrency.cp) || 0
+                }
+                : { gp: 0, sp: 0, cp: 0 };
+
+            const totalItemCount = persistedEntries.reduce((sum, item) => sum + item.quantity, 0);
+
+            return {
+                weapons,
+                armor,
+                gear,
+                currency,
+                totalItemCount
+            };
+        }
+
         const defaults = this.classEquipmentMap[char.className] ?? {
             weapons: ['Simple Weapon'],
             armor: ['Travel Clothes'],
@@ -667,7 +830,8 @@ export class CharacterDetailPageComponent {
         return {
             ...defaults,
             magicItems: [] as string[],
-            currency: { gp: 12, sp: 8, cp: 5 }
+            currency: { gp: 12, sp: 8, cp: 5 },
+            totalItemCount: defaults.weapons.length + defaults.armor.length + defaults.gear.length
         };
     });
 
@@ -677,7 +841,7 @@ export class CharacterDetailPageComponent {
             return { weight: '0 lb', itemCount: 0, partyWeight: '0 lb' };
         }
 
-        const itemCount = bag.weapons.length + bag.armor.length + bag.gear.length;
+        const itemCount = bag.totalItemCount ?? (bag.weapons.length + bag.armor.length + bag.gear.length);
         return {
             weight: `${Math.max(10, itemCount * 3)} lb`,
             itemCount,
@@ -696,7 +860,7 @@ export class CharacterDetailPageComponent {
         ];
 
         return templates.map((action) => {
-            const abilityMod = this.getAbilityModifier(char.abilityScores?.[action.ability] ?? 10);
+            const abilityMod = this.getAbilityModifier(this.effectiveAbilityScores()?.[action.ability] ?? 10);
             const bonus = abilityMod + (char.proficiencyBonus ?? 2);
             return {
                 ...action,
@@ -749,13 +913,7 @@ export class CharacterDetailPageComponent {
     });
 
     readonly displayBackstoryText = computed(() => {
-        const char = this.character();
-        if (!char) {
-            return '';
-        }
-
-        const persistedBackstory = char.notes?.trim() ?? '';
-        const notes = persistedBackstory;
+        const notes = this.parsedNotes().cleanedNotes.trim();
         if (!notes) {
             return '';
         }
@@ -795,7 +953,7 @@ export class CharacterDetailPageComponent {
     });
 
     readonly noteContext = computed(() => {
-        const notes = this.character()?.notes ?? '';
+        const notes = this.parsedNotes().cleanedNotes;
 
         const alignment = this.extractNoteValue(notes, /(^|\n)Alignment direction:\s*(.+?)(?=\n|$)/i);
         const lifestyle = this.extractNoteValue(notes, /(^|\n)Lifestyle direction:\s*(.+?)(?=\n|$)/i);
@@ -910,9 +1068,160 @@ export class CharacterDetailPageComponent {
         }
 
         const abilityKey = this.skillAbilityMap[skill];
-        const abilityMod = this.getAbilityModifier(char.abilityScores?.[abilityKey] ?? 10);
-        const profBonus = char.skills?.[skill] ? char.proficiencyBonus : 0;
+        const abilityMod = this.getAbilityModifier(this.effectiveAbilityScores()?.[abilityKey] ?? 10);
+        const profBonus = this.isSkillProficient(skill, char.skills)
+            ? char.proficiencyBonus
+            : 0;
         return 10 + abilityMod + profBonus;
+    }
+
+    private isSkillProficient(skillKey: string, fallbackSkills?: SkillProficiencies): boolean {
+        if (this.persistedSkillProficiencies().has(skillKey)) {
+            return true;
+        }
+
+        return Boolean(fallbackSkills?.[skillKey as keyof SkillProficiencies]);
+    }
+
+    private parseSkillTokens(raw: string): string[] {
+        const text = raw?.trim();
+        if (!text) {
+            return [];
+        }
+
+        const tokens = text
+            .split(/[,;/|]/g)
+            .map((segment) => segment.trim())
+            .filter((segment) => segment.length > 0);
+
+        const normalized = tokens
+            .map((token) => this.skillLabelToKey(token))
+            .filter((token): token is string => Boolean(token));
+
+        return [...new Set(normalized)];
+    }
+
+    private skillLabelToKey(label: string): string | null {
+        const normalized = label.trim().toLowerCase();
+        const map: Record<string, string> = {
+            'acrobatics': 'acrobatics',
+            'animal handling': 'animalHandling',
+            'arcana': 'arcana',
+            'athletics': 'athletics',
+            'deception': 'deception',
+            'history': 'history',
+            'insight': 'insight',
+            'intimidation': 'intimidation',
+            'investigation': 'investigation',
+            'medicine': 'medicine',
+            'nature': 'nature',
+            'perception': 'perception',
+            'performance': 'performance',
+            'persuasion': 'persuasion',
+            'sleight of hand': 'sleightOfHand',
+            'stealth': 'stealth',
+            'survival': 'survival'
+        };
+
+        return map[normalized] ?? null;
+    }
+
+    private getPersistedAbilityScores(state: PersistedBuilderState | null): {
+        strength: number;
+        dexterity: number;
+        constitution: number;
+        intelligence: number;
+        wisdom: number;
+        charisma: number;
+    } | null {
+        if (!state) {
+            return null;
+        }
+
+        const base = state.abilityBaseScores ?? {};
+        const overrides = state.abilityOverrideScores ?? {};
+
+        const fromKey = (key: AbilityKey): number | null => {
+            const titleKey = this.toTitleCaseAbilityKey(key);
+            const override = overrides[titleKey];
+            if (typeof override === 'number' && Number.isFinite(override)) {
+                return Math.trunc(override);
+            }
+
+            const baseValue = base[titleKey];
+            if (typeof baseValue === 'number' && Number.isFinite(baseValue)) {
+                return Math.trunc(baseValue);
+            }
+
+            return null;
+        };
+
+        const strength = fromKey('strength');
+        const dexterity = fromKey('dexterity');
+        const constitution = fromKey('constitution');
+        const intelligence = fromKey('intelligence');
+        const wisdom = fromKey('wisdom');
+        const charisma = fromKey('charisma');
+
+        if (
+            strength == null
+            || dexterity == null
+            || constitution == null
+            || intelligence == null
+            || wisdom == null
+            || charisma == null
+        ) {
+            return null;
+        }
+
+        const scores = {
+            strength,
+            dexterity,
+            constitution,
+            intelligence,
+            wisdom,
+            charisma
+        };
+
+        const mode = state.bgAbilityMode?.trim();
+        if (mode === 'plus-two-plus-one') {
+            const plusTwo = this.parseAbilityKey(state.bgAbilityScoreFor2);
+            const plusOne = this.parseAbilityKey(state.bgAbilityScoreFor1);
+
+            if (plusTwo) {
+                scores[plusTwo] = Math.min(20, scores[plusTwo] + 2);
+            }
+
+            if (plusOne) {
+                scores[plusOne] = Math.min(20, scores[plusOne] + 1);
+            }
+        }
+
+        return scores;
+    }
+
+    private parseAbilityKey(value: string | undefined): AbilityKey | null {
+        const normalized = (value ?? '').trim().toLowerCase();
+        switch (normalized) {
+            case 'strength':
+                return 'strength';
+            case 'dexterity':
+                return 'dexterity';
+            case 'constitution':
+                return 'constitution';
+            case 'intelligence':
+                return 'intelligence';
+            case 'wisdom':
+                return 'wisdom';
+            case 'charisma':
+                return 'charisma';
+            default:
+                return null;
+        }
+    }
+
+    private toTitleCaseAbilityKey(key: AbilityKey): string {
+        return `${key.charAt(0).toUpperCase()}${key.slice(1)}`;
     }
 
     private getXpForLevel(level: number): number {
@@ -973,6 +1282,33 @@ export class CharacterDetailPageComponent {
         const cappedLevel = Math.min(Math.max(level, 1), 20);
         const effectiveLevel = casterType === 'half' ? Math.max(1, Math.floor(cappedLevel / 2)) : cappedLevel;
         return fullCasterSlots[effectiveLevel - 1] ?? [];
+    }
+
+    private parsePersistedNotes(notes: string): { cleanedNotes: string; state: PersistedBuilderState | null } {
+        const raw = notes?.trim() ?? '';
+        if (!raw) {
+            return { cleanedNotes: '', state: null };
+        }
+
+        const start = raw.indexOf(this.builderStateStartTag);
+        const end = raw.indexOf(this.builderStateEndTag);
+
+        if (start === -1 || end === -1 || end < start) {
+            return { cleanedNotes: raw, state: null };
+        }
+
+        const jsonStart = start + this.builderStateStartTag.length;
+        const jsonText = raw.slice(jsonStart, end).trim();
+        const before = raw.slice(0, start).trimEnd();
+        const after = raw.slice(end + this.builderStateEndTag.length).trimStart();
+        const cleanedNotes = [before, after].filter((part) => part.length > 0).join('\n\n').trim();
+
+        try {
+            const parsed = JSON.parse(jsonText) as PersistedBuilderState;
+            return { cleanedNotes, state: parsed };
+        } catch {
+            return { cleanedNotes: raw, state: null };
+        }
     }
 
     private extractNoteValue(notes: string, pattern: RegExp): string {

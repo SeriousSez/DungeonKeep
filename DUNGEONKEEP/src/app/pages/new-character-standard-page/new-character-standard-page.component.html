@@ -123,6 +123,76 @@
                                 </app-dropdown>
                                 }
                             </div>
+
+                            @if (getSelectedAbilityScoreImprovementFeatClassification(className, feature); as featClassification) {
+                            <p class="choice-meta choice-meta--feat-classification">{{ featClassification }}</p>
+                            }
+
+                            @if (getSelectedAbilityScoreImprovementFeatIntro(className, feature); as featIntro) {
+                            <p class="choice-meta">{{ featIntro }}</p>
+                            }
+
+                            @if (getSelectedAbilityScoreImprovementFeatBenefits(className, feature).length > 0) {
+                            <div class="choice-benefits">
+                                @for (benefit of getSelectedAbilityScoreImprovementFeatBenefits(className, feature); track benefit.title) {
+                                <p class="choice-meta"><strong>{{ benefit.title }}.</strong> {{ benefit.description }}</p>
+                                }
+                            </div>
+                            } @else if (getSelectedAbilityScoreImprovementFeatDescription(className, feature); as selectedFeatDescription) {
+                            <p class="choice-meta">{{ selectedFeatDescription }}</p>
+                            }
+
+                            @if (shouldShowAbilityScoreImprovementPickers(className, feature)) {
+                            <div class="choice-select-group">
+                                <app-dropdown [id]="getFeatureChoiceDropdownId(className, feature, 100)" [value]="getAbilityScoreImprovementMode(className, feature)" [options]="getAbilityScoreImprovementModeOptions()" [placeholder]="'- Choose Improvement Type -'" size="wide"
+                                    (changed)="onAbilityScoreImprovementModeChanged(className, feature, $event)">
+                                </app-dropdown>
+
+                                @if (shouldShowAbilityScoreImprovementPrimary(className, feature)) {
+                                <app-dropdown [id]="getFeatureChoiceDropdownId(className, feature, 101)" [value]="getAbilityScoreImprovementPrimaryValue(className, feature)" [options]="getAbilityScoreImprovementAbilityOptions(className, feature, 'primary')"
+                                    [placeholder]="'- Choose an Ability Score -'" size="wide" (changed)="onAbilityScoreImprovementPrimaryChanged(className, feature, $event)">
+                                </app-dropdown>
+                                }
+
+                                @if (shouldShowAbilityScoreImprovementSecondary(className, feature)) {
+                                <app-dropdown [id]="getFeatureChoiceDropdownId(className, feature, 102)" [value]="getAbilityScoreImprovementSecondaryValue(className, feature)" [options]="getAbilityScoreImprovementAbilityOptions(className, feature, 'secondary')"
+                                    [placeholder]="'- Choose an Ability Score -'" size="wide" (changed)="onAbilityScoreImprovementSecondaryChanged(className, feature, $event)">
+                                </app-dropdown>
+                                }
+                            </div>
+                            }
+
+                            @if (shouldShowFeatAbilityIncreasePicker(className, feature)) {
+                            <div class="choice-select-group">
+                                <app-dropdown [id]="getFeatureChoiceDropdownId(className, feature, 110)" [value]="getFeatAbilityIncreaseValue(className, feature)" [options]="getFeatAbilityIncreaseOptions(className, feature)" [placeholder]="getFeatAbilityIncreasePlaceholder(className, feature)" size="wide"
+                                    (changed)="onFeatAbilityIncreaseChanged(className, feature, $event)">
+                                </app-dropdown>
+                            </div>
+                            }
+
+                            @if (shouldShowMagicInitiatePicker(className, feature)) {
+                            <div class="choice-select-group">
+                                <app-dropdown [id]="getFeatureChoiceDropdownId(className, feature, 120)" [value]="getMagicInitiateAbilityValue(className, feature)" [options]="getMagicInitiateAbilityOptions()" [placeholder]="'- Choose a Spellcasting Ability -'" size="wide"
+                                    (changed)="onMagicInitiateAbilityForFeatChanged(className, feature, $event)">
+                                </app-dropdown>
+                            </div>
+                            }
+
+                            @if (shouldShowSkilledPickers(className, feature)) {
+                            <div class="choice-select-group">
+                                <app-dropdown [id]="getFeatureChoiceDropdownId(className, feature, 130)" [value]="getSkilledValue(className, feature, 0)" [options]="getSkilledOptions(className, feature, 0)" [placeholder]="'- Choose Skill or Tool 1 -'" size="wide" [searchable]="true"
+                                    (changed)="onSkilledSelectionChanged(className, feature, 0, $event)">
+                                </app-dropdown>
+
+                                <app-dropdown [id]="getFeatureChoiceDropdownId(className, feature, 131)" [value]="getSkilledValue(className, feature, 1)" [options]="getSkilledOptions(className, feature, 1)" [placeholder]="'- Choose Skill or Tool 2 -'" size="wide" [searchable]="true"
+                                    (changed)="onSkilledSelectionChanged(className, feature, 1, $event)">
+                                </app-dropdown>
+
+                                <app-dropdown [id]="getFeatureChoiceDropdownId(className, feature, 132)" [value]="getSkilledValue(className, feature, 2)" [options]="getSkilledOptions(className, feature, 2)" [placeholder]="'- Choose Skill or Tool 3 -'" size="wide" [searchable]="true"
+                                    (changed)="onSkilledSelectionChanged(className, feature, 2, $event)">
+                                </app-dropdown>
+                            </div>
+                            }
                         </div>
                         }
                     </details>
@@ -434,30 +504,30 @@
         </section>
         }
 
-        <div class="accordion-list">
-            <details open>
+        <div class="accordion-list" [class.accordion-list--faith-overlay]="faithDropdownOpen()">
+            <details open [class.details--faith-overlay]="faithDropdownOpen()">
                 <summary>Character Details</summary>
                 <div class="form-grid">
                     <label>Alignment
                         <app-dropdown [value]="selectedAlignment()" [options]="alignmentOptions" [searchable]="true" [placeholder]="'-- Choose an Option --'" size="wide" (changed)="selectedAlignment.set($any($event))"></app-dropdown>
+                        @if (selectedAlignmentDescription(); as alignmentDescription) {
+                        <p class="field-description">{{ alignmentDescription }}</p>
+                        }
                     </label>
                     <label>Faith
                         <div class="faith-combobox">
-                            <input type="text" [value]="selectedFaith()" (input)="onFaithChanged($any($event.target).value)" (blur)="onFaithBlur()" placeholder="Deity or custom faith…" autocomplete="off" />
-                            @if (faithDropdownOpen() && faithSuggestions().length > 0) {
-                            <ul class="deity-suggestions" role="listbox">
-                                @for (deity of faithSuggestions(); track deity.name) {
-                                <li role="option" (mousedown)="selectDeity(deity.name)">
-                                    <span class="deity-name">{{ deity.name }}</span>
-                                    <span class="deity-domain">{{ deity.domain }}</span>
-                                </li>
-                                }
-                            </ul>
-                            }
+                            <input #faithInput type="text" [value]="selectedFaith()" (input)="onFaithChanged($any($event.target).value, faithInput)" (blur)="onFaithBlur()" placeholder="Deity or custom faith…" autocomplete="off" />
+                            <button type="button" class="faith-show-all" (click)="openDeityPicker()">Show all deities</button>
                         </div>
+                        @if (selectedFaithDescription(); as faithDescription) {
+                        <p class="field-description">{{ faithDescription }}</p>
+                        }
                     </label>
                     <label>Lifestyle
                         <app-dropdown [value]="selectedLifestyle()" [options]="lifestyleOptions" [searchable]="true" [placeholder]="'-- Choose an Option --'" size="wide" (changed)="selectedLifestyle.set($any($event))"></app-dropdown>
+                        @if (selectedLifestyleDescription(); as lifestyleDescription) {
+                        <p class="field-description">{{ lifestyleDescription }}</p>
+                        }
                     </label>
                 </div>
             </details>
@@ -1003,7 +1073,22 @@
     <app-characteristics-modal [characteristicType]="activeCharacteristicModal()!" [selectedValues]="getActiveCharacteristicValues()" (onClose)="closeCharacteristicModal()" (onSubmit)="onCharacteristicSubmit($event)"></app-characteristics-modal>
     }
 
+    @if (faithDropdownOpen() && faithSuggestions().length > 0) {
+    <ul class="deity-suggestions deity-suggestions--floating" [class.deity-suggestions--up]="faithOpensUpward()" [ngStyle]="faithSuggestionsStyle()" role="listbox">
+        @for (deity of faithSuggestions(); track deity.name) {
+        <li role="option" (mousedown)="selectDeity(deity.name)">
+            <span class="deity-name">{{ deity.name }}</span>
+            <span class="deity-domain">{{ deity.domain }}</span>
+        </li>
+        }
+    </ul>
+    }
+
     @if (activeInfoModal(); as modal) {
     <app-new-character-info-modal [modal]="modal" (closed)="closeInfoModal()" (confirmed)="onInfoModalConfirmed($event)"></app-new-character-info-modal>
+    }
+
+    @if (deityPickerOpen()) {
+    <app-deity-picker-modal [deities]="allDeities" [currentFaith]="selectedFaith()" (closed)="closeDeityPicker()" (confirmed)="onDeityConfirmed($event)"></app-deity-picker-modal>
     }
 </main>

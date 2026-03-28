@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, computed, ElementRef, inject, input, output, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, ElementRef, effect, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 export interface DropdownOption {
@@ -13,7 +13,8 @@ export interface DropdownOption {
     standalone: true,
     imports: [CommonModule],
     host: {
-        '(document:click)': 'onDocumentClick($event)'
+        '(document:click)': 'onDocumentClick($event)',
+        '[class.app-dropdown-host--open]': 'isOpen()'
     },
     templateUrl: './dropdown.component.html',
     styleUrl: './dropdown.component.scss',
@@ -21,6 +22,8 @@ export interface DropdownOption {
 })
 export class DropdownComponent {
     private readonly hostElement = inject(ElementRef<HTMLElement>);
+    private readonly defaultPanelMaxHeight = 300;
+    private suppressOutsideCloseUntil = 0;
 
     readonly id = input<string>('');
     readonly ariaLabel = input<string>('');
@@ -35,7 +38,9 @@ export class DropdownComponent {
     readonly changed = output<string | number>();
 
     readonly isOpen = signal(false);
+    readonly opensUpward = signal(false);
     readonly searchTerm = signal('');
+    readonly panelMaxHeight = signal(this.defaultPanelMaxHeight);
 
     readonly filteredOptions = computed(() => {
         const query = this.searchTerm().trim().toLowerCase();
@@ -75,6 +80,60 @@ export class DropdownComponent {
         return Array.from(groupedMap.entries()).map(([label, options]) => ({ label, options }));
     });
 
+    constructor() {
+        effect((onCleanup) => {
+            if (!this.isOpen()) {
+                this.opensUpward.set(false);
+                this.panelMaxHeight.set(this.defaultPanelMaxHeight);
+                return;
+            }
+
+            const view = globalThis.window;
+            if (!view) {
+                return;
+            }
+
+            const updatePanelPosition = () => {
+                const trigger = this.hostElement.nativeElement.querySelector('.app-dropdown-trigger');
+                const panel = this.hostElement.nativeElement.querySelector('.app-dropdown-panel');
+
+                if (!(trigger instanceof HTMLElement) || !(panel instanceof HTMLElement)) {
+                    return;
+                }
+
+                const viewportPadding = 12;
+                const panelGap = 6;
+                const triggerRect = trigger.getBoundingClientRect();
+                const desiredPanelHeight = panel.offsetHeight || panel.scrollHeight || this.defaultPanelMaxHeight;
+                const availableBelow = Math.max(0, view.innerHeight - triggerRect.bottom - viewportPadding - panelGap);
+                const availableAbove = Math.max(0, triggerRect.top - viewportPadding - panelGap);
+                const shouldOpenUpward = desiredPanelHeight > availableBelow && availableAbove > availableBelow;
+                const availableSpace = shouldOpenUpward ? availableAbove : availableBelow;
+
+                this.opensUpward.set(shouldOpenUpward);
+                this.panelMaxHeight.set(Math.max(160, Math.min(this.defaultPanelMaxHeight, availableSpace)));
+            };
+
+            const frameId = view.requestAnimationFrame(() => {
+                updatePanelPosition();
+                view.requestAnimationFrame(updatePanelPosition);
+            });
+
+            view.addEventListener('resize', updatePanelPosition);
+            globalThis.document.addEventListener('scroll', updatePanelPosition, true);
+
+            onCleanup(() => {
+                view.cancelAnimationFrame(frameId);
+                view.removeEventListener('resize', updatePanelPosition);
+                globalThis.document.removeEventListener('scroll', updatePanelPosition, true);
+            });
+        });
+    }
+
+    getOptionsMaxHeight(): number {
+        return Math.max(120, this.panelMaxHeight() - (this.searchable() ? 50 : 0));
+    }
+
     onValueChange(newValue: string | number): void {
         this.changed.emit(newValue);
     }
@@ -84,7 +143,14 @@ export class DropdownComponent {
             return;
         }
 
-        this.isOpen.update((open) => !open);
+        this.isOpen.update((open) => {
+            const nextOpen = !open;
+            if (nextOpen) {
+                this.suppressOutsideCloseUntil = Date.now() + 150;
+            }
+
+            return nextOpen;
+        });
     }
 
     onSearchInput(value: string): void {
@@ -103,6 +169,10 @@ export class DropdownComponent {
 
     onDocumentClick(event: MouseEvent): void {
         if (!this.isOpen()) {
+            return;
+        }
+
+        if (Date.now() < this.suppressOutsideCloseUntil) {
             return;
         }
 

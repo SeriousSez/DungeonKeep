@@ -8,6 +8,8 @@ import { SessionService } from './session.service';
 @Injectable({ providedIn: 'root' })
 export class DungeonStoreService {
     private static readonly UNASSIGNED_CAMPAIGN_ID = '00000000-0000-0000-0000-000000000000';
+    private static readonly BUILDER_STATE_START_TAG = '[DK_BUILDER_STATE_START]';
+    private static readonly BUILDER_STATE_END_TAG = '[DK_BUILDER_STATE_END]';
 
     readonly title = signal('DungeonKeep');
     readonly campaigns = signal<Campaign[]>([]);
@@ -187,7 +189,7 @@ export class DungeonStoreService {
             this.characters.update((characters) =>
                 characters.map((character) =>
                     character.id === characterId
-                        ? { ...character, notes: updated.backstory || updated.notes }
+                        ? { ...character, notes: this.resolveCharacterNotes(updated, character.notes) }
                         : character
                 )
             );
@@ -353,7 +355,7 @@ export class DungeonStoreService {
             role: draft?.role ?? 'Striker',
             status: character.status,
             background: character.background,
-            notes: character.backstory || character.notes,
+            notes: this.resolveCharacterNotes(character, draft?.notes),
             abilityScores,
             skills: draft?.skills ?? this.getDefaultSkillsByClass(character.className),
             armorClass,
@@ -362,6 +364,56 @@ export class DungeonStoreService {
             proficiencyBonus,
             traits: race?.traits ?? []
         };
+    }
+
+    private resolveCharacterNotes(character: ApiCharacterDto, previousNotes?: string): string {
+        const notes = character.notes?.trim() ?? '';
+        const backstory = character.backstory?.trim() ?? '';
+
+        if (this.hasBuilderStateBlock(notes)) {
+            return notes;
+        }
+
+        if (this.hasBuilderStateBlock(backstory)) {
+            return backstory;
+        }
+
+        if (notes) {
+            return notes;
+        }
+
+        if (backstory) {
+            if (previousNotes && this.hasBuilderStateBlock(previousNotes)) {
+                return this.mergeVisibleNotesWithBuilderState(previousNotes, backstory);
+            }
+
+            return backstory;
+        }
+
+        return previousNotes?.trim() || 'No field notes yet.';
+    }
+
+    private hasBuilderStateBlock(text: string): boolean {
+        return text.includes(DungeonStoreService.BUILDER_STATE_START_TAG)
+            && text.includes(DungeonStoreService.BUILDER_STATE_END_TAG);
+    }
+
+    private mergeVisibleNotesWithBuilderState(previousNotes: string, visibleNotes: string): string {
+        const start = previousNotes.indexOf(DungeonStoreService.BUILDER_STATE_START_TAG);
+        const end = previousNotes.indexOf(DungeonStoreService.BUILDER_STATE_END_TAG);
+
+        if (start === -1 || end === -1 || end < start) {
+            return visibleNotes;
+        }
+
+        const metadataTail = previousNotes.slice(start).trim();
+        const cleanedVisibleNotes = visibleNotes.trim();
+
+        if (!cleanedVisibleNotes) {
+            return metadataTail;
+        }
+
+        return `${cleanedVisibleNotes}\n\n${metadataTail}`;
     }
 
     private getDefaultAbilitiesByClass(className: string): AbilityScores {

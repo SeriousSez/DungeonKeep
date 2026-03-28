@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, inject, effect, ElementRef, computed } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
+import { CommonModule, DOCUMENT } from '@angular/common';
 
 export interface MultiSelectOptionGroup {
     label: string;
@@ -9,6 +9,10 @@ export interface MultiSelectOptionGroup {
 @Component({
     selector: 'app-multi-select-dropdown',
     standalone: true,
+    imports: [CommonModule],
+    host: {
+        '[class.msd-host--open]': 'isOpen()'
+    },
     templateUrl: './multi-select-dropdown.component.html',
     styleUrl: './multi-select-dropdown.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -17,6 +21,7 @@ export class MultiSelectDropdownComponent {
     private readonly document = inject(DOCUMENT);
     private readonly el = inject<ElementRef<HTMLElement>>(ElementRef);
     private readonly defaultPanelMaxHeight = 300;
+    private suppressOutsideCloseUntil = 0;
 
     readonly groups = input.required<ReadonlyArray<MultiSelectOptionGroup>>();
     readonly value = input<string[]>([]);
@@ -63,6 +68,10 @@ export class MultiSelectDropdownComponent {
 
             const view = this.document.defaultView;
             const close = (event: MouseEvent) => {
+                if (Date.now() < this.suppressOutsideCloseUntil) {
+                    return;
+                }
+
                 const target = event.target;
                 if (target instanceof Node && !this.el.nativeElement.contains(target)) {
                     this.isOpen.set(false);
@@ -78,15 +87,17 @@ export class MultiSelectDropdownComponent {
                 }
 
                 const viewportPadding = 12;
+                const panelGap = 6;
                 const triggerRect = trigger.getBoundingClientRect();
                 const desiredPanelHeight = Math.min(panel.scrollHeight, this.defaultPanelMaxHeight);
-                const availableBelow = Math.max(0, view.innerHeight - triggerRect.bottom - viewportPadding);
-                const availableAbove = Math.max(0, triggerRect.top - viewportPadding);
+                const availableBelow = Math.max(0, view.innerHeight - triggerRect.bottom - viewportPadding - panelGap);
+                const availableAbove = Math.max(0, triggerRect.top - viewportPadding - panelGap);
                 const shouldOpenUpward = desiredPanelHeight > availableBelow && availableAbove > availableBelow;
                 const availableSpace = shouldOpenUpward ? availableAbove : availableBelow;
+                const panelMaxHeight = Math.max(120, Math.min(this.defaultPanelMaxHeight, availableSpace));
 
                 this.opensUpward.set(shouldOpenUpward);
-                this.panelMaxHeight.set(Math.max(0, Math.min(this.defaultPanelMaxHeight, availableSpace)));
+                this.panelMaxHeight.set(panelMaxHeight);
             };
 
             const frameId = view?.requestAnimationFrame(updatePanelPosition) ?? 0;
@@ -127,7 +138,14 @@ export class MultiSelectDropdownComponent {
     }
 
     toggleOpen(): void {
-        this.isOpen.update((open) => !open);
+        this.isOpen.update((open) => {
+            const nextOpen = !open;
+            if (nextOpen) {
+                this.suppressOutsideCloseUntil = Date.now() + 150;
+            }
+
+            return nextOpen;
+        });
     }
 
     onToggle(option: string, checked: boolean): void {

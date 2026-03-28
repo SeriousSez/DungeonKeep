@@ -1,0 +1,88 @@
+<div class="deity-modal-overlay" (click)="close()">
+    <div class="deity-modal" (click)="$event.stopPropagation()">
+        <header class="deity-modal-header">
+            <h2>Choose a Deity</h2>
+            <button type="button" class="deity-close-btn" (click)="close()" aria-label="Close deity picker">
+                <i class="fa-duotone fa-thin fa-xmark"></i>
+            </button>
+        </header>
+
+        <div class="deity-modal-body">
+            <label class="deity-search-label">
+                Search Deities
+                <input type="text" class="deity-search-input" [value]="searchTerm()" (input)="onSearchChanged($any($event.target).value)" placeholder="Tyr, Mystra, Moradin..." />
+            </label>
+
+            <div class="deity-list" role="listbox" aria-label="Available deities">
+                @for (deity of filteredDeities(); track deity.name) {
+                <article class="deity-card" [class.deity-card--selected]="isSelected(deity.name)">
+                    <button type="button" class="deity-card-toggle" [attr.aria-expanded]="isExpanded(deity.name)" (click)="toggleDeityDetails(deity.name)">
+                        <div class="deity-card-title">
+                            <strong>{{ deity.name }}</strong>
+                            <span>{{ deity.pantheon }}</span>
+                        </div>
+                        <span class="deity-card-chevron">{{ isExpanded(deity.name) ? '▾' : '▸' }}</span>
+                    </button>
+
+                    @if (isExpanded(deity.name)) {
+                    <div class="deity-card-details">
+                        <p class="deity-summary">{{ getDeitySummary(deity) }}</p>
+
+                        @if (deity.titles?.length) {
+                        <div class="deity-detail-block">
+                            <p class="deity-detail-label">Titles</p>
+                            <p>{{ deity.titles?.join(', ') }}</p>
+                        </div>
+                        }
+
+                        <div class="deity-detail-grid">
+                            @for (entry of getMetadataEntries(deity); track entry.label) {
+                            <div class="deity-detail-item">
+                                <p class="deity-detail-label">{{ entry.label }}</p>
+                                <p>{{ entry.value }}</p>
+                            </div>
+                            }
+                        </div>
+
+                        <div class="deity-portfolio-tags">
+                            @for (tag of getPortfolioTags(deity.domain); track tag) {
+                            <span class="deity-portfolio-tag">{{ tag }}</span>
+                            }
+                        </div>
+
+                        <div class="deity-detail-block">
+                            <p class="deity-detail-label">Doctrine</p>
+                            <p>{{ getDeityDoctrine(deity) }}</p>
+                        </div>
+
+                        <div class="deity-detail-block">
+                            <p class="deity-detail-label">Allies and Enmities</p>
+                            <p>{{ getDeityRelationships(deity) }}</p>
+                        </div>
+
+                        <div class="deity-lore-links">
+                            <a class="deity-lore-link" [href]="getPrimaryLoreUrl(deity)" target="_blank" rel="noopener noreferrer">Open {{ getPrimaryLoreLabel(deity) }}</a>
+
+                            @if (hasSecondarySource(deity)) {
+                            <a class="deity-lore-link deity-lore-link--secondary" [href]="deity.alternateSourceUrl" target="_blank" rel="noopener noreferrer">Open {{ deity.alternateSourceLabel }}</a>
+                            }
+                        </div>
+
+                        <p class="deity-lore-note">Expanded details come from campaign-setting lore sources when available and fall back to the D&D Lore Wiki for broader entries.</p>
+                    </div>
+                    }
+                </article>
+                }
+
+                @if (filteredDeities().length === 0) {
+                <p class="deity-empty">No deities match your search.</p>
+                }
+            </div>
+        </div>
+
+        <footer class="deity-modal-actions">
+            <button type="button" class="ghost-button" (click)="close()">Cancel</button>
+            <button type="button" class="primary-button" [disabled]="!selectedDeityName().trim()" (click)="confirmSelection()">Confirm Selection</button>
+        </footer>
+    </div>
+</div>
