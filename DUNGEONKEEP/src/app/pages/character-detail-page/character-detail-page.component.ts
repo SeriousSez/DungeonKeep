@@ -1,11 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { marked } from 'marked';
 
 import { DropdownComponent, type DropdownOption } from '../../components/dropdown/dropdown.component';
+import { classLevelOneFeatures } from '../../data/class-features.data';
 import { classSpellCatalog } from '../../data/class-spells.data';
 import { races } from '../../data/races';
+import { equipmentCatalog } from '../../data/new-character-standard-page.data';
 import { spellDetailsMap } from '../../data/spell-details.data';
 import type { SkillProficiencies } from '../../models/dungeon.models';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
@@ -25,6 +27,8 @@ interface PersistedInventoryEntry {
     category: string;
     quantity: number;
     weight?: number;
+    costGp?: number;
+    notes?: string;
     isContainer?: boolean;
     containedItems?: PersistedInventoryEntry[];
     maxCapacity?: number;
@@ -96,6 +100,48 @@ export class CharacterDetailPageComponent {
     private readonly cdr = inject(ChangeDetectorRef);
     private readonly builderStateStartTag = '[DK_BUILDER_STATE_START]';
     private readonly builderStateEndTag = '[DK_BUILDER_STATE_END]';
+    private readonly catalogLookup = new Map(equipmentCatalog.map((item) => [item.name.toLowerCase(), item]));
+
+    private readonly weaponDamageMap: Record<string, string> = {
+        'club': '1d4 Bludgeoning',
+        'dagger': '1d4 Piercing',
+        'greatclub': '1d8 Bludgeoning',
+        'handaxe': '1d6 Slashing',
+        'javelin': '1d6 Piercing',
+        'light hammer': '1d4 Bludgeoning',
+        'mace': '1d6 Bludgeoning',
+        'quarterstaff': '1d6 Bludgeoning',
+        'sickle': '1d4 Slashing',
+        'spear': '1d6 Piercing',
+        'crossbow, light': '1d8 Piercing',
+        'shortbow': '1d6 Piercing',
+        'longbow': '1d8 Piercing',
+        'longsword': '1d8 Slashing',
+        'greatsword': '2d6 Slashing',
+        'greataxe': '1d12 Slashing',
+        'warhammer': '1d8 Bludgeoning',
+        'rapier': '1d8 Piercing',
+        'scimitar': '1d6 Slashing',
+        'battleaxe': '1d8 Slashing',
+        'flail': '1d8 Bludgeoning',
+        'glaive': '1d10 Slashing',
+        'halberd': '1d10 Slashing',
+        'lance': '1d10 Piercing',
+        'maul': '2d6 Bludgeoning',
+        'morningstar': '1d8 Piercing',
+        'pike': '1d10 Piercing',
+        'shortsword': '1d6 Piercing',
+        'trident': '1d8 Piercing',
+        'war pick': '1d8 Piercing',
+        'whip': '1d4 Slashing',
+        'crossbow, hand': '1d6 Piercing',
+        'crossbow, heavy': '1d10 Piercing',
+        'pistol': '3d4 Piercing',
+        'musket': '5d4 Piercing',
+        'blunderbuss': '3d8 Piercing',
+        'pepperbox': '4d10 Piercing'
+    };
+
     private readonly containerItemNames = new Set([
         'backpack',
         'bag of holding',
@@ -217,6 +263,7 @@ export class CharacterDetailPageComponent {
     readonly activeActionFilter = signal<ActionFilter>('all');
     readonly activeBackgroundFilter = signal<BackgroundFilter>('all');
     readonly activeInventoryFilter = signal<InventoryFilter>('all');
+    readonly inventorySearchTerm = signal('');
     readonly activeFeaturesFilter = signal<FeaturesFilter>('all');
     readonly activeNotesFilter = signal<NotesFilter>('all');
     readonly selectedCampaignAssignment = signal('');
@@ -227,6 +274,20 @@ export class CharacterDetailPageComponent {
 
     private lastCharacterId: string | null = null;
     private saveSpellSlotTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    constructor() {
+        // Seed usedSpellSlotsByLevel from persisted state whenever the character
+        // or their saved data changes (e.g. on first load or navigation).
+        effect(() => {
+            const initial = this.initialSpellSlots();
+            const char = this.character();
+            if (!char) return;
+            if (this.lastCharacterId !== char.id) {
+                this.lastCharacterId = char.id;
+                this.usedSpellSlotsByLevel.set({ ...initial });
+            }
+        });
+    }
 
 
     readonly combatTabs: Array<{ key: CombatTab; label: string }> = [
@@ -276,8 +337,7 @@ export class CharacterDetailPageComponent {
 
         const filters: Array<{ key: InventoryFilter; label: string }> = [
             { key: 'all', label: 'All' },
-            { key: 'equipment', label: 'Equipment' },
-            { key: 'other', label: 'Gear' }
+            { key: 'equipment', label: 'Equipment' }
         ];
 
         // Add dynamic container tabs
@@ -334,25 +394,35 @@ export class CharacterDetailPageComponent {
 
         return entries
             .filter((entry) => entry && typeof entry.name === 'string' && typeof entry.category === 'string')
-            .map((entry) => {
-                const name = entry.name.trim();
-                const category = entry.category.trim();
-                const quantity = Math.max(1, Math.trunc(Number(entry.quantity) || 1));
-                const containedItems = Array.isArray(entry.containedItems) ? entry.containedItems : [];
-                const isContainer = Boolean(entry.isContainer) || this.isContainerItemName(name) || containedItems.length > 0;
-
-                return {
-                    ...entry,
-                    name,
-                    category,
-                    quantity,
-                    isContainer,
-                    containedItems,
-                    maxCapacity: entry.maxCapacity ?? (isContainer ? this.getContainerCapacity(name) : undefined)
-                };
-            })
+            .map((entry) => this.normalizeInventoryEntry(entry))
             .filter((entry) => entry.name.length > 0 && entry.category.length > 0);
     });
+
+    private normalizeInventoryEntry(entry: PersistedInventoryEntry): PersistedInventoryEntry {
+        const name = entry.name.trim();
+        const category = entry.category.trim();
+        const quantity = Math.max(1, Math.trunc(Number(entry.quantity) || 1));
+        const containedItems = Array.isArray(entry.containedItems)
+            ? entry.containedItems
+                .filter((item) => item && typeof item.name === 'string' && typeof item.category === 'string')
+                .map((item) => this.normalizeInventoryEntry(item))
+            : [];
+        const isContainer = Boolean(entry.isContainer) || this.isContainerItemName(name) || containedItems.length > 0;
+        const catalogItem = this.catalogLookup.get(name.toLowerCase());
+
+        return {
+            ...entry,
+            name,
+            category,
+            quantity,
+            weight: typeof entry.weight === 'number' ? entry.weight : catalogItem?.weight,
+            costGp: typeof entry.costGp === 'number' ? entry.costGp : catalogItem?.costGp,
+            notes: entry.notes?.trim() || catalogItem?.notes || undefined,
+            isContainer,
+            containedItems,
+            maxCapacity: entry.maxCapacity ?? (isContainer ? this.getContainerCapacity(name) : undefined)
+        };
+    }
 
     readonly initialSpellSlots = computed(() => {
         const state = this.persistedBuilderState();
@@ -848,7 +918,10 @@ export class CharacterDetailPageComponent {
             .map((entry) => ({
                 name: entry.name,
                 category: entry.category,
-                quantity: entry.quantity
+                quantity: entry.quantity,
+                weight: entry.weight,
+                costGp: entry.costGp,
+                notes: entry.notes
             }));
 
         if (persistedEntries.length > 0) {
@@ -876,11 +949,13 @@ export class CharacterDetailPageComponent {
             const persistedCurrency = this.persistedBuilderState()?.currency;
             const currency = persistedCurrency
                 ? {
-                    gp: (Number(persistedCurrency.pp) || 0) * 10 + (Number(persistedCurrency.gp) || 0) + (Number(persistedCurrency.ep) || 0) * 0.5,
+                    pp: Number(persistedCurrency.pp) || 0,
+                    gp: Number(persistedCurrency.gp) || 0,
+                    ep: Number(persistedCurrency.ep) || 0,
                     sp: Number(persistedCurrency.sp) || 0,
                     cp: Number(persistedCurrency.cp) || 0
                 }
-                : { gp: 0, sp: 0, cp: 0 };
+                : { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 };
 
             const totalItemCount = persistedEntries.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -889,7 +964,8 @@ export class CharacterDetailPageComponent {
                 armor,
                 gear,
                 currency,
-                totalItemCount
+                totalItemCount,
+                items: persistedEntries
             };
         }
 
@@ -897,8 +973,9 @@ export class CharacterDetailPageComponent {
             weapons: [] as string[],
             armor: [] as string[],
             gear: [] as string[],
-            currency: { gp: 0, sp: 0, cp: 0 },
-            totalItemCount: 0
+            currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 },
+            totalItemCount: 0,
+            items: [] as Array<{ name: string; category: string; quantity: number; weight?: number; costGp?: number; notes?: string }>
         };
     });
 
@@ -909,13 +986,50 @@ export class CharacterDetailPageComponent {
             return { weight: '0 lb', itemCount: 0, partyWeight: '0 lb' };
         }
 
+        const totalWeight = this.normalizedInventoryEntries().reduce((sum, entry) => sum + this.getInventoryEntryWeight(entry), 0);
         const itemCount = bag.totalItemCount ?? (bag.weapons.length + bag.armor.length + bag.gear.length);
+        const weightLabel = totalWeight > 0
+            ? `${Number.isInteger(totalWeight) ? totalWeight : totalWeight.toFixed(1)} lb`
+            : '0 lb';
+
         return {
-            weight: itemCount > 0 ? `${itemCount} items` : 'Not tracked',
+            weight: weightLabel,
             itemCount,
             partyWeight: 'Not tracked'
         };
     });
+
+    readonly filteredInventoryItems = computed(() => {
+        const bag = this.inventory();
+        if (!bag) {
+            return [];
+        }
+
+        const term = this.inventorySearchTerm().trim().toLowerCase();
+        if (!term) {
+            return bag.items;
+        }
+
+        return bag.items.filter((item) => {
+            const haystack = [
+                item.name,
+                item.category,
+                item.notes ?? '',
+                item.costGp != null ? String(item.costGp) : '',
+                item.weight != null ? String(item.weight) : ''
+            ].join(' ').toLowerCase();
+            return haystack.includes(term);
+        });
+    });
+
+    private getInventoryEntryWeight(entry: PersistedInventoryEntry): number {
+        const ownWeight = (entry.weight ?? 0) * Math.max(1, entry.quantity || 1);
+        const containedWeight = (entry.containedItems ?? []).reduce(
+            (sum, contained) => sum + this.getInventoryEntryWeight(contained),
+            0
+        );
+        return ownWeight + containedWeight;
+    }
 
     readonly containersByName = computed(() => {
         const entries = this.normalizedInventoryEntries();
@@ -934,6 +1048,50 @@ export class CharacterDetailPageComponent {
         return grouped;
     });
 
+    readonly filteredContainersByName = computed<Array<{ entry: PersistedInventoryEntry; index: number }>>(() => {
+        const term = this.inventorySearchTerm().trim().toLowerCase();
+        if (!term) {
+            return this.containersByName();
+        }
+
+        const results: Array<{ entry: PersistedInventoryEntry; index: number }> = [];
+        for (const containerItem of this.containersByName()) {
+            const matchesContainer = [
+                containerItem.entry.name,
+                containerItem.entry.category,
+                containerItem.entry.notes ?? ''
+            ]
+                .join(' ')
+                .toLowerCase()
+                .includes(term);
+
+            const filteredContainedItems = (containerItem.entry.containedItems ?? []).filter((item) => {
+                const haystack = [
+                    item.name,
+                    item.category,
+                    item.notes ?? '',
+                    item.costGp != null ? String(item.costGp) : '',
+                    item.weight != null ? String(item.weight) : ''
+                ].join(' ').toLowerCase();
+                return haystack.includes(term);
+            });
+
+            if (!matchesContainer && filteredContainedItems.length === 0) {
+                continue;
+            }
+
+            results.push({
+                ...containerItem,
+                entry: {
+                    ...containerItem.entry,
+                    containedItems: filteredContainedItems
+                }
+            });
+        }
+
+        return results;
+    });
+
 
     readonly weaponCombatRows = computed<CombatRow[]>(() => {
         const char = this.character();
@@ -944,18 +1102,21 @@ export class CharacterDetailPageComponent {
 
         return bag.weapons.map((weaponLabel) => {
             const weaponName = weaponLabel.replace(/\s+x\d+$/i, '').trim();
+            const weaponKey = weaponName.toLowerCase();
             const isRanged = /bow|crossbow|sling|blowgun|pistol|musket|rifle|gun/i.test(weaponName);
             const useDexterity = /bow|crossbow|sling|dagger|rapier|shortsword/i.test(weaponName);
             const abilityKey: AbilityKey = useDexterity ? 'dexterity' : 'strength';
             const abilityMod = this.getAbilityModifier(this.effectiveAbilityScores()?.[abilityKey] ?? 10);
             const bonus = abilityMod + char.proficiencyBonus;
+            const damage = this.weaponDamageMap[weaponKey] ?? '—';
+            const catalogNotes = this.catalogLookup.get(weaponKey)?.notes ?? '—';
             return {
                 name: weaponName,
                 subtitle: isRanged ? 'Ranged Weapon' : 'Melee Weapon',
                 range: isRanged ? 'Ranged' : '5 ft.',
                 hitDcLabel: this.formatSigned(bonus),
-                damage: '—',
-                notes: '—',
+                damage,
+                notes: catalogNotes,
                 concentration: false,
                 ritual: false
             };
@@ -979,7 +1140,7 @@ export class CharacterDetailPageComponent {
                 subtitle: this.SPELL_LEVEL_LABELS[spell.level] ?? `Level ${spell.level}`,
                 range: spell.range,
                 hitDcLabel: spell.hitDcLabel,
-                damage: details?.damageEffect ?? '—',
+                damage: this.formatSpellDamage(details),
                 notes: details?.components ?? '—',
                 concentration: spell.concentration,
                 ritual: spell.ritual
@@ -1021,19 +1182,25 @@ export class CharacterDetailPageComponent {
     });
 
     readonly classFeatures = computed(() => {
+        const char = this.character();
         const state = this.persistedBuilderState();
-        if (!state) {
+        if (!char || !state) {
             return [];
         }
 
         const selections = state.classFeatureSelections ?? {};
+        const allLevels = classLevelOneFeatures[char.className] ?? [];
         const features: Array<{ name: string; description: string }> = [];
 
-        for (const selectedValues of Object.values(selections)) {
-            for (const value of selectedValues ?? []) {
-                const name = value.trim();
-                if (!name) continue;
-                features.push({ name, description: 'Selected during character creation.' });
+        for (const levelGroup of allLevels) {
+            if (levelGroup.level > char.level) continue;
+            for (const feature of levelGroup.features) {
+                const selectedValues = (selections[feature.name] ?? []).filter(Boolean);
+                let description = feature.description ?? '';
+                if (feature.choices && selectedValues.length > 0) {
+                    description = `${description}${description ? '\n' : ''}Chosen: ${selectedValues.join(', ')}`;
+                }
+                features.push({ name: feature.name, description });
             }
         }
 
@@ -1107,6 +1274,13 @@ export class CharacterDetailPageComponent {
             physical
         };
     });
+
+    private formatSpellDamage(details: { damageEffect?: string; description?: string } | undefined): string {
+        if (!details?.damageEffect) return '—';
+        const match = details.description?.match(/(\d+d\d+(?:\s*[+\-]\s*\d+)?)/);
+        const dice = match?.[1] ?? '';
+        return dice ? `${dice} ${details.damageEffect}` : details.damageEffect;
+    }
 
     getAbilityModifier(score: number): number {
         return Math.floor((score - 10) / 2);
@@ -1186,6 +1360,10 @@ export class CharacterDetailPageComponent {
 
     setInventoryFilter(filter: InventoryFilter): void {
         this.activeInventoryFilter.set(filter);
+    }
+
+    onInventorySearchChanged(value: string): void {
+        this.inventorySearchTerm.set(value);
     }
 
     toggleContainerExpanded(containerName: string): void {

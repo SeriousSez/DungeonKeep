@@ -426,12 +426,20 @@
                 } @else if (activeCombatTab() === 'inventory') {
                 <h3 class="subsection-title">Inventory</h3>
                 @if (inventory(); as bag) {
-                <div class="info-rows">
-                    <div class="info-row"><span class="label">My Inventory</span><span class="value">Weight Carried: {{ inventorySummary().weight }}</span></div>
-                    <div class="info-row"><span class="label">Party Inventory</span><span class="value">{{ inventorySummary().partyWeight }}</span></div>
+                <div class="inventory-header-row">
+                    <div class="info-rows">
+                        <div class="info-row"><span class="value">Weight Carried: {{ inventorySummary().weight }}</span></div>
+                    </div>
+                    <div class="currency-piece-strip">
+                        <div class="currency-piece"><i class="fa-duotone fa-thin fa-gem"></i><span>PP</span><strong>{{ bag.currency.pp }}</strong></div>
+                        <div class="currency-piece"><i class="fa-duotone fa-thin fa-coins"></i><span>GP</span><strong>{{ bag.currency.gp }}</strong></div>
+                        <div class="currency-piece"><i class="fa-duotone fa-thin fa-hourglass-half"></i><span>EP</span><strong>{{ bag.currency.ep }}</strong></div>
+                        <div class="currency-piece"><i class="fa-duotone fa-thin fa-circle"></i><span>SP</span><strong>{{ bag.currency.sp }}</strong></div>
+                        <div class="currency-piece"><i class="fa-duotone fa-thin fa-square"></i><span>CP</span><strong>{{ bag.currency.cp }}</strong></div>
+                    </div>
                 </div>
                 <div class="actions-meta-row">
-                    <span>Search Item Names, Types, Rarities, or Tags</span>
+                    <input class="inventory-search-input" type="search" placeholder="Search Item Names, Types, Rarities, or Tags" [value]="inventorySearchTerm()" (input)="onInventorySearchChanged($any($event.target).value)" />
                     <span class="manage-custom">Manage Inventory</span>
                 </div>
                 <div class="action-filter-row">
@@ -442,28 +450,36 @@
                     }
                 </div>
                 @if (activeInventoryFilter() === 'all' || activeInventoryFilter() === 'equipment') {
-                <div class="training-grid">
-                    <div class="training-block"><span class="label">Weapons</span>
-                        <p>{{ bag.weapons.length ? bag.weapons.join(', ') : 'Not recorded' }}</p>
-                    </div>
-                    <div class="training-block"><span class="label">Armor</span>
-                        <p>{{ bag.armor.length ? bag.armor.join(', ') : 'Not recorded' }}</p>
-                    </div>
-                </div>
-                }
-                @if (activeInventoryFilter() === 'all' || activeInventoryFilter() === 'other') {
-                <div class="training-grid">
-                    <div class="training-block"><span class="label">Gear</span>
-                        <p>{{ bag.gear.length ? bag.gear.join(', ') : 'Not recorded' }}</p>
-                    </div>
-                    <div class="training-block"><span class="label">Currency</span>
-                        <p>GP {{ bag.currency.gp }} · SP {{ bag.currency.sp }} · CP {{ bag.currency.cp }}</p>
-                    </div>
-                </div>
-                }
-                @if (containersByName().length > 0) {
+                @if (bag.items.length > 0) {
                 <div class="inventory-section">
-                    @for (containerItem of containersByName(); track containerItem.entry.name + containerItem.index) {
+                    <table class="inventory-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Weight</th>
+                                <th>QTY</th>
+                                <th>Cost (GP)</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (item of filteredInventoryItems(); track item.name + '_' + item.category) {
+                            <tr class="inventory-row">
+                                <td class="item-name">{{ item.name }}</td>
+                                <td class="item-weight">{{ item.weight != null ? (item.weight + ' lb') : '—' }}</td>
+                                <td class="item-quantity">{{ item.quantity }}</td>
+                                <td class="item-cost">{{ item.costGp != null ? item.costGp : '—' }}</td>
+                                <td class="item-notes">{{ item.notes || '—' }}</td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                }
+                }
+                @if (filteredContainersByName().length > 0) {
+                <div class="inventory-section">
+                    @for (containerItem of filteredContainersByName(); track containerItem.entry.name + containerItem.index) {
                     @if (activeInventoryFilter() === 'all' || activeInventoryFilter() === containerItem.entry.name) {
                     <div class="container-item">
                         <button type="button" class="container-header" [class.expanded]="isContainerExpanded(containerItem.entry.name + '_' + containerItem.index)" (click)="toggleContainerExpanded(containerItem.entry.name + '_' + containerItem.index)">
@@ -478,16 +494,23 @@
                         <div class="container-contents">
                             @if ((containerItem.entry.containedItems || []).length > 0) {
                             <table class="inventory-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Weight</th>
+                                        <th>QTY</th>
+                                        <th>Cost (GP)</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
                                     @for (item of containerItem.entry.containedItems || []; track item.name) {
                                     <tr class="inventory-row">
                                         <td class="item-name">{{ item.name }}</td>
+                                        <td class="item-weight">{{ item.weight != null ? (item.weight + ' lb') : '—' }}</td>
                                         <td class="item-quantity">{{ item.quantity }}</td>
-                                        @if (item.weight) {
-                                        <td class="item-weight">{{ item.weight }} lb</td>
-                                        } @else {
-                                        <td class="item-weight">—</td>
-                                        }
+                                        <td class="item-cost">{{ item.costGp != null ? item.costGp : '—' }}</td>
+                                        <td class="item-notes">{{ item.notes || '—' }}</td>
                                     </tr>
                                     }
                                 </tbody>

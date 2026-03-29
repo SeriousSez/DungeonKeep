@@ -1627,17 +1627,31 @@
             </summary>
             <div class="equipment-section-body compact">
                 @if (inventoryEntries().length > 0) {
-                <div class="equipment-item-list">
-                    @for (entry of inventoryEntries(); track entry.name) {
-                    <div class="equipment-item-row">
-                        <div>
-                            <strong>{{ entry.name }}</strong>
-                            <p>{{ entry.category }}</p>
-                        </div>
-                        <strong>QTY {{ entry.quantity }}</strong>
-                    </div>
-                    }
-                </div>
+                <table class="inventory-grid-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Weight</th>
+                            <th>QTY</th>
+                            <th>Cost (GP)</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (entry of inventoryEntries(); track entry.name) {
+                        <tr>
+                            <td>
+                                <strong>{{ entry.name }}</strong>
+                                <p>{{ entry.category }}</p>
+                            </td>
+                            <td>{{ entry.weight != null ? (entry.weight + ' lb') : '—' }}</td>
+                            <td>{{ entry.quantity }}</td>
+                            <td>{{ entry.costGp != null ? entry.costGp : '—' }}</td>
+                            <td>{{ entry.notes || (entry.isContainer ? 'Container' : '—') }}</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
                 } @else {
                 <p class="muted">You currently have no items in your inventory. Add Starting Equipment above or Add Items from the list below.</p>
                 }

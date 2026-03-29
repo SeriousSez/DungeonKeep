@@ -1444,71 +1444,71 @@ export class NewCharacterStandardPageComponent {
 
     private readonly startingPackContents: Readonly<Record<StartingPackName, ReadonlyArray<InventoryEntry>>> = {
         "Explorer's Pack": [
-            { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Mess Kit', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Tinderbox', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Torch', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Hempen Rope (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+            { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 5, costGp: 2, notes: 'Container, 30 lb / 1 cu. ft. capacity' },
+            { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 7, costGp: 1, notes: 'Sleep comfort, outdoors rest' },
+            { name: 'Mess Kit', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 1, costGp: 0.02, notes: 'Tin cup, fork, knife, and plate' },
+            { name: 'Tinderbox', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 1, costGp: 0.05, notes: 'Utility, Exploration, start fires' },
+            { name: 'Torch', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 1, costGp: 0.01, notes: '1 hour, 20-ft bright / 20-ft dim light, 1 fire damage' },
+            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 2, costGp: 0.5, notes: 'Consumable, dried food for one day' },
+            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 5, costGp: 0.02, notes: 'Holds 4 pints of liquid' },
+            { name: 'Hempen Rope (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 10, costGp: 1, notes: 'AC 11, 2 HP, supports up to 500 lb, Utility, Exploration' }
         ],
         "Dungeoneer's Pack": [
-            { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Hammer', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Piton', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Torch', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Tinderbox', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Hempen Rope (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+            { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 5, costGp: 2, notes: 'Container, 30 lb / 1 cu. ft. capacity' },
+            { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 5, costGp: 2, notes: 'Advantage on Strength checks requiring leverage' },
+            { name: 'Hammer', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 3, costGp: 1, notes: 'Drive pitons, basic repairs' },
+            { name: 'Piton', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 0.25, costGp: 0.05, notes: 'Iron spike for climbing anchors' },
+            { name: 'Torch', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 1, costGp: 0.01, notes: '1 hour, 20-ft bright / 20-ft dim light, 1 fire damage' },
+            { name: 'Tinderbox', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 1, costGp: 0.05, notes: 'Utility, Exploration, start fires' },
+            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 2, costGp: 0.5, notes: 'Consumable, dried food for one day' },
+            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 5, costGp: 0.02, notes: 'Holds 4 pints of liquid' },
+            { name: 'Hempen Rope (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 10, costGp: 1, notes: 'AC 11, 2 HP, supports up to 500 lb, Utility, Exploration' }
         ],
         "Scholar's Pack": [
-            { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Ink (1-ounce bottle)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Parchment (sheet)', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Little Bag of Sand', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Small Knife', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+            { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 5, costGp: 2, notes: 'Container, 30 lb / 1 cu. ft. capacity' },
+            { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 5, costGp: 25, notes: 'Reference, blank or filled with academic knowledge' },
+            { name: 'Ink (1-ounce bottle)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 0, costGp: 10, notes: 'Writing supply' },
+            { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 0, costGp: 0.02, notes: 'Writing tool' },
+            { name: 'Parchment (sheet)', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 0, costGp: 0.1, notes: 'Writing surface' },
+            { name: 'Little Bag of Sand', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 0.5, costGp: 0, notes: 'Dry ink on fresh writing' },
+            { name: 'Small Knife', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 0.5, costGp: 0, notes: 'Utility cutting tool' }
         ],
         "Priest's Pack": [
-            { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Blanket', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Candle', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Tinderbox', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Alms Box', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Block of Incense', category: 'Adventuring Gear', quantity: 2, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Censer', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Vestments', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 2, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+            { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 5, costGp: 2, notes: 'Container, 30 lb / 1 cu. ft. capacity' },
+            { name: 'Blanket', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 3, costGp: 0.5, notes: 'Warmth and comfort during rest' },
+            { name: 'Candle', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 0, costGp: 0.01, notes: '1 hour, 5-ft bright / 5-ft dim light' },
+            { name: 'Tinderbox', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 1, costGp: 0.05, notes: 'Utility, Exploration, start fires' },
+            { name: 'Alms Box', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 0.5, costGp: 0, notes: 'Collect charitable donations' },
+            { name: 'Block of Incense', category: 'Adventuring Gear', quantity: 2, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 0, costGp: 0.1, notes: 'Ritual, ceremonial burning' },
+            { name: 'Censer', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 1, costGp: 0, notes: 'Vessel for burning incense during rituals' },
+            { name: 'Vestments', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 4, costGp: 1, notes: 'Religious ceremonial clothing' },
+            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 2, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 2, costGp: 0.5, notes: 'Consumable, dried food for one day' },
+            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 5, costGp: 0.02, notes: 'Holds 4 pints of liquid' }
         ],
         "Burglar's Pack": [
-            { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Ball Bearings (bag)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'String (10 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Bell', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Candle', category: 'Adventuring Gear', quantity: 5, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Hammer', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Piton', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Hooded Lantern', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Oil (flask)', category: 'Adventuring Gear', quantity: 2, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 5, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Tinderbox', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Hempen Rope (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+            { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 5, costGp: 2, notes: 'Container, 30 lb / 1 cu. ft. capacity' },
+            { name: 'Ball Bearings (bag)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 2, costGp: 0.1, notes: '1000 bearings, DC 10 Dex or fall prone in 10-ft area' },
+            { name: 'String (10 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 0, costGp: 0, notes: 'Utility, traps, signals' },
+            { name: 'Bell', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 0, costGp: 0.1, notes: 'Alarm trigger, signal device' },
+            { name: 'Candle', category: 'Adventuring Gear', quantity: 5, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 0, costGp: 0.01, notes: '1 hour, 5-ft bright / 5-ft dim light' },
+            { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 5, costGp: 2, notes: 'Advantage on Strength checks requiring leverage' },
+            { name: 'Hammer', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 3, costGp: 1, notes: 'Drive pitons, basic repairs' },
+            { name: 'Piton', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 0.25, costGp: 0.05, notes: 'Iron spike for climbing anchors' },
+            { name: 'Hooded Lantern', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 2, costGp: 5, notes: '30-ft bright / 60-ft dim light, concealable beam' },
+            { name: 'Oil (flask)', category: 'Adventuring Gear', quantity: 2, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 1, costGp: 0.1, notes: 'Fuel for lanterns; throwable for 5 fire damage' },
+            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 5, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 2, costGp: 0.5, notes: 'Consumable, dried food for one day' },
+            { name: 'Tinderbox', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 1, costGp: 0.05, notes: 'Utility, Exploration, start fires' },
+            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 5, costGp: 0.02, notes: 'Holds 4 pints of liquid' },
+            { name: 'Hempen Rope (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 10, costGp: 1, notes: 'AC 11, 2 HP, supports up to 500 lb, Utility, Exploration' }
         ],
         "Entertainer's Pack": [
-            { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Costume', category: 'Adventuring Gear', quantity: 2, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Candle', category: 'Adventuring Gear', quantity: 5, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 5, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
-            { name: 'Disguise Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' }
+            { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 5, costGp: 2, notes: 'Container, 30 lb / 1 cu. ft. capacity' },
+            { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 7, costGp: 1, notes: 'Sleep comfort, outdoors rest' },
+            { name: 'Costume', category: 'Adventuring Gear', quantity: 2, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 4, costGp: 5, notes: 'Performance attire, disguise base' },
+            { name: 'Candle', category: 'Adventuring Gear', quantity: 5, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 0, costGp: 0.01, notes: '1 hour, 5-ft bright / 5-ft dim light' },
+            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 5, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 2, costGp: 0.5, notes: 'Consumable, dried food for one day' },
+            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 5, costGp: 0.02, notes: 'Holds 4 pints of liquid' },
+            { name: 'Disguise Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools', weight: 3, costGp: 25, notes: 'Alter appearance, create costumes' }
         ]
     };
 
@@ -3588,6 +3588,9 @@ export class NewCharacterStandardPageComponent {
                     category: backpackItem.category,
                     quantity: backpackItem.quantity * Math.max(1, item.quantity),
                     sourceUrl: backpackItem.sourceUrl,
+                    weight: backpackItem.weight,
+                    costGp: backpackItem.costGp,
+                    notes: backpackItem.notes,
                     isContainer: true,
                     maxCapacity: 60, // Standard backpack capacity in lbs (50-60 lbs based on D&D 5e)
                     containedItems: nestedItems.map((nestedItem) => ({
@@ -3621,7 +3624,10 @@ export class NewCharacterStandardPageComponent {
             name: item.name,
             category: item.category,
             quantity: 1,
-            sourceUrl: item.sourceUrl
+            sourceUrl: item.sourceUrl,
+            weight: item.weight,
+            costGp: item.costGp,
+            notes: item.notes
         };
 
         const expandedPackItems = this.expandStartingPackItems([inventoryEntry]);
@@ -3657,6 +3663,9 @@ export class NewCharacterStandardPageComponent {
                         containedItems[nestedIndex] = {
                             ...containedItems[nestedIndex],
                             quantity: containedItems[nestedIndex].quantity + enrichedItem.quantity,
+                            weight: containedItems[nestedIndex].weight ?? enrichedItem.weight,
+                            costGp: containedItems[nestedIndex].costGp ?? enrichedItem.costGp,
+                            notes: containedItems[nestedIndex].notes || enrichedItem.notes,
                             isContainer: enrichedItem.isContainer,
                             maxCapacity: enrichedItem.maxCapacity,
                             containedItems: enrichedItem.containedItems ?? containedItems[nestedIndex].containedItems
@@ -3680,6 +3689,9 @@ export class NewCharacterStandardPageComponent {
             next[index] = {
                 ...next[index],
                 quantity: next[index].quantity + enrichedItem.quantity,
+                weight: next[index].weight ?? enrichedItem.weight,
+                costGp: next[index].costGp ?? enrichedItem.costGp,
+                notes: next[index].notes || enrichedItem.notes,
                 isContainer: enrichedItem.isContainer,
                 maxCapacity: enrichedItem.maxCapacity,
                 containedItems: enrichedItem.containedItems ?? next[index].containedItems
@@ -3694,6 +3706,8 @@ export class NewCharacterStandardPageComponent {
             ...item,
             isContainer: item.isContainer ?? isContainer,
             maxCapacity: item.maxCapacity ?? (isContainer ? this.getContainerCapacity(item.name) : undefined),
+            costGp: typeof item.costGp === 'number' ? item.costGp : undefined,
+            notes: item.notes?.trim() || undefined,
             containedItems: item.containedItems ?? []
         };
     }

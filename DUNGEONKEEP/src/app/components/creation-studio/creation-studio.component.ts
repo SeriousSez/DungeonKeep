@@ -3,6 +3,7 @@ import { Component, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { CampaignDraft, CharacterDraft } from '../../models/dungeon.models';
+import { ThemedDatepickerComponent } from '../themed-datepicker/themed-datepicker.component';
 
 const emptyCampaignDraft = (): CampaignDraft => ({
     name: '',
@@ -26,7 +27,7 @@ const emptyCharacterDraft = (): CharacterDraft => ({
 
 @Component({
     selector: 'app-creation-studio',
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, ThemedDatepickerComponent],
     templateUrl: './creation-studio.component.html',
     styleUrl: './creation-studio.component.scss'
 })

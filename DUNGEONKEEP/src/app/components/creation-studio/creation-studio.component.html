@@ -48,7 +48,7 @@
 
             <label>
                 <span>Next session</span>
-                <input type="text" name="campaignNextSession" [ngModel]="campaignDraft().nextSession" (ngModelChange)="updateCampaign('nextSession', $event)" placeholder="2026-05-03" />
+                <app-themed-datepicker name="campaignNextSession" [value]="campaignDraft().nextSession" (valueChange)="updateCampaign('nextSession', $event)" />
             </label>
 
             <label>

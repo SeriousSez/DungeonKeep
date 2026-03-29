@@ -68,6 +68,20 @@ export interface ApiGenerateCharacterBackstoryResponse {
     backstory: string;
 }
 
+export interface ApiDndChatMessage {
+    role: 'user' | 'assistant';
+    content: string;
+}
+
+export interface ApiDndChatRequest {
+    message: string;
+    history?: ApiDndChatMessage[];
+}
+
+export interface ApiDndChatResponse {
+    reply: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class DungeonApiService {
     private readonly http = inject(HttpClient);
@@ -131,6 +145,10 @@ export class DungeonApiService {
 
     async updateCharacterBackstory(characterId: string, backstory: string): Promise<ApiCharacterDto> {
         return await firstValueFrom(this.http.put<ApiCharacterDto>(`${this.baseUrl}/characters/${characterId}/backstory`, { backstory }));
+    }
+
+    async askDndQuestion(payload: ApiDndChatRequest): Promise<ApiDndChatResponse> {
+        return await firstValueFrom(this.http.post<ApiDndChatResponse>(`${this.baseUrl}/assistant/dnd-chat`, payload));
     }
 
     async updateCharacterStatus(characterId: string, status: 'Ready' | 'Resting' | 'Recovering'): Promise<ApiCharacterDto> {

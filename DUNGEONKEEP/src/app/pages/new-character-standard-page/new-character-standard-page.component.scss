@@ -2307,6 +2307,45 @@ input {
     font-size: 0.85rem;
 }
 
+.inventory-grid-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+
+    th,
+    td {
+        border: 1px solid var(--panel-border);
+        padding: 8px;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    th {
+        background: color-mix(in srgb, var(--surface-raised) 72%, var(--panel-bg));
+        color: var(--text-main);
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    td {
+        background: var(--surface-raised);
+        color: var(--text-main);
+    }
+
+    td:nth-child(2),
+    td:nth-child(3),
+    td:nth-child(4) {
+        white-space: nowrap;
+    }
+
+    p {
+        margin: 2px 0 0;
+        color: var(--text-muted);
+        font-size: 0.76rem;
+    }
+}
+
 .currency-list {
     display: grid;
     gap: 8px;

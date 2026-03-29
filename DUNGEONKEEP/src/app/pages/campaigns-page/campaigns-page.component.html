@@ -3,6 +3,7 @@
         <p class="eyebrow">Campaign management</p>
         <h1>Campaigns</h1>
         <p>Build campaign arcs, track threads, and archive completed story beats.</p>
+        <a routerLink="/campaigns/new" class="create-link">+ New Campaign</a>
     </section>
 
     <section class="page-stats">
@@ -18,6 +19,4 @@
 
     <app-campaign-board [campaigns]="store.campaigns()" [selectedCampaignId]="store.selectedCampaignId()" [selectedCampaign]="store.selectedCampaign()" [openThreadCount]="store.openThreadCount()" (campaignSelected)="store.selectCampaign($event)" (threadArchived)="store.archiveThread($event)"
         (memberInvited)="store.inviteMember($event)" />
-
-    <a routerLink="/campaigns/new" class="create-link">+ New Campaign</a>
 </main>

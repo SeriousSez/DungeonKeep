@@ -1,0 +1,42 @@
+<div class="themed-datepicker">
+    <input type="hidden" [name]="name()" [value]="value()" />
+
+    <div class="field-shell" (click)="open()">
+        <input class="field-input" type="text" [value]="displayValue()" placeholder="YYYY-MM-DD" readonly aria-label="Pick next session date" />
+        <button type="button" class="trigger" (click)="toggle(); $event.stopPropagation()" aria-label="Toggle calendar">
+            <i class="fa-duotone fa-thin fa-calendar"></i>
+        </button>
+    </div>
+
+    @if (isOpen()) {
+    <div class="calendar-popover" [class.opens-upward]="opensUpward()" role="dialog" aria-label="Calendar date picker">
+        <div class="calendar-header">
+            <button type="button" class="nav-btn" (click)="goToPreviousMonth()" aria-label="Previous month">
+                <i class="fa-duotone fa-thin fa-chevron-left"></i>
+            </button>
+            <p>{{ monthLabel() }}</p>
+            <button type="button" class="nav-btn" (click)="goToNextMonth()" aria-label="Next month">
+                <i class="fa-duotone fa-thin fa-chevron-right"></i>
+            </button>
+        </div>
+
+        <div class="weekday-row">
+            @for (weekday of weekdayLabels; track weekday) {
+            <span>{{ weekday }}</span>
+            }
+        </div>
+
+        <div class="day-grid">
+            @for (cell of calendarCells(); track cell.iso ?? $index) {
+            @if (cell.day && cell.iso) {
+            <button type="button" class="day-cell" [class.is-selected]="isSelected(cell.iso)" [class.is-today]="isToday(cell.iso)" (click)="pickDate(cell.iso)">
+                {{ cell.day }}
+            </button>
+            } @else {
+            <span class="day-cell empty" aria-hidden="true"></span>
+            }
+            }
+        </div>
+    </div>
+    }
+</div>
