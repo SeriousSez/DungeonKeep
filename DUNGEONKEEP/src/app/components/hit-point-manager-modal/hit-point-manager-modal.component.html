@@ -1,0 +1,63 @@
+<div class="class-hp-modal-backdrop" (click)="close()">
+    <section class="class-hp-modal" role="dialog" aria-modal="true" aria-label="Manage hit points" (click)="$event.stopPropagation()">
+        <header class="class-hp-modal__header">
+            <h3>Manage Hit Points</h3>
+            <button type="button" class="class-hp-modal__close" aria-label="Close" (click)="close()">✕</button>
+        </header>
+
+        <div class="class-hp-modal__body">
+            <div class="class-hp-modal__summary">
+                <span><strong>Class:</strong> {{ className() }}</span>
+                <span><strong>Level:</strong> {{ level() }}</span>
+                <span><strong>Hit Die:</strong> d{{ hitDie() }}</span>
+                <span><strong>CON Modifier:</strong> {{ conModifier() }}</span>
+                <span><strong>Fixed Max HP:</strong> {{ fixedMaxHp() }}</span>
+                <span><strong>Current Max HP:</strong> {{ currentMaxHp() }}</span>
+            </div>
+
+            <div class="class-hp-modal__controls">
+                <app-dropdown id="hp-mode-modal" [value]="hitPointMode()" [options]="modeOptions()" size="wide" (changed)="onModeChanged($event)"></app-dropdown>
+
+                @if (hitPointMode() === 'rolled') {
+                <input type="number" min="1" class="score-input" placeholder="Enter rolled HP total" [value]="rolledHitPointTotal()" (input)="onRolledTotalInput($any($event.target).value)" />
+                <p class="muted">Enter the full HP total from your rolled progression. If left blank, fixed HP is used.</p>
+                }
+            </div>
+
+            <div class="class-hp-modal__reference-grid">
+                <div class="reference-panel">
+                    <h4>Hit Dice</h4>
+                    <p><strong>{{ className() }}:</strong> {{ getHitDiceExpression() }}</p>
+                    <p class="muted">At level 1, this builder uses max Hit Die value for starting HP.</p>
+                </div>
+
+                <div class="reference-panel">
+                    <h4>Potential Values</h4>
+                    <p><strong>Total Fixed HP:</strong> {{ fixedMaxHp() }}</p>
+                    <p><strong>Total Minimum HP:</strong> {{ getMinimumRolledTotal() }}</p>
+                    <p><strong>Total Maximum HP:</strong> {{ getMaximumRolledTotal() }}</p>
+                    <p class="muted">Constitution contribution across levels: {{ getConContributionDisplay() }}</p>
+                </div>
+            </div>
+
+            <section class="class-hp-modal__info-section">
+                <h4>Max Hit Points</h4>
+                <p>Your maximum HP is your total durability pool. In fixed mode, this builder uses max Hit Die at level 1, then average gains per level, plus your Constitution modifier each level.</p>
+            </section>
+
+            <section class="class-hp-modal__info-section">
+                <h4>Rolled Hit Points</h4>
+                <p>If you prefer rolling at level-up, switch to rolled mode and enter the final HP total you rolled for this character. This keeps your sheet aligned with table-specific rulings.</p>
+            </section>
+
+            <section class="class-hp-modal__info-section">
+                <h4>Overrides And Bonuses</h4>
+                <p>This modal focuses on selecting fixed vs rolled progression. If your campaign applies additional HP overrides or special bonuses, adjust those from the character sheet management tools after creation.</p>
+            </section>
+        </div>
+
+        <footer class="class-hp-modal__footer">
+            <button type="button" class="secondary-btn" (click)="close()">Done</button>
+        </footer>
+    </section>
+</div>

@@ -4,8 +4,8 @@ export const races: Race[] = [
     {
         id: 'human',
         name: 'Human',
-        abilityBonuses: { strength: 1, dexterity: 1, constitution: 1, intelligence: 1, wisdom: 1, charisma: 1 },
-        traits: ['Versatility: +1 to all ability scores', 'Diverse Heritage: can choose any feat at 1st level'],
+        abilityBonuses: {},
+        traits: ['Resourceful: Gain Heroic Inspiration when you finish a Long Rest', 'Skillful: Gain proficiency in one skill of your choice', 'Versatile: Gain one Origin Feat of your choice'],
         size: 'Medium',
         speed: 30,
         languages: ['Common'],
@@ -14,10 +14,10 @@ export const races: Race[] = [
     {
         id: 'dwarf',
         name: 'Dwarf',
-        abilityBonuses: { constitution: 2, wisdom: 1 },
-        traits: ['Dwarven Resilience: Resistance to poison damage', 'Dwarven Combat Training: Proficiency with axes and hammers', 'Stonecunning: Advantage on Architecture checks related to stone'],
+        abilityBonuses: {},
+        traits: ['Darkvision: You have Darkvision with a range of 120 feet', 'Dwarven Resilience: Advantage on saves against Poisoned; Resistance to poison damage', 'Dwarven Toughness: Your hit point maximum increases by 1 per level', 'Stonecunning: As a Bonus Action, gain Tremorsense for 10 minutes'],
         size: 'Medium',
-        speed: 25,
+        speed: 30,
         languages: ['Common', 'Dwarvish'],
         description: 'Bold and hardy, dwarves are known as skilled warriors, miners, and workers of stone and metal.'
     },
@@ -44,8 +44,8 @@ export const races: Race[] = [
     {
         id: 'dragonborn',
         name: 'Dragonborn',
-        abilityBonuses: { strength: 2, charisma: 1 },
-        traits: ['Draconic Ancestry: Choose a dragon type for resistances', 'Breath Weapon: Exhale destructive energy (3d6 at 1st level)', 'Damage Resistance: Resistance to damage type matching your ancestry'],
+        abilityBonuses: {},
+        traits: ['Dragon Ancestry: Choose your dragon type', 'Breath Weapon: Exhale destructive energy in a line or cone', 'Damage Resistance: Resistance to your ancestry damage type', 'Darkvision: You have Darkvision with a range of 60 feet', 'Draconic Flight: At 5th level, manifest spectral wings to fly'],
         size: 'Medium',
         speed: 30,
         languages: ['Common', 'Draconic'],
@@ -54,10 +54,10 @@ export const races: Race[] = [
     {
         id: 'gnome',
         name: 'Gnome',
-        abilityBonuses: { intelligence: 2, wisdom: 1 },
-        traits: ['Gnome Cunning: Advantage on INT, WIS, CHA saves against spells', 'Natural Tinker: Can create small devices', 'Darkvision: Can see in dim light within 60 feet'],
+        abilityBonuses: {},
+        traits: ['Darkvision: You have Darkvision with a range of 60 feet', 'Gnomish Cunning: Advantage on Intelligence, Wisdom, and Charisma saves against magic', 'Gnomish Lineage: Choose a lineage such as Forest, Rock, or Deep Gnome'],
         size: 'Small',
-        speed: 25,
+        speed: 30,
         languages: ['Common', 'Gnomish'],
         description: 'The arrival of humans meant the departure of gnomes from the world. Gnomes were not heard of again for many years.'
     },
@@ -74,7 +74,7 @@ export const races: Race[] = [
     {
         id: 'half-orc',
         name: 'Half-Orc',
-        abilityBonuses: { strength: 2, constitution: 1, intelligence: -1 },
+        abilityBonuses: {},
         traits: ['Relentless Endurance: When reduced to 0 HP, drop to 1 HP instead (once per rest)', 'Savage Attacks: Roll additional damage dice on critical hits', 'Darkvision: Can see in dim light within 60 feet'],
         size: 'Medium',
         speed: 30,
@@ -82,10 +82,20 @@ export const races: Race[] = [
         description: 'Half-orcs are the turbulent union of the civilized world and the wild. Their bravery and raw power mark their bloodline.'
     },
     {
+        id: 'orc',
+        name: 'Orc',
+        abilityBonuses: {},
+        traits: ['Adrenaline Rush: Take the Dash action as a Bonus Action and gain temporary hit points', 'Darkvision: You have Darkvision with a range of 120 feet', 'Relentless Endurance: When reduced to 0 HP, drop to 1 HP instead (once per Long Rest)'],
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Orc'],
+        description: 'Orcs are equipped with gifts to help them wander great plains, vast caverns, and churning seas.'
+    },
+    {
         id: 'tiefling',
         name: 'Tiefling',
-        abilityBonuses: { intelligence: 1, charisma: 2 },
-        traits: ['Infernal Legacy: Know the Thaumaturgy cantrip', 'Darkvision: Can see in dim light within 60 feet', 'Resistance to Fire: Resistance to fire damage', 'Hellish Resistance: Innate magical abilities reflecting infernal heritage'],
+        abilityBonuses: {},
+        traits: ['Darkvision: You have Darkvision with a range of 60 feet', 'Fiendish Legacy: Choose Abyssal, Chthonic, or Infernal legacy spells', 'Otherworldly Presence: You know the Thaumaturgy cantrip'],
         size: 'Medium',
         speed: 30,
         languages: ['Common', 'Infernal'],

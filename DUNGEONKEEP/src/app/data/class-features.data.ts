@@ -28,6 +28,23 @@ const paladinWeaponMasteryOptions: ReadonlyArray<string> = [
     'Antimatter Rifle', 'Automatic Rifle', 'Hunting Rifle', 'Laser Pistol', 'Laser Rifle', 'Musket', 'Pistol', 'Revolver', 'Shotgun'
 ];
 
+const barbarianSkillChoiceOptions: ReadonlyArray<string> = [
+    'Animal Handling', 'Athletics', 'Intimidation', 'Nature', 'Perception', 'Survival'
+];
+
+const barbarianWeaponMasteryChoiceOptions: ReadonlyArray<string> = [
+    'Club (Slow)', 'Dagger (Nick)', 'Greatclub (Push)', 'Handaxe (Vex)', 'Javelin (Slow)', 'Light Hammer (Nick)', 'Mace (Sap)', 'Quarterstaff (Topple)', 'Sickle (Nick)', 'Spear (Sap)',
+    'Battleaxe (Topple)', 'Flail (Sap)', 'Glaive (Graze)', 'Greataxe (Cleave)', 'Greatsword (Graze)', 'Halberd (Cleave)', 'Lance (Topple)', 'Longsword (Sap)', 'Maul (Topple)', 'Morningstar (Sap)',
+    'Pike (Push)', 'Rapier (Vex)', 'Scimitar (Nick)', 'Shortsword (Vex)', 'Trident (Topple)', 'War Pick (Sap)', 'Warhammer (Push)', 'Whip (Slow)'
+];
+
+const barbarianSubclassOptions: ReadonlyArray<string> = [
+    'Path of the Berserker',
+    'Path of the Wild Heart',
+    'Path of the World Tree',
+    'Path of the Zealot'
+];
+
 const paladinClericCantripOptions: ReadonlyArray<string> = [
     'Guidance', 'Light', 'Mending', 'Resistance', 'Sacred Flame', 'Spare the Dying', 'Thaumaturgy'
 ];
@@ -168,11 +185,21 @@ export const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
                     choices: {
                         title: 'Choose 2 Skill Proficiencies',
                         count: 2,
-                        options: ['Animal Handling', 'Athletics', 'Intimidation', 'Nature', 'Perception', 'Survival']
+                        options: [...barbarianSkillChoiceOptions]
                     }
                 },
                 { name: 'Rage', level: 1, description: 'Enter a primal rage 2 times per long rest. You gain advantage on Strength checks/saves and damage resistance while raging.' },
-                { name: 'Unarmored Defense', level: 1, description: 'While unarmored, your AC = 10 + Dexterity modifier + Constitution modifier.' }
+                { name: 'Unarmored Defense', level: 1, description: 'While unarmored, your AC = 10 + Dexterity modifier + Constitution modifier.' },
+                {
+                    name: 'Weapon Mastery',
+                    level: 1,
+                    description: 'Gain mastery properties for two Simple or Martial Melee weapon types you are proficient with.',
+                    choices: {
+                        title: 'Choose 2 Weapon Masteries',
+                        count: 2,
+                        options: [...barbarianWeaponMasteryChoiceOptions]
+                    }
+                }
             ]
         },
         {
@@ -183,12 +210,40 @@ export const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
         },
         {
             level: 3, features: [
-                { name: 'Barbarian Subclass', level: 3, description: 'Choose your Barbarian subclass.' },
-                { name: 'Primal Knowledge', level: 3, description: 'Gain primal utility improvements.' }
+                {
+                    name: 'Barbarian Subclass',
+                    level: 3,
+                    description: 'Choose your Barbarian subclass.',
+                    choices: {
+                        title: 'Choose 1 Subclass',
+                        count: 1,
+                        options: [...barbarianSubclassOptions]
+                    }
+                },
+                {
+                    name: 'Primal Knowledge',
+                    level: 3,
+                    description: 'Gain proficiency in one additional Barbarian skill.',
+                    choices: {
+                        title: 'Choose 1 Barbarian Skill Proficiency',
+                        count: 1,
+                        options: [...barbarianSkillChoiceOptions]
+                    }
+                }
             ]
         },
         {
             level: 4, features: [
+                {
+                    name: 'Weapon Mastery',
+                    level: 4,
+                    description: 'Gain mastery for one additional weapon type.',
+                    choices: {
+                        title: 'Choose 1 Weapon Mastery',
+                        count: 1,
+                        options: [...barbarianWeaponMasteryChoiceOptions]
+                    }
+                },
                 { name: 'Ability Score Improvement', level: 4, description: 'Increase your ability scores or take a feat.' }
             ]
         },
@@ -301,17 +356,18 @@ export const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
                     level: 1,
                     description: 'Gain spellcasting and bardic inspiration.',
                     choices: {
-                        title: 'Choose 2 Skill Proficiencies from any skill',
-                        count: 2,
+                        title: 'Choose 3 Skill Proficiencies from any skill',
+                        count: 3,
                         options: ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation', 'Investigation', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Sleight of Hand', 'Stealth', 'Survival']
                     }
                 },
-                { name: 'Spellcasting', level: 1, description: 'Cast spells using Charisma. Know 4 cantrips and have 2 1st-level spell slots.' },
+                { name: 'Spellcasting', level: 1, description: 'Cast spells using Charisma. Know 2 Bard cantrips and prepare Bard spells from the class list.' },
                 { name: 'Bardic Inspiration', level: 1, description: 'Grant allies inspiration dice (d6) they can add to ability checks, attack rolls, or saves.' }
             ]
         },
         {
             level: 2, features: [
+                { name: 'Expertise', level: 2, description: 'Gain Expertise in two skill proficiencies; gain two more at level 9.' },
                 { name: 'Jack of All Trades', level: 2, description: 'Add half your proficiency bonus to ability checks you don\'t already add proficiency to.' }
             ]
         },
@@ -396,10 +452,10 @@ export const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
                     choices: {
                         title: 'Choose 2 Skill Proficiencies',
                         count: 2,
-                        options: ['Insight', 'Medicine', 'Persuasion', 'Religion']
+                        options: ['History', 'Insight', 'Medicine', 'Persuasion', 'Religion']
                     }
                 },
-                { name: 'Spellcasting', level: 1, description: 'Cast spells using Wisdom.' },
+                { name: 'Spellcasting', level: 1, description: 'Cast spells using Wisdom. Know 3 Cleric cantrips and prepare Cleric spells from the class list.' },
                 { name: 'Divine Order', level: 1, description: 'Choose your divine training focus.' }
             ]
         },
@@ -487,7 +543,7 @@ export const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
                         options: ['Animal Handling', 'Arcana', 'Insight', 'Medicine', 'Nature', 'Perception', 'Religion', 'Survival']
                     }
                 },
-                { name: 'Spellcasting', level: 1, description: 'Cast spells using Wisdom.' },
+                { name: 'Spellcasting', level: 1, description: 'Cast spells using Wisdom. Know 2 Druid cantrips and prepare Druid spells from the class list.' },
                 { name: 'Druidic', level: 1, description: 'Learn the Druidic secret language.' },
                 { name: 'Primal Order', level: 1, description: 'Choose your primal training focus.' }
             ]
@@ -1257,40 +1313,44 @@ export const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
                         options: ['Arcana', 'Deception', 'Insight', 'Intimidation', 'Persuasion', 'Religion']
                     }
                 },
-                { name: 'Spellcasting', level: 1, description: 'Cast spells using Charisma. Know 4 cantrips and have 2 1st-level spell slots.' },
-                { name: 'Sorcerous Origin', level: 1, description: 'Choose your Sorcerous Origin, which grants subclass features at levels 1, 6, 14, and 18.' }
+                { name: 'Spellcasting', level: 1, description: 'Cast spells using Charisma. Know 4 Sorcerer cantrips and prepare Sorcerer spells from the class list.' },
+                { name: 'Innate Sorcery', level: 1, description: 'As a bonus action, enter a 1-minute state that boosts your spell save DC and Sorcerer spell attack reliability.' }
             ]
         },
         {
             level: 2, features: [
-                { name: 'Font of Magic', level: 2, description: 'Gain Sorcery Points (2 at this level) to fuel class features and convert spell slots.' }
+                { name: 'Font of Magic', level: 2, description: 'Gain Sorcery Points to fuel class features and convert spell slots.' },
+                { name: 'Metamagic', level: 2, description: 'Choose 2 Metamagic options; gain additional options at levels 10 and 17.' }
             ]
         },
         {
             level: 3, features: [
-                { name: 'Metamagic', level: 3, description: 'Choose 2 Metamagic options to modify your spells.' }
+                { name: 'Sorcerer Subclass', level: 3, description: 'Choose your Sorcerer subclass; it grants features at levels 3, 6, 14, and 18.' }
             ]
         },
         {
             level: 4, features: [
-                { name: 'Ability Score Improvement', level: 4, description: 'Increase one ability score by 2, or two ability scores by 1 each.' },
-                { name: 'Sorcerous Versatility (Optional)', level: 4, description: 'Optional class feature allowing flexible spell or cantrip changes.' }
+                { name: 'Ability Score Improvement', level: 4, description: 'Increase your ability scores or take a feat.' }
             ]
         },
         {
             level: 5, features: [
-                { name: 'Magical Guidance (Optional)', level: 5, description: 'Optional feature allowing a Sorcery Point to reroll a failed ability check.' }
+                { name: 'Sorcerous Restoration', level: 5, description: 'Regain expended Sorcery Points on a short rest, up to half your Sorcerer level (round down).' }
             ]
         },
         {
             level: 6, features: [
-                { name: 'Sorcerous Origin Feature', level: 6, description: 'Gain an additional feature from your chosen Sorcerous Origin.' }
+                { name: 'Subclass Feature', level: 6, description: 'Gain a feature from your Sorcerer subclass.' }
+            ]
+        },
+        {
+            level: 7, features: [
+                { name: 'Sorcery Incarnate', level: 7, description: 'Empower Innate Sorcery and combine up to two Metamagic options while it is active.' }
             ]
         },
         {
             level: 8, features: [
-                { name: 'Ability Score Improvement', level: 8, description: 'Increase one ability score by 2, or two ability scores by 1 each.' },
-                { name: 'Sorcerous Versatility (Optional)', level: 8, description: 'Optional class feature allowing flexible spell or cantrip changes.' }
+                { name: 'Ability Score Improvement', level: 8, description: 'Increase your ability scores or take a feat.' }
             ]
         },
         {
@@ -1300,19 +1360,17 @@ export const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
         },
         {
             level: 12, features: [
-                { name: 'Ability Score Improvement', level: 12, description: 'Increase one ability score by 2, or two ability scores by 1 each.' },
-                { name: 'Sorcerous Versatility (Optional)', level: 12, description: 'Optional class feature allowing flexible spell or cantrip changes.' }
+                { name: 'Ability Score Improvement', level: 12, description: 'Increase your ability scores or take a feat.' }
             ]
         },
         {
             level: 14, features: [
-                { name: 'Sorcerous Origin Feature', level: 14, description: 'Gain another feature from your chosen Sorcerous Origin.' }
+                { name: 'Subclass Feature', level: 14, description: 'Gain a feature from your Sorcerer subclass.' }
             ]
         },
         {
             level: 16, features: [
-                { name: 'Ability Score Improvement', level: 16, description: 'Increase one ability score by 2, or two ability scores by 1 each.' },
-                { name: 'Sorcerous Versatility (Optional)', level: 16, description: 'Optional class feature allowing flexible spell or cantrip changes.' }
+                { name: 'Ability Score Improvement', level: 16, description: 'Increase your ability scores or take a feat.' }
             ]
         },
         {
@@ -1322,18 +1380,17 @@ export const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
         },
         {
             level: 18, features: [
-                { name: 'Sorcerous Origin Feature', level: 18, description: 'Gain your final high-level feature from your chosen Sorcerous Origin.' }
+                { name: 'Subclass Feature', level: 18, description: 'Gain a feature from your Sorcerer subclass.' }
             ]
         },
         {
             level: 19, features: [
-                { name: 'Ability Score Improvement', level: 19, description: 'Increase one ability score by 2, or two ability scores by 1 each.' },
-                { name: 'Sorcerous Versatility (Optional)', level: 19, description: 'Optional class feature allowing flexible spell or cantrip changes.' }
+                { name: 'Epic Boon', level: 19, description: 'Gain a powerful epic boon.' }
             ]
         },
         {
             level: 20, features: [
-                { name: 'Sorcerous Restoration', level: 20, description: 'At capstone, recover spent Sorcery Points on short rest as defined by class rules.' }
+                { name: 'Arcane Apotheosis', level: 20, description: 'While Innate Sorcery is active, use one Metamagic option each turn without spending Sorcery Points.' }
             ]
         }
     ],
@@ -1448,14 +1505,23 @@ export const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
                         options: ['Arcana', 'History', 'Insight', 'Investigation', 'Medicine', 'Religion']
                     }
                 },
-                { name: 'Spellcasting', level: 1, description: 'Cast spells using Intelligence.' },
-                { name: 'Ritual Adept', level: 1, description: 'Gain enhanced ritual-casting utility.' },
-                { name: 'Arcane Recovery', level: 1, description: 'Recover expended spell resources on short rest.' }
+                { name: 'Spellcasting', level: 1, description: 'Cast spells using Intelligence. Maintain a spellbook and prepare Wizard spells from it.' },
+                { name: 'Ritual Adept', level: 1, description: 'Cast Ritual-tag spells from your spellbook as rituals without preparing them.' },
+                { name: 'Arcane Recovery', level: 1, description: 'After a short rest, recover spell slots with combined levels up to half your Wizard level (round up), none above level 5.' }
             ]
         },
         {
             level: 2, features: [
-                { name: 'Scholar', level: 2, description: 'Gain scholarly magical utility improvements.' }
+                {
+                    name: 'Scholar',
+                    level: 2,
+                    description: 'Choose one Wizard skill proficiency and gain Expertise in it.',
+                    choices: {
+                        title: 'Choose 1 Skill Expertise',
+                        count: 1,
+                        options: ['Arcana', 'History', 'Investigation', 'Medicine', 'Nature', 'Religion']
+                    }
+                }
             ]
         },
         {

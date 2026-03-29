@@ -2028,6 +2028,43 @@ const phbSpeciesDetails: Record<string, BuilderInfo> = {
             ]
         }
     },
+    'Orc': {
+        name: 'Orc',
+        source: "Player's Handbook 2024",
+        summary: 'Orcs are equipped with gifts to help them wander great plains, vast caverns, and churning seas.',
+        highlights: ['Adrenaline Rush', 'Darkvision', 'Relentless Endurance'],
+        speciesDetails: {
+            tagline: 'Orc Species Overview',
+            creatureType: 'Humanoid',
+            size: 'Medium',
+            speed: '30 ft.',
+            sourceUrl: 'https://www.dndbeyond.com/species/1751442-orc',
+            traits: ['Adrenaline Rush', 'Darkvision', 'Relentless Endurance', 'Languages'],
+            coreTraits: [
+                { label: 'Creature Type', value: 'Humanoid' },
+                { label: 'Size', value: 'Medium' },
+                { label: 'Speed', value: '30 ft.' }
+            ],
+            traitNotes: [
+                {
+                    title: 'Adrenaline Rush',
+                    summary: 'Dash as a Bonus Action and gain temporary hit points.',
+                    details: 'You can take the Dash action as a Bonus Action. When you do so, you gain temporary hit points equal to your Proficiency Bonus. You can use this trait a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest.'
+                },
+                {
+                    title: 'Darkvision',
+                    summary: 'See in dim light and darkness within 120 ft.',
+                    details: 'You have Darkvision with a range of 120 feet. Within that range, you can see in dim light as if it were bright light, and in darkness as if it were dim light. You discern colors in darkness only as shades of gray.'
+                },
+                {
+                    title: 'Relentless Endurance',
+                    summary: 'Drop to 1 HP instead of 0 once per Long Rest.',
+                    details: 'When you are reduced to 0 Hit Points but not killed outright, you can drop to 1 Hit Point instead. Once you use this trait, you can’t use it again until you finish a Long Rest.'
+                },
+                langTrait('Common and Orc')
+            ]
+        }
+    },
     'Tiefling': {
         name: 'Tiefling',
         source: "Player's Handbook",
@@ -2147,7 +2184,6 @@ const speciesCatalog: Array<{ name: string; slug: string; hallmark: string; size
 ];
 
 export const speciesInfoMap: Record<string, BuilderInfo> = {
-    ...phbSpeciesDetails,
     ...Object.fromEntries(
         speciesCatalog.map((species) => [
             species.name,
@@ -2163,7 +2199,8 @@ export const speciesInfoMap: Record<string, BuilderInfo> = {
                 species.languageChoiceLabel ?? 'Species'
             )
         ])
-    )
+    ),
+    ...phbSpeciesDetails
 };
 
 export const magicInitiateSpellsByAbility: Readonly<Record<string, { cantrips: readonly string[]; level1Spells: readonly string[] }>> = {

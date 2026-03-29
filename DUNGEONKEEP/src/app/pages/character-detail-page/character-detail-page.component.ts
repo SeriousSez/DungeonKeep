@@ -4,15 +4,22 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { marked } from 'marked';
 
 import { DropdownComponent, type DropdownOption } from '../../components/dropdown/dropdown.component';
+import { classSpellCatalog } from '../../data/class-spells.data';
 import { races } from '../../data/races';
+import { spellDetailsMap } from '../../data/spell-details.data';
 import type { SkillProficiencies } from '../../models/dungeon.models';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
 type AbilityKey = 'strength' | 'dexterity' | 'constitution' | 'intelligence' | 'wisdom' | 'charisma';
 
-type ActionType = 'attack' | 'save';
+type ActionType = 'attack' | 'action';
 type CombatTab = 'actions' | 'spells' | 'inventory' | 'features' | 'background' | 'notes' | 'extras';
+type SpellFilter = 'all' | '0' | '1' | '2' | '3';
 type ActionFilter = 'all' | 'attack' | 'action' | 'bonus-action' | 'reaction' | 'other' | 'limited-use';
+type BackgroundFilter = 'all' | 'background' | 'characteristics' | 'appearance';
+type InventoryFilter = 'all' | 'equipment' | 'backpack' | 'other';
+type FeaturesFilter = 'all' | 'class-features' | 'species-traits' | 'feats';
+type NotesFilter = 'all' | 'orgs' | 'allies' | 'enemies' | 'backstory' | 'other';
 
 interface PersistedInventoryEntry {
     name: string;
@@ -28,11 +35,25 @@ interface PersistedCurrencyState {
     cp: number;
 }
 
+type PersistedAbilityScoreImprovementMode = '' | 'plus-two' | 'plus-one-plus-one';
+
+interface PersistedAbilityScoreImprovementChoice {
+    mode: PersistedAbilityScoreImprovementMode;
+    primaryAbility: string;
+    secondaryAbility: string;
+}
+
+interface PersistedFeatFollowUpChoice {
+    abilityIncreaseAbility?: string;
+}
+
 interface PersistedBuilderState {
     selectedBackgroundName?: string;
     selectedLanguages?: string[];
     selectedSpeciesLanguages?: string[];
     classFeatureSelections?: Record<string, string[]>;
+    abilityScoreImprovementChoices?: Record<string, PersistedAbilityScoreImprovementChoice>;
+    featFollowUpChoices?: Record<string, PersistedFeatFollowUpChoice>;
     backgroundChoiceSelections?: Record<string, string>;
     abilityBaseScores?: Record<string, number>;
     abilityOverrideScores?: Record<string, number | null>;
@@ -41,6 +62,17 @@ interface PersistedBuilderState {
     bgAbilityScoreFor1?: string;
     inventoryEntries?: PersistedInventoryEntry[];
     currency?: PersistedCurrencyState;
+    classPreparedSpells?: Record<string, string[]>;
+    classKnownSpellsByClass?: Record<string, string[]>;
+    wizardSpellbookByClass?: Record<string, string[]>;
+}
+
+interface ActionRow {
+    name: string;
+    type: ActionType;
+    damage: string;
+    note: string;
+    bonusLabel: string;
 }
 
 @Component({
@@ -150,193 +182,15 @@ export class CharacterDetailPageComponent {
         Wizard: 'intelligence'
     };
 
-    private readonly classTrainingMap: Record<string, { armor: string[]; weapons: string[]; tools: string[] }> = {
-        Barbarian: { armor: ['Light Armor', 'Medium Armor', 'Shields'], weapons: ['Simple Weapons', 'Martial Weapons'], tools: [] },
-        Bard: { armor: ['Light Armor'], weapons: ['Simple Weapons', 'Hand Crossbows', 'Longswords', 'Rapiers', 'Shortswords'], tools: ['Three musical instruments'] },
-        Cleric: { armor: ['Light Armor', 'Medium Armor', 'Shields'], weapons: ['Simple Weapons'], tools: [] },
-        Druid: { armor: ['Light Armor', 'Medium Armor', 'Shields (non-metal)'], weapons: ['Clubs', 'Daggers', 'Darts', 'Javelins', 'Maces', 'Quarterstaffs', 'Scimitars', 'Sickles', 'Slings', 'Spears'], tools: ['Herbalism Kit'] },
-        Fighter: { armor: ['All Armor', 'Shields'], weapons: ['Simple Weapons', 'Martial Weapons'], tools: [] },
-        Monk: { armor: [], weapons: ['Simple Weapons', 'Shortswords'], tools: ['One artisan tool or one musical instrument'] },
-        Paladin: { armor: ['All Armor', 'Shields'], weapons: ['Simple Weapons', 'Martial Weapons'], tools: [] },
-        Ranger: { armor: ['Light Armor', 'Medium Armor', 'Shields'], weapons: ['Simple Weapons', 'Martial Weapons'], tools: [] },
-        Rogue: { armor: ['Light Armor'], weapons: ['Simple Weapons', 'Hand Crossbows', 'Longswords', 'Rapiers', 'Shortswords'], tools: ["Thieves' Tools"] },
-        Sorcerer: { armor: [], weapons: ['Daggers', 'Darts', 'Slings', 'Quarterstaffs', 'Light Crossbows'], tools: [] },
-        Warlock: { armor: ['Light Armor'], weapons: ['Simple Weapons'], tools: [] },
-        Wizard: { armor: [], weapons: ['Daggers', 'Darts', 'Slings', 'Quarterstaffs', 'Light Crossbows'], tools: [] }
-    };
-
-    private readonly classActionTemplates: Record<string, Array<{ name: string; type: ActionType; ability: AbilityKey; damage: string; note: string }>> = {
-        Barbarian: [
-            { name: 'Greataxe', type: 'attack', ability: 'strength', damage: '1d12 + STR', note: 'Melee heavy weapon' },
-            { name: 'Javelin', type: 'attack', ability: 'strength', damage: '1d6 + STR', note: 'Thrown (30/120)' }
-        ],
-        Bard: [
-            { name: 'Rapier', type: 'attack', ability: 'dexterity', damage: '1d8 + DEX', note: 'Finesse melee attack' },
-            { name: 'Vicious Mockery', type: 'save', ability: 'charisma', damage: '1d4 psychic', note: 'WIS save' }
-        ],
-        Cleric: [
-            { name: 'Mace', type: 'attack', ability: 'strength', damage: '1d6 + STR', note: 'Melee attack' },
-            { name: 'Sacred Flame', type: 'save', ability: 'wisdom', damage: '1d8 radiant', note: 'DEX save' }
-        ],
-        Druid: [
-            { name: 'Scimitar', type: 'attack', ability: 'dexterity', damage: '1d6 + DEX', note: 'Finesse melee attack' },
-            { name: 'Produce Flame', type: 'attack', ability: 'wisdom', damage: '1d8 fire', note: 'Ranged spell attack' }
-        ],
-        Fighter: [
-            { name: 'Longsword', type: 'attack', ability: 'strength', damage: '1d8 + STR', note: 'Melee versatile weapon' },
-            { name: 'Longbow', type: 'attack', ability: 'dexterity', damage: '1d8 + DEX', note: 'Ranged (150/600)' }
-        ],
-        Monk: [
-            { name: 'Unarmed Strike', type: 'attack', ability: 'dexterity', damage: '1d6 + DEX', note: 'Martial Arts' },
-            { name: 'Shortsword', type: 'attack', ability: 'dexterity', damage: '1d6 + DEX', note: 'Finesse melee attack' }
-        ],
-        Paladin: [
-            { name: 'Longsword', type: 'attack', ability: 'strength', damage: '1d8 + STR', note: 'Melee versatile weapon' },
-            { name: 'Javelin', type: 'attack', ability: 'strength', damage: '1d6 + STR', note: 'Thrown (30/120)' }
-        ],
-        Ranger: [
-            { name: 'Longbow', type: 'attack', ability: 'dexterity', damage: '1d8 + DEX', note: 'Ranged (150/600)' },
-            { name: 'Shortsword', type: 'attack', ability: 'dexterity', damage: '1d6 + DEX', note: 'Finesse melee attack' }
-        ],
-        Rogue: [
-            { name: 'Rapier', type: 'attack', ability: 'dexterity', damage: '1d8 + DEX', note: 'Sneak Attack eligible' },
-            { name: 'Shortbow', type: 'attack', ability: 'dexterity', damage: '1d6 + DEX', note: 'Ranged (80/320)' }
-        ],
-        Sorcerer: [
-            { name: 'Fire Bolt', type: 'attack', ability: 'charisma', damage: '1d10 fire', note: 'Ranged spell attack' },
-            { name: 'Ray of Frost', type: 'attack', ability: 'charisma', damage: '1d8 cold', note: 'Ranged spell attack' }
-        ],
-        Warlock: [
-            { name: 'Eldritch Blast', type: 'attack', ability: 'charisma', damage: '1d10 force', note: 'Ranged spell attack' },
-            { name: 'Chill Touch', type: 'attack', ability: 'charisma', damage: '1d8 necrotic', note: 'Ranged spell attack' }
-        ],
-        Wizard: [
-            { name: 'Fire Bolt', type: 'attack', ability: 'intelligence', damage: '1d10 fire', note: 'Ranged spell attack' },
-            { name: 'Chromatic Orb', type: 'attack', ability: 'intelligence', damage: '3d8 elemental', note: 'Ranged spell attack' }
-        ]
-    };
-
-    private readonly knownCantripNames = new Set<string>([
-        'Vicious Mockery',
-        'Sacred Flame',
-        'Produce Flame',
-        'Fire Bolt',
-        'Ray of Frost',
-        'Eldritch Blast',
-        'Chill Touch'
-    ]);
-
-    private readonly classBonusActionMap: Record<string, string> = {
-        Barbarian: 'Enter Rage',
-        Bard: 'Bardic Inspiration',
-        Cleric: 'Spiritual Weapon (if prepared)',
-        Druid: 'Wild Shape (circle feature dependent)',
-        Fighter: 'Second Wind',
-        Monk: 'Flurry of Blows',
-        Paladin: 'Misty Step (if prepared)',
-        Ranger: "Hunter's Mark (move mark)",
-        Rogue: 'Cunning Action',
-        Sorcerer: 'Quickened Spell (Metamagic)',
-        Warlock: 'Hex (move curse)',
-        Wizard: 'Misty Step (if prepared)'
-    };
-
-    private readonly classReactionMap: Record<string, string> = {
-        Barbarian: 'Opportunity Attack',
-        Bard: 'Cutting Words (subclass dependent)',
-        Cleric: 'Opportunity Attack',
-        Druid: 'Opportunity Attack',
-        Fighter: 'Opportunity Attack',
-        Monk: 'Deflect Missiles',
-        Paladin: 'Opportunity Attack',
-        Ranger: 'Opportunity Attack',
-        Rogue: 'Uncanny Dodge (if available)',
-        Sorcerer: 'Shield (if known)',
-        Warlock: 'Hellish Rebuke (if known)',
-        Wizard: 'Shield / Counterspell (if prepared)'
-    };
-
-    private readonly classFeatureMap: Record<string, Array<{ name: string; minLevel: number; description: string }>> = {
-        Barbarian: [
-            { name: 'Rage', minLevel: 1, description: 'Bonus damage and resistance to physical damage while raging.' },
-            { name: 'Reckless Attack', minLevel: 2, description: 'Advantage on STR melee attacks, but attacks against you have advantage.' },
-            { name: 'Danger Sense', minLevel: 2, description: 'Advantage on Dex saves against visible effects.' }
-        ],
-        Bard: [
-            { name: 'Bardic Inspiration', minLevel: 1, description: 'Grant allies inspiration dice.' },
-            { name: 'Jack of All Trades', minLevel: 2, description: 'Half proficiency bonus on checks without proficiency.' },
-            { name: 'Song of Rest', minLevel: 2, description: 'Extra healing during short rests.' }
-        ],
-        Cleric: [
-            { name: 'Divine Domain', minLevel: 1, description: 'Domain powers and spell options.' },
-            { name: 'Channel Divinity', minLevel: 2, description: 'Harness divine energy for domain effects.' },
-            { name: 'Turn Undead', minLevel: 2, description: 'Force undead to flee.' }
-        ],
-        Druid: [
-            { name: 'Druidic', minLevel: 1, description: 'Secret druid language.' },
-            { name: 'Wild Shape', minLevel: 2, description: 'Transform into beasts.' },
-            { name: 'Druid Circle', minLevel: 2, description: 'Choose a druid specialization.' }
-        ],
-        Fighter: [
-            { name: 'Second Wind', minLevel: 1, description: 'Recover HP as a bonus action.' },
-            { name: 'Action Surge', minLevel: 2, description: 'Take one additional action.' },
-            { name: 'Martial Archetype', minLevel: 3, description: 'Choose a fighter specialization.' }
-        ],
-        Monk: [
-            { name: 'Martial Arts', minLevel: 1, description: 'Unarmed combat features.' },
-            { name: 'Ki', minLevel: 2, description: 'Spend Ki points for combat techniques.' },
-            { name: 'Unarmored Movement', minLevel: 2, description: 'Faster movement while unarmored.' }
-        ],
-        Paladin: [
-            { name: 'Divine Sense', minLevel: 1, description: 'Detect celestial, fiend, and undead presence.' },
-            { name: 'Lay on Hands', minLevel: 1, description: 'Healing pool for allies.' },
-            { name: 'Divine Smite', minLevel: 2, description: 'Spend spell slots for radiant damage.' }
-        ],
-        Ranger: [
-            { name: 'Favored Enemy', minLevel: 1, description: 'Tracking and lore benefits vs selected enemies.' },
-            { name: 'Natural Explorer', minLevel: 1, description: 'Travel and exploration benefits in favored terrain.' },
-            { name: 'Fighting Style', minLevel: 2, description: 'Choose a combat style.' }
-        ],
-        Rogue: [
-            { name: 'Sneak Attack', minLevel: 1, description: 'Extra damage once per turn.' },
-            { name: 'Cunning Action', minLevel: 2, description: 'Dash, Disengage, or Hide as bonus action.' },
-            { name: 'Roguish Archetype', minLevel: 3, description: 'Choose rogue specialization.' }
-        ],
-        Sorcerer: [
-            { name: 'Sorcerous Origin', minLevel: 1, description: 'Bloodline-based magical powers.' },
-            { name: 'Font of Magic', minLevel: 2, description: 'Convert between spell slots and sorcery points.' },
-            { name: 'Metamagic', minLevel: 3, description: 'Modify spell casting effects.' }
-        ],
-        Warlock: [
-            { name: 'Otherworldly Patron', minLevel: 1, description: 'Pact powers from your patron.' },
-            { name: 'Pact Magic', minLevel: 1, description: 'Short-rest spell slots.' },
-            { name: 'Eldritch Invocations', minLevel: 2, description: 'Custom magical augmentations.' }
-        ],
-        Wizard: [
-            { name: 'Spellbook', minLevel: 1, description: 'Prepare and expand known spells.' },
-            { name: 'Arcane Recovery', minLevel: 1, description: 'Recover spell slots on short rest once/day.' },
-            { name: 'Arcane Tradition', minLevel: 2, description: 'Choose a magical school specialization.' }
-        ]
-    };
-
-    private readonly classEquipmentMap: Record<string, { weapons: string[]; armor: string[]; gear: string[] }> = {
-        Barbarian: { weapons: ['Greataxe', 'Javelins'], armor: ['Explorer clothes', 'Shield (optional)'], gear: ["Explorer's Pack", 'Bedroll', 'Rations'] },
-        Bard: { weapons: ['Rapier', 'Dagger'], armor: ['Leather Armor'], gear: ['Lute', "Diplomat's Pack", 'Ink & Quill'] },
-        Cleric: { weapons: ['Mace', 'Light Crossbow'], armor: ['Chain Shirt', 'Shield'], gear: ['Holy Symbol', "Priest's Pack", 'Incense'] },
-        Druid: { weapons: ['Scimitar', 'Dagger'], armor: ['Leather Armor', 'Wooden Shield'], gear: ['Druidic Focus', "Explorer's Pack", 'Herbalism Kit'] },
-        Fighter: { weapons: ['Longsword', 'Longbow'], armor: ['Chain Mail', 'Shield'], gear: ["Explorer's Pack", 'Whetstone', 'Rope'] },
-        Monk: { weapons: ['Shortsword', 'Quarterstaff'], armor: ['Unarmored Defense'], gear: ["Explorer's Pack", 'Prayer Beads', 'Waterskin'] },
-        Paladin: { weapons: ['Longsword', 'Javelins'], armor: ['Chain Mail', 'Shield'], gear: ['Holy Symbol', "Priest's Pack", "Traveler's Cloak"] },
-        Ranger: { weapons: ['Longbow', 'Shortswords'], armor: ['Scale Mail'], gear: ["Explorer's Pack", 'Hunting Trap', 'Rope'] },
-        Rogue: { weapons: ['Rapier', 'Shortbow'], armor: ['Leather Armor'], gear: ["Thieves' Tools", "Burglar's Pack", 'Ball Bearings'] },
-        Sorcerer: { weapons: ['Quarterstaff', 'Dagger'], armor: ['No armor proficiency'], gear: ['Arcane Focus', "Dungeoneer's Pack", 'Spell Components'] },
-        Warlock: { weapons: ['Light Crossbow', 'Dagger'], armor: ['Leather Armor'], gear: ['Arcane Focus', "Scholar's Pack", 'Book of Shadows'] },
-        Wizard: { weapons: ['Quarterstaff', 'Dagger'], armor: ['No armor proficiency'], gear: ['Spellbook', 'Arcane Focus', "Scholar's Pack"] }
-    };
 
     readonly characterId = this.route.snapshot.paramMap.get('id') || '';
     readonly activeCombatTab = signal<CombatTab>('actions');
+    readonly activeSpellFilter = signal<SpellFilter>('all');
     readonly activeActionFilter = signal<ActionFilter>('all');
+    readonly activeBackgroundFilter = signal<BackgroundFilter>('all');
+    readonly activeInventoryFilter = signal<InventoryFilter>('all');
+    readonly activeFeaturesFilter = signal<FeaturesFilter>('all');
+    readonly activeNotesFilter = signal<NotesFilter>('all');
     readonly selectedCampaignAssignment = signal('');
     readonly isUpdatingCampaign = signal(false);
     readonly campaignUpdateError = signal('');
@@ -360,6 +214,44 @@ export class CharacterDetailPageComponent {
         { key: 'reaction', label: 'Reaction' },
         { key: 'other', label: 'Other' },
         { key: 'limited-use', label: 'Limited Use' }
+    ];
+
+    readonly spellFilters: Array<{ key: SpellFilter; label: string }> = [
+        { key: 'all', label: 'All' },
+        { key: '0', label: '-0-' },
+        { key: '1', label: '1st' },
+        { key: '2', label: '2nd' },
+        { key: '3', label: '3rd' }
+    ];
+
+    readonly backgroundFilters: Array<{ key: BackgroundFilter; label: string }> = [
+        { key: 'all', label: 'All' },
+        { key: 'background', label: 'Background' },
+        { key: 'characteristics', label: 'Characteristics' },
+        { key: 'appearance', label: 'Appearance' }
+    ];
+
+    readonly inventoryFilters: Array<{ key: InventoryFilter; label: string }> = [
+        { key: 'all', label: 'All' },
+        { key: 'equipment', label: 'Equipment' },
+        { key: 'backpack', label: 'Backpack' },
+        { key: 'other', label: 'Other Possessions' }
+    ];
+
+    readonly featuresFilters: Array<{ key: FeaturesFilter; label: string }> = [
+        { key: 'all', label: 'All' },
+        { key: 'class-features', label: 'Class Features' },
+        { key: 'species-traits', label: 'Species Traits' },
+        { key: 'feats', label: 'Feats' }
+    ];
+
+    readonly notesFilters: Array<{ key: NotesFilter; label: string }> = [
+        { key: 'all', label: 'All' },
+        { key: 'orgs', label: 'Orgs' },
+        { key: 'allies', label: 'Allies' },
+        { key: 'enemies', label: 'Enemies' },
+        { key: 'backstory', label: 'Backstory' },
+        { key: 'other', label: 'Other' }
     ];
 
     readonly character = computed(() =>
@@ -467,10 +359,10 @@ export class CharacterDetailPageComponent {
             { label: 'Class & Level', value: `${char.className} ${char.level}` },
             { label: 'Race', value: char.race },
             { label: 'Background', value: this.displayBackground() },
-            { label: 'Alignment', value: noteContext.alignment || 'Unaligned' },
-            { label: 'Lifestyle', value: noteContext.lifestyle || 'Not set' },
-            { label: 'Faith', value: noteContext.faith || 'Not set' },
-            { label: 'Experience', value: `${this.getXpForLevel(char.level).toLocaleString()} XP` }
+            { label: 'Alignment', value: noteContext.alignment || 'Not recorded' },
+            { label: 'Lifestyle', value: noteContext.lifestyle || 'Not recorded' },
+            { label: 'Faith', value: noteContext.faith || 'Not recorded' },
+            { label: 'Experience', value: noteContext.experience || 'Not recorded' }
         ];
     });
 
@@ -672,22 +564,72 @@ export class CharacterDetailPageComponent {
         };
     });
 
+    readonly persistedSpellRows = computed(() => {
+        const char = this.character();
+        const persisted = this.persistedBuilderState();
+        if (!char || !persisted) {
+            return [] as Array<{ name: string; level: number; hitDcLabel: string; range: string; damage: string; concentration: boolean; ritual: boolean }>;
+        }
+
+        const className = char.className;
+        const preparedNames = persisted.classPreparedSpells?.[className] ?? [];
+        const knownNames = persisted.classKnownSpellsByClass?.[className] ?? [];
+        const wizardSpellbookNames = persisted.wizardSpellbookByClass?.[className] ?? [];
+        const ritualKnownNames = knownNames.filter((name) => this.isRitualSpell(name));
+
+        let selectedNames: string[];
+        if (className === 'Wizard') {
+            const wizardCantrips = wizardSpellbookNames.filter((name) => this.getSpellLevelForDetails(className, name) === 0);
+            const preparedLeveled = preparedNames.filter((name) => this.getSpellLevelForDetails(className, name) > 0);
+            const ritualFromSpellbook = wizardSpellbookNames.filter((name) => this.isRitualSpell(name) && this.getSpellLevelForDetails(className, name) > 0);
+            selectedNames = [...wizardCantrips, ...preparedLeveled, ...ritualFromSpellbook];
+        } else if (preparedNames.length > 0) {
+            selectedNames = [...preparedNames, ...ritualKnownNames];
+        } else {
+            selectedNames = knownNames;
+        }
+
+        const uniqueNames = [...new Set(selectedNames)];
+        const spellBonus = this.spellAttackBonus();
+        const saveDC = this.spellSaveDC();
+
+        return uniqueNames
+            .map((name) => {
+                const details = spellDetailsMap[name];
+                const as = details?.attackSave ?? '';
+                const hitDcLabel = as.includes('Attack') ? spellBonus
+                    : as.includes('Save') ? `DC ${saveDC}`
+                        : '—';
+                return {
+                    name,
+                    level: this.getSpellLevelForDetails(className, name),
+                    hitDcLabel,
+                    range: details?.range ?? '—',
+                    damage: 'Spell',
+                    concentration: details?.concentration ?? false,
+                    ritual: details?.ritual ?? false
+                };
+            })
+            .sort((left, right) => left.level - right.level || left.name.localeCompare(right.name));
+    });
+
     readonly spellCantrips = computed(() => {
-        const rows = this.actionRows();
-        return rows.filter((row) => this.knownCantripNames.has(row.name));
+        return this.persistedSpellRows().filter((row) => row.level === 0);
     });
 
-    readonly spellLevelOne = computed(() => {
-        const rows = this.actionRows();
-        return rows.filter((row) => {
-            if (this.knownCantripNames.has(row.name)) {
-                return false;
-            }
-
-            // Spell rows include save-based spells and explicit spell attacks.
-            return row.type === 'save' || /spell/i.test(row.note);
-        });
+    readonly spellsByLevel = computed(() => {
+        const leveled = this.persistedSpellRows().filter((row) => row.level > 0);
+        const groups = new Map<number, typeof leveled>();
+        for (const spell of leveled) {
+            if (!groups.has(spell.level)) groups.set(spell.level, []);
+            groups.get(spell.level)!.push(spell);
+        }
+        return [...groups.entries()]
+            .sort(([a], [b]) => a - b)
+            .map(([level, spells]) => ({ level, spells }));
     });
+
+    readonly hasLeveledSpells = computed(() => this.spellsByLevel().length > 0);
 
     readonly defenses = computed(() => {
         const char = this.character();
@@ -699,7 +641,7 @@ export class CharacterDetailPageComponent {
             .filter((trait) => /resistance|resil|immune/i.test(trait))
             .map((trait) => trait.replace(/^[^:]*:\s*/, '').trim());
 
-        return traitResistances.length ? traitResistances : ['No explicit resistances recorded'];
+        return traitResistances;
     });
 
     readonly conditionSummary = computed(() => {
@@ -717,11 +659,7 @@ export class CharacterDetailPageComponent {
             return { armor: [] as string[], weapons: [] as string[], tools: [] as string[] };
         }
 
-        return this.classTrainingMap[char.className] ?? {
-            armor: ['Light Armor'],
-            weapons: ['Simple Weapons'],
-            tools: []
-        };
+        return this.getTrainingFromSelections(this.persistedBuilderState());
     });
 
     readonly languageList = computed(() => {
@@ -738,7 +676,7 @@ export class CharacterDetailPageComponent {
             return uniqueSelected;
         }
 
-        return this.raceInfo()?.languages ?? ['Common'];
+        return this.raceInfo()?.languages ?? [];
     });
 
     readonly senses = computed(() => {
@@ -747,18 +685,11 @@ export class CharacterDetailPageComponent {
             return ['Passive Perception 10'];
         }
 
-        const hasDarkvision = (char.traits ?? []).some((trait) => /darkvision/i.test(trait));
-        const entries = [
+        return [
             `Passive Perception ${this.passivePerception()}`,
             `Passive Investigation ${this.passiveInvestigation()}`,
             `Passive Insight ${this.passiveInsight()}`
         ];
-
-        if (hasDarkvision) {
-            entries.push('Darkvision 60 ft');
-        }
-
-        return entries;
     });
 
     readonly inventory = computed(() => {
@@ -821,17 +752,12 @@ export class CharacterDetailPageComponent {
             };
         }
 
-        const defaults = this.classEquipmentMap[char.className] ?? {
-            weapons: ['Simple Weapon'],
-            armor: ['Travel Clothes'],
-            gear: ['Backpack']
-        };
-
         return {
-            ...defaults,
-            magicItems: [] as string[],
-            currency: { gp: 12, sp: 8, cp: 5 },
-            totalItemCount: defaults.weapons.length + defaults.armor.length + defaults.gear.length
+            weapons: [] as string[],
+            armor: [] as string[],
+            gear: [] as string[],
+            currency: { gp: 0, sp: 0, cp: 0 },
+            totalItemCount: 0
         };
     });
 
@@ -843,30 +769,46 @@ export class CharacterDetailPageComponent {
 
         const itemCount = bag.totalItemCount ?? (bag.weapons.length + bag.armor.length + bag.gear.length);
         return {
-            weight: `${Math.max(10, itemCount * 3)} lb`,
+            weight: itemCount > 0 ? `${itemCount} items` : 'Not tracked',
             itemCount,
-            partyWeight: `${Math.max(40, itemCount * 7)} lb`
+            partyWeight: 'Not tracked'
         };
     });
 
-    readonly actionRows = computed(() => {
+    readonly weaponActionRows = computed<ActionRow[]>(() => {
         const char = this.character();
-        if (!char) {
-            return [];
+        const bag = this.inventory();
+        if (!char || !bag) {
+            return [] as ActionRow[];
         }
 
-        const templates = this.classActionTemplates[char.className] ?? [
-            { name: 'Weapon Attack', type: 'attack' as ActionType, ability: 'strength' as AbilityKey, damage: '1d8 + STR', note: 'Basic attack' }
-        ];
-
-        return templates.map((action) => {
-            const abilityMod = this.getAbilityModifier(this.effectiveAbilityScores()?.[action.ability] ?? 10);
-            const bonus = abilityMod + (char.proficiencyBonus ?? 2);
+        return bag.weapons.map((weaponLabel) => {
+            const weaponName = weaponLabel.replace(/\s+x\d+$/i, '').trim();
+            const useDexterity = /bow|crossbow|sling|dagger|rapier|shortsword/i.test(weaponName);
+            const abilityKey: AbilityKey = useDexterity ? 'dexterity' : 'strength';
+            const abilityMod = this.getAbilityModifier(this.effectiveAbilityScores()?.[abilityKey] ?? 10);
+            const bonus = abilityMod + char.proficiencyBonus;
             return {
-                ...action,
+                name: weaponLabel,
+                type: 'attack',
+                damage: 'Weapon damage',
+                note: 'Recorded inventory weapon',
                 bonusLabel: this.formatSigned(bonus)
             };
         });
+    });
+
+    readonly actionRows = computed<ActionRow[]>(() => {
+        const weapons = this.weaponActionRows();
+        const spellRows = this.persistedSpellRows().map((spell) => ({
+            name: spell.name,
+            type: 'action' as ActionType,
+            damage: 'Spell',
+            note: spell.level === 0 ? 'Cantrip' : `Level ${spell.level} spell`,
+            bonusLabel: spell.hitDcLabel
+        }));
+
+        return [...weapons, ...spellRows];
     });
 
     readonly filteredActionRows = computed(() => {
@@ -882,13 +824,20 @@ export class CharacterDetailPageComponent {
         }
 
         if (filter === 'action') {
-            return rows.filter((row) => row.type === 'save');
+            return rows.filter((row) => row.type === 'action');
         }
 
         return [];
     });
 
-    readonly attacksPerAction = computed(() => 1);
+    readonly attacksPerAction = computed(() => {
+        const value = Number(this.noteContext().attacksPerAction);
+        if (Number.isFinite(value) && value > 0) {
+            return Math.trunc(value);
+        }
+
+        return Math.max(1, this.weaponActionRows().length > 0 ? 1 : 0);
+    });
 
     readonly quickActions = computed(() => {
         const char = this.character();
@@ -896,20 +845,39 @@ export class CharacterDetailPageComponent {
             return { actions: [], bonusActions: [] as string[], reactions: [] as string[] };
         }
 
+        const context = this.noteContext();
+
         return {
             actions: this.actionRows(),
-            bonusActions: [this.classBonusActionMap[char.className] ?? 'Class bonus action'],
-            reactions: [this.classReactionMap[char.className] ?? 'Opportunity Attack']
+            bonusActions: context.bonusActions,
+            reactions: context.reactions
         };
     });
 
     readonly classFeatures = computed(() => {
-        const char = this.character();
-        if (!char) {
+        const state = this.persistedBuilderState();
+        if (!state) {
             return [];
         }
 
-        return (this.classFeatureMap[char.className] ?? []).filter((feature) => char.level >= feature.minLevel);
+        const selections = state.classFeatureSelections ?? {};
+        const features: Array<{ name: string; description: string }> = [];
+
+        for (const selectedValues of Object.values(selections)) {
+            for (const value of selectedValues ?? []) {
+                const name = value.trim();
+                if (!name) {
+                    continue;
+                }
+
+                features.push({
+                    name,
+                    description: 'Selected during character creation.'
+                });
+            }
+        }
+
+        return features;
     });
 
     readonly displayBackstoryText = computed(() => {
@@ -944,11 +912,11 @@ export class CharacterDetailPageComponent {
         const context = this.noteContext();
 
         return {
-            personality: context.personality || 'Not set',
-            ideals: context.ideals || 'Not set',
-            bonds: context.bonds || 'Not set',
-            flaws: context.flaws || 'Not set',
-            backstory: char.notes || 'Backstory not yet documented.'
+            personality: context.personality || 'Not recorded',
+            ideals: context.ideals || 'Not recorded',
+            bonds: context.bonds || 'Not recorded',
+            flaws: context.flaws || 'Not recorded',
+            backstory: char.notes || ''
         };
     });
 
@@ -958,10 +926,18 @@ export class CharacterDetailPageComponent {
         const alignment = this.extractNoteValue(notes, /(^|\n)Alignment direction:\s*(.+?)(?=\n|$)/i);
         const lifestyle = this.extractNoteValue(notes, /(^|\n)Lifestyle direction:\s*(.+?)(?=\n|$)/i);
         const faith = this.extractNoteValue(notes, /(^|\n)Faith:\s*(.+?)(?=\n|$)/i);
+        const experience = this.extractNoteValue(notes, /(^|\n)Experience:\s*(.+?)(?=\n|$)/i);
         const personality = this.extractNoteValue(notes, /(^|\n)Emphasize these personality traits:\s*(.+?)(?=\n|$)/i);
         const ideals = this.extractNoteValue(notes, /(^|\n)Include these ideals:\s*(.+?)(?=\n|$)/i);
         const bonds = this.extractNoteValue(notes, /(^|\n)Include these bonds:\s*(.+?)(?=\n|$)/i);
         const flaws = this.extractNoteValue(notes, /(^|\n)Reflect these flaws:\s*(.+?)(?=\n|$)/i);
+
+        const organizations = this.extractNoteList(notes, /(^|\n)Organizations:\s*(.+?)(?=\n|$)/i);
+        const allies = this.extractNoteList(notes, /(^|\n)Allies:\s*(.+?)(?=\n|$)/i);
+        const enemies = this.extractNoteList(notes, /(^|\n)Enemies:\s*(.+?)(?=\n|$)/i);
+        const bonusActions = this.extractNoteList(notes, /(^|\n)Bonus Actions?:\s*(.+?)(?=\n|$)/i);
+        const reactions = this.extractNoteList(notes, /(^|\n)Reactions?:\s*(.+?)(?=\n|$)/i);
+        const attacksPerAction = this.extractNoteValue(notes, /(^|\n)Attacks? per Action:\s*(.+?)(?=\n|$)/i);
 
         const physicalRaw = this.extractNoteValue(notes, /(^|\n)Physical characteristics:\s*(.+?)(?=\n|$)/i);
         const physical = this.parsePhysicalCharacteristics(physicalRaw);
@@ -970,10 +946,17 @@ export class CharacterDetailPageComponent {
             alignment,
             lifestyle,
             faith,
+            experience,
             personality,
             ideals,
             bonds,
             flaws,
+            organizations,
+            allies,
+            enemies,
+            bonusActions,
+            reactions,
+            attacksPerAction,
             physical
         };
     });
@@ -1033,8 +1016,37 @@ export class CharacterDetailPageComponent {
         this.activeCombatTab.set(tab);
     }
 
+    setSpellFilter(filter: SpellFilter): void {
+        this.activeSpellFilter.set(filter);
+    }
+
+    showsSpellLevel(level: number): boolean {
+        const filter = this.activeSpellFilter();
+        if (filter === 'all') {
+            return true;
+        }
+
+        return filter === String(level);
+    }
+
     setActionFilter(filter: ActionFilter): void {
         this.activeActionFilter.set(filter);
+    }
+
+    setBackgroundFilter(filter: BackgroundFilter): void {
+        this.activeBackgroundFilter.set(filter);
+    }
+
+    setInventoryFilter(filter: InventoryFilter): void {
+        this.activeInventoryFilter.set(filter);
+    }
+
+    setFeaturesFilter(filter: FeaturesFilter): void {
+        this.activeFeaturesFilter.set(filter);
+    }
+
+    setNotesFilter(filter: NotesFilter): void {
+        this.activeNotesFilter.set(filter);
     }
 
     getUsedSpellSlots(level: number, maxSlots: number): number {
@@ -1140,20 +1152,21 @@ export class CharacterDetailPageComponent {
 
         const base = state.abilityBaseScores ?? {};
         const overrides = state.abilityOverrideScores ?? {};
+        const bonuses = this.getPersistedAbilityBonuses(state);
 
         const fromKey = (key: AbilityKey): number | null => {
             const titleKey = this.toTitleCaseAbilityKey(key);
+            const baseValue = base[titleKey];
+            if (typeof baseValue !== 'number' || !Number.isFinite(baseValue)) {
+                return null;
+            }
+
             const override = overrides[titleKey];
             if (typeof override === 'number' && Number.isFinite(override)) {
                 return Math.trunc(override);
             }
 
-            const baseValue = base[titleKey];
-            if (typeof baseValue === 'number' && Number.isFinite(baseValue)) {
-                return Math.trunc(baseValue);
-            }
-
-            return null;
+            return Math.min(20, Math.trunc(baseValue) + (bonuses[key] ?? 0));
         };
 
         const strength = fromKey('strength');
@@ -1183,21 +1196,176 @@ export class CharacterDetailPageComponent {
             charisma
         };
 
+        return scores;
+    }
+
+    private getPersistedAbilityBonuses(state: PersistedBuilderState): Record<AbilityKey, number> {
+        const total = this.createEmptyAbilityBonusMap();
+        const background = this.getPersistedBackgroundAbilityBonuses(state);
+        const classFeatures = this.getPersistedClassFeatureAbilityBonuses(state);
+
+        (Object.keys(total) as AbilityKey[]).forEach((key) => {
+            total[key] = (background[key] ?? 0) + (classFeatures[key] ?? 0);
+        });
+
+        return total;
+    }
+
+    private getPersistedBackgroundAbilityBonuses(state: PersistedBuilderState): Record<AbilityKey, number> {
+        const bonuses = this.createEmptyAbilityBonusMap();
         const mode = state.bgAbilityMode?.trim();
-        if (mode === 'plus-two-plus-one') {
+
+        if (mode === 'Increase three scores (+1 / +1 / +1)') {
+            const abilities = this.getBackgroundAbilityPool(state);
+            abilities.forEach((ability) => this.addAbilityBonus(bonuses, ability, 1));
+            return bonuses;
+        }
+
+        if (mode === 'Increase two scores (+2 / +1)' || mode === 'plus-two-plus-one') {
+            const allowed = new Set(this.getBackgroundAbilityPool(state));
             const plusTwo = this.parseAbilityKey(state.bgAbilityScoreFor2);
             const plusOne = this.parseAbilityKey(state.bgAbilityScoreFor1);
 
-            if (plusTwo) {
-                scores[plusTwo] = Math.min(20, scores[plusTwo] + 2);
+            if (plusTwo && allowed.has(plusTwo)) {
+                this.addAbilityBonus(bonuses, plusTwo, 2);
             }
 
-            if (plusOne) {
-                scores[plusOne] = Math.min(20, scores[plusOne] + 1);
+            if (plusOne && plusOne !== plusTwo && allowed.has(plusOne)) {
+                this.addAbilityBonus(bonuses, plusOne, 1);
             }
         }
 
-        return scores;
+        return bonuses;
+    }
+
+    private getPersistedClassFeatureAbilityBonuses(state: PersistedBuilderState): Record<AbilityKey, number> {
+        const bonuses = this.createEmptyAbilityBonusMap();
+        const selections = state.classFeatureSelections ?? {};
+        const asiChoices = state.abilityScoreImprovementChoices ?? {};
+        const featChoices = state.featFollowUpChoices ?? {};
+
+        Object.entries(selections).forEach(([selectionKey, values]) => {
+            values.forEach((selectedValue) => {
+                if (!selectedValue) {
+                    return;
+                }
+
+                if (selectedValue === 'Ability Score Improvement') {
+                    const asiChoice = asiChoices[selectionKey];
+                    if (!asiChoice) {
+                        return;
+                    }
+
+                    const primary = this.parseAbilityKey(asiChoice.primaryAbility);
+                    const secondary = this.parseAbilityKey(asiChoice.secondaryAbility);
+
+                    if (asiChoice.mode === 'plus-two' && primary) {
+                        this.addAbilityBonus(bonuses, primary, 2);
+                        return;
+                    }
+
+                    if (asiChoice.mode === 'plus-one-plus-one' && primary && secondary && primary !== secondary) {
+                        this.addAbilityBonus(bonuses, primary, 1);
+                        this.addAbilityBonus(bonuses, secondary, 1);
+                    }
+
+                    return;
+                }
+
+                const validFeatAbilities = this.getFeatAbilityIncreaseChoicesByFeat(selectedValue);
+                if (validFeatAbilities.length === 0) {
+                    return;
+                }
+
+                const selectedAbility = this.parseAbilityKey(featChoices[selectionKey]?.abilityIncreaseAbility);
+                if (selectedAbility && validFeatAbilities.includes(selectedAbility)) {
+                    this.addAbilityBonus(bonuses, selectedAbility, 1);
+                }
+            });
+        });
+
+        return bonuses;
+    }
+
+    private getBackgroundAbilityPool(state: PersistedBuilderState): AbilityKey[] {
+        const backgroundName = state.selectedBackgroundName?.trim();
+        const map: Partial<Record<string, AbilityKey[]>> = {
+            Acolyte: ['intelligence', 'wisdom', 'charisma'],
+            Criminal: ['dexterity', 'constitution', 'intelligence'],
+            Spy: ['dexterity', 'constitution', 'intelligence'],
+            Noble: ['strength', 'dexterity', 'charisma'],
+            Knight: ['strength', 'dexterity', 'charisma'],
+            Charlatan: ['dexterity', 'constitution', 'charisma'],
+            Entertainer: ['strength', 'dexterity', 'charisma'],
+            Gladiator: ['strength', 'dexterity', 'charisma'],
+            'Folk Hero': ['strength', 'constitution', 'wisdom'],
+            'Guild Artisan': ['dexterity', 'intelligence', 'charisma'],
+            'Guild Merchant': ['dexterity', 'intelligence', 'charisma'],
+            Hermit: ['constitution', 'intelligence', 'wisdom'],
+            Outlander: ['strength', 'dexterity', 'constitution'],
+            Sage: ['constitution', 'intelligence', 'wisdom'],
+            Sailor: ['strength', 'dexterity', 'wisdom'],
+            Pirate: ['strength', 'dexterity', 'wisdom'],
+            Soldier: ['strength', 'dexterity', 'constitution'],
+            'Mercenary Veteran': ['strength', 'dexterity', 'constitution'],
+            Urchin: ['strength', 'dexterity', 'intelligence']
+        };
+
+        return map[backgroundName ?? ''] ?? ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
+    }
+
+    private getFeatAbilityIncreaseChoicesByFeat(featName: string): AbilityKey[] {
+        switch (featName) {
+            case 'Athlete':
+            case 'Charger':
+            case 'Dual Wielder':
+            case 'Grappler':
+            case 'Mage Slayer':
+            case 'Sentinel':
+            case 'Slasher':
+            case 'Weapon Master':
+                return ['strength', 'dexterity'];
+            case 'Defensive Duelist':
+            case 'Skulker':
+                return ['dexterity'];
+            case 'Elemental Adept':
+            case 'Spell Sniper':
+            case 'War Caster':
+                return ['intelligence', 'wisdom', 'charisma'];
+            case 'Great Weapon Master':
+            case 'Shield Master':
+                return ['strength'];
+            case 'Heavy Armor Master':
+                return ['strength', 'constitution'];
+            case 'Speedy':
+                return ['dexterity', 'constitution'];
+            case 'Inspiring Leader':
+                return ['wisdom', 'charisma'];
+            case 'Mounted Combatant':
+                return ['strength', 'dexterity', 'wisdom'];
+            case 'Polearm Master':
+                return ['dexterity', 'strength'];
+            case 'Resilient':
+            case 'Skill Expert':
+                return ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
+            default:
+                return [];
+        }
+    }
+
+    private createEmptyAbilityBonusMap(): Record<AbilityKey, number> {
+        return {
+            strength: 0,
+            dexterity: 0,
+            constitution: 0,
+            intelligence: 0,
+            wisdom: 0,
+            charisma: 0
+        };
+    }
+
+    private addAbilityBonus(target: Record<AbilityKey, number>, ability: AbilityKey, amount: number): void {
+        target[ability] = (target[ability] ?? 0) + amount;
     }
 
     private parseAbilityKey(value: string | undefined): AbilityKey | null {
@@ -1222,33 +1390,6 @@ export class CharacterDetailPageComponent {
 
     private toTitleCaseAbilityKey(key: AbilityKey): string {
         return `${key.charAt(0).toUpperCase()}${key.slice(1)}`;
-    }
-
-    private getXpForLevel(level: number): number {
-        const thresholds = [
-            0,
-            300,
-            900,
-            2700,
-            6500,
-            14000,
-            23000,
-            34000,
-            48000,
-            64000,
-            85000,
-            100000,
-            120000,
-            140000,
-            165000,
-            195000,
-            225000,
-            265000,
-            305000,
-            355000
-        ];
-
-        return thresholds[Math.min(Math.max(level, 1), 20) - 1] ?? 0;
     }
 
     private getSpellSlots(level: number, casterType: 'none' | 'full' | 'half'): number[] {
@@ -1284,6 +1425,32 @@ export class CharacterDetailPageComponent {
         return fullCasterSlots[effectiveLevel - 1] ?? [];
     }
 
+    private getSpellLevelForDetails(className: string, spellName: string): number {
+        const classCatalog = classSpellCatalog[className] ?? [];
+        const classMatch = classCatalog.find((spell) => spell.name === spellName);
+        if (classMatch) {
+            return classMatch.level;
+        }
+
+        const wizardMatch = (classSpellCatalog['Wizard'] ?? []).find((spell) => spell.name === spellName);
+        if (wizardMatch) {
+            return wizardMatch.level;
+        }
+
+        for (const catalog of Object.values(classSpellCatalog)) {
+            const fallback = catalog.find((spell) => spell.name === spellName);
+            if (fallback) {
+                return fallback.level;
+            }
+        }
+
+        return 1;
+    }
+
+    private isRitualSpell(spellName: string): boolean {
+        return Boolean(spellDetailsMap[spellName]?.ritual);
+    }
+
     private parsePersistedNotes(notes: string): { cleanedNotes: string; state: PersistedBuilderState | null } {
         const raw = notes?.trim() ?? '';
         if (!raw) {
@@ -1314,6 +1481,67 @@ export class CharacterDetailPageComponent {
     private extractNoteValue(notes: string, pattern: RegExp): string {
         const match = notes.match(pattern);
         return match?.[2]?.trim() ?? '';
+    }
+
+    private extractNoteList(notes: string, pattern: RegExp): string[] {
+        const value = this.extractNoteValue(notes, pattern);
+        if (!value) {
+            return [];
+        }
+
+        return value
+            .split(/[,;|]/g)
+            .map((entry) => entry.trim())
+            .filter((entry) => entry.length > 0);
+    }
+
+    private getTrainingFromSelections(state: PersistedBuilderState | null): { armor: string[]; weapons: string[]; tools: string[] } {
+        if (!state) {
+            return { armor: [], weapons: [], tools: [] };
+        }
+
+        const armor = new Set<string>();
+        const weapons = new Set<string>();
+        const tools = new Set<string>();
+
+        const selectedValues: string[] = [];
+        const classSelections = state.classFeatureSelections ?? {};
+        const backgroundSelections = state.backgroundChoiceSelections ?? {};
+
+        for (const values of Object.values(classSelections)) {
+            for (const entry of values ?? []) {
+                selectedValues.push(entry);
+            }
+        }
+
+        for (const value of Object.values(backgroundSelections)) {
+            selectedValues.push(value);
+        }
+
+        for (const raw of selectedValues) {
+            const value = raw.trim();
+            if (!value) {
+                continue;
+            }
+
+            if (/armor|shield/i.test(value)) {
+                armor.add(value);
+            }
+
+            if (/weapon|bow|crossbow|sword|axe|mace|spear|dagger/i.test(value)) {
+                weapons.add(value);
+            }
+
+            if (/tool|kit|instrument|thieves'/i.test(value)) {
+                tools.add(value);
+            }
+        }
+
+        return {
+            armor: [...armor],
+            weapons: [...weapons],
+            tools: [...tools]
+        };
     }
 
     private parsePhysicalCharacteristics(input: string): {

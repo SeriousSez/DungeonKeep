@@ -339,7 +339,15 @@ export class DungeonStoreService {
 
         const proficiencyBonus = Math.ceil(Math.max(character.level, 1) / 4) + 1;
         const armorClass = this.calculateAC(character.className, abilityScores.dexterity);
-        const hitPoints = this.calculateHitPoints(character.className, Math.max(character.level, 1), abilityScores.constitution);
+        const fallbackHitPoints = this.calculateHitPoints(character.className, Math.max(character.level, 1), abilityScores.constitution);
+        const draftMaxHitPoints = draft?.maxHitPoints ?? draft?.hitPoints;
+        const maxHitPoints = Number.isFinite(draftMaxHitPoints)
+            ? Math.max(1, Math.trunc(draftMaxHitPoints as number))
+            : fallbackHitPoints;
+        const draftCurrentHitPoints = draft?.hitPoints;
+        const hitPoints = Number.isFinite(draftCurrentHitPoints)
+            ? Math.max(0, Math.min(maxHitPoints, Math.trunc(draftCurrentHitPoints as number)))
+            : maxHitPoints;
 
         return {
             id: character.id,
@@ -360,7 +368,7 @@ export class DungeonStoreService {
             skills: draft?.skills ?? this.getDefaultSkillsByClass(character.className),
             armorClass,
             hitPoints,
-            maxHitPoints: hitPoints,
+            maxHitPoints,
             proficiencyBonus,
             traits: race?.traits ?? []
         };

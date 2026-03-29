@@ -1,4 +1,4 @@
-import { HttpErrorResponse } from '@angular/common/http';
+﻿import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { ChangeDetectorRef, Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -16,6 +16,7 @@ import { CharacteristicsModalComponent } from '../../components/characteristics-
 import { DeityPickerModalComponent } from '../../components/deity-picker-modal/deity-picker-modal.component';
 import { ChoiceBadgeComponent } from '../../components/choice-badge/choice-badge';
 import { DropdownComponent, type DropdownOption } from '../../components/dropdown/dropdown.component';
+import { HitPointManagerModalComponent } from '../../components/hit-point-manager-modal/hit-point-manager-modal.component';
 import { MultiSelectDropdownComponent, type MultiSelectOptionGroup } from '../../components/multi-select-dropdown/multi-select-dropdown.component';
 import { DungeonApiService } from '../../state/dungeon-api.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
@@ -23,13 +24,16 @@ import { SessionService } from '../../state/session.service';
 import { classSpellCatalog, type ClassSpellOption, spellcastingProgressionByClass, type SpellcastingProgression } from '../../data/class-spells.data';
 import { spellDetailsMap, type SpellDetail } from '../../data/spell-details.data';
 import { deitiesList } from '../../data/deities.data';
+import { subclassFeatureProgressionByClass as sharedSubclassFeatureProgressionByClass, subclassConfigs as sharedSubclassConfigs, subclassChoiceTitles as sharedSubclassChoiceTitles, subclassOptionsByClass as sharedSubclassOptionsByClass, type SubclassConfig } from '../../data/subclass-features.data';
 
 type StandardStep = 'home' | 'class' | 'species' | 'background' | 'abilities' | 'equipment' | 'whats-next';
 type AbilityGenerationMethod = '' | 'standard-array' | 'manual-rolled' | 'point-buy';
 type ClassSortMode = 'primary-ability' | 'party-role' | 'power-source' | 'complexity' | 'spellcasting' | 'armor';
 type SpeciesSortMode = 'lineage' | 'movement' | 'world' | 'complexity';
 type ClassPanelTab = 'class-features' | 'spells';
+type WizardSpellSubTab = 'prepared' | 'spellbook' | 'catalog';
 type AbilityScoreImprovementMode = '' | 'plus-two' | 'plus-one-plus-one';
+type HitPointMode = 'fixed' | 'rolled';
 
 interface AbilityScoreImprovementChoice {
     mode: AbilityScoreImprovementMode;
@@ -39,6 +43,7 @@ interface AbilityScoreImprovementChoice {
 
 interface FeatFollowUpChoice {
     abilityIncreaseAbility: string;
+    weaponMasterWeapon: string;
     grapplerAbility: string;
     magicInitiateAbility: string;
     skilledSelections: string[];
@@ -53,6 +58,19 @@ interface AbilityScoreImprovementFeatDetail {
     classification: string;
     intro: string;
     benefits: ReadonlyArray<AbilityScoreImprovementFeatBenefit>;
+}
+
+interface BarbarianSubclassDetail {
+    sourceText: string;
+    tagline: string;
+    description: string;
+    progressionNote: string;
+}
+
+interface StartingEquipmentPackage {
+    label: string;
+    items: ReadonlyArray<InventoryEntry>;
+    currency: { gp?: number };
 }
 
 interface PersistedBuilderState {
@@ -78,6 +96,8 @@ interface PersistedBuilderState {
     bgAbilityMode: string;
     bgAbilityScoreFor2: string;
     bgAbilityScoreFor1: string;
+    hitPointMode: HitPointMode;
+    rolledHitPointTotal: number | null;
     selectedClassStartingOption: 'A' | 'B' | '';
     selectedBackgroundStartingOption: 'A' | 'B' | '';
     inventoryEntries: InventoryEntry[];
@@ -93,11 +113,16 @@ interface PersistedBuilderState {
     physicalWeight: string;
     physicalAge: string;
     physicalGender: string;
+    classPreparedSpells: Record<string, string[]>;
+    classKnownSpellsByClass: Record<string, string[]>;
+    wizardSpellbookByClass: Record<string, string[]>;
+    wizardLevelUpLearnedSpellsByClass: Record<string, string[]>;
+    wizardSpellSubTabByClass: Record<string, WizardSpellSubTab>;
 }
 
 @Component({
     selector: 'app-new-character-standard-page',
-    imports: [CommonModule, RouterLink, NewCharacterInfoModalComponent, CharacteristicsModalComponent, DeityPickerModalComponent, ChoiceBadgeComponent, DropdownComponent, MultiSelectDropdownComponent, OptionMenuFilterComponent],
+    imports: [CommonModule, RouterLink, NewCharacterInfoModalComponent, CharacteristicsModalComponent, DeityPickerModalComponent, ChoiceBadgeComponent, DropdownComponent, HitPointManagerModalComponent, MultiSelectDropdownComponent, OptionMenuFilterComponent],
     templateUrl: './new-character-standard-page.component.html',
     styleUrl: './new-character-standard-page.component.scss'
 })
@@ -203,6 +228,10 @@ export class NewCharacterStandardPageComponent {
     readonly featFollowUpChoices = signal<Record<string, FeatFollowUpChoice>>({});
     readonly classPanelTabsByClass = signal<Record<string, ClassPanelTab>>({});
     readonly classPreparedSpells = signal<Record<string, string[]>>({});
+    readonly classKnownSpellsByClass = signal<Record<string, string[]>>({});
+    readonly wizardSpellbookByClass = signal<Record<string, string[]>>({});
+    readonly wizardLevelUpLearnedSpellsByClass = signal<Record<string, string[]>>({});
+    readonly wizardSpellSubTabByClass = signal<Record<string, WizardSpellSubTab>>({});
     readonly selectedSpellByClass = signal<Record<string, string>>({});
     readonly backgroundChoiceSelections = signal<Record<string, string>>({});
     readonly selectedAbilityMethod = signal<AbilityGenerationMethod>('');
@@ -234,6 +263,9 @@ export class NewCharacterStandardPageComponent {
     readonly rolledAssignments = signal<Record<number, string>>({});
     readonly manualRollGroupCount = signal(1);
     readonly diceRollGroupOpen = signal(true);
+    readonly hitPointMode = signal<HitPointMode>('fixed');
+    readonly rolledHitPointTotal = signal<number | null>(null);
+    readonly hitPointManagerOpen = signal(false);
 
     readonly activeCharacteristicModal = signal<'traits' | 'ideals' | 'bonds' | 'flaws' | null>(null);
     readonly deityPickerOpen = signal(false);
@@ -395,6 +427,10 @@ export class NewCharacterStandardPageComponent {
         value: i + 1,
         label: `Level ${i + 1}`
     }));
+    readonly hitPointModeOptions: ReadonlyArray<DropdownOption> = [
+        { value: 'fixed', label: 'Use Fixed HP (Average)' },
+        { value: 'rolled', label: 'Use Rolled HP Total' }
+    ];
     readonly spellcasterAbilityOptions: ReadonlyArray<DropdownOption> = [
         { value: 'Intelligence', label: 'Intelligence' },
         { value: 'Wisdom', label: 'Wisdom' },
@@ -553,7 +589,7 @@ export class NewCharacterStandardPageComponent {
             {
                 label: 'Core Species',
                 source: "Player's Handbook",
-                species: ['Dragonborn', 'Dwarf', 'Elf', 'Gnome', 'Half-Elf', 'Half-Orc', 'Halfling', 'Human', 'Tiefling']
+                species: ['Dragonborn', 'Dwarf', 'Elf', 'Gnome', 'Goliath', 'Halfling', 'Human', 'Orc', 'Tiefling']
             },
             {
                 label: 'Expanded Lineages',
@@ -561,14 +597,14 @@ export class NewCharacterStandardPageComponent {
                 species: [
                     'Aarakocra', 'Aasimar', 'Changeling', 'Deep Gnome', 'Duergar', 'Eladrin', 'Fairy', 'Firbolg',
                     'Genasi (Air)', 'Genasi (Earth)', 'Genasi (Fire)', 'Genasi (Water)', 'Githyanki', 'Githzerai',
-                    'Goliath', 'Harengon', 'Kenku', 'Locathah', 'Owlin', 'Satyr', 'Sea Elf', 'Shadar-Kai', 'Tabaxi',
+                    'Harengon', 'Kenku', 'Locathah', 'Owlin', 'Satyr', 'Sea Elf', 'Shadar-Kai', 'Tabaxi',
                     'Tortle', 'Triton', 'Verdan'
                 ]
             },
             {
                 label: 'Monstrous Ancestries',
                 source: 'Expanded Lineages',
-                species: ['Bugbear', 'Centaur', 'Goblin', 'Grung', 'Hobgoblin', 'Kobold', 'Lizardfolk', 'Minotaur', 'Orc', 'Shifter', 'Yuan-Ti']
+                species: ['Bugbear', 'Centaur', 'Goblin', 'Grung', 'Hobgoblin', 'Kobold', 'Lizardfolk', 'Minotaur', 'Shifter', 'Yuan-Ti']
             }
         ],
         movement: [
@@ -591,7 +627,7 @@ export class NewCharacterStandardPageComponent {
                 label: 'Standard Grounded',
                 source: 'Movement Profile',
                 species: [
-                    'Dragonborn', 'Dwarf', 'Elf', 'Gnome', 'Half-Elf', 'Half-Orc', 'Halfling', 'Human', 'Tiefling',
+                    'Dragonborn', 'Dwarf', 'Elf', 'Gnome', 'Goliath', 'Halfling', 'Human', 'Orc', 'Tiefling',
                     'Aasimar', 'Changeling', 'Deep Gnome', 'Duergar', 'Eladrin', 'Firbolg', 'Genasi (Air)',
                     'Genasi (Earth)', 'Genasi (Fire)', 'Genasi (Water)', 'Githyanki', 'Githzerai', 'Goliath',
                     'Kenku', 'Satyr', 'Shadar-Kai', 'Tortle', 'Verdan', 'Bugbear', 'Goblin', 'Hobgoblin',
@@ -603,7 +639,7 @@ export class NewCharacterStandardPageComponent {
             {
                 label: 'Civilized Realms',
                 source: 'World Affinity',
-                species: ['Human', 'Dwarf', 'Elf', 'Gnome', 'Halfling', 'Half-Elf', 'Dragonborn', 'Tiefling']
+                species: ['Human', 'Dwarf', 'Elf', 'Gnome', 'Halfling', 'Dragonborn', 'Tiefling']
             },
             {
                 label: 'Fey & Planar',
@@ -613,7 +649,7 @@ export class NewCharacterStandardPageComponent {
             {
                 label: 'Wildlands & Frontiers',
                 source: 'World Affinity',
-                species: ['Firbolg', 'Goliath', 'Harengon', 'Tabaxi', 'Tortle', 'Shifter', 'Orc', 'Half-Orc', 'Centaur']
+                species: ['Firbolg', 'Goliath', 'Harengon', 'Tabaxi', 'Tortle', 'Shifter', 'Orc', 'Centaur']
             },
             {
                 label: 'Underdark & Shadow',
@@ -635,13 +671,13 @@ export class NewCharacterStandardPageComponent {
             {
                 label: 'Beginner Friendly',
                 source: 'Complexity',
-                species: ['Human', 'Dwarf', 'Halfling', 'Half-Orc', 'Goliath', 'Orc', 'Tortle']
+                species: ['Human', 'Dwarf', 'Halfling', 'Goliath', 'Orc', 'Tortle']
             },
             {
                 label: 'Intermediate',
                 source: 'Complexity',
                 species: [
-                    'Dragonborn', 'Elf', 'Gnome', 'Half-Elf', 'Tiefling', 'Aarakocra', 'Aasimar', 'Firbolg',
+                    'Dragonborn', 'Elf', 'Gnome', 'Tiefling', 'Aarakocra', 'Aasimar', 'Firbolg',
                     'Genasi (Air)', 'Genasi (Earth)', 'Genasi (Fire)', 'Genasi (Water)', 'Harengon', 'Tabaxi',
                     'Sea Elf', 'Triton', 'Bugbear', 'Centaur', 'Goblin', 'Hobgoblin', 'Lizardfolk', 'Minotaur',
                     'Shifter', 'Yuan-Ti', 'Locathah', 'Owlin', 'Satyr'
@@ -670,6 +706,36 @@ export class NewCharacterStandardPageComponent {
     });
     readonly abilityTiles = ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'];
     readonly abilityScoreImprovementOptions = this.buildAbilityScoreImprovementFeatOptions();
+    private readonly barbarianSubclassDetails: Readonly<Record<string, BarbarianSubclassDetail>> = {
+        'Path of the Berserker': {
+            sourceText: 'Character options from the 5.5e Player\'s Handbook, Dungeon Master\'s Guide, Monster Manual, and D&D Beyond Basic Rules.',
+            tagline: 'Channel Rage into Violent Fury',
+            description: 'Barbarians who walk the Path of the Berserker direct their rage primarily toward violence. Their path is one of untrammeled fury, and they thrive in the chaos of battle as they let their rage seize and empower them.',
+            progressionNote: 'At levels 3, 6, 10, and 14, this path emphasizes relentless offense, fear pressure, and punishing counterattacks.'
+        },
+        'Path of the Wild Heart': {
+            sourceText: 'Character options from the 5.5e Player\'s Handbook, Dungeon Master\'s Guide, Monster Manual, and D&D Beyond Basic Rules.',
+            tagline: 'Bond with Primal Animal Spirits',
+            description: 'This path channels bestial instincts and adapts rage through totem-like aspects of the wild. It supports resilient frontlining, pursuit pressure, and flexible responses to changing encounters.',
+            progressionNote: 'At levels 3, 6, 10, and 14, this path adds mobility, survivability, and nature-aligned utility to your rage turns.'
+        },
+        'Path of the World Tree': {
+            sourceText: 'Character options from the 5.5e Player\'s Handbook, Dungeon Master\'s Guide, Monster Manual, and D&D Beyond Basic Rules.',
+            tagline: 'Fight as a Living Pillar of the World',
+            description: 'World Tree barbarians draw on cosmic roots to anchor allies and control space. Their rage blends durability with battlefield influence, making them strong protectors and disruptive frontliners.',
+            progressionNote: 'At levels 3, 6, 10, and 14, this path deepens your control tools, ally support, and positional dominance.'
+        },
+        'Path of the Zealot': {
+            sourceText: 'Character options from the 5.5e Player\'s Handbook, Dungeon Master\'s Guide, Monster Manual, and D&D Beyond Basic Rules.',
+            tagline: 'Burn with Divine Fury',
+            description: 'Zealot barbarians channel sacred conviction through their rage, dealing forceful strikes and refusing to fall. This path pushes high-tempo aggression while staying difficult to remove from the fight.',
+            progressionNote: 'At levels 3, 6, 10, and 14, this path strengthens burst damage, endurance, and faith-driven combat momentum.'
+        }
+    };
+    private readonly subclassFeatureProgressionByClass = sharedSubclassFeatureProgressionByClass;
+    private readonly subclassConfigs = sharedSubclassConfigs;
+    private readonly subclassChoiceTitles = sharedSubclassChoiceTitles;
+    private readonly subclassOptionsByClass = sharedSubclassOptionsByClass;
     private readonly abilityScoreImprovementFeatDescriptions: Readonly<Record<string, string>> = {
         'Ability Score Improvement': 'Increase one ability score by 2, or increase two ability scores by 1 each. You cannot raise a score above 20 with this feat.',
         'Alert': 'You gain +5 initiative, can swap initiative with a willing ally at the start of combat, and no longer grant advantage to unseen attackers.',
@@ -709,580 +775,286 @@ export class NewCharacterStandardPageComponent {
             classification: 'General Feat (Prerequisite: Level 4+)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Increase One Score',
-                    description: 'Increase one ability score by 2, to a maximum of 20.'
-                },
-                {
-                    title: 'Increase Two Scores',
-                    description: 'Instead, increase two different ability scores by 1 each, to a maximum of 20.'
-                },
-                {
-                    title: 'Flexible Growth',
-                    description: 'Use this option to round out key modifiers, unlock multiclass targets, or stabilize weak saves.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase one ability score by 2, or increase two ability scores by 1 each. This canâ€™t raise a score above 20.' },
+                { title: 'Repeatable', description: 'You can take this feat more than once.' }
             ]
         },
         'Alert': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
+            classification: 'Origin Feat',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Initiative Training',
-                    description: 'You gain stronger initiative performance, helping you act earlier in combat.'
-                },
-                {
-                    title: 'Initiative Swap',
-                    description: 'You can trade initiative placement with a willing ally to optimize turn order.'
-                },
-                {
-                    title: 'Hard To Ambush',
-                    description: 'Enemies do not get easy advantage from being unseen when attacking you.'
-                }
+                { title: 'Initiative Proficiency', description: 'When you roll Initiative, add your Proficiency Bonus.' },
+                { title: 'Initiative Swap', description: 'After rolling Initiative, you can swap with one willing ally who is not Incapacitated.' }
             ]
         },
         'Athlete': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
+            classification: 'General Feat (Prerequisite: Level 4+, Strength or Dexterity 13+)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Climb Speed',
-                    description: 'You gain improved climbing movement to navigate terrain more reliably.'
-                },
-                {
-                    title: 'Jump And Recovery',
-                    description: 'Your jumping and stand-up movement become more efficient in tactical situations.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.' },
+                { title: 'Climb Speed', description: 'You gain a Climb Speed equal to your Speed.' },
+                { title: 'Hop Up', description: 'If you are Prone, you can stand using only 5 feet of movement.' },
+                { title: 'Jumping', description: 'You can make running Long and High Jumps after moving only 5 feet.' }
             ]
         },
         'Charger': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
+            classification: 'General Feat (Prerequisite: Level 4+, Strength or Dexterity 13+)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Improved Dash',
-                    description: 'Your Dash action sets up stronger offensive pressure in the same turn.'
-                },
-                {
-                    title: 'Charge Attack',
-                    description: 'After building momentum, you can convert movement into bonus damage or battlefield control.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.' },
+                { title: 'Improved Dash', description: 'When you take the Dash action, your Speed increases by 10 feet for that action.' },
+                { title: 'Charge Attack', description: 'After moving at least 10 feet in a straight line, your next melee hit can add damage or push the target once per turn.' }
             ]
         },
         'Defensive Duelist': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
+            classification: 'General Feat (Prerequisite: Level 4+, Dexterity 13+)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Dexterity score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Parry Reaction',
-                    description: 'While wielding a finesse weapon, you can react to a melee hit by boosting AC against that attack.'
-                },
-                {
-                    title: 'Dueling Defense',
-                    description: 'This feat improves survivability for agile frontliners who rely on reaction timing.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Dexterity score by 1, to a maximum of 20.' },
+                { title: 'Parry', description: 'While holding a Finesse weapon, use your Reaction to add Proficiency Bonus to AC against melee attacks until your next turn.' }
             ]
         },
         'Dual Wielder': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
+            classification: 'General Feat (Prerequisite: Level 4+, Strength or Dexterity 13+)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Enhanced Dual Wielding',
-                    description: 'You gain stronger combat efficiency when using a weapon in each hand.'
-                },
-                {
-                    title: 'Quick Draw',
-                    description: 'You can draw or stow two one-handed weapons in the same interaction window.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.' },
+                { title: 'Enhanced Dual Wielding', description: 'After attacking with a Light weapon, you can make a Bonus Action attack with a different qualifying melee weapon.' },
+                { title: 'Quick Draw', description: 'You can draw or stow two qualifying weapons when you would normally draw or stow one.' }
             ]
         },
         'Elemental Adept': {
-            classification: 'General Feat (Prerequisite: Level 4+, Repeatable)',
+            classification: 'General Feat (Prerequisite: Level 4+, Spellcasting or Pact Magic Feature)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Intelligence, Wisdom, or Charisma score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Energy Mastery',
-                    description: 'Choose an energy type to specialize in and improve reliability with spells using that damage type.'
-                },
-                {
-                    title: 'Repeatable Choice',
-                    description: 'You can take this feat again to gain mastery with an additional energy type.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Intelligence, Wisdom, or Charisma score by 1, to a maximum of 20.' },
+                { title: 'Energy Mastery', description: 'Choose Acid, Cold, Fire, Lightning, or Thunder. Your spells ignore Resistance to that type, and 1s on damage dice can become 2s.' },
+                { title: 'Repeatable', description: 'You can take this feat more than once, choosing a different damage type each time.' }
             ]
         },
         'Grappler': {
             classification: 'General Feat (Prerequisite: Level 4+, Strength or Dexterity 13+)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Punch and Grab',
-                    description: 'When you hit a creature with an Unarmed Strike as part of your Attack action, you can apply both the Damage and Grapple options. You can do this once per turn.'
-                },
-                {
-                    title: 'Attack Advantage',
-                    description: 'You have Advantage on attack rolls against a creature Grappled by you.'
-                },
-                {
-                    title: 'Fast Wrestler',
-                    description: 'You ignore the usual extra movement cost for dragging a creature Grappled by you if it is your size or smaller.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.' },
+                { title: 'Punch and Grab', description: 'When you hit with an Unarmed Strike as part of the Attack action, you can use both the Damage and Grapple options once per turn.' },
+                { title: 'Attack Advantage', description: 'You have Advantage on attack rolls against creatures Grappled by you.' },
+                { title: 'Fast Wrestler', description: 'You donâ€™t spend extra movement to move creatures Grappled by you if they are your size or smaller.' }
             ]
         },
         'Great Weapon Master': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
+            classification: 'General Feat (Prerequisite: Level 4+, Strength 13+)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Strength score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Heavy Weapon Mastery',
-                    description: 'You gain stronger payoff while fighting with Heavy weapons.'
-                },
-                {
-                    title: 'Hew',
-                    description: 'Your biggest hits can chain into extra offensive pressure in the same round.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Strength score by 1, to a maximum of 20.' },
+                { title: 'Heavy Weapon Mastery', description: 'When you hit with a Heavy weapon during the Attack action, it deals extra damage equal to your Proficiency Bonus.' },
+                { title: 'Hew', description: 'After a Critical Hit or reducing a creature to 0 HP with a melee weapon, you can make one Bonus Action attack with that weapon.' }
             ]
         },
         'Healer': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
+            classification: 'Origin Feat',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Battle Medic',
-                    description: 'You can deliver faster, more effective emergency treatment during encounters.'
-                },
-                {
-                    title: 'Healing Rerolls',
-                    description: 'Your healing output becomes more consistent by improving low roll outcomes.'
-                },
-                {
-                    title: 'Nonmagical Support',
-                    description: 'This feat supports parties that need durable healing without relying on spell slots.'
-                }
+                { title: 'Battle Medic', description: 'Using a Healerâ€™s Kit, you can let a nearby creature spend a Hit Die and regain HP equal to the roll plus your Proficiency Bonus.' },
+                { title: 'Healing Rerolls', description: 'When you roll healing dice from spells or Battle Medic, you can reroll 1s.' }
             ]
         },
         'Heavy Armor Master': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
+            classification: 'General Feat (Prerequisite: Level 4+, Heavy Armor Training)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Strength or Constitution score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Damage Reduction',
-                    description: 'While wearing Heavy armor, you reduce incoming nonmagical physical weapon damage.'
-                },
-                {
-                    title: 'Frontline Endurance',
-                    description: 'You become harder to wear down across long attrition-focused fights.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Constitution or Strength score by 1, to a maximum of 20.' },
+                { title: 'Damage Reduction', description: 'While wearing Heavy armor, reduce incoming Bludgeoning, Piercing, and Slashing damage from attacks by your Proficiency Bonus.' }
             ]
         },
         'Inspiring Leader': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
+            classification: 'General Feat (Prerequisite: Level 4+, Wisdom or Charisma 13+)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Wisdom or Charisma score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Bolstering Performance',
-                    description: 'You can grant temporary hit points to allies through a brief motivating performance.'
-                },
-                {
-                    title: 'Pre-Fight Protection',
-                    description: 'Use this before dangerous scenes to soften incoming burst damage for the whole group.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Wisdom or Charisma score by 1, to a maximum of 20.' },
+                { title: 'Bolstering Performance', description: 'After a Short or Long Rest, grant Temporary Hit Points to up to six creatures based on level plus your chosen ability modifier.' }
             ]
         },
         'Mage Slayer': {
             classification: 'General Feat (Prerequisite: Level 4+)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Concentration Breaker',
-                    description: 'You gain tools to pressure enemy casters and disrupt concentration-based plans.'
-                },
-                {
-                    title: 'Guarded Mind',
-                    description: 'You become more resilient when facing magical control and hostile spell effects.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.' },
+                { title: 'Concentration Breaker', description: 'Creatures you damage have Disadvantage on Concentration saves.' },
+                { title: 'Guarded Mind', description: 'If you fail an Intelligence, Wisdom, or Charisma save, you can succeed instead once per Short or Long Rest.' }
             ]
         },
         'Magic Initiate (Cleric)': {
-            classification: 'General Feat (Prerequisite: Level 4+, Repeatable)',
+            classification: 'Origin Feat',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Two Cantrips',
-                    description: 'Learn two cantrips from the Cleric spell list.'
-                },
-                {
-                    title: 'One 1st-Level Spell',
-                    description: 'Learn one 1st-level Cleric spell, with limited free casting and normal slot casting thereafter.'
-                },
-                {
-                    title: 'Spell Flexibility',
-                    description: 'This feat broadens your toolkit with utility and support magic without full multiclassing.'
-                }
+                { title: 'Two Cantrips', description: 'Learn two cantrips from the Cleric list. Choose Intelligence, Wisdom, or Charisma as your casting ability for this feat.' },
+                { title: 'Level 1 Spell', description: 'Learn one level 1 Cleric spell. You always have it prepared, can cast it once per Long Rest without a slot, and can cast it with slots.' },
+                { title: 'Spell Change', description: 'When you gain a level, you can replace one chosen spell with another of the same level from the same list.' },
+                { title: 'Repeatable', description: 'You can take this feat again, choosing a different spell list.' }
             ]
         },
         'Magic Initiate (Druid)': {
-            classification: 'General Feat (Prerequisite: Level 4+, Repeatable)',
+            classification: 'Origin Feat',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Two Cantrips',
-                    description: 'Learn two cantrips from the Druid spell list.'
-                },
-                {
-                    title: 'One 1st-Level Spell',
-                    description: 'Learn one 1st-level Druid spell, with limited free casting and normal slot casting thereafter.'
-                },
-                {
-                    title: 'Spell Flexibility',
-                    description: 'This feat adds nature-themed utility and control options to your core role.'
-                }
+                { title: 'Two Cantrips', description: 'Learn two cantrips from the Druid list. Choose Intelligence, Wisdom, or Charisma as your casting ability for this feat.' },
+                { title: 'Level 1 Spell', description: 'Learn one level 1 Druid spell. You always have it prepared, can cast it once per Long Rest without a slot, and can cast it with slots.' },
+                { title: 'Spell Change', description: 'When you gain a level, you can replace one chosen spell with another of the same level from the same list.' },
+                { title: 'Repeatable', description: 'You can take this feat again, choosing a different spell list.' }
             ]
         },
         'Magic Initiate (Wizard)': {
-            classification: 'General Feat (Prerequisite: Level 4+, Repeatable)',
+            classification: 'Origin Feat',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Two Cantrips',
-                    description: 'Learn two cantrips from the Wizard spell list.'
-                },
-                {
-                    title: 'One 1st-Level Spell',
-                    description: 'Learn one 1st-level Wizard spell, with limited free casting and normal slot casting thereafter.'
-                },
-                {
-                    title: 'Spell Flexibility',
-                    description: 'This feat adds arcane utility and ranged problem-solving to non-wizard builds.'
-                }
+                { title: 'Two Cantrips', description: 'Learn two cantrips from the Wizard list. Choose Intelligence, Wisdom, or Charisma as your casting ability for this feat.' },
+                { title: 'Level 1 Spell', description: 'Learn one level 1 Wizard spell. You always have it prepared, can cast it once per Long Rest without a slot, and can cast it with slots.' },
+                { title: 'Spell Change', description: 'When you gain a level, you can replace one chosen spell with another of the same level from the same list.' },
+                { title: 'Repeatable', description: 'You can take this feat again, choosing a different spell list.' }
             ]
         },
         'Mounted Combatant': {
             classification: 'General Feat (Prerequisite: Level 4+)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Strength, Dexterity, or Wisdom score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Mounted Strike',
-                    description: 'You gain improved offensive reliability while mounted.'
-                },
-                {
-                    title: 'Leap Aside And Veer',
-                    description: 'Your mount-and-rider pairing gains stronger reactive defense and repositioning options.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Strength, Dexterity, or Wisdom score by 1, to a maximum of 20.' },
+                { title: 'Mounted Strike', description: 'While mounted, you have Advantage on attacks against nearby unmounted creatures smaller than your mount.' },
+                { title: 'Leap Aside', description: 'Your mount takes no damage on successful Dexterity saves and half on failed saves against qualifying effects while conditions are met.' },
+                { title: 'Veer', description: 'While mounted, you can redirect a hit from your mount to yourself if you are not Incapacitated.' }
             ]
         },
         'Polearm Master': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
+            classification: 'General Feat (Prerequisite: Level 4+, Strength or Dexterity 13+)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Pole Strike',
-                    description: 'You gain extra attack economy using the haft or opposite end of qualifying weapons.'
-                },
-                {
-                    title: 'Reactive Strike',
-                    description: 'Enemies entering your reach can trigger stronger reaction-based pressure.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Dexterity or Strength score by 1, to a maximum of 20.' },
+                { title: 'Pole Strike', description: 'After attacking with a qualifying polearm, you can make a Bonus Action attack with the opposite end of the weapon.' },
+                { title: 'Reactive Strike', description: 'While holding a qualifying weapon, you can make a Reaction attack against a creature entering your reach.' }
             ]
         },
         'Resilient': {
             classification: 'General Feat (Prerequisite: Level 4+)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase one ability score of your choice by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Saving Throw Proficiency',
-                    description: 'Gain saving throw proficiency tied to that chosen ability.'
-                },
-                {
-                    title: 'Defensive Specialization',
-                    description: 'Use this feat to patch weak saves against your campaign\'s most dangerous effects.'
-                }
+                { title: 'Ability Score Increase', description: 'Choose one ability in which you lack saving throw proficiency and increase that ability score by 1, to a maximum of 20.' },
+                { title: 'Saving Throw Proficiency', description: 'You gain saving throw proficiency with that chosen ability.' }
             ]
         },
         'Savage Attacker': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
-            intro: 'You gain the following benefits.',
+            classification: 'Origin Feat',
+            intro: 'You gain the following benefit.',
             benefits: [
-                {
-                    title: 'Damage Reroll',
-                    description: 'Once per turn, roll your weapon damage twice and use either result.'
-                },
-                {
-                    title: 'Reliable Burst',
-                    description: 'This improves consistency on key turns where one big hit matters most.'
-                },
-                {
-                    title: 'Simple Throughput Boost',
-                    description: 'The feat is straightforward and benefits almost any weapon-focused build.'
-                }
+                { title: 'Savage Attacker', description: 'Once per turn when you hit with a weapon, roll the weaponâ€™s damage dice twice and use either roll.' }
             ]
         },
         'Sentinel': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
+            classification: 'General Feat (Prerequisite: Level 4+, Strength or Dexterity 13+)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Guardian',
-                    description: 'You can punish enemies for attacking allies near you.'
-                },
-                {
-                    title: 'Halt',
-                    description: 'Your opportunity attacks become stronger at stopping movement and controlling space.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.' },
+                { title: 'Guardian', description: 'When nearby creatures Disengage or hit targets other than you, you can make an Opportunity Attack against them.' },
+                { title: 'Halt', description: 'When you hit with an Opportunity Attack, the targetâ€™s Speed becomes 0 for the rest of the turn.' }
             ]
         },
         'Shield Master': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
+            classification: 'General Feat (Prerequisite: Level 4+, Shield Training)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Strength score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Shield Bash',
-                    description: 'Use your shield offensively to create pressure and battlefield control.'
-                },
-                {
-                    title: 'Interpose Shield',
-                    description: 'You gain stronger defensive reactions when protecting yourself from harmful effects.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Strength score by 1, to a maximum of 20.' },
+                { title: 'Shield Bash', description: 'After a qualifying melee weapon hit, you can force a Strength save to push a target or knock it Prone once per turn.' },
+                { title: 'Interpose Shield', description: 'If an effect allows half damage on a successful Dexterity save, you can use your Reaction to take no damage on a success while holding a Shield.' }
             ]
         },
         'Skilled': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
+            classification: 'Origin Feat',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Three Proficiencies',
-                    description: 'Gain proficiency in any combination of three skills or tools.'
-                },
-                {
-                    title: 'Build Flexibility',
-                    description: 'Use this to fill missing party utility, social coverage, or crafting niches.'
-                },
-                {
-                    title: 'Broad Competence',
-                    description: 'This feat increases your out-of-combat impact and backup problem-solving depth.'
-                }
+                { title: 'Three Proficiencies', description: 'Gain proficiency in any combination of three skills or tools of your choice.' },
+                { title: 'Repeatable', description: 'You can take this feat more than once.' }
             ]
         },
         'Skill Expert': {
             classification: 'General Feat (Prerequisite: Level 4+)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase one ability score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Skill Proficiency',
-                    description: 'Gain proficiency in one additional skill of your choice.'
-                },
-                {
-                    title: 'Expertise',
-                    description: 'Choose one skill you are proficient in and double your proficiency bonus for it.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase one ability score of your choice by 1, to a maximum of 20.' },
+                { title: 'Skill Proficiency', description: 'You gain proficiency in one skill of your choice.' },
+                { title: 'Expertise', description: 'Choose one skill in which you have proficiency but lack Expertise; you gain Expertise in that skill.' }
             ]
         },
         'Skulker': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
+            classification: 'General Feat (Prerequisite: Level 4+, Dexterity 13+)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Dexterity score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Blindsight Utility',
-                    description: 'Gain limited perception benefits that improve close-range threat awareness.'
-                },
-                {
-                    title: 'Fog Of War And Sniper Pressure',
-                    description: 'You retain stronger stealth and ranged pressure when vision is obscured.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Dexterity score by 1, to a maximum of 20.' },
+                { title: 'Blindsight', description: 'You have Blindsight with a range of 10 feet.' },
+                { title: 'Fog of War', description: 'In combat, you gain Advantage on Dexterity (Stealth) checks made as part of the Hide action.' },
+                { title: 'Sniper', description: 'If you make an attack roll while hidden and miss, that attack doesnâ€™t reveal your location.' }
             ]
         },
         'Slasher': {
             classification: 'General Feat (Prerequisite: Level 4+)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Hamstring',
-                    description: 'Your slashing hits can reduce enemy movement, improving chase and kite control.'
-                },
-                {
-                    title: 'Enhanced Critical',
-                    description: 'Critical slashing hits apply additional pressure that benefits the whole party.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.' },
+                { title: 'Hamstring', description: 'Once per turn, when you hit with Slashing damage, reduce the targetâ€™s Speed by 10 feet until the start of your next turn.' },
+                { title: 'Enhanced Critical', description: 'When you score a Critical Hit with Slashing damage, the target has Disadvantage on attack rolls until the start of your next turn.' }
             ]
         },
         'Speedy': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
+            classification: 'General Feat (Prerequisite: Level 4+, Dexterity or Constitution 13+)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Dexterity or Constitution score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Speed Increase',
-                    description: 'Your base movement speed increases, improving positioning every round.'
-                },
-                {
-                    title: 'Agile Movement',
-                    description: 'You gain better Dash and difficult-terrain handling for sustained mobility.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Dexterity or Constitution score by 1, to a maximum of 20.' },
+                { title: 'Speed Increase', description: 'Your Speed increases by 10 feet.' },
+                { title: 'Dash over Difficult Terrain', description: 'When you Dash, Difficult Terrain doesnâ€™t cost extra movement for the rest of that turn.' },
+                { title: 'Agile Movement', description: 'Opportunity Attacks have Disadvantage against you.' }
             ]
         },
         'Spell Sniper': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
+            classification: 'General Feat (Prerequisite: Level 4+, Spellcasting or Pact Magic Feature)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Intelligence, Wisdom, or Charisma score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Bypass Cover',
-                    description: 'Your spell attacks become more reliable against targets using cover.'
-                },
-                {
-                    title: 'Melee Casting And Increased Range',
-                    description: 'You gain stronger spell-attack reach and improved close-quarters casting utility.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Intelligence, Wisdom, or Charisma score by 1, to a maximum of 20.' },
+                { title: 'Bypass Cover', description: 'Your spell attack rolls ignore Half Cover and Three-Quarters Cover.' },
+                { title: 'Casting in Melee', description: 'Being within 5 feet of enemies doesnâ€™t impose Disadvantage on your spell attack rolls.' },
+                { title: 'Increased Range', description: 'When you cast a spell with at least 10-foot range that requires an attack roll, you can increase its range by 60 feet.' }
             ]
         },
         'Tavern Brawler': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
+            classification: 'Origin Feat',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Enhanced Unarmed Strike',
-                    description: 'Your unarmed and improvised offense becomes more threatening in rough fights.'
-                },
-                {
-                    title: 'Damage Rerolls',
-                    description: 'You improve consistency on scrappy close-range damage turns.'
-                },
-                {
-                    title: 'Improvised Weaponry And Push',
-                    description: 'Use environmental objects effectively and apply displacement pressure in melee.'
-                }
+                { title: 'Enhanced Unarmed Strike', description: 'When your Unarmed Strike hits and deals damage, you can deal 1d4 + Strength modifier Bludgeoning damage instead of normal Unarmed Strike damage.' },
+                { title: 'Damage Rerolls', description: 'When you roll damage for your Unarmed Strike, you can reroll 1s.' },
+                { title: 'Improvised Weaponry', description: 'You have proficiency with improvised weapons.' },
+                { title: 'Push', description: 'Once per turn, when your Unarmed Strike hits during the Attack action, you can deal damage and also push the target 5 feet.' }
             ]
         },
         'Tough': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
-            intro: 'You gain the following benefits.',
+            classification: 'Origin Feat',
+            intro: 'You gain the following benefit.',
             benefits: [
-                {
-                    title: 'Hit Point Increase',
-                    description: 'Your hit point maximum increases significantly as you level.'
-                },
-                {
-                    title: 'Immediate Durability',
-                    description: 'You become harder to drop right away, even before additional gear upgrades.'
-                },
-                {
-                    title: 'Long-Term Scaling',
-                    description: 'The durability benefit keeps scaling and remains relevant at higher tiers.'
-                }
+                { title: 'Hit Point Maximum Increase', description: 'Your HP maximum increases by twice your level when you take this feat, and by 2 more each time you gain a level thereafter.' }
             ]
         },
         'War Caster': {
-            classification: 'General Feat (Prerequisite: Level 4+)',
+            classification: 'General Feat (Prerequisite: Level 4+, Spellcasting or Pact Magic Feature)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Intelligence, Wisdom, or Charisma score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Concentration Support',
-                    description: 'You gain stronger concentration performance while under pressure in combat.'
-                },
-                {
-                    title: 'Reactive And Somatic Casting',
-                    description: 'You can cast more effectively while armed and gain stronger reaction-casting options.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Intelligence, Wisdom, or Charisma score by 1, to a maximum of 20.' },
+                { title: 'Concentration', description: 'You have Advantage on Constitution saving throws made to maintain Concentration.' },
+                { title: 'Reactive Spell', description: 'When a creature provokes your Opportunity Attack by leaving your reach, you can cast a qualifying one-action spell that targets only that creature instead.' },
+                { title: 'Somatic Components', description: 'You can perform Somatic components even when your hands are occupied by weapons or a Shield.' }
             ]
         },
         'Weapon Master': {
             classification: 'General Feat (Prerequisite: Level 4+)',
             intro: 'You gain the following benefits.',
             benefits: [
-                {
-                    title: 'Ability Score Increase',
-                    description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.'
-                },
-                {
-                    title: 'Mastery Property Access',
-                    description: 'Gain expanded access to weapon mastery properties and tactical weapon options.'
-                },
-                {
-                    title: 'Martial Breadth',
-                    description: 'This feat improves flexibility when adapting loadouts to enemy and encounter type.'
-                }
+                { title: 'Ability Score Increase', description: 'Increase your Strength or Dexterity score by 1, to a maximum of 20.' },
+                { title: 'Mastery Property', description: 'Gain access to one chosen weapon mastery property for an eligible weapon type you are proficient with; you can change the type after a Long Rest.' }
             ]
         }
     };
@@ -1329,6 +1101,55 @@ export class NewCharacterStandardPageComponent {
         const value = this.currency();
         return (value.pp * 10) + value.gp + (value.ep * 0.5) + (value.sp * 0.1) + (value.cp * 0.01);
     });
+
+    private readonly classStartingPackagePresets: Readonly<Record<string, Readonly<Record<'A' | 'B', StartingEquipmentPackage>>>> = {
+        Barbarian: {
+            A: {
+                label: 'Greataxe, 4 Handaxes, Explorer\'s Pack, and 15 GP',
+                items: classStartingPackages.A.items,
+                currency: classStartingPackages.A.currency
+            },
+            B: {
+                label: '75 GP',
+                items: classStartingPackages.B.items,
+                currency: classStartingPackages.B.currency
+            }
+        }
+    };
+
+    private readonly backgroundStartingPackagePresets: Readonly<Record<string, Readonly<Record<'A' | 'B', StartingEquipmentPackage>>>> = {
+        Acolyte: {
+            A: {
+                label: 'Calligrapher\'s Supplies, Book (prayers), Holy Symbol, Parchment (10 sheets), Robe, 8 GP',
+                items: backgroundStartingPackages.A.items,
+                currency: backgroundStartingPackages.A.currency
+            },
+            B: {
+                label: '50 GP',
+                items: backgroundStartingPackages.B.items,
+                currency: backgroundStartingPackages.B.currency
+            }
+        }
+    };
+
+    readonly equipmentClassName = computed(() => this.getPrimaryClassName() || 'Class');
+    readonly equipmentBackgroundName = computed(() => this.selectedBackground()?.name || this.selectedBackgroundName() || 'Background');
+    readonly hasClassStartingPackageData = computed(() => !!this.classStartingPackagePresets[this.equipmentClassName()]);
+    readonly hasBackgroundStartingPackageData = computed(() => !!this.backgroundStartingPackagePresets[this.equipmentBackgroundName()]);
+
+    readonly resolvedClassStartingPackages = computed<Readonly<Record<'A' | 'B', StartingEquipmentPackage>>>(() =>
+        this.classStartingPackagePresets[this.equipmentClassName()] ?? {
+            A: { label: 'Class package data is not configured for this class yet.', items: [], currency: {} },
+            B: { label: 'Class gold alternative is not configured for this class yet.', items: [], currency: {} }
+        }
+    );
+
+    readonly resolvedBackgroundStartingPackages = computed<Readonly<Record<'A' | 'B', StartingEquipmentPackage>>>(() =>
+        this.backgroundStartingPackagePresets[this.equipmentBackgroundName()] ?? {
+            A: { label: 'Background package data is not configured for this background yet.', items: [], currency: {} },
+            B: { label: 'Background gold alternative is not configured for this background yet.', items: [], currency: {} }
+        }
+    );
 
     readonly selectedBackground = computed(() => {
         const selectedUrl = this.selectedBackgroundUrl();
@@ -1596,15 +1417,43 @@ export class NewCharacterStandardPageComponent {
     getFeatureChoiceInfoText(feature: ClassFeature): string {
         switch (feature.name) {
             case 'Weapon Mastery':
-                return 'Choose weapons your Paladin regularly uses so your mastery options stay relevant in combat.';
+            case '4: Weapon Mastery':
+                return 'Choose weapon types you regularly attack with so mastery options matter in your core combat loop.';
             case 'Fighting Style':
                 return 'Pick Blessed Warrior for cantrips, or Fighting Style Feat for martial specialization.';
             case 'Blessed Warrior Cantrips':
                 return 'These cantrips count as Paladin spells for you, and Charisma is your spellcasting ability.';
             case 'Fighting Style Feat':
                 return 'Pick the style that best matches your primary weapon setup.';
+            case 'Barbarian Subclass':
+                return 'Your path defines subclass features at levels 3, 6, 10, and 14.';
+            case 'Artificer Specialist':
+                return 'Your specialist grants subclass features at levels 3, 5, 9, and 15.';
+            case 'Bard Subclass':
+                return 'Your bard college grants subclass features at levels 3, 6, and 14.';
+            case 'Cleric Subclass':
+                return 'Your divine domain grants subclass features at levels 3, 6, and 17.';
+            case 'Druid Subclass':
+                return 'Your druid circle grants subclass features at levels 3, 6, 10, and 14.';
+            case 'Fighter Subclass':
+                return 'Your martial archetype grants subclass features at levels 3, 7, 10, 15, and 18.';
+            case 'Monk Subclass':
+                return 'Your monastic tradition grants subclass features at levels 3, 6, 11, and 17.';
+            case 'Primal Knowledge':
+                return 'Choose one additional Barbarian skill proficiency.';
             case 'Paladin Subclass':
                 return 'Your Sacred Oath defines subclass features at levels 3, 7, 15, and 20.';
+            case 'Ranger Subclass':
+                return 'Your ranger conclave grants subclass features at levels 3, 7, 11, and 15.';
+            case 'Rogue Subclass':
+                return 'Your roguish archetype grants subclass features at levels 3, 9, 13, and 17.';
+            case 'Sorcerous Origin':
+            case 'Sorcerer Subclass':
+                return 'Your sorcerer subclass grants features at levels 3, 6, 14, and 18.';
+            case 'Warlock Subclass':
+                return 'Your patron grants subclass features at levels 3, 6, 10, and 14.';
+            case 'Wizard Subclass':
+                return 'Your arcane tradition grants subclass features at levels 3, 6, 10, and 14.';
             case 'Ability Score Improvement':
                 return 'You can pick a feat or take a standard Ability Score Improvement.';
             case 'Epic Boon':
@@ -1617,9 +1466,35 @@ export class NewCharacterStandardPageComponent {
     getFeatureChoiceSourceUrl(feature: ClassFeature): string {
         switch (feature.name) {
             case 'Weapon Mastery':
+            case '4: Weapon Mastery':
                 return 'https://roll20.net/compendium/dnd5e/Weapons#content';
+            case 'Barbarian Subclass':
+                return 'https://www.dndbeyond.com/classes/barbarian';
+            case 'Artificer Specialist':
+                return 'https://www.dndbeyond.com/classes/artificer';
+            case 'Bard Subclass':
+                return 'https://www.dndbeyond.com/classes/bard';
+            case 'Cleric Subclass':
+                return 'https://www.dndbeyond.com/classes/cleric';
+            case 'Druid Subclass':
+                return 'https://www.dndbeyond.com/classes/druid';
+            case 'Fighter Subclass':
+                return 'https://www.dndbeyond.com/classes/fighter';
+            case 'Monk Subclass':
+                return 'https://www.dndbeyond.com/classes/monk';
             case 'Paladin Subclass':
                 return 'https://www.dndbeyond.com/classes/paladin';
+            case 'Ranger Subclass':
+                return 'https://www.dndbeyond.com/classes/ranger';
+            case 'Rogue Subclass':
+                return 'https://www.dndbeyond.com/classes/rogue';
+            case 'Sorcerous Origin':
+            case 'Sorcerer Subclass':
+                return 'https://www.dndbeyond.com/classes/sorcerer';
+            case 'Warlock Subclass':
+                return 'https://www.dndbeyond.com/classes/warlock';
+            case 'Wizard Subclass':
+                return 'https://www.dndbeyond.com/classes/wizard';
             case 'Ability Score Improvement':
             case 'Epic Boon':
             case 'Fighting Style Feat':
@@ -1638,6 +1513,14 @@ export class NewCharacterStandardPageComponent {
         const normalizedClass = className.toLowerCase().replace(/[^a-z0-9]+/g, '-');
         const normalizedName = feature.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
         return `feature-choice-${normalizedClass}-${feature.level}-${normalizedName}-${choiceIndex}`;
+    }
+
+    getFeatureChoicePlaceholder(feature: ClassFeature): string {
+        if (this.isWizardSavantFeature(feature.name)) {
+            return '- Choose a Spell -';
+        }
+
+        return '- Choose an Option -';
     }
 
     getFeatureChoiceDropdownOptions(className: string, feature: ClassFeature, choiceIndex: number): DropdownOption[] {
@@ -1697,7 +1580,6 @@ export class NewCharacterStandardPageComponent {
                 [key]: compactSelections
             };
         });
-
         if (this.isAbilityScoreImprovementFeature(feature) && choiceIndex === 0) {
             const selectedValue = String(value ?? '').trim();
             if (selectedValue !== 'Ability Score Improvement') {
@@ -1736,6 +1618,16 @@ export class NewCharacterStandardPageComponent {
         }
     }
 
+    getFeatureChoiceSpellCatalogOption(className: string, spellName: string): ClassSpellOption | null {
+        const normalized = spellName.trim();
+        if (!normalized) {
+            return null;
+        }
+
+        const catalog = this.classSpellCatalog[className] ?? [];
+        return catalog.find((entry) => entry.name === normalized) ?? null;
+    }
+
     shouldShowAbilityScoreImprovementPickers(className: string, feature: ClassFeature): boolean {
         if (!this.isAbilityScoreImprovementFeature(feature)) {
             return false;
@@ -1759,6 +1651,10 @@ export class NewCharacterStandardPageComponent {
     }
 
     getSelectedAbilityScoreImprovementFeatDescription(className: string, feature: ClassFeature): string {
+        if (!this.isAbilityScoreImprovementFeature(feature)) {
+            return '';
+        }
+
         const selectedFeat = this.getSelectedAbilityScoreImprovementFeat(className, feature);
         if (!selectedFeat) {
             return '';
@@ -1769,6 +1665,10 @@ export class NewCharacterStandardPageComponent {
     }
 
     getSelectedAbilityScoreImprovementFeatClassification(className: string, feature: ClassFeature): string {
+        if (!this.isAbilityScoreImprovementFeature(feature)) {
+            return '';
+        }
+
         const selectedFeat = this.getSelectedAbilityScoreImprovementFeat(className, feature);
         if (!selectedFeat) {
             return '';
@@ -1778,6 +1678,10 @@ export class NewCharacterStandardPageComponent {
     }
 
     getSelectedAbilityScoreImprovementFeatIntro(className: string, feature: ClassFeature): string {
+        if (!this.isAbilityScoreImprovementFeature(feature)) {
+            return '';
+        }
+
         const selectedFeat = this.getSelectedAbilityScoreImprovementFeat(className, feature);
         if (!selectedFeat) {
             return '';
@@ -1787,12 +1691,29 @@ export class NewCharacterStandardPageComponent {
     }
 
     getSelectedAbilityScoreImprovementFeatBenefits(className: string, feature: ClassFeature): ReadonlyArray<AbilityScoreImprovementFeatBenefit> {
+        if (!this.isAbilityScoreImprovementFeature(feature)) {
+            return [];
+        }
+
         const selectedFeat = this.getSelectedAbilityScoreImprovementFeat(className, feature);
         if (!selectedFeat) {
             return [];
         }
 
         return this.abilityScoreImprovementFeatDetails[selectedFeat]?.benefits ?? [];
+    }
+
+    getSelectedBarbarianSubclassDetail(className: string, feature: ClassFeature): BarbarianSubclassDetail | null {
+        if (className !== 'Barbarian' || feature.name !== 'Barbarian Subclass') {
+            return null;
+        }
+
+        const selected = this.getFeatureChoiceValue(className, feature, 0);
+        if (!selected) {
+            return null;
+        }
+
+        return this.barbarianSubclassDetails[selected] ?? null;
     }
 
     shouldShowGrapplerPicker(className: string, feature: ClassFeature): boolean {
@@ -1806,6 +1727,10 @@ export class NewCharacterStandardPageComponent {
         }
 
         return this.getFeatAbilityIncreaseChoicesByFeat(selected).length > 0;
+    }
+
+    shouldShowWeaponMasterPicker(className: string, feature: ClassFeature): boolean {
+        return this.getSelectedAbilityScoreImprovementFeat(className, feature) === 'Weapon Master';
     }
 
     getFeatAbilityIncreasePlaceholder(className: string, feature: ClassFeature): string {
@@ -1827,6 +1752,30 @@ export class NewCharacterStandardPageComponent {
 
     getFeatAbilityIncreaseValue(className: string, feature: ClassFeature): string {
         return this.getFeatFollowUpChoice(className, feature).abilityIncreaseAbility;
+    }
+
+    getWeaponMasterOptions(): DropdownOption[] {
+        return this.buildWeaponMasterOptions().map((weapon) => ({
+            value: weapon,
+            label: weapon
+        }));
+    }
+
+    getWeaponMasterValue(className: string, feature: ClassFeature): string {
+        return this.getFeatFollowUpChoice(className, feature).weaponMasterWeapon;
+    }
+
+    onWeaponMasterChanged(className: string, feature: ClassFeature, value: string | number): void {
+        const key = this.getFeatureSelectionKey(className, feature);
+        const nextValue = String(value ?? '').trim();
+
+        this.featFollowUpChoices.update((current) => ({
+            ...current,
+            [key]: {
+                ...this.getFeatFollowUpChoice(className, feature),
+                weaponMasterWeapon: nextValue
+            }
+        }));
     }
 
     onFeatAbilityIncreaseChanged(className: string, feature: ClassFeature, value: string | number): void {
@@ -2044,18 +1993,31 @@ export class NewCharacterStandardPageComponent {
 
     private getFeatFollowUpChoice(className: string, feature: ClassFeature): FeatFollowUpChoice {
         const key = this.getFeatureSelectionKey(className, feature);
-        return this.featFollowUpChoices()[key] ?? {
-            abilityIncreaseAbility: '',
-            grapplerAbility: '',
-            magicInitiateAbility: '',
-            skilledSelections: []
+        const existing = this.featFollowUpChoices()[key];
+        return {
+            abilityIncreaseAbility: existing?.abilityIncreaseAbility ?? '',
+            weaponMasterWeapon: existing?.weaponMasterWeapon ?? '',
+            grapplerAbility: existing?.grapplerAbility ?? '',
+            magicInitiateAbility: existing?.magicInitiateAbility ?? '',
+            skilledSelections: existing?.skilledSelections ?? []
         };
     }
 
     private requiresFeatFollowUpChoice(featName: string): boolean {
         return this.getFeatAbilityIncreaseChoicesByFeat(featName).length > 0
+            || featName === 'Weapon Master'
             || featName.startsWith('Magic Initiate (')
             || featName === 'Skilled';
+    }
+
+    private buildWeaponMasterOptions(): string[] {
+        return [
+            'Club', 'Dagger', 'Greatclub', 'Handaxe', 'Javelin', 'Light Hammer', 'Mace', 'Quarterstaff', 'Sickle', 'Spear',
+            'Crossbow, Light', 'Dart', 'Shortbow', 'Sling',
+            'Battleaxe', 'Flail', 'Glaive', 'Greataxe', 'Greatsword', 'Halberd', 'Lance', 'Longsword', 'Maul', 'Morningstar',
+            'Pike', 'Rapier', 'Scimitar', 'Shortsword', 'Trident', 'War Pick', 'Warhammer', 'Whip',
+            'Blowgun', 'Crossbow, Hand', 'Crossbow, Heavy', 'Longbow', 'Net', 'Musket', 'Pistol'
+        ];
     }
 
     private getFeatAbilityIncreaseChoicesByFeat(featName: string): string[] {
@@ -2080,8 +2042,9 @@ export class NewCharacterStandardPageComponent {
             case 'Shield Master':
                 return ['Strength'];
             case 'Heavy Armor Master':
-            case 'Speedy':
                 return ['Strength', 'Constitution'];
+            case 'Speedy':
+                return ['Dexterity', 'Constitution'];
             case 'Inspiring Leader':
                 return ['Wisdom', 'Charisma'];
             case 'Mounted Combatant':
@@ -2111,6 +2074,72 @@ export class NewCharacterStandardPageComponent {
         return `${className}:${feature.level}:${feature.name}`;
     }
 
+    private getSubclassConfig(className: string): SubclassConfig | null {
+        return this.subclassConfigs[className] ?? null;
+    }
+
+    private getSelectedSubclassName(className: string): string {
+        const config = this.getSubclassConfig(className);
+        if (!config) {
+            return '';
+        }
+
+        const key = `${className}:${config.selectorLevel}:${config.selectorFeatureName}`;
+        return this.classFeatureSelections()[key]?.[0] ?? '';
+    }
+
+    private getSubclassFeaturesForLevel(className: string, subclassName: string, level: number): ClassFeature[] {
+        const detailOrList = this.subclassFeatureProgressionByClass[className]?.[subclassName]?.[level];
+        if (detailOrList) {
+            const details = Array.isArray(detailOrList) ? detailOrList : [detailOrList];
+            return details.map((detail) => ({
+                name: detail.name,
+                level,
+                description: detail.description
+            }));
+        }
+
+        return [
+            {
+                name: `${subclassName} Feature`,
+                level,
+                description: `Subclass feature unlocked by ${subclassName} at level ${level}.`
+            }
+        ];
+    }
+
+    private applySubclassFeatureProgression(className: string, featureLevel: ClassFeaturesForLevel): ClassFeaturesForLevel {
+        const subclassConfig = this.getSubclassConfig(className);
+        if (!subclassConfig) {
+            return featureLevel;
+        }
+
+        const selectedSubclass = this.getSelectedSubclassName(className);
+        if (!selectedSubclass) {
+            return featureLevel;
+        }
+
+        const isMilestoneLevel = subclassConfig.milestoneLevels.includes(featureLevel.level);
+        const hasSubclassPlaceholder = featureLevel.features.some((feature) => subclassConfig.placeholderFeatureNames.includes(feature.name));
+        if (!isMilestoneLevel && !hasSubclassPlaceholder) {
+            return featureLevel;
+        }
+
+        const subclassFeatures = this.getSubclassFeaturesForLevel(className, selectedSubclass, featureLevel.level);
+        if (subclassFeatures.length === 0) {
+            return featureLevel;
+        }
+
+        const withoutPlaceholder = featureLevel.features.filter((feature) => !subclassConfig.placeholderFeatureNames.includes(feature.name));
+        const existingNames = new Set(withoutPlaceholder.map((feature) => feature.name.toLowerCase()));
+        const featuresToApply = subclassFeatures.filter((feature) => !existingNames.has(feature.name.toLowerCase()));
+
+        return {
+            ...featureLevel,
+            features: [...withoutPlaceholder, ...featuresToApply]
+        };
+    }
+
     getClassFeatures(className: string, maxLevel: number = 1): ClassFeaturesForLevel[] {
         const seededFeatures = classLevelOneFeatures[className] || [];
         const hasSeededProgression = seededFeatures.some((featureGroup) => featureGroup.level > 1);
@@ -2118,9 +2147,10 @@ export class NewCharacterStandardPageComponent {
         if (hasSeededProgression) {
             return [...seededFeatures]
                 .sort((a, b) => a.level - b.level)
+                .map((featureLevel) => this.applySubclassFeatureProgression(className, featureLevel))
                 .map((featureLevel) => ({
                     ...featureLevel,
-                    features: featureLevel.features.map((feature) => this.resolveFeatureChoices(feature))
+                    features: featureLevel.features.map((feature) => this.resolveFeatureChoices(className, feature))
                 }))
                 .filter((featureLevel) => featureLevel.level <= maxLevel);
         }
@@ -2131,7 +2161,7 @@ export class NewCharacterStandardPageComponent {
         for (const featureGroup of [...seededFeatures, ...milestoneFeatures]) {
             const current = mergedByLevel.get(featureGroup.level) || [];
             for (const feature of featureGroup.features) {
-                const resolvedFeature = this.resolveFeatureChoices(feature);
+                const resolvedFeature = this.resolveFeatureChoices(className, feature);
                 const exists = current.some((entry) => entry.name.toLowerCase() === feature.name.toLowerCase());
                 if (!exists) {
                     current.push(resolvedFeature);
@@ -2142,13 +2172,42 @@ export class NewCharacterStandardPageComponent {
 
         return Array.from(mergedByLevel.entries())
             .map(([level, features]) => ({ level, features }))
+            .map((featureLevel) => this.applySubclassFeatureProgression(className, featureLevel))
+            .map((featureLevel) => ({
+                ...featureLevel,
+                features: featureLevel.features.map((feature) => this.resolveFeatureChoices(className, feature))
+            }))
             .sort((a, b) => a.level - b.level)
             .filter((featureLevel) => featureLevel.level <= maxLevel);
     }
 
-    private resolveFeatureChoices(feature: ClassFeature): ClassFeature {
+    private resolveFeatureChoices(className: string, feature: ClassFeature): ClassFeature {
         if (feature.choices) {
             return feature;
+        }
+
+        if (className === 'Wizard' && this.isWizardSavantFeature(feature.name)) {
+            return {
+                ...feature,
+                choices: {
+                    title: 'Choose 2 Wizard Spells',
+                    count: 2,
+                    options: this.getWizardSavantSpellOptions()
+                }
+            };
+        }
+
+        const subclassConfig = this.getSubclassConfig(className);
+        const subclassOptions = this.subclassOptionsByClass[className];
+        if (subclassConfig && subclassOptions && feature.name === subclassConfig.selectorFeatureName) {
+            return {
+                ...feature,
+                choices: {
+                    title: this.subclassChoiceTitles[className] ?? 'Choose 1 Subclass',
+                    count: 1,
+                    options: [...subclassOptions]
+                }
+            };
         }
 
         if (feature.name === 'Ability Score Improvement') {
@@ -2163,6 +2222,19 @@ export class NewCharacterStandardPageComponent {
         }
 
         return feature;
+    }
+
+    private isWizardSavantFeature(featureName: string): boolean {
+        return featureName.endsWith('Savant');
+    }
+
+    private getWizardSavantSpellOptions(): string[] {
+        const wizardSpells = this.classSpellCatalog['Wizard'] ?? [];
+        return wizardSpells
+            .filter((spell) => spell.level >= 1 && spell.level <= 2)
+            .map((spell) => spell.name)
+            .filter((name, index, all) => all.indexOf(name) === index)
+            .sort((a, b) => a.localeCompare(b));
     }
 
     private buildAbilityScoreImprovementFeatOptions(): string[] {
@@ -2233,7 +2305,7 @@ export class NewCharacterStandardPageComponent {
             return Number(levelMatch[1]);
         }
 
-        const rangedMatch = title.match(/(\d+)\s*[-–]\s*(\d+)/);
+        const rangedMatch = title.match(/(\d+)\s*[-â€“]\s*(\d+)/);
         if (rangedMatch) {
             return Number(rangedMatch[1]);
         }
@@ -2283,6 +2355,94 @@ export class NewCharacterStandardPageComponent {
         this.syncPreparedSpellsForClass(className, normalizedLevel);
     }
 
+    getClassHitDie(className: string): number {
+        const hitDice: Record<string, number> = {
+            Artificer: 8,
+            Barbarian: 12,
+            Bard: 8,
+            BloodHunter: 10,
+            Cleric: 8,
+            Druid: 8,
+            Fighter: 10,
+            Monk: 8,
+            Paladin: 10,
+            Ranger: 10,
+            Rogue: 8,
+            Sorcerer: 6,
+            Warlock: 8,
+            Wizard: 6
+        };
+
+        return hitDice[className.replace(/\s+/g, '')] ?? 10;
+    }
+
+    getConModifierForHitPoints(): number {
+        return Math.floor((this.getTotalScore('Constitution') - 10) / 2);
+    }
+
+    getConModifierForHitPointsDisplay(): string {
+        return this.toSignedNumber(this.getConModifierForHitPoints());
+    }
+
+    getFixedHitPointTotal(className: string, level: number): number {
+        const normalizedLevel = Math.max(1, Math.trunc(level || 1));
+        const hitDie = this.getClassHitDie(className);
+        const conMod = this.getConModifierForHitPoints();
+        const average = Math.ceil(hitDie / 2) + 1;
+        const total = hitDie + ((normalizedLevel - 1) * (average + conMod));
+        return Math.max(normalizedLevel, total);
+    }
+
+    getResolvedHitPointTotal(className: string, level: number): number {
+        if (this.hitPointMode() === 'rolled') {
+            const rolled = this.rolledHitPointTotal();
+            if (typeof rolled === 'number' && Number.isFinite(rolled) && rolled > 0) {
+                return Math.trunc(rolled);
+            }
+        }
+
+        return this.getFixedHitPointTotal(className, level);
+    }
+
+    getRolledHitPointTotalDisplay(): string {
+        const value = this.rolledHitPointTotal();
+        return value == null ? '' : String(value);
+    }
+
+    getHitPointManagerClassName(): string {
+        return this.getPrimaryClassName();
+    }
+
+    getHitPointManagerClassLevel(): number {
+        return this.getPrimaryClassLevel();
+    }
+
+    canManageHitPoints(): boolean {
+        return this.getHitPointManagerClassName().length > 0;
+    }
+
+    openHitPointManager(): void {
+        if (!this.canManageHitPoints()) {
+            return;
+        }
+
+        this.hitPointManagerOpen.set(true);
+    }
+
+    closeHitPointManager(): void {
+        this.hitPointManagerOpen.set(false);
+    }
+
+    onHitPointModeChanged(value: string | number): void {
+        const mode = String(value).trim() === 'rolled' ? 'rolled' : 'fixed';
+        this.hitPointMode.set(mode);
+    }
+
+    onRolledHitPointTotalInput(value: string): void {
+        const parsed = Number.parseInt(value, 10);
+        this.rolledHitPointTotal.set(Number.isNaN(parsed) ? null : Math.max(1, parsed));
+    }
+
     getActiveClassPanelTab(className: string): ClassPanelTab {
         return this.classPanelTabsByClass()[className] ?? 'class-features';
     }
@@ -2295,10 +2455,31 @@ export class NewCharacterStandardPageComponent {
     }
 
     classSupportsSpells(className: string, classLevel: number): boolean {
-        return this.getKnownClassSpells(className, classLevel).length > 0;
+        return this.getAvailableClassSpells(className, classLevel).length > 0;
     }
 
-    getKnownClassSpells(className: string, classLevel: number): ClassSpellOption[] {
+    private isSubclassSpellcaster(className: string): boolean {
+        const selectedSubclass = this.getSelectedSubclassName(className);
+        return (className === 'Fighter' && selectedSubclass === 'Eldritch Knight')
+            || (className === 'Rogue' && selectedSubclass === 'Arcane Trickster');
+    }
+
+    private getThirdCasterMaxSpellLevel(classLevel: number): number {
+        const normalizedLevel = Math.min(20, Math.max(1, Math.trunc(classLevel)));
+        if (normalizedLevel < 3) return 0;
+        if (normalizedLevel < 7) return 1;
+        if (normalizedLevel < 13) return 2;
+        if (normalizedLevel < 19) return 3;
+        return 4;
+    }
+
+    getAvailableClassSpells(className: string, classLevel: number): ClassSpellOption[] {
+        if (this.isSubclassSpellcaster(className)) {
+            const catalog = this.classSpellCatalog['Wizard'] ?? [];
+            const maxSpellLevel = this.getThirdCasterMaxSpellLevel(classLevel);
+            return catalog.filter((spell) => spell.level === 0 || spell.level <= maxSpellLevel);
+        }
+
         const catalog = this.classSpellCatalog[className] ?? [];
         if (!catalog.length) {
             return [];
@@ -2308,18 +2489,433 @@ export class NewCharacterStandardPageComponent {
         return catalog.filter((spell) => spell.level === 0 || spell.level <= maxSpellLevel);
     }
 
+    isKnownOnlyCaster(className: string): boolean {
+        return className === 'Bard'
+            || className === 'Sorcerer'
+            || className === 'Warlock'
+            || this.isSubclassSpellcaster(className);
+    }
+
+    getKnownCantripLimitForClass(className: string, classLevel: number): number {
+        const normalizedLevel = Math.min(20, Math.max(1, Math.trunc(classLevel)));
+        switch (className) {
+            case 'Bard':
+                return normalizedLevel >= 10 ? 4 : (normalizedLevel >= 4 ? 3 : 2);
+            case 'Sorcerer':
+                return normalizedLevel >= 10 ? 6 : (normalizedLevel >= 4 ? 5 : 4);
+            case 'Warlock':
+                return normalizedLevel >= 10 ? 4 : (normalizedLevel >= 4 ? 3 : 2);
+            case 'Fighter':
+                return normalizedLevel >= 10 ? 3 : 2;
+            case 'Rogue':
+                return normalizedLevel >= 10 ? 4 : 3;
+            default:
+                return Number.MAX_SAFE_INTEGER;
+        }
+    }
+
+    getKnownSpellLimitForClass(className: string, classLevel: number): number {
+        const normalizedLevel = Math.min(20, Math.max(1, Math.trunc(classLevel)));
+        switch (className) {
+            case 'Bard':
+                return this.getTableValueForClassLevel(className, normalizedLevel, [
+                    4, 5, 6, 7, 8, 9, 10, 11, 12, 14,
+                    15, 15, 16, 18, 19, 19, 20, 22, 22, 22
+                ]);
+            case 'Sorcerer':
+                return this.getTableValueForClassLevel(className, normalizedLevel, [
+                    2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+                    12, 12, 13, 13, 14, 14, 15, 15, 15, 15
+                ]);
+            case 'Warlock':
+                return this.getTableValueForClassLevel(className, normalizedLevel, [
+                    2, 3, 4, 5, 6, 7, 8, 9, 10, 10,
+                    11, 11, 12, 12, 13, 13, 14, 14, 15, 15
+                ]);
+            case 'Fighter':
+            case 'Rogue':
+                if (!this.isSubclassSpellcaster(className) || normalizedLevel < 3) {
+                    return 0;
+                }
+
+                return this.getTableValueForClassLevel(className, normalizedLevel, [
+                    0, 0, 3, 4, 4, 4, 5, 6, 6, 7,
+                    8, 8, 9, 10, 10, 11, 11, 11, 12, 13
+                ]);
+            default:
+                return 0;
+        }
+    }
+
+    isKnownSpellLimitReached(className: string, classLevel: number): boolean {
+        return this.getKnownLeveledSpellCount(className, classLevel) >= this.getKnownSpellLimitForClass(className, classLevel);
+    }
+
+    isKnownCantripLimitReached(className: string, classLevel: number): boolean {
+        return this.getKnownCantripCount(className, classLevel) >= this.getKnownCantripLimitForClass(className, classLevel);
+    }
+
+    getKnownLeveledSpellCount(className: string, classLevel: number): number {
+        return this.getKnownClassSpells(className, classLevel)
+            .filter((spell) => spell.level > 0)
+            .length;
+    }
+
+    getKnownCantripCount(className: string, classLevel: number): number {
+        return this.getKnownClassSpells(className, classLevel)
+            .filter((spell) => spell.level === 0)
+            .length;
+    }
+
+    getKnownClassSpells(className: string, classLevel: number): ClassSpellOption[] {
+        if (this.isWizardClass(className)) {
+            return this.getSpellbookSpells(className, classLevel);
+        }
+
+        if (this.isKnownOnlyCaster(className)) {
+            const available = this.getAvailableClassSpells(className, classLevel);
+            const knownNames = this.classKnownSpellsByClass()[className] ?? [];
+            const availableByName = new Map(available.map((spell) => [spell.name, spell]));
+            const knownLimit = this.getKnownSpellLimitForClass(className, classLevel);
+            return knownNames
+                .map((spellName) => availableByName.get(spellName))
+                .filter((spell): spell is ClassSpellOption => !!spell)
+                .slice(0, knownLimit);
+        }
+
+        return this.getAvailableClassSpells(className, classLevel);
+    }
+
+    getKnownUnlearnedClassSpells(className: string, classLevel: number): ClassSpellOption[] {
+        const knownNames = new Set(this.getKnownClassSpells(className, classLevel).map((spell) => spell.name));
+        return this.getAvailableClassSpells(className, classLevel).filter((spell) => !knownNames.has(spell.name));
+    }
+
     getPreparedClassSpells(className: string, classLevel: number): ClassSpellOption[] {
         const knownByName = new Map(this.getKnownClassSpells(className, classLevel).map((spell) => [spell.name, spell]));
         const prepared = this.classPreparedSpells()[className] ?? [];
+        const preparedLimit = this.getPreparedSpellLimitForClass(className, classLevel);
+        const ritualKnownSpells = this.getKnownClassSpells(className, classLevel)
+            .filter((spell) => spell.level > 0 && this.isRitualSpell(spell.name));
 
-        return prepared
+        const mergedPreparedByName = new Map<string, ClassSpellOption>();
+        prepared
             .map((spellName) => knownByName.get(spellName))
-            .filter((spell): spell is ClassSpellOption => !!spell);
+            .filter((spell): spell is ClassSpellOption => !!spell)
+            .forEach((spell) => mergedPreparedByName.set(spell.name, spell));
+        ritualKnownSpells.forEach((spell) => mergedPreparedByName.set(spell.name, spell));
+
+        const mergedPrepared = [...mergedPreparedByName.values()];
+
+        if (this.isWizardClass(className)) {
+            const spellbookCantrips = this.getSpellbookSpells(className, classLevel).filter((spell) => spell.level === 0);
+            const leveled = this.limitPreparedLeveledSpellsForDisplay(
+                mergedPrepared.filter((spell) => spell.level > 0),
+                preparedLimit
+            );
+            return [...spellbookCantrips, ...leveled];
+        }
+
+        return this.limitPreparedLeveledSpellsForDisplay(
+            mergedPrepared.filter((spell) => spell.level > 0),
+            preparedLimit
+        );
+    }
+
+    getPreparedSpellLimitForClass(className: string, classLevel: number): number {
+        const normalizedLevel = Math.min(20, Math.max(1, Math.trunc(classLevel)));
+        const progression = this.spellcastingProgressionByClass[className] ?? 'none';
+        if (progression === 'none') {
+            return 0;
+        }
+
+        const spellcastingAbilityModifier = this.getSpellcastingAbilityModifierForClass(className);
+
+        switch (className) {
+            case 'Cleric':
+            case 'Druid':
+            case 'Wizard':
+                return Math.max(1, normalizedLevel + spellcastingAbilityModifier);
+            case 'Paladin':
+                return Math.max(1, Math.floor(normalizedLevel / 2) + spellcastingAbilityModifier);
+            case 'Artificer':
+                return Math.max(1, normalizedLevel + spellcastingAbilityModifier);
+            case 'Bard':
+            case 'Sorcerer':
+            case 'Warlock':
+                return 0;
+            case 'Ranger':
+                return Math.max(1, Math.floor(normalizedLevel / 2) + spellcastingAbilityModifier);
+            default:
+                if (progression === 'full' || progression === 'pact') {
+                    return normalizedLevel;
+                }
+
+                if (progression === 'half') {
+                    return Math.max(1, Math.ceil(normalizedLevel / 2));
+                }
+
+                if (normalizedLevel < 2) {
+                    return 0;
+                }
+
+                return Math.max(1, Math.floor(normalizedLevel / 2));
+        }
+    }
+
+    isPreparedSpellLimitReached(className: string, classLevel: number): boolean {
+        const limit = this.getPreparedSpellLimitForClass(className, classLevel);
+        if (limit <= 0) {
+            return true;
+        }
+
+        return this.getPreparedSpellCountForLimit(className, classLevel) >= limit;
+    }
+
+    getPreparedLeveledSpellCount(className: string, classLevel: number): number {
+        return this.getPreparedSpellCountForLimit(className, classLevel);
     }
 
     getKnownUnpreparedClassSpells(className: string, classLevel: number): ClassSpellOption[] {
         const prepared = new Set(this.getPreparedClassSpells(className, classLevel).map((spell) => spell.name));
         return this.getKnownClassSpells(className, classLevel).filter((spell) => !prepared.has(spell.name));
+    }
+
+    isWizardClass(className: string): boolean {
+        return className === 'Wizard';
+    }
+
+    getWizardSpellSubTab(className: string): WizardSpellSubTab {
+        return this.wizardSpellSubTabByClass()[className] ?? 'prepared';
+    }
+
+    setWizardSpellSubTab(className: string, tab: WizardSpellSubTab): void {
+        this.wizardSpellSubTabByClass.update((current) => ({ ...current, [className]: tab }));
+    }
+
+    getSpellbookSpells(className: string, classLevel: number): ClassSpellOption[] {
+        const catalog = this.classSpellCatalog[className] ?? [];
+        const maxSpellLevel = this.getMaxSpellLevelForClass(className, classLevel);
+        const spellbookNames = new Set(this.wizardSpellbookByClass()[className] ?? []);
+        const byName = new Map(catalog.map((s) => [s.name, s]));
+        return [...spellbookNames]
+            .map((name) => byName.get(name))
+            .filter((spell): spell is ClassSpellOption => !!spell && (spell.level === 0 || spell.level <= maxSpellLevel));
+    }
+
+    getCatalogSpellsNotInSpellbook(className: string, classLevel: number): ClassSpellOption[] {
+        const spellbookNames = new Set(this.wizardSpellbookByClass()[className] ?? []);
+        return this.getAvailableClassSpells(className, classLevel).filter((s) => !spellbookNames.has(s.name));
+    }
+
+    getWizardCantripLimit(classLevel: number): number {
+        const normalizedLevel = Math.min(20, Math.max(1, Math.trunc(classLevel)));
+        if (normalizedLevel >= 10) {
+            return 5;
+        }
+
+        if (normalizedLevel >= 4) {
+            return 4;
+        }
+
+        return 3;
+    }
+
+    getWizardLearnedCantripCount(className: string, classLevel: number): number {
+        return this.getSpellbookSpells(className, classLevel).filter((spell) => spell.level === 0).length;
+    }
+
+    getWizardFreeLeveledSpellLimit(classLevel: number): number {
+        const normalizedLevel = Math.min(20, Math.max(1, Math.trunc(classLevel)));
+        return 6 + ((normalizedLevel - 1) * 2);
+    }
+
+    getWizardLevelUpLearnedSpellCount(className: string): number {
+        return (this.wizardLevelUpLearnedSpellsByClass()[className] ?? []).length;
+    }
+
+    isWizardLevelUpLeveledSpellLimitReached(className: string, classLevel: number): boolean {
+        return this.getWizardLevelUpLearnedSpellCount(className) >= this.getWizardFreeLeveledSpellLimit(classLevel);
+    }
+
+    isWizardCantripLimitReached(className: string, classLevel: number): boolean {
+        return this.getWizardLearnedCantripCount(className, classLevel) >= this.getWizardCantripLimit(classLevel);
+    }
+
+    canLearnSpellToWizardSpellbook(
+        className: string,
+        classLevel: number,
+        spellName: string,
+        source: 'level-up' | 'copied' = 'level-up'
+    ): boolean {
+        if (!this.isWizardClass(className)) {
+            return true;
+        }
+
+        if (this.isSpellInSpellbook(className, spellName)) {
+            return false;
+        }
+
+        const spell = this.getAvailableClassSpells(className, classLevel).find((entry) => entry.name === spellName);
+        if (!spell) {
+            return false;
+        }
+
+        if (spell.level !== 0) {
+            if (source === 'copied') {
+                return true;
+            }
+
+            return !this.isWizardLevelUpLeveledSpellLimitReached(className, classLevel);
+        }
+
+        return !this.isWizardCantripLimitReached(className, classLevel);
+    }
+
+    private addWizardLevelUpLearnedSpell(className: string, spellName: string): void {
+        this.wizardLevelUpLearnedSpellsByClass.update((current) => {
+            const levelUpSpells = current[className] ?? [];
+            if (levelUpSpells.includes(spellName)) {
+                return current;
+            }
+
+            return {
+                ...current,
+                [className]: [...levelUpSpells, spellName]
+            };
+        });
+    }
+
+    private removeWizardLevelUpLearnedSpell(className: string, spellName: string): void {
+        this.wizardLevelUpLearnedSpellsByClass.update((current) => {
+            const levelUpSpells = current[className] ?? [];
+            const nextLevelUpSpells = levelUpSpells.filter((entry) => entry !== spellName);
+            if (!nextLevelUpSpells.length) {
+                const { [className]: _, ...rest } = current;
+                return rest;
+            }
+
+            return {
+                ...current,
+                [className]: nextLevelUpSpells
+            };
+        });
+    }
+
+    addSpellToSpellbook(
+        className: string,
+        classLevel: number,
+        spellName: string,
+        source: 'level-up' | 'copied' = 'level-up'
+    ): void {
+        if (!this.canLearnSpellToWizardSpellbook(className, classLevel, spellName, source)) {
+            return;
+        }
+
+        const spell = this.getAvailableClassSpells(className, classLevel).find((entry) => entry.name === spellName);
+        if (!spell) {
+            return;
+        }
+
+        this.wizardSpellbookByClass.update((current) => {
+            const book = current[className] ?? [];
+            if (book.includes(spellName)) {
+                return current;
+            }
+
+            return { ...current, [className]: [...book, spellName] };
+        });
+
+        if (source === 'level-up' && spell.level > 0) {
+            this.addWizardLevelUpLearnedSpell(className, spellName);
+        }
+
+        if (spell.level === 0) {
+            this.classPreparedSpells.update((current) => {
+                const prepared = current[className] ?? [];
+                if (prepared.includes(spellName)) {
+                    return current;
+                }
+
+                return {
+                    ...current,
+                    [className]: [...prepared, spellName]
+                };
+            });
+        }
+    }
+
+    removeFromSpellbook(className: string, spellName: string): void {
+        this.unprepareClassSpell(className, spellName);
+        this.removeWizardLevelUpLearnedSpell(className, spellName);
+        this.wizardSpellbookByClass.update((current) => {
+            const book = current[className] ?? [];
+            const nextBook = book.filter((n) => n !== spellName);
+            if (!nextBook.length) {
+                const { [className]: _, ...rest } = current;
+                return rest;
+            }
+
+            return { ...current, [className]: nextBook };
+        });
+    }
+
+    isSpellInSpellbook(className: string, spellName: string): boolean {
+        return (this.wizardSpellbookByClass()[className] ?? []).includes(spellName);
+    }
+
+    isSpellPreparedForClass(className: string, spellName: string): boolean {
+        const classLevel = this.multiclassList()[className] ?? 1;
+        if (this.isRitualAlwaysAvailableSpell(className, classLevel, spellName)) {
+            return true;
+        }
+
+        if (this.isWizardClass(className) && this.isSpellInSpellbook(className, spellName)) {
+            const wizardSpell = (this.classSpellCatalog['Wizard'] ?? []).find((spell) => spell.name === spellName);
+            if (wizardSpell?.level === 0) {
+                return true;
+            }
+        }
+
+        return (this.classPreparedSpells()[className] ?? []).includes(spellName);
+    }
+
+    prepareFromSpellbook(className: string, classLevel: number, spellName: string): void {
+        if (!this.isSpellInSpellbook(className, spellName)) {
+            return;
+        }
+
+        const spell = this.getSpellbookSpells(className, classLevel).find((entry) => entry.name === spellName);
+        if (!spell) {
+            return;
+        }
+
+        if (spell.level === 0) {
+            this.classPreparedSpells.update((current) => {
+                const prepared = current[className] ?? [];
+                if (prepared.includes(spellName)) {
+                    return current;
+                }
+
+                return { ...current, [className]: [...prepared, spellName] };
+            });
+            return;
+        }
+
+        const preparedLimit = this.getPreparedSpellLimitForClass(className, classLevel);
+        const preparedCount = this.getPreparedSpellCountForLimit(className, classLevel);
+        if (preparedLimit <= 0 || preparedCount >= preparedLimit) {
+            return;
+        }
+
+        this.classPreparedSpells.update((current) => {
+            const prepared = current[className] ?? [];
+            if (prepared.includes(spellName)) {
+                return current;
+            }
+
+            return { ...current, [className]: [...prepared, spellName] };
+        });
     }
 
     getSpellLevels(spells: readonly ClassSpellOption[]): number[] {
@@ -2330,9 +2926,71 @@ export class NewCharacterStandardPageComponent {
         return spells.filter((spell) => spell.level === level);
     }
 
+    learnKnownClassSpell(className: string, classLevel: number, spellName: string): void {
+        if (!this.isKnownOnlyCaster(className)) {
+            return;
+        }
+
+        const availableNames = new Set(this.getAvailableClassSpells(className, classLevel).map((spell) => spell.name));
+        if (!availableNames.has(spellName)) {
+            return;
+        }
+
+        const selectedSpell = this.getAvailableClassSpells(className, classLevel).find((spell) => spell.name === spellName);
+        if (!selectedSpell) {
+            return;
+        }
+
+        if (selectedSpell.level === 0 && this.isKnownCantripLimitReached(className, classLevel)) {
+            return;
+        }
+
+        if (selectedSpell.level > 0 && this.isKnownSpellLimitReached(className, classLevel)) {
+            return;
+        }
+
+        this.classKnownSpellsByClass.update((current) => {
+            const known = current[className] ?? [];
+            if (known.includes(spellName)) {
+                return current;
+            }
+
+            return {
+                ...current,
+                [className]: [...known, spellName]
+            };
+        });
+    }
+
+    forgetKnownClassSpell(className: string, spellName: string): void {
+        this.classKnownSpellsByClass.update((current) => {
+            const known = current[className] ?? [];
+            const nextKnown = known.filter((entry) => entry !== spellName);
+            if (!nextKnown.length) {
+                const { [className]: _, ...rest } = current;
+                return rest;
+            }
+
+            return {
+                ...current,
+                [className]: nextKnown
+            };
+        });
+    }
+
     learnClassSpell(className: string, classLevel: number, spellName: string): void {
+        if (this.isKnownOnlyCaster(className)) {
+            return;
+        }
+
         const known = new Set(this.getKnownClassSpells(className, classLevel).map((spell) => spell.name));
         if (!known.has(spellName)) {
+            return;
+        }
+
+        const preparedLimit = this.getPreparedSpellLimitForClass(className, classLevel);
+        const preparedCount = this.getPreparedSpellCountForLimit(className, classLevel);
+        if (preparedLimit <= 0 || preparedCount >= preparedLimit) {
             return;
         }
 
@@ -2350,6 +3008,13 @@ export class NewCharacterStandardPageComponent {
     }
 
     unprepareClassSpell(className: string, spellName: string): void {
+        if (this.isWizardClass(className) && this.isSpellInSpellbook(className, spellName)) {
+            const wizardSpell = (this.classSpellCatalog['Wizard'] ?? []).find((spell) => spell.name === spellName);
+            if (wizardSpell?.level === 0) {
+                return;
+            }
+        }
+
         this.classPreparedSpells.update((current) => {
             const prepared = current[className] ?? [];
             const nextPrepared = prepared.filter((entry) => entry !== spellName);
@@ -2393,7 +3058,7 @@ export class NewCharacterStandardPageComponent {
         return this.selectedSpellByClass()[className] ?? '';
     }
 
-    getSpellItemId(className: string, spellName: string, listType: 'prepared' | 'known'): string {
+    getSpellItemId(className: string, spellName: string, listType: 'prepared' | 'known' | 'spellbook' | 'catalog'): string {
         const slug = `${className}-${spellName}-${listType}`
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '-')
@@ -2402,7 +3067,7 @@ export class NewCharacterStandardPageComponent {
         return `spell-item-${slug}`;
     }
 
-    toggleSpellDetail(className: string, spellName: string, listType: 'prepared' | 'known'): void {
+    toggleSpellDetail(className: string, spellName: string, listType: 'prepared' | 'known' | 'spellbook' | 'catalog'): void {
         const isClosing = this.selectedSpellByClass()[className] === spellName;
         this.selectedSpellByClass.update((current) => {
             const same = current[className] === spellName;
@@ -2494,7 +3159,10 @@ export class NewCharacterStandardPageComponent {
     }
 
     canAddStartingEquipment(): boolean {
-        return this.selectedClassStartingOption() !== '' && this.selectedBackgroundStartingOption() !== '';
+        return this.selectedClassStartingOption() !== ''
+            && this.selectedBackgroundStartingOption() !== ''
+            && this.hasClassStartingPackageData()
+            && this.hasBackgroundStartingPackageData();
     }
 
     addStartingEquipment(): void {
@@ -2504,8 +3172,8 @@ export class NewCharacterStandardPageComponent {
 
         const classKey = this.selectedClassStartingOption() as 'A' | 'B';
         const backgroundKey = this.selectedBackgroundStartingOption() as 'A' | 'B';
-        const classPackage = classStartingPackages[classKey];
-        const backgroundPackage = backgroundStartingPackages[backgroundKey];
+        const classPackage = this.resolvedClassStartingPackages()[classKey];
+        const backgroundPackage = this.resolvedBackgroundStartingPackages()[backgroundKey];
 
         classPackage.items.forEach((item) => this.addInventoryItem(item));
         backgroundPackage.items.forEach((item) => this.addInventoryItem(item));
@@ -2762,16 +3430,41 @@ export class NewCharacterStandardPageComponent {
         return this.abilityBaseScores()[ability] ?? 10;
     }
 
+    getCalculatedAbilityScoreBonus(ability: string): number {
+        const background = this.getBackgroundAbilityBonuses()[ability] ?? 0;
+        const classFeatures = this.getClassFeatureAbilityBonuses()[ability] ?? 0;
+        return background + classFeatures;
+    }
+
+    getCalculatedAbilityScoreBonusDisplay(ability: string): string {
+        return this.toSignedNumber(this.getCalculatedAbilityScoreBonus(ability));
+    }
+
+    getSetScoreDisplay(ability: string): string {
+        const override = this.abilityOverrideScores()[ability];
+        return override == null ? '--' : String(override);
+    }
+
+    getStackingBonusDisplay(ability: string): string {
+        return this.toSignedNumber(this.abilityOtherModifiers()[ability] ?? 0);
+    }
+
     getTotalScore(ability: string): number {
-        return this.abilityOverrideScores()[ability] ?? this.getAbilityBaseScore(ability);
+        const overrideScore = this.abilityOverrideScores()[ability];
+        if (overrideScore != null) {
+            return overrideScore;
+        }
+
+        const total = this.getAbilityBaseScore(ability) + this.getCalculatedAbilityScoreBonus(ability);
+        return Math.min(20, total);
     }
 
     getTotalModifier(ability: string): string {
         const score = this.getTotalScore(ability);
         const base = Math.floor((score - 10) / 2);
-        const other = this.abilityOtherModifiers()[ability] ?? 0;
+        const other = this.getStackingModifier(ability);
         const total = base + other;
-        return total >= 0 ? `+${total}` : `${total}`;
+        return this.toSignedNumber(total);
     }
 
     getOtherModifierDisplay(ability: string): string {
@@ -2792,6 +3485,108 @@ export class NewCharacterStandardPageComponent {
     onOverrideScoreInput(ability: string, value: string): void {
         const parsed = Number.parseInt(value, 10);
         this.abilityOverrideScores.update((c) => ({ ...c, [ability]: Number.isNaN(parsed) ? null : parsed }));
+    }
+
+    private getStackingModifier(ability: string): number {
+        return this.abilityOtherModifiers()[ability] ?? 0;
+    }
+
+    private getBackgroundAbilityBonuses(): Record<string, number> {
+        const bonuses = this.createEmptyAbilityBonusMap();
+        const mode = this.bgAbilityMode();
+
+        if (mode === 'Increase three scores (+1 / +1 / +1)') {
+            this.currentBgAbilityScores().forEach((ability) => {
+                this.addAbilityBonus(bonuses, ability, 1);
+            });
+            return bonuses;
+        }
+
+        if (mode === 'Increase two scores (+2 / +1)') {
+            const allowed = new Set(this.currentBgAbilityScores());
+            const primary = this.bgAbilityScoreFor2();
+            const secondary = this.bgAbilityScoreFor1();
+
+            if (allowed.has(primary)) {
+                this.addAbilityBonus(bonuses, primary, 2);
+            }
+
+            if (allowed.has(secondary) && secondary !== primary) {
+                this.addAbilityBonus(bonuses, secondary, 1);
+            }
+        }
+
+        return bonuses;
+    }
+
+    private getClassFeatureAbilityBonuses(): Record<string, number> {
+        const bonuses = this.createEmptyAbilityBonusMap();
+        const selections = this.classFeatureSelections();
+        const asiChoices = this.abilityScoreImprovementChoices();
+        const featChoices = this.featFollowUpChoices();
+
+        Object.entries(selections).forEach(([selectionKey, selectedValues]) => {
+            selectedValues.forEach((selectedValue) => {
+                if (!selectedValue) {
+                    return;
+                }
+
+                if (selectedValue === 'Ability Score Improvement') {
+                    const asiChoice = asiChoices[selectionKey];
+                    if (!asiChoice) {
+                        return;
+                    }
+
+                    if (asiChoice.mode === 'plus-two' && asiChoice.primaryAbility) {
+                        this.addAbilityBonus(bonuses, asiChoice.primaryAbility, 2);
+                        return;
+                    }
+
+                    if (
+                        asiChoice.mode === 'plus-one-plus-one'
+                        && asiChoice.primaryAbility
+                        && asiChoice.secondaryAbility
+                        && asiChoice.primaryAbility !== asiChoice.secondaryAbility
+                    ) {
+                        this.addAbilityBonus(bonuses, asiChoice.primaryAbility, 1);
+                        this.addAbilityBonus(bonuses, asiChoice.secondaryAbility, 1);
+                    }
+
+                    return;
+                }
+
+                const validChoices = this.getFeatAbilityIncreaseChoicesByFeat(selectedValue);
+                if (validChoices.length === 0) {
+                    return;
+                }
+
+                const selectedAbility = featChoices[selectionKey]?.abilityIncreaseAbility ?? '';
+                if (validChoices.includes(selectedAbility)) {
+                    this.addAbilityBonus(bonuses, selectedAbility, 1);
+                }
+            });
+        });
+
+        return bonuses;
+    }
+
+    private createEmptyAbilityBonusMap(): Record<string, number> {
+        return this.abilityTiles.reduce<Record<string, number>>((current, ability) => {
+            current[ability] = 0;
+            return current;
+        }, {});
+    }
+
+    private addAbilityBonus(target: Record<string, number>, ability: string, amount: number): void {
+        if (!ability || !Object.prototype.hasOwnProperty.call(target, ability)) {
+            return;
+        }
+
+        target[ability] = (target[ability] ?? 0) + amount;
+    }
+
+    private toSignedNumber(value: number): string {
+        return value >= 0 ? `+${value}` : `${value}`;
     }
 
     getAbilityModifier(score: number): string {
@@ -3016,6 +3811,10 @@ export class NewCharacterStandardPageComponent {
         return 'Unknown class';
     }
 
+    isPrimaryClass(className: string): boolean {
+        return this.getPrimaryClassName() === className;
+    }
+
     private getPrimaryClassName(): string {
         const selected = this.selectedClass();
         if (selected && selected !== '__MULTICLASS_SELECTOR__') {
@@ -3048,17 +3847,21 @@ export class NewCharacterStandardPageComponent {
         const background = this.selectedBackgroundName() || this.selectedBackground()?.name || 'Freshly arrived adventurer';
         const notes = this.buildPersistedNotes();
         const selectedCampaignId = this.store.selectedCampaign()?.id;
+        const level = this.getPrimaryClassLevel();
+        const maxHitPoints = this.getResolvedHitPointTotal(className, level);
 
         return {
             name: characterName,
             playerName,
             race: this.selectedSpeciesName() || 'Human',
             className,
-            level: this.getPrimaryClassLevel(),
+            level,
             role: 'Striker',
             background,
             notes,
-            campaignId: this.assignToCurrentCampaignOnCreate() ? selectedCampaignId : undefined
+            campaignId: this.assignToCurrentCampaignOnCreate() ? selectedCampaignId : undefined,
+            hitPoints: maxHitPoints,
+            maxHitPoints
         };
     }
 
@@ -3188,6 +3991,12 @@ export class NewCharacterStandardPageComponent {
             this.bgAbilityMode.set(persisted.bgAbilityMode || this.bgAbilityMode());
             this.bgAbilityScoreFor2.set(persisted.bgAbilityScoreFor2 || this.bgAbilityScoreFor2());
             this.bgAbilityScoreFor1.set(persisted.bgAbilityScoreFor1 || this.bgAbilityScoreFor1());
+            this.hitPointMode.set(persisted.hitPointMode === 'rolled' ? 'rolled' : 'fixed');
+            this.rolledHitPointTotal.set(
+                typeof persisted.rolledHitPointTotal === 'number' && Number.isFinite(persisted.rolledHitPointTotal)
+                    ? Math.max(1, Math.trunc(persisted.rolledHitPointTotal))
+                    : null
+            );
 
             const classStartingChoice = persisted.selectedClassStartingOption;
             this.selectedClassStartingOption.set(classStartingChoice === 'A' || classStartingChoice === 'B' ? classStartingChoice : '');
@@ -3220,6 +4029,12 @@ export class NewCharacterStandardPageComponent {
             this.physicalWeight.set(persisted.physicalWeight || '');
             this.physicalAge.set(persisted.physicalAge || '');
             this.physicalGender.set(persisted.physicalGender || '');
+
+            this.classPreparedSpells.set(persisted.classPreparedSpells ?? {});
+            this.classKnownSpellsByClass.set(persisted.classKnownSpellsByClass ?? {});
+            this.wizardSpellbookByClass.set(persisted.wizardSpellbookByClass ?? {});
+            this.wizardLevelUpLearnedSpellsByClass.set(persisted.wizardLevelUpLearnedSpellsByClass ?? {});
+            this.wizardSpellSubTabByClass.set(persisted.wizardSpellSubTabByClass ?? {});
         } else {
             this.selectedFaith.set(this.extractFaithFromNotes(notes));
         }
@@ -3256,6 +4071,8 @@ export class NewCharacterStandardPageComponent {
             bgAbilityMode: this.bgAbilityMode(),
             bgAbilityScoreFor2: this.bgAbilityScoreFor2(),
             bgAbilityScoreFor1: this.bgAbilityScoreFor1(),
+            hitPointMode: this.hitPointMode(),
+            rolledHitPointTotal: this.rolledHitPointTotal(),
             selectedClassStartingOption: this.selectedClassStartingOption(),
             selectedBackgroundStartingOption: this.selectedBackgroundStartingOption(),
             inventoryEntries: this.inventoryEntries(),
@@ -3270,7 +4087,12 @@ export class NewCharacterStandardPageComponent {
             physicalHeight: this.physicalHeight(),
             physicalWeight: this.physicalWeight(),
             physicalAge: this.physicalAge(),
-            physicalGender: this.physicalGender()
+            physicalGender: this.physicalGender(),
+            classPreparedSpells: this.classPreparedSpells(),
+            classKnownSpellsByClass: this.classKnownSpellsByClass(),
+            wizardSpellbookByClass: this.wizardSpellbookByClass(),
+            wizardLevelUpLearnedSpellsByClass: this.wizardLevelUpLearnedSpellsByClass(),
+            wizardSpellSubTabByClass: this.wizardSpellSubTabByClass()
         };
 
         const serialized = JSON.stringify(state);
@@ -3427,6 +4249,88 @@ export class NewCharacterStandardPageComponent {
         return 1;
     }
 
+    private getClassSpellcastingAbility(className: string): 'Intelligence' | 'Wisdom' | 'Charisma' | null {
+        switch (className) {
+            case 'Artificer':
+            case 'Wizard':
+                return 'Intelligence';
+            case 'Cleric':
+            case 'Druid':
+            case 'Ranger':
+                return 'Wisdom';
+            case 'Bard':
+            case 'Paladin':
+            case 'Sorcerer':
+            case 'Warlock':
+                return 'Charisma';
+            default:
+                return null;
+        }
+    }
+
+    private getSpellcastingAbilityModifierForClass(className: string): number {
+        const ability = this.getClassSpellcastingAbility(className);
+        if (!ability) {
+            return 0;
+        }
+
+        const score = this.getTotalScore(ability);
+        return Math.floor((score - 10) / 2);
+    }
+
+    private isRitualSpell(spellName: string): boolean {
+        return Boolean(spellDetailsMap[spellName]?.ritual);
+    }
+
+    isRitualAlwaysAvailableSpell(className: string, classLevel: number, spellName: string): boolean {
+        if (!this.isRitualSpell(spellName)) {
+            return false;
+        }
+
+        return this.getKnownClassSpells(className, classLevel)
+            .some((spell) => spell.name === spellName && spell.level > 0);
+    }
+
+    private limitPreparedLeveledSpellsForDisplay(spells: ClassSpellOption[], preparedLimit: number): ClassSpellOption[] {
+        const kept: ClassSpellOption[] = [];
+        let countedPrepared = 0;
+
+        for (const spell of spells) {
+            if (this.isRitualSpell(spell.name)) {
+                kept.push(spell);
+                continue;
+            }
+
+            if (countedPrepared >= preparedLimit) {
+                continue;
+            }
+
+            countedPrepared += 1;
+            kept.push(spell);
+        }
+
+        return kept;
+    }
+
+    private getPreparedSpellCountForLimit(className: string, classLevel: number): number {
+        const knownByName = new Map(this.getKnownClassSpells(className, classLevel).map((spell) => [spell.name, spell]));
+        return (this.classPreparedSpells()[className] ?? [])
+            .map((spellName) => knownByName.get(spellName))
+            .filter((spell): spell is ClassSpellOption => !!spell)
+            .filter((spell) => spell.level > 0 && !this.isRitualSpell(spell.name))
+            .length;
+    }
+
+    private getTableValueForClassLevel(className: string, classLevel: number, tableValuesByLevel: ReadonlyArray<number>): number {
+        const progression = this.spellcastingProgressionByClass[className] ?? 'none';
+        if (progression === 'none') {
+            return 0;
+        }
+
+        const index = Math.min(20, Math.max(1, Math.trunc(classLevel))) - 1;
+        return tableValuesByLevel[index] ?? 0;
+    }
+
     private syncPreparedSpellsForClass(className: string, classLevel: number): void {
         this.classPreparedSpells.update((current) => {
             const prepared = current[className] ?? [];
@@ -3434,8 +4338,54 @@ export class NewCharacterStandardPageComponent {
                 return current;
             }
 
-            const known = new Set(this.getKnownClassSpells(className, classLevel).map((spell) => spell.name));
-            const nextPrepared = prepared.filter((spellName) => known.has(spellName));
+            const known = className === 'Wizard'
+                ? new Set(this.getSpellbookSpells(className, classLevel).map((spell) => spell.name))
+                : new Set(this.getKnownClassSpells(className, classLevel).map((spell) => spell.name));
+            const preparedLimit = this.getPreparedSpellLimitForClass(className, classLevel);
+
+            let nextPrepared: string[];
+            if (className === 'Wizard') {
+                const spellbookByName = new Map(this.getSpellbookSpells(className, classLevel).map((spell) => [spell.name, spell]));
+                const filteredPrepared = prepared.filter((spellName) => known.has(spellName));
+                const cantripPrepared = filteredPrepared.filter((spellName) => spellbookByName.get(spellName)?.level === 0);
+                const leveledPrepared = filteredPrepared
+                    .filter((spellName) => (spellbookByName.get(spellName)?.level ?? 0) > 0);
+                const leveledSlots: string[] = [];
+                let countedPrepared = 0;
+                for (const spellName of leveledPrepared) {
+                    if (this.isRitualSpell(spellName)) {
+                        leveledSlots.push(spellName);
+                        continue;
+                    }
+
+                    if (countedPrepared >= preparedLimit) {
+                        continue;
+                    }
+
+                    countedPrepared += 1;
+                    leveledSlots.push(spellName);
+                }
+                nextPrepared = [...cantripPrepared, ...leveledSlots];
+            } else {
+                const filteredPrepared = prepared.filter((spellName) => known.has(spellName));
+                const leveledSlots: string[] = [];
+                let countedPrepared = 0;
+                for (const spellName of filteredPrepared) {
+                    if (this.isRitualSpell(spellName)) {
+                        leveledSlots.push(spellName);
+                        continue;
+                    }
+
+                    if (countedPrepared >= preparedLimit) {
+                        continue;
+                    }
+
+                    countedPrepared += 1;
+                    leveledSlots.push(spellName);
+                }
+
+                nextPrepared = leveledSlots;
+            }
 
             if (nextPrepared.length === prepared.length) {
                 return current;
@@ -3822,6 +4772,8 @@ export class NewCharacterStandardPageComponent {
     }
 
 }
+
+
 
 
 

@@ -96,19 +96,19 @@
             <div class="training-grid">
                 <div class="training-block">
                     <span class="label">Armor</span>
-                    <p>{{ training().armor.length ? training().armor.join(', ') : 'None' }}</p>
+                    <p>{{ training().armor.length ? training().armor.join(', ') : 'Not recorded' }}</p>
                 </div>
                 <div class="training-block">
                     <span class="label">Weapons</span>
-                    <p>{{ training().weapons.length ? training().weapons.join(', ') : 'None' }}</p>
+                    <p>{{ training().weapons.length ? training().weapons.join(', ') : 'Not recorded' }}</p>
                 </div>
                 <div class="training-block">
                     <span class="label">Tools</span>
-                    <p>{{ training().tools.length ? training().tools.join(', ') : 'None' }}</p>
+                    <p>{{ training().tools.length ? training().tools.join(', ') : 'Not recorded' }}</p>
                 </div>
                 <div class="training-block">
                     <span class="label">Languages</span>
-                    <p>{{ languageList().join(', ') }}</p>
+                    <p>{{ languageList().length ? languageList().join(', ') : 'Not recorded' }}</p>
                 </div>
             </div>
         </section>
@@ -135,6 +135,9 @@
                     <ul class="mini-list">
                         @for (item of defenses(); track $index) {
                         <li>{{ item }}</li>
+                        }
+                        @if (!defenses().length) {
+                        <li>No defenses recorded</li>
                         }
                     </ul>
                 </div>
@@ -185,6 +188,15 @@
                             <span>{{ action.note }}</span>
                         </div>
                         }
+                        @if (!filteredActionRows().length) {
+                        <div class="actions-row">
+                            <span>No actions recorded</span>
+                            <span>-</span>
+                            <span>-</span>
+                            <span>-</span>
+                            <span>Add actions in character notes or inventory.</span>
+                        </div>
+                        }
                     </div>
                 </div>
 
@@ -195,6 +207,9 @@
                             @for (item of quickActions().bonusActions; track item) {
                             <li>{{ item }}</li>
                             }
+                            @if (!quickActions().bonusActions.length) {
+                            <li>No bonus actions recorded</li>
+                            }
                         </ul>
                     </div>
                     <div>
@@ -202,6 +217,9 @@
                         <ul class="mini-list">
                             @for (item of quickActions().reactions; track item) {
                             <li>{{ item }}</li>
+                            }
+                            @if (!quickActions().reactions.length) {
+                            <li>No reactions recorded</li>
                             }
                         </ul>
                     </div>
@@ -219,13 +237,14 @@
                     <span class="manage-custom">Manage Spells</span>
                 </div>
                 <div class="action-filter-row">
-                    <button type="button" class="action-filter active">All</button>
-                    <button type="button" class="action-filter">-0-</button>
-                    <button type="button" class="action-filter">1st</button>
-                    <button type="button" class="action-filter">2nd</button>
-                    <button type="button" class="action-filter">3rd</button>
+                    @for (filter of spellFilters; track filter.key) {
+                    <button type="button" class="action-filter" [class.active]="activeSpellFilter() === filter.key" (click)="setSpellFilter(filter.key)">
+                        {{ filter.label }}
+                    </button>
+                    }
                 </div>
 
+                @if (showsSpellLevel(0)) {
                 <h3 class="subsection-title">Cantrip</h3>
                 <div class="actions-table-scroll">
                     <div class="actions-table">
@@ -238,17 +257,28 @@
                         </div>
                         @for (spellRow of spellCantrips(); track spellRow.name) {
                         <div class="actions-row">
-                            <span>{{ spellRow.name }}</span>
+                            <span class="spell-name-cell">{{ spellRow.name }}@if (spellRow.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (spellRow.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}</span>
                             <span>1A</span>
-                            <span>60 ft.</span>
-                            <span>{{ spellRow.bonusLabel }}</span>
+                            <span>{{ spellRow.range }}</span>
+                            <span>{{ spellRow.hitDcLabel }}</span>
                             <span>{{ spellRow.damage }}</span>
+                        </div>
+                        }
+                        @if (!spellCantrips().length) {
+                        <div class="actions-row">
+                            <span>No cantrips recorded</span>
+                            <span>-</span>
+                            <span>-</span>
+                            <span>-</span>
+                            <span>-</span>
                         </div>
                         }
                     </div>
                 </div>
+                }
 
-                <h3 class="subsection-title">1st Level</h3>
+                @if (showsSpellLevel(1)) {
+                <h3 class="subsection-title">Prepared Leveled Spells</h3>
                 <div class="slot-list">
                     @for (slot of spell.slots; track slot.level) {
                     <button type="button" class="slot-pill" [class.slot-pill--used]="getUsedSpellSlots(slot.level, slot.count) > 0" [class.slot-pill--empty]="getUsedSpellSlots(slot.level, slot.count) === 0" [class.slot-pill--full]="getUsedSpellSlots(slot.level, slot.count) === slot.count"
@@ -257,6 +287,9 @@
                     </button>
                     }
                 </div>
+                @if (hasLeveledSpells()) {
+                @for (group of spellsByLevel(); track group.level) {
+                <h4 class="spell-level-heading">Level {{ group.level }}</h4>
                 <div class="actions-table-scroll">
                     <div class="actions-table">
                         <div class="actions-head">
@@ -266,17 +299,42 @@
                             <span>Hit / DC</span>
                             <span>Effect</span>
                         </div>
-                        @for (spellRow of spellLevelOne(); track spellRow.name) {
+                        @for (spellRow of group.spells; track spellRow.name) {
                         <div class="actions-row">
-                            <span>{{ spellRow.name }}</span>
+                            <span class="spell-name-cell">{{ spellRow.name }}@if (spellRow.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (spellRow.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}</span>
                             <span>1A</span>
-                            <span>Touch</span>
-                            <span>{{ spellRow.bonusLabel }}</span>
+                            <span>{{ spellRow.range }}</span>
+                            <span>{{ spellRow.hitDcLabel }}</span>
                             <span>{{ spellRow.damage }}</span>
                         </div>
                         }
                     </div>
                 </div>
+                }
+                } @else {
+                <div class="actions-table-scroll">
+                    <div class="actions-table">
+                        <div class="actions-head">
+                            <span>Name</span>
+                            <span>Time</span>
+                            <span>Range</span>
+                            <span>Hit / DC</span>
+                            <span>Effect</span>
+                        </div>
+                        <div class="actions-row">
+                            <span>No prepared spells recorded</span>
+                            <span>-</span>
+                            <span>-</span>
+                            <span>-</span>
+                            <span>-</span>
+                        </div>
+                    </div>
+                </div>
+                }
+                }
+                @if (!showsSpellLevel(0) && !showsSpellLevel(1)) {
+                <p class="notes-block">No spell entries tracked for this level yet.</p>
+                }
                 } @else {
                 <p class="notes-block">No class spell slots available.</p>
                 }
@@ -292,34 +350,47 @@
                     <span class="manage-custom">Manage Inventory</span>
                 </div>
                 <div class="action-filter-row">
-                    <button type="button" class="action-filter active">All</button>
-                    <button type="button" class="action-filter">Equipment</button>
-                    <button type="button" class="action-filter">Backpack</button>
-                    <button type="button" class="action-filter">Other Possessions</button>
+                    @for (filter of inventoryFilters; track filter.key) {
+                    <button type="button" class="action-filter" [class.active]="activeInventoryFilter() === filter.key" (click)="setInventoryFilter(filter.key)">
+                        {{ filter.label }}
+                    </button>
+                    }
                 </div>
+                @if (activeInventoryFilter() === 'all' || activeInventoryFilter() === 'equipment') {
                 <div class="training-grid">
                     <div class="training-block"><span class="label">Weapons</span>
-                        <p>{{ bag.weapons.join(', ') }}</p>
+                        <p>{{ bag.weapons.length ? bag.weapons.join(', ') : 'Not recorded' }}</p>
                     </div>
                     <div class="training-block"><span class="label">Armor</span>
-                        <p>{{ bag.armor.join(', ') }}</p>
+                        <p>{{ bag.armor.length ? bag.armor.join(', ') : 'Not recorded' }}</p>
                     </div>
+                </div>
+                }
+                @if (activeInventoryFilter() === 'all' || activeInventoryFilter() === 'backpack') {
+                <div class="training-grid">
                     <div class="training-block"><span class="label">Gear</span>
-                        <p>{{ bag.gear.join(', ') }}</p>
+                        <p>{{ bag.gear.length ? bag.gear.join(', ') : 'Not recorded' }}</p>
                     </div>
+                </div>
+                }
+                @if (activeInventoryFilter() === 'all' || activeInventoryFilter() === 'other') {
+                <div class="training-grid">
                     <div class="training-block"><span class="label">Currency</span>
                         <p>GP {{ bag.currency.gp }} · SP {{ bag.currency.sp }} · CP {{ bag.currency.cp }}</p>
                     </div>
                 </div>
                 }
+                }
                 } @else if (activeCombatTab() === 'features') {
                 <h3 class="subsection-title">Features & Traits</h3>
                 <div class="action-filter-row">
-                    <button type="button" class="action-filter active">All</button>
-                    <button type="button" class="action-filter">Class Features</button>
-                    <button type="button" class="action-filter">Species Traits</button>
-                    <button type="button" class="action-filter">Feats</button>
+                    @for (filter of featuresFilters; track filter.key) {
+                    <button type="button" class="action-filter" [class.active]="activeFeaturesFilter() === filter.key" (click)="setFeaturesFilter(filter.key)">
+                        {{ filter.label }}
+                    </button>
+                    }
                 </div>
+                @if (activeFeaturesFilter() === 'all' || activeFeaturesFilter() === 'class-features') {
                 <ul class="mini-list feature-list">
                     @for (feature of classFeatures(); track feature.name) {
                     <li>
@@ -327,20 +398,34 @@
                         <p>{{ feature.description }}</p>
                     </li>
                     }
+                    @if (!classFeatures().length) {
+                    <li>No class features recorded</li>
+                    }
                 </ul>
+                }
+                @if (activeFeaturesFilter() === 'all' || activeFeaturesFilter() === 'species-traits') {
                 <ul class="traits-list">
                     @for (trait of char.traits; track $index) {
                     <li>{{ trait }}</li>
                     }
+                    @if (!char.traits.length) {
+                    <li>No species traits recorded</li>
+                    }
                 </ul>
+                }
+                @if (activeFeaturesFilter() === 'feats') {
+                <p class="notes-block">No feats recorded yet.</p>
+                }
                 } @else if (activeCombatTab() === 'background') {
                 <h3 class="subsection-title">Background</h3>
                 <div class="action-filter-row">
-                    <button type="button" class="action-filter active">All</button>
-                    <button type="button" class="action-filter">Background</button>
-                    <button type="button" class="action-filter">Characteristics</button>
-                    <button type="button" class="action-filter">Appearance</button>
+                    @for (filter of backgroundFilters; track filter.key) {
+                    <button type="button" class="action-filter" [class.active]="activeBackgroundFilter() === filter.key" (click)="setBackgroundFilter(filter.key)">
+                        {{ filter.label }}
+                    </button>
+                    }
                 </div>
+                @if (activeBackgroundFilter() === 'all' || activeBackgroundFilter() === 'background') {
                 <div class="info-rows">
                     @for (item of basicIdentityRows(); track item.label) {
                     <div class="info-row">
@@ -349,6 +434,8 @@
                     </div>
                     }
                 </div>
+                }
+                @if (activeBackgroundFilter() === 'all' || activeBackgroundFilter() === 'characteristics') {
                 <h3 class="subsection-title">Personality & Roleplay</h3>
                 @if (roleplay(); as rp) {
                 <div class="training-grid">
@@ -366,7 +453,8 @@
                     </div>
                 </div>
                 }
-
+                }
+                @if (activeBackgroundFilter() === 'all' || activeBackgroundFilter() === 'appearance') {
                 <h3 class="subsection-title">Appearance</h3>
                 <div class="info-rows">
                     @for (item of appearanceRows(); track item.label) {
@@ -376,26 +464,33 @@
                     </div>
                     }
                 </div>
+                }
                 } @else if (activeCombatTab() === 'notes') {
                 <h3 class="subsection-title">Notes</h3>
                 <div class="action-filter-row">
-                    <button type="button" class="action-filter active">All</button>
-                    <button type="button" class="action-filter">Orgs</button>
-                    <button type="button" class="action-filter">Allies</button>
-                    <button type="button" class="action-filter">Enemies</button>
-                    <button type="button" class="action-filter">Backstory</button>
-                    <button type="button" class="action-filter">Other</button>
+                    @for (filter of notesFilters; track filter.key) {
+                    <button type="button" class="action-filter" [class.active]="activeNotesFilter() === filter.key" (click)="setNotesFilter(filter.key)">
+                        {{ filter.label }}
+                    </button>
+                    }
                 </div>
                 <div class="training-grid">
+                    @if (activeNotesFilter() === 'all' || activeNotesFilter() === 'orgs') {
                     <div class="training-block"><span class="label">Organizations</span>
-                        <p>Adventurers Guild</p>
+                        <p>{{ noteContext().organizations.length ? noteContext().organizations.join(', ') : 'Not recorded' }}</p>
                     </div>
+                    }
+                    @if (activeNotesFilter() === 'all' || activeNotesFilter() === 'allies') {
                     <div class="training-block"><span class="label">Allies</span>
-                        <p>Elisia</p>
+                        <p>{{ noteContext().allies.length ? noteContext().allies.join(', ') : 'Not recorded' }}</p>
                     </div>
+                    }
+                    @if (activeNotesFilter() === 'all' || activeNotesFilter() === 'enemies') {
                     <div class="training-block"><span class="label">Enemies</span>
-                        <p>Add enemies as needed</p>
+                        <p>{{ noteContext().enemies.length ? noteContext().enemies.join(', ') : 'Not recorded' }}</p>
                     </div>
+                    }
+                    @if (activeNotesFilter() === 'all' || activeNotesFilter() === 'backstory') {
                     <div class="training-block"><span class="label">Backstory</span>
                         @if (formattedBackstoryHtml()) {
                         <div class="backstory-rich-text" [innerHTML]="formattedBackstoryHtml()"></div>
@@ -403,6 +498,10 @@
                         <p>No additional notes yet.</p>
                         }
                     </div>
+                    }
+                    @if (activeNotesFilter() === 'other') {
+                    <p class="notes-block">No other notes recorded yet.</p>
+                    }
                 </div>
                 } @else {
                 <h3 class="subsection-title">Extras</h3>
