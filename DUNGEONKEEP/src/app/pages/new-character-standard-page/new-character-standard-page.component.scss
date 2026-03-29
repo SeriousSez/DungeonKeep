@@ -2601,6 +2601,12 @@ input {
     z-index: 3;
 }
 
+.trait-choice-picker {
+    margin-top: 12px;
+    display: grid;
+    gap: 10px;
+}
+
 /* ── End Species Detail ──────────────────────────────────────────── */
 
 @media (max-width: 980px) {

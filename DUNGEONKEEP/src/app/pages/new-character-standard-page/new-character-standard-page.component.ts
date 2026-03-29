@@ -89,6 +89,7 @@ interface PersistedBuilderState {
     selectedLifestyle: string;
     selectedLanguages: string[];
     selectedSpeciesLanguages: string[];
+    selectedSpeciesTraitChoices: Record<string, string[]>;
     classFeatureSelections: Record<string, string[]>;
     abilityScoreImprovementChoices: Record<string, AbilityScoreImprovementChoice>;
     featFollowUpChoices: Record<string, FeatFollowUpChoice>;
@@ -407,6 +408,7 @@ export class NewCharacterStandardPageComponent {
     readonly allLanguages = [...this.commonLanguages, ...this.exoticLanguages, ...this.otherLanguages];
     readonly selectedLanguages = signal<string[]>([]);
     readonly selectedSpeciesLanguages = signal<string[]>([]);
+    readonly selectedSpeciesTraitChoices = signal<Record<string, string[]>>({});
     readonly completionCharacterName = signal('');
     readonly completionPlayerName = signal('');
     readonly assignToCurrentCampaignOnCreate = signal(false);
@@ -713,6 +715,15 @@ export class NewCharacterStandardPageComponent {
             .filter((category) => category.species.length > 0);
     });
     readonly abilityTiles = ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'];
+    private readonly speciesSkillChoiceOptions: ReadonlyArray<string> = [
+        'Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation',
+        'Investigation', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion',
+        'Sleight of Hand', 'Stealth', 'Survival'
+    ];
+    private readonly speciesOriginFeatOptions: ReadonlyArray<string> = [
+        'Alert', 'Crafter', 'Healer', 'Lucky', 'Magic Initiate', 'Musician', 'Savage Attacker',
+        'Sentinel', 'Sharpshooter', 'Skilled', 'Tavern Brawler', 'Tough'
+    ];
     readonly abilityScoreImprovementOptions = this.buildAbilityScoreImprovementFeatOptions();
     private readonly barbarianSubclassDetails: Readonly<Record<string, BarbarianSubclassDetail>> = {
         'Path of the Berserker': {
@@ -1666,12 +1677,63 @@ export class NewCharacterStandardPageComponent {
     selectSpecies(name: string): void {
         this.selectedSpeciesName.set(name);
         this.selectedSpeciesLanguages.set([]);
+        this.selectedSpeciesTraitChoices.set({});
         this.openTraitKeys.set(new Set<string>());
     }
 
     changeSpecies(): void {
         this.selectedSpeciesName.set('');
         this.selectedSpeciesLanguages.set([]);
+        this.selectedSpeciesTraitChoices.set({});
+    }
+
+    getSpeciesTraitChoiceIndexes(count: number): number[] {
+        return Array.from({ length: Math.max(1, count) }, (_, index) => index);
+    }
+
+    getSpeciesTraitChoiceValue(traitTitle: string, choiceIndex: number): string {
+        return this.selectedSpeciesTraitChoices()[traitTitle]?.[choiceIndex] ?? '';
+    }
+
+    getSpeciesTraitChoicePlaceholder(traitTitle: string): string {
+        if (traitTitle === 'Skillful') {
+            return '- Choose a Skill -';
+        }
+
+        if (traitTitle === 'Versatile') {
+            return '- Choose an Origin Feat -';
+        }
+
+        return '- Choose an Option -';
+    }
+
+    getSpeciesTraitChoiceOptions(traitTitle: string, choiceIndex: number): DropdownOption[] {
+        const pool = traitTitle === 'Skillful'
+            ? this.speciesSkillChoiceOptions
+            : traitTitle === 'Versatile'
+                ? this.speciesOriginFeatOptions
+                : [];
+
+        const selected = this.selectedSpeciesTraitChoices()[traitTitle] ?? [];
+
+        return pool.map((option) => ({
+            value: option,
+            label: option,
+            disabled: selected.some((value, index) => value === option && index !== choiceIndex)
+        }));
+    }
+
+    onSpeciesTraitChoiceChanged(traitTitle: string, choiceIndex: number, value: string | number): void {
+        const nextValue = String(value);
+        this.selectedSpeciesTraitChoices.update((current) => {
+            const existing = [...(current[traitTitle] ?? [])];
+            existing[choiceIndex] = nextValue;
+            const compact = existing.filter((entry) => entry && entry.trim().length > 0);
+            return {
+                ...current,
+                [traitTitle]: compact
+            };
+        });
     }
 
     toggleTrait(key: string): void {
@@ -4463,6 +4525,7 @@ export class NewCharacterStandardPageComponent {
 
             this.selectedLanguages.set(Array.isArray(persisted.selectedLanguages) ? persisted.selectedLanguages : []);
             this.selectedSpeciesLanguages.set(Array.isArray(persisted.selectedSpeciesLanguages) ? persisted.selectedSpeciesLanguages : []);
+            this.selectedSpeciesTraitChoices.set(persisted.selectedSpeciesTraitChoices ?? {});
 
             this.classFeatureSelections.set(persisted.classFeatureSelections ?? {});
             this.abilityScoreImprovementChoices.set(persisted.abilityScoreImprovementChoices ?? {});
@@ -4550,6 +4613,7 @@ export class NewCharacterStandardPageComponent {
             selectedLifestyle: this.selectedLifestyle(),
             selectedLanguages: this.selectedLanguages(),
             selectedSpeciesLanguages: this.selectedSpeciesLanguages(),
+            selectedSpeciesTraitChoices: this.selectedSpeciesTraitChoices(),
             classFeatureSelections: this.classFeatureSelections(),
             abilityScoreImprovementChoices: this.abilityScoreImprovementChoices(),
             featFollowUpChoices: this.featFollowUpChoices(),

@@ -559,10 +559,10 @@
                 }
                 @if (activeFeaturesFilter() === 'all' || activeFeaturesFilter() === 'species-traits') {
                 <ul class="traits-list">
-                    @for (trait of char.traits; track $index) {
+                    @for (trait of speciesTraits(); track $index) {
                     <li>{{ trait }}</li>
                     }
-                    @if (!char.traits.length) {
+                    @if (!speciesTraits().length) {
                     <li>No species traits recorded</li>
                     }
                 </ul>

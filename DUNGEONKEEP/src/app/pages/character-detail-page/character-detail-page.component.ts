@@ -58,6 +58,7 @@ interface PersistedBuilderState {
     selectedBackgroundName?: string;
     selectedLanguages?: string[];
     selectedSpeciesLanguages?: string[];
+    selectedSpeciesTraitChoices?: Record<string, string[]>;
     classFeatureSelections?: Record<string, string[]>;
     abilityScoreImprovementChoices?: Record<string, PersistedAbilityScoreImprovementChoice>;
     featFollowUpChoices?: Record<string, PersistedFeatFollowUpChoice>;
@@ -1232,6 +1233,32 @@ export class CharacterDetailPageComponent {
         }
 
         return features;
+    });
+
+    readonly speciesTraits = computed(() => {
+        const char = this.character();
+        if (!char) {
+            return [] as string[];
+        }
+
+        const baseTraits = [...(char.traits ?? [])];
+        const choiceMap = this.persistedBuilderState()?.selectedSpeciesTraitChoices ?? {};
+
+        if (Object.keys(choiceMap).length === 0) {
+            return baseTraits;
+        }
+
+        return baseTraits.map((trait) => {
+            const separator = trait.indexOf(':');
+            const traitTitle = separator >= 0 ? trait.slice(0, separator).trim() : trait.trim();
+            const selected = (choiceMap[traitTitle] ?? []).filter((value) => value && value.trim().length > 0);
+
+            if (selected.length === 0) {
+                return trait;
+            }
+
+            return `${trait} | Chosen: ${selected.join(', ')}`;
+        });
     });
 
     readonly displayBackstoryText = computed(() => {

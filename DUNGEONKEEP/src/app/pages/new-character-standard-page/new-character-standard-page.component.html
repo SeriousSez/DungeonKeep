@@ -1411,6 +1411,14 @@
                             <app-multi-select-dropdown [groups]="languageGroups" [value]="selectedSpeciesLanguages()" [disabledOptions]="speciesLanguageDisabledOptions()" [maxSelections]="trait.choices" [placeholder]="speciesLanguagePlaceholder()"
                                 (changed)="onSpeciesLanguagesChanged($event)"></app-multi-select-dropdown>
                         </div>
+                        } @else if (trait.choices) {
+                        <div class="trait-choice-picker">
+                            @for (choiceIndex of getSpeciesTraitChoiceIndexes(trait.choices); track choiceIndex) {
+                            <app-dropdown [id]="'species-trait-' + trait.title + '-' + choiceIndex" [value]="getSpeciesTraitChoiceValue(trait.title, choiceIndex)" [options]="getSpeciesTraitChoiceOptions(trait.title, choiceIndex)" [placeholder]="getSpeciesTraitChoicePlaceholder(trait.title)"
+                                [searchable]="getSpeciesTraitChoiceOptions(trait.title, choiceIndex).length > 10" size="wide" (changed)="onSpeciesTraitChoiceChanged(trait.title, choiceIndex, $event)">
+                            </app-dropdown>
+                            }
+                        </div>
                         }
                     </div>
                     }
