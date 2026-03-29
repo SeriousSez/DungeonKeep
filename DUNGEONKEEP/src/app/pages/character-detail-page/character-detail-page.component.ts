@@ -260,6 +260,7 @@ export class CharacterDetailPageComponent {
     readonly characterId = this.route.snapshot.paramMap.get('id') || '';
     readonly activeCombatTab = signal<CombatTab>('actions');
     readonly activeSpellFilter = signal<SpellFilter>('all');
+    readonly spellSearchTerm = signal('');
     readonly activeActionFilter = signal<ActionFilter>('all');
     readonly activeBackgroundFilter = signal<BackgroundFilter>('all');
     readonly activeInventoryFilter = signal<InventoryFilter>('all');
@@ -828,12 +829,38 @@ export class CharacterDetailPageComponent {
             .sort((left, right) => left.level - right.level || left.name.localeCompare(right.name));
     });
 
+    readonly filteredSpellRows = computed(() => {
+        const term = this.spellSearchTerm().trim().toLowerCase();
+        if (!term) {
+            return this.persistedSpellRows();
+        }
+
+        return this.persistedSpellRows().filter((row) => {
+            const details = spellDetailsMap[row.name];
+            const haystack = [
+                row.name,
+                row.castingTime,
+                row.range,
+                row.hitDcLabel,
+                row.damage,
+                details?.attackSave ?? '',
+                details?.components ?? '',
+                details?.damageEffect ?? '',
+                details?.description ?? ''
+            ]
+                .join(' ')
+                .toLowerCase();
+
+            return haystack.includes(term);
+        });
+    });
+
     readonly spellCantrips = computed(() => {
-        return this.persistedSpellRows().filter((row) => row.level === 0);
+        return this.filteredSpellRows().filter((row) => row.level === 0);
     });
 
     readonly spellsByLevel = computed(() => {
-        const leveled = this.persistedSpellRows().filter((row) => row.level > 0);
+        const leveled = this.filteredSpellRows().filter((row) => row.level > 0);
         const groups = new Map<number, typeof leveled>();
         for (const spell of leveled) {
             if (!groups.has(spell.level)) groups.set(spell.level, []);
@@ -1339,6 +1366,10 @@ export class CharacterDetailPageComponent {
 
     setSpellFilter(filter: SpellFilter): void {
         this.activeSpellFilter.set(filter);
+    }
+
+    onSpellSearchChanged(value: string): void {
+        this.spellSearchTerm.set(value);
     }
 
     showsSpellLevel(level: number): boolean {

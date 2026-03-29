@@ -37,32 +37,46 @@ export const routes: Routes = [
     {
         path: 'characters/new',
         component: NewCharacterPageComponent,
-        data: { title: 'New Character', breadcrumb: 'New Character' }
+        data: { title: 'New Character', breadcrumb: 'New Character', parentCrumbs: [{ label: 'Characters', url: '/characters' }] }
     },
     {
         path: 'characters/new/standard',
         component: NewCharacterStandardPageComponent,
-        data: { title: 'Standard Character Builder', breadcrumb: 'Standard Builder' }
+        data: {
+            title: 'Standard Character Builder',
+            breadcrumb: 'Standard Builder',
+            parentCrumbs: [
+                { label: 'Characters', url: '/characters' },
+                { label: 'New Character', url: '/characters/new' }
+            ]
+        }
     },
     {
         path: 'characters/new/standard/:step',
         component: NewCharacterStandardPageComponent,
-        data: { title: 'Standard Character Builder', breadcrumb: 'Standard Builder' }
+        data: {
+            title: 'Standard Character Builder',
+            breadcrumb: 'Standard Builder',
+            parentCrumbs: [
+                { label: 'Characters', url: '/characters' },
+                { label: 'New Character', url: '/characters/new' }
+            ]
+        }
     },
     {
         path: 'characters/:id/builder',
         component: NewCharacterStandardPageComponent,
-        data: { title: 'Character Builder', breadcrumb: 'Character Builder' }
+        data: { title: 'Character Builder', breadcrumb: 'Character Builder', parentCrumbs: [{ label: 'Characters', url: '/characters' }] }
     },
     {
         path: 'characters/:id/builder/:step',
         component: NewCharacterStandardPageComponent,
-        data: { title: 'Character Builder', breadcrumb: 'Character Builder' }
+        data: { title: 'Character Builder', breadcrumb: 'Character Builder', parentCrumbs: [{ label: 'Characters', url: '/characters' }] }
     },
     {
         path: 'characters/:id/builder/:step/:mode',
         component: NewCharacterStandardPageComponent,
-        data: { title: 'Character Builder', breadcrumb: 'Character Builder' }
+        data: { title: 'Character Builder', breadcrumb: 'Character Builder', parentCrumbs: [{ label: 'Characters', url: '/characters' }] }
     },
     {
         path: 'sessions',
@@ -72,7 +86,7 @@ export const routes: Routes = [
     {
         path: 'character/:id',
         component: CharacterDetailPageComponent,
-        data: { title: 'Character', breadcrumb: 'Character Details' }
+        data: { title: 'Character', breadcrumb: 'Character', parentCrumbs: [{ label: 'Characters', url: '/characters' }] }
     },
     {
         path: '**',

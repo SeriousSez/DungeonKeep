@@ -1,5 +1,11 @@
 <nav class="breadcrumb-nav">
     <a routerLink="/dashboard" class="breadcrumb-link">Dashboard</a>
+    @for (crumb of crumbs(); track crumb.label; let last = $last) {
     <span class="breadcrumb-separator">/</span>
-    <span class="breadcrumb-current">{{ breadcrumbLabel() }}</span>
+    @if (crumb.url && !last) {
+    <a [routerLink]="crumb.url" class="breadcrumb-link">{{ crumb.label }}</a>
+    } @else {
+    <span class="breadcrumb-current">{{ crumb.label }}</span>
+    }
+    }
 </nav>

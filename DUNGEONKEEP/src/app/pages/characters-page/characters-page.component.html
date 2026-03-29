@@ -1,8 +1,13 @@
 <main class="page-stack">
     <section class="panel page-intro">
-        <p class="eyebrow">Character management</p>
-        <h1>Characters</h1>
-        <p>Track readiness, level progression, and player-facing notes for the active party.</p>
+        <div class="page-intro-body">
+            <div>
+                <p class="eyebrow">Character management</p>
+                <h1>Characters</h1>
+                <p>Track readiness, level progression, and player-facing notes for the active party.</p>
+            </div>
+            <a routerLink="/characters/new" class="create-link">+ New Character</a>
+        </div>
     </section>
 
     <section class="page-stats">
@@ -18,6 +23,4 @@
 
     <app-party-roster [selectedParty]="ownedCharacters()" [eyebrow]="'Character vault'" [title]="'Your Characters'" [countLabel]="'total'" [emptyTitle]="'No characters created yet'" [emptyMessage]="'Create a character below to start building your roster.'" (statusCycled)="store.cycleStatus($event)"
         (characterPromoted)="store.promoteCharacter($event)" />
-
-    <a routerLink="/characters/new" class="create-link">+ New Character</a>
 </main>

@@ -73,9 +73,79 @@ export interface ApiDndChatMessage {
     content: string;
 }
 
+export interface ApiDndChatCharacterContext {
+    id: string;
+    name: string;
+    playerName: string;
+    race: string;
+    className: string;
+    level: number;
+    role: string;
+    status: string;
+    background: string;
+    armorClass: number;
+    hitPoints: number;
+    maxHitPoints: number;
+    proficiencyBonus: number;
+    backstory: string;
+    abilityScores: {
+        strength: number;
+        dexterity: number;
+        constitution: number;
+        intelligence: number;
+        wisdom: number;
+        charisma: number;
+    };
+    raceTraits: string[];
+    personalityTraits: string[];
+    ideals: string[];
+    bonds: string[];
+    flaws: string[];
+}
+
+export interface ApiDndChatCampaignPartyMemberContext {
+    id: string;
+    name: string;
+    race: string;
+    className: string;
+    level: number;
+    role: string;
+    status: string;
+    background: string;
+    backstory: string;
+    raceTraits: string[];
+    personalityTraits: string[];
+    ideals: string[];
+    bonds: string[];
+    flaws: string[];
+}
+
+export interface ApiDndChatCampaignContext {
+    id: string;
+    name: string;
+    setting: string;
+    tone: string;
+    summary: string;
+    hook: string;
+    nextSession: string;
+    playerCount: number;
+    party: ApiDndChatCampaignPartyMemberContext[];
+    openThreads: string[];
+    npcs: string[];
+    loot: string[];
+}
+
+export interface ApiDndChatPageContext {
+    route: string;
+    pageType: 'character' | 'campaign' | 'sessions' | 'dashboard' | 'other';
+    character?: ApiDndChatCharacterContext;
+    campaign?: ApiDndChatCampaignContext;
+}
+
 export interface ApiDndChatRequest {
     message: string;
     history?: ApiDndChatMessage[];
+    pageContext?: ApiDndChatPageContext;
 }
 
 export interface ApiDndChatResponse {

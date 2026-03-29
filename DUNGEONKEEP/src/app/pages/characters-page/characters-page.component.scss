@@ -19,6 +19,13 @@
     padding: 24px;
 }
 
+.page-intro-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+}
+
 .page-intro h1 {
     margin: 0;
     font-family: var(--display-font);

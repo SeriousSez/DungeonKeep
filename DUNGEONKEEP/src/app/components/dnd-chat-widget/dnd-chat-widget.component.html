@@ -5,9 +5,10 @@
 @if (isOpen()) {
 <section class="chat-panel panel" aria-label="D&D assistant chat panel">
     <header class="chat-header">
-        <div>
+        <div class="chat-title-wrap">
             <p class="chat-eyebrow">OpenAI Assistant</p>
             <h3>D&D Rules Chat</h3>
+            <p class="chat-subtitle">Fast rulings and examples for 5e tables.</p>
         </div>
         <button type="button" class="close-btn" aria-label="Close chat" (click)="toggleOpen()">
             <i class="fa-duotone fa-thin fa-xmark"></i>
@@ -16,10 +17,20 @@
 
     <p class="key-state ok">Server-backed chat enabled.</p>
 
-    <div class="messages">
+    <div class="messages" #messagesContainer>
         @for (message of messages(); track $index) {
         <article class="message" [class.user]="message.role === 'user'" [class.assistant]="message.role === 'assistant'">
-            <p>{{ message.content }}</p>
+            <span class="message-role">{{ message.role === 'user' ? 'You' : 'DungeonKeep Sage' }}</span>
+            <div class="message-body" [innerHTML]="renderMarkdown(message.content)"></div>
+        </article>
+        }
+
+        @if (isLoading()) {
+        <article class="message assistant loading" aria-live="polite">
+            <span class="message-role">DungeonKeep Sage</span>
+            <div class="message-body">
+                <p>Thinking through the rules...</p>
+            </div>
         </article>
         }
     </div>
@@ -29,8 +40,9 @@
     }
 
     <form class="composer" (ngSubmit)="sendMessage()">
-        <textarea [ngModel]="draft()" (ngModelChange)="draft.set($event)" name="chatPrompt" rows="2" placeholder="Ask about D&D rules, classes, spells..."></textarea>
-        <button type="submit" [disabled]="isLoading()">
+        <textarea [ngModel]="draft()" (ngModelChange)="draft.set($event)" name="chatPrompt" rows="2" placeholder="Ask about D&D rules, classes, spells..." [disabled]="isLoading()"></textarea>
+        <button type="submit" [disabled]="isLoading() || draft().trim().length === 0">
+            <i class="fa-duotone fa-thin fa-wand-magic-sparkles"></i>
             {{ isLoading() ? 'Thinking...' : 'Ask' }}
         </button>
     </form>

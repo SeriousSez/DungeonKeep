@@ -85,6 +85,16 @@ public sealed class AssistantController(IAuthService authService, IHttpClientFac
             }
         };
 
+        var contextPrompt = BuildContextPrompt(request.PageContext);
+        if (!string.IsNullOrWhiteSpace(contextPrompt))
+        {
+            input.Add(new
+            {
+                role = "system",
+                content = contextPrompt
+            });
+        }
+
         foreach (var entry in request.History ?? [])
         {
             if (!string.Equals(entry.Role, "user", StringComparison.OrdinalIgnoreCase) &&
@@ -112,6 +122,97 @@ public sealed class AssistantController(IAuthService authService, IHttpClientFac
         });
 
         return input;
+    }
+
+    private static string BuildContextPrompt(DndChatPageContext? context)
+    {
+        if (context is null)
+        {
+            return string.Empty;
+        }
+
+        var lines = new List<string>
+        {
+            "Current DungeonKeep page context is available below. Use it when it is relevant to the user's question. Do not invent missing facts.",
+            $"Route: {context.Route}",
+            $"Page Type: {context.PageType}"
+        };
+
+        if (context.Character is not null)
+        {
+            lines.AddRange(
+            [
+                "Character Context:",
+                $"- Name: {context.Character.Name}",
+                $"- Player: {context.Character.PlayerName}",
+                $"- Race: {context.Character.Race}",
+                $"- Class: {context.Character.ClassName}",
+                $"- Level: {context.Character.Level}",
+                $"- Role: {context.Character.Role}",
+                $"- Status: {context.Character.Status}",
+                $"- Background: {context.Character.Background}",
+                $"- Armor Class: {context.Character.ArmorClass}",
+                $"- Hit Points: {context.Character.HitPoints}/{context.Character.MaxHitPoints}",
+                $"- Proficiency Bonus: {context.Character.ProficiencyBonus}",
+                $"- Backstory: {FormatOptionalText(context.Character.Backstory, "none recorded")}",
+                $"- Ability Scores: STR {context.Character.AbilityScores.Strength}, DEX {context.Character.AbilityScores.Dexterity}, CON {context.Character.AbilityScores.Constitution}, INT {context.Character.AbilityScores.Intelligence}, WIS {context.Character.AbilityScores.Wisdom}, CHA {context.Character.AbilityScores.Charisma}",
+                $"- Race Traits: {FormatList(context.Character.RaceTraits, "none recorded")}",
+                $"- Personality Traits: {FormatList(context.Character.PersonalityTraits, "none recorded")}",
+                $"- Ideals: {FormatList(context.Character.Ideals, "none recorded")}",
+                $"- Bonds: {FormatList(context.Character.Bonds, "none recorded")}",
+                $"- Flaws: {FormatList(context.Character.Flaws, "none recorded")}"
+            ]);
+        }
+
+        if (context.Campaign is not null)
+        {
+            lines.AddRange(
+            [
+                "Campaign Context:",
+                $"- Name: {context.Campaign.Name}",
+                $"- Setting: {context.Campaign.Setting}",
+                $"- Tone: {context.Campaign.Tone}",
+                $"- Summary: {context.Campaign.Summary}",
+                $"- Hook: {context.Campaign.Hook}",
+                $"- Next Session: {context.Campaign.NextSession}",
+                $"- Player Count: {context.Campaign.PlayerCount}",
+                $"- Party: {FormatParty(context.Campaign.Party)}",
+                $"- Open Threads: {FormatList(context.Campaign.OpenThreads, "none recorded")}",
+                $"- NPCs: {FormatList(context.Campaign.Npcs, "none recorded")}",
+                $"- Loot: {FormatList(context.Campaign.Loot, "none recorded")}"
+            ]);
+        }
+
+        return string.Join('\n', lines);
+    }
+
+    private static string FormatParty(IReadOnlyList<DndChatCampaignPartyMemberContext>? party)
+    {
+        if (party is null || party.Count == 0)
+        {
+            return "none recorded";
+        }
+
+        return string.Join(
+            "; ",
+            party.Select(member =>
+                $"{member.Name} (Level {member.Level} {member.Race} {member.ClassName}, {member.Role}, {member.Status}; Background: {member.Background}; Backstory: {FormatOptionalText(member.Backstory, "none")}; Race Traits: {FormatList(member.RaceTraits, "none")}; Personality Traits: {FormatList(member.PersonalityTraits, "none")}; Ideals: {FormatList(member.Ideals, "none")}; Bonds: {FormatList(member.Bonds, "none")}; Flaws: {FormatList(member.Flaws, "none")})")
+        );
+    }
+
+    private static string FormatList(IReadOnlyList<string>? values, string fallback)
+    {
+        if (values is null || values.Count == 0)
+        {
+            return fallback;
+        }
+
+        return string.Join(", ", values.Where(value => !string.IsNullOrWhiteSpace(value)).Select(value => value.Trim()));
+    }
+
+    private static string FormatOptionalText(string? value, string fallback)
+    {
+        return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
     }
 
     private static string ExtractResponseText(OpenAiResponsesApiResponse? payload)
@@ -146,9 +247,65 @@ public sealed class AssistantController(IAuthService authService, IHttpClientFac
         return await authService.GetAuthenticatedUserByTokenAsync(token, cancellationToken);
     }
 
-    public sealed record DndChatRequest(string Message, IReadOnlyList<DndChatMessage>? History);
+    public sealed record DndChatRequest(string Message, IReadOnlyList<DndChatMessage>? History, DndChatPageContext? PageContext);
 
     public sealed record DndChatMessage(string Role, string Content);
+
+    public sealed record DndChatPageContext(string Route, string PageType, DndChatCharacterContext? Character, DndChatCampaignContext? Campaign);
+
+    public sealed record DndChatCharacterContext(
+        string Id,
+        string Name,
+        string PlayerName,
+        string Race,
+        string ClassName,
+        int Level,
+        string Role,
+        string Status,
+        string Background,
+        int ArmorClass,
+        int HitPoints,
+        int MaxHitPoints,
+        int ProficiencyBonus,
+        string Backstory,
+        DndChatAbilityScores AbilityScores,
+        IReadOnlyList<string> RaceTraits,
+        IReadOnlyList<string> PersonalityTraits,
+        IReadOnlyList<string> Ideals,
+        IReadOnlyList<string> Bonds,
+        IReadOnlyList<string> Flaws);
+
+    public sealed record DndChatAbilityScores(int Strength, int Dexterity, int Constitution, int Intelligence, int Wisdom, int Charisma);
+
+    public sealed record DndChatCampaignContext(
+        string Id,
+        string Name,
+        string Setting,
+        string Tone,
+        string Summary,
+        string Hook,
+        string NextSession,
+        int PlayerCount,
+        IReadOnlyList<DndChatCampaignPartyMemberContext> Party,
+        IReadOnlyList<string> OpenThreads,
+        IReadOnlyList<string> Npcs,
+        IReadOnlyList<string> Loot);
+
+    public sealed record DndChatCampaignPartyMemberContext(
+        string Id,
+        string Name,
+        string Race,
+        string ClassName,
+        int Level,
+        string Role,
+        string Status,
+        string Background,
+        string Backstory,
+        IReadOnlyList<string> RaceTraits,
+        IReadOnlyList<string> PersonalityTraits,
+        IReadOnlyList<string> Ideals,
+        IReadOnlyList<string> Bonds,
+        IReadOnlyList<string> Flaws);
 
     public sealed record DndChatResponse(string Reply);
 

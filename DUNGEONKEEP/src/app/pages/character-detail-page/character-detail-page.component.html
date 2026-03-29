@@ -3,10 +3,19 @@
     <div class="detail-header">
         <a routerLink="/characters" class="back-link">← Back to Characters</a>
         <div class="header-content">
-            <div>
+            <div class="header-main">
                 <p class="eyebrow">Character Sheet</p>
                 <h1>{{ char.name }}</h1>
                 <p class="subheader">{{ char.race }} {{ char.className }} · Level {{ char.level }} · {{ campaignName() }}</p>
+            </div>
+
+            <div class="header-actions">
+                <div class="header-status-row">
+                    <span class="status-pill" [attr.data-status]="char.status">{{ char.status }}</span>
+                    <a class="edit-character-btn" [routerLink]="['/characters', char.id, 'builder', 'class']" aria-label="Open character builder" title="Open Character Builder">
+                        <i class="fa-duotone fa-thin fa-scroll"></i>
+                    </a>
+                </div>
                 @if (char.canEdit) {
                 <div class="campaign-assignment-controls">
                     <app-dropdown [value]="selectedCampaignAssignment()" [options]="assignableCampaignOptions()" [placeholder]="'Choose campaign...'" size="compact" (changed)="onCampaignAssignmentChanged($event)"></app-dropdown>
@@ -22,7 +31,6 @@
                 }
                 }
             </div>
-            <span class="status-pill" [attr.data-status]="char.status">{{ char.status }}</span>
         </div>
     </div>
 
@@ -127,27 +135,28 @@
             </div>
         </section>
 
-        <section class="panel right-column">
-            <h2 class="section-title">Defenses & Conditions</h2>
-            <div class="defense-condition-grid">
-                <div>
-                    <h3 class="subsection-title">Defenses</h3>
-                    <ul class="mini-list">
-                        @for (item of defenses(); track $index) {
-                        <li>{{ item }}</li>
-                        }
-                        @if (!defenses().length) {
-                        <li>No defenses recorded</li>
-                        }
-                    </ul>
+        <div class="right-column">
+            <section class="panel">
+                <div class="defense-condition-grid">
+                    <div>
+                        <h3 class="subsection-title">Defenses</h3>
+                        <ul class="mini-list">
+                            @for (item of defenses(); track $index) {
+                            <li>{{ item }}</li>
+                            }
+                            @if (!defenses().length) {
+                            <li>No defenses recorded</li>
+                            }
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="subsection-title">Conditions</h3>
+                        <p class="notes-block">{{ conditionSummary() }}</p>
+                    </div>
                 </div>
-                <div>
-                    <h3 class="subsection-title">Conditions</h3>
-                    <p class="notes-block">{{ conditionSummary() }}</p>
-                </div>
-            </div>
+            </section>
 
-            <section class="actions-hub">
+            <section class="panel actions-hub" [class.actions-hub--spells]="activeCombatTab() === 'spells'">
                 <div class="primary-tab-row">
                     @for (tab of combatTabs; track tab.key) {
                     <button type="button" class="combat-tab" [class.active]="activeCombatTab() === tab.key" (click)="setCombatTab(tab.key)">
@@ -312,13 +321,13 @@
                 } @else if (activeCombatTab() === 'spells') {
                 <h3 class="subsection-title">Spellcasting</h3>
                 @if (spellcastingProfile(); as spell) {
-                <div class="info-rows">
-                    <div class="info-row"><span class="label">Modifier</span><span class="value">{{ spell.modifierLabel }}</span></div>
-                    <div class="info-row"><span class="label">Spell Attack</span><span class="value">{{ spell.attackBonus }}</span></div>
-                    <div class="info-row"><span class="label">Save DC</span><span class="value">{{ spell.saveDC }}</span></div>
+                <div class="info-rows spellcasting-rows">
+                    <div class="info-row"><span class="value">{{ spell.modifierLabel }}</span><span class="label">Modifier</span></div>
+                    <div class="info-row"><span class="value">{{ spell.attackBonus }}</span><span class="label">Spell Attack</span></div>
+                    <div class="info-row"><span class="value">{{ spell.saveDC }}</span><span class="label">Save DC</span></div>
                 </div>
                 <div class="actions-meta-row">
-                    <span>Search Spell Names, Casting Times, Damage Types, Conditions or Tags</span>
+                    <input class="inventory-search-input" type="search" placeholder="Search Spell Names, Casting Times, Damage Types, Conditions or Tags" [value]="spellSearchTerm()" (input)="onSpellSearchChanged($any($event.target).value)" />
                     <span class="manage-custom">Manage Spells</span>
                 </div>
                 <div class="action-filter-row">
@@ -657,7 +666,7 @@
                 <p class="notes-block">Extras that you add will display here.</p>
                 }
             </section>
-        </section>
+        </div>
     </div>
     } @else {
     <div class="empty-state">

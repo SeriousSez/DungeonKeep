@@ -28,13 +28,31 @@
 .header-content {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     gap: 16px;
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);
     border-radius: 18px;
     padding: 20px 24px;
     box-shadow: var(--panel-shadow);
+}
+
+.header-main {
+    display: grid;
+    gap: 6px;
+}
+
+.header-actions {
+    display: grid;
+    justify-items: end;
+    align-content: start;
+    gap: 10px;
+}
+
+.header-status-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .header-content h1 {
@@ -59,8 +77,9 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: flex-end;
     gap: 8px;
-    margin-top: 10px;
+    margin-top: 0;
 }
 
 .assign-btn,
@@ -74,6 +93,29 @@
     cursor: pointer;
 }
 
+.edit-character-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    border: 1px solid var(--pill-border);
+    background: var(--pill-bg);
+    color: var(--text-main);
+    text-decoration: none;
+    transition: border-color 0.18s ease, transform 0.18s ease;
+
+    &:hover {
+        border-color: var(--accent-primary);
+        transform: translateY(-1px);
+    }
+
+    i {
+        font-size: 0.9rem;
+    }
+}
+
 .assign-btn:disabled,
 .remove-btn:disabled {
     cursor: not-allowed;
@@ -81,7 +123,8 @@
 }
 
 .campaign-error {
-    margin-top: 6px;
+    margin: 0;
+    text-align: right;
     color: var(--text-main);
     font-size: 0.86rem;
 }
@@ -123,12 +166,13 @@
     display: grid;
     grid-template-columns: auto auto;
     gap: 10px;
-    align-items: start;
+    align-items: stretch;
 }
 
 .summary-panel {
     display: grid;
     gap: 10px;
+    height: 100%;
 }
 
 .summary-strip {
@@ -227,14 +271,15 @@
 .left-column,
 .middle-column,
 .right-column {
+    max-height: calc(70vh - 175px);
+    overflow-x: clip;
+    overflow: auto;
     display: grid;
     gap: 10px;
 }
 
 .right-column {
-    max-height: calc(70vh - 180px);
-    overflow-y: auto;
-    padding-right: 4px;
+    padding-right: 0;
 }
 
 .save-list,
@@ -299,6 +344,40 @@
 .value {
     color: var(--text-main);
     font-weight: 600;
+}
+
+.spellcasting-rows {
+    grid-template-columns: repeat(3, minmax(72px, auto));
+    width: fit-content;
+    margin: 0 auto;
+    gap: 16px;
+    align-items: end;
+}
+
+.spellcasting-rows .info-row {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+    gap: 3px;
+    border: 0;
+    background: transparent;
+    border-radius: 0;
+    padding: 0;
+}
+
+.spellcasting-rows .value {
+    font-size: 1.12rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-main);
+}
+
+.spellcasting-rows .label {
+    font-size: 0.56rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
 }
 
 .skill-row {
@@ -573,7 +652,15 @@
     gap: 10px;
 }
 
+.right-column>.panel {
+    box-shadow: 0 2px 8px rgba(78, 50, 32, 0.07);
+}
+
 .actions-hub {
+    max-height: calc(60vh - 175px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
     display: grid;
     gap: 10px;
 }
@@ -641,6 +728,12 @@
     max-height: 360px;
     overflow: auto;
     padding-right: 2px;
+}
+
+.actions-hub--spells .actions-table-scroll {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
 }
 
 .actions-table {
@@ -903,8 +996,12 @@
 
     .right-column {
         order: 2;
+        padding-right: 0;
+    }
+
+    .actions-hub {
         max-height: none;
-        overflow-y: visible;
+        overflow: visible;
         padding-right: 0;
     }
 
@@ -918,6 +1015,23 @@
         flex-direction: column;
         align-items: flex-start;
         padding: 16px;
+    }
+
+    .header-actions {
+        width: 100%;
+        justify-items: start;
+    }
+
+    .header-status-row {
+        justify-content: flex-start;
+    }
+
+    .campaign-assignment-controls {
+        justify-content: flex-start;
+    }
+
+    .campaign-error {
+        text-align: left;
     }
 
     .header-content h1 {
@@ -941,6 +1055,13 @@
     .actions-head,
     .actions-row {
         grid-template-columns: 1.2fr 0.8fr 0.8fr 1fr;
+    }
+
+    .spellcasting-rows {
+        grid-template-columns: repeat(3, minmax(64px, auto));
+        width: fit-content;
+        margin: 0 auto;
+        gap: 10px;
     }
 
     .actions-head span:last-child,
