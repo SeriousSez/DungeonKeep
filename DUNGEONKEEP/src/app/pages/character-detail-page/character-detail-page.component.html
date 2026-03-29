@@ -165,65 +165,150 @@
                     }
                 </div>
 
-                <div class="actions-meta-row">
-                    <span>Actions · Attacks per Action: {{ attacksPerAction() }}</span>
-                    <span class="manage-custom">Manage Custom</span>
-                </div>
-
-                <div class="actions-table-scroll">
-                    <div class="actions-table">
+                @if (activeActionFilter() === 'all' || activeActionFilter() === 'attack') {
+                <section class="action-section">
+                    <div class="action-section-header">
+                        <span>ACTIONS <span class="header-meta">· Attacks per Action: {{ attacksPerAction() }}</span></span>
+                        <span class="manage-custom">Manage Custom</span>
+                    </div>
+                    <div class="actions-table actions-table--combat">
                         <div class="actions-head">
                             <span>Attack</span>
-                            <span>Type</span>
+                            <span>Range</span>
                             <span>Hit / DC</span>
                             <span>Damage</span>
                             <span>Notes</span>
                         </div>
-                        @for (action of filteredActionRows(); track action.name) {
-                        <div class="actions-row">
-                            <span>{{ action.name }}</span>
-                            <span>{{ action.type }}</span>
-                            <span>{{ action.bonusLabel }}</span>
-                            <span>{{ action.damage }}</span>
-                            <span>{{ action.note }}</span>
+                        @for (row of attackRows(); track row.name) {
+                        <div class="actions-row actions-row--combat">
+                            <span class="combat-name-cell">
+                                <strong class="combat-name">{{ row.name }}</strong>
+                                <span class="combat-subtitle">{{ row.subtitle }}</span>
+                            </span>
+                            <span>{{ row.range }}</span>
+                            <span><span class="hitdc-badge">{{ row.hitDcLabel }}</span></span>
+                            <span class="combat-damage-cell">{{ row.damage }}@if (row.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}</span>
+                            <span class="combat-notes">{{ row.notes }}</span>
                         </div>
                         }
-                        @if (!filteredActionRows().length) {
+                        @if (!attackRows().length) {
                         <div class="actions-row">
-                            <span>No actions recorded</span>
-                            <span>-</span>
-                            <span>-</span>
-                            <span>-</span>
-                            <span>Add actions in character notes or inventory.</span>
+                            <span>No attacks recorded</span>
+                            <span>—</span>
+                            <span>—</span>
+                            <span>—</span>
+                            <span>Add weapons to inventory</span>
                         </div>
                         }
                     </div>
-                </div>
+                </section>
+                }
 
-                <div class="quick-lists">
-                    <div>
-                        <h3 class="subsection-title">Bonus Actions</h3>
-                        <ul class="mini-list">
-                            @for (item of quickActions().bonusActions; track item) {
-                            <li>{{ item }}</li>
-                            }
-                            @if (!quickActions().bonusActions.length) {
-                            <li>No bonus actions recorded</li>
-                            }
-                        </ul>
+                @if (activeActionFilter() === 'all' || activeActionFilter() === 'action') {
+                <section class="action-section">
+                    <h4 class="action-group-label">Actions in Combat</h4>
+                    <div class="action-chips">
+                        @for (a of STANDARD_COMBAT_ACTIONS; track a) {
+                        <span class="action-chip">{{ a }}</span>
+                        }
                     </div>
-                    <div>
-                        <h3 class="subsection-title">Reactions</h3>
-                        <ul class="mini-list">
-                            @for (item of quickActions().reactions; track item) {
-                            <li>{{ item }}</li>
-                            }
-                            @if (!quickActions().reactions.length) {
-                            <li>No reactions recorded</li>
-                            }
-                        </ul>
+                    @if (actionSpellRows().length) {
+                    <h4 class="action-group-label">Spells</h4>
+                    <div class="spell-chip-list">
+                        @for (row of actionSpellRows(); track row.name) {
+                        <span class="spell-chip">
+                            <span class="spell-chip-name">{{ row.name }}</span>
+                            <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}</span>
+                        </span>
+                        }
                     </div>
-                </div>
+                    }
+                </section>
+                }
+
+                @if (activeActionFilter() === 'all' || activeActionFilter() === 'bonus-action') {
+                <section class="action-section">
+                    <div class="action-section-header">
+                        <span>Bonus Actions</span>
+                        <span class="manage-custom">Manage Custom</span>
+                    </div>
+                    <h4 class="action-group-label">Actions in Combat</h4>
+                    <div class="action-chips">
+                        @for (a of STANDARD_BONUS_COMBAT_ACTIONS; track a) {
+                        <span class="action-chip">{{ a }}</span>
+                        }
+                        @for (a of bonusActionNames(); track a) {
+                        <span class="action-chip">{{ a }}</span>
+                        }
+                    </div>
+                    @if (bonusActionSpellRows().length) {
+                    <h4 class="action-group-label">Spells</h4>
+                    <div class="spell-chip-list">
+                        @for (row of bonusActionSpellRows(); track row.name) {
+                        <span class="spell-chip">
+                            <span class="spell-chip-name">{{ row.name }}</span>
+                            <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}</span>
+                        </span>
+                        }
+                    </div>
+                    }
+                </section>
+                }
+
+                @if (activeActionFilter() === 'all' || activeActionFilter() === 'reaction') {
+                <section class="action-section">
+                    <div class="action-section-header">
+                        <span>Reactions</span>
+                        <span class="manage-custom">Manage Custom</span>
+                    </div>
+                    <h4 class="action-group-label">Actions in Combat</h4>
+                    <div class="action-chips">
+                        @for (a of STANDARD_REACTIONS; track a) {
+                        <span class="action-chip">{{ a }}</span>
+                        }
+                        @for (a of reactionNames(); track a) {
+                        <span class="action-chip">{{ a }}</span>
+                        }
+                    </div>
+                    @if (reactionSpellRows().length) {
+                    <h4 class="action-group-label">Spells</h4>
+                    <div class="spell-chip-list">
+                        @for (row of reactionSpellRows(); track row.name) {
+                        <span class="spell-chip">
+                            <span class="spell-chip-name">{{ row.name }}</span>
+                            <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}</span>
+                        </span>
+                        }
+                    </div>
+                    }
+                </section>
+                }
+
+                @if (activeActionFilter() === 'all' || activeActionFilter() === 'other' || activeActionFilter() === 'limited-use') {
+                <section class="action-section">
+                    <div class="action-section-header">
+                        <span>Other</span>
+                        <span class="manage-custom">Manage Custom</span>
+                    </div>
+                    <h4 class="action-group-label">Actions in Combat</h4>
+                    <div class="action-chips">
+                        @for (a of STANDARD_OTHER_ACTIONS; track a) {
+                        <span class="action-chip">{{ a }}</span>
+                        }
+                    </div>
+                    @if (otherSpellRows().length) {
+                    <h4 class="action-group-label">Spells</h4>
+                    <div class="spell-chip-list">
+                        @for (row of otherSpellRows(); track row.name) {
+                        <span class="spell-chip">
+                            <span class="spell-chip-name">{{ row.name }}</span>
+                            <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (row.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}</span>
+                        </span>
+                        }
+                    </div>
+                    }
+                </section>
+                }
                 } @else if (activeCombatTab() === 'spells') {
                 <h3 class="subsection-title">Spellcasting</h3>
                 @if (spellcastingProfile(); as spell) {
@@ -258,7 +343,7 @@
                         @for (spellRow of spellCantrips(); track spellRow.name) {
                         <div class="actions-row">
                             <span class="spell-name-cell">{{ spellRow.name }}@if (spellRow.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (spellRow.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}</span>
-                            <span>1A</span>
+                            <span>{{ spellRow.castingTime }}</span>
                             <span>{{ spellRow.range }}</span>
                             <span>{{ spellRow.hitDcLabel }}</span>
                             <span>{{ spellRow.damage }}</span>
@@ -302,7 +387,7 @@
                         @for (spellRow of group.spells; track spellRow.name) {
                         <div class="actions-row">
                             <span class="spell-name-cell">{{ spellRow.name }}@if (spellRow.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (spellRow.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}</span>
-                            <span>1A</span>
+                            <span>{{ spellRow.castingTime }}</span>
                             <span>{{ spellRow.range }}</span>
                             <span>{{ spellRow.hitDcLabel }}</span>
                             <span>{{ spellRow.damage }}</span>
@@ -350,7 +435,7 @@
                     <span class="manage-custom">Manage Inventory</span>
                 </div>
                 <div class="action-filter-row">
-                    @for (filter of inventoryFilters; track filter.key) {
+                    @for (filter of inventoryFilters(); track filter.key) {
                     <button type="button" class="action-filter" [class.active]="activeInventoryFilter() === filter.key" (click)="setInventoryFilter(filter.key)">
                         {{ filter.label }}
                     </button>
@@ -366,18 +451,55 @@
                     </div>
                 </div>
                 }
-                @if (activeInventoryFilter() === 'all' || activeInventoryFilter() === 'backpack') {
+                @if (activeInventoryFilter() === 'all' || activeInventoryFilter() === 'other') {
                 <div class="training-grid">
                     <div class="training-block"><span class="label">Gear</span>
                         <p>{{ bag.gear.length ? bag.gear.join(', ') : 'Not recorded' }}</p>
                     </div>
-                </div>
-                }
-                @if (activeInventoryFilter() === 'all' || activeInventoryFilter() === 'other') {
-                <div class="training-grid">
                     <div class="training-block"><span class="label">Currency</span>
                         <p>GP {{ bag.currency.gp }} · SP {{ bag.currency.sp }} · CP {{ bag.currency.cp }}</p>
                     </div>
+                </div>
+                }
+                @if (containersByName().length > 0) {
+                <div class="inventory-section">
+                    @for (containerItem of containersByName(); track containerItem.entry.name + containerItem.index) {
+                    @if (activeInventoryFilter() === 'all' || activeInventoryFilter() === containerItem.entry.name) {
+                    <div class="container-item">
+                        <button type="button" class="container-header" [class.expanded]="isContainerExpanded(containerItem.entry.name + '_' + containerItem.index)" (click)="toggleContainerExpanded(containerItem.entry.name + '_' + containerItem.index)">
+                            <i class="fa-duotone fa-thin" [ngClass]="isContainerExpanded(containerItem.entry.name + '_' + containerItem.index) ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+                            <span class="container-name">{{ containerItem.entry.name }}</span>
+                            <span class="container-count">{{ (containerItem.entry.containedItems || []).length }} items</span>
+                            @if (containerItem.entry.maxCapacity) {
+                            <span class="container-capacity">{{ containerItem.entry.maxCapacity }} lb capacity</span>
+                            }
+                        </button>
+                        @if (isContainerExpanded(containerItem.entry.name + '_' + containerItem.index)) {
+                        <div class="container-contents">
+                            @if ((containerItem.entry.containedItems || []).length > 0) {
+                            <table class="inventory-table">
+                                <tbody>
+                                    @for (item of containerItem.entry.containedItems || []; track item.name) {
+                                    <tr class="inventory-row">
+                                        <td class="item-name">{{ item.name }}</td>
+                                        <td class="item-quantity">{{ item.quantity }}</td>
+                                        @if (item.weight) {
+                                        <td class="item-weight">{{ item.weight }} lb</td>
+                                        } @else {
+                                        <td class="item-weight">—</td>
+                                        }
+                                    </tr>
+                                    }
+                                </tbody>
+                            </table>
+                            } @else {
+                            <p class="empty-container">This container is empty</p>
+                            }
+                        </div>
+                        }
+                    </div>
+                    }
+                    }
                 </div>
                 }
                 }

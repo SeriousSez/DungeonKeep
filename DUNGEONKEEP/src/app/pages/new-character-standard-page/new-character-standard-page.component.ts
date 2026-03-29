@@ -73,6 +73,14 @@ interface StartingEquipmentPackage {
     currency: { gp?: number };
 }
 
+type StartingPackName =
+    | "Burglar's Pack"
+    | "Dungeoneer's Pack"
+    | "Entertainer's Pack"
+    | "Explorer's Pack"
+    | "Priest's Pack"
+    | "Scholar's Pack";
+
 interface PersistedBuilderState {
     selectedBackgroundName: string;
     selectedBackgroundUrl: string;
@@ -1080,8 +1088,21 @@ export class NewCharacterStandardPageComponent {
     readonly selectedEquipmentSourceUrl = signal('');
     readonly selectedClassStartingOption = signal<'A' | 'B' | ''>('A');
     readonly selectedBackgroundStartingOption = signal<'A' | 'B' | ''>('A');
+    readonly selectedInventoryDestination = signal('inventory');
     readonly inventoryEntries = signal<InventoryEntry[]>([]);
     readonly currency = signal<CurrencyState>({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 });
+
+    readonly inventoryDestinationOptions = computed<DropdownOption[]>(() => {
+        const options: DropdownOption[] = [{ value: 'inventory', label: 'Inventory' }];
+        const containers = this.inventoryEntries().filter((entry) => entry.isContainer);
+
+        for (const container of containers) {
+            const suffix = container.quantity > 1 ? ` (x${container.quantity})` : '';
+            options.push({ value: container.name, label: `${container.name}${suffix}` });
+        }
+
+        return options;
+    });
 
     readonly filteredEquipmentItems = computed(() => {
         const term = this.equipmentSearchTerm().trim().toLowerCase();
@@ -1103,6 +1124,25 @@ export class NewCharacterStandardPageComponent {
     });
 
     private readonly classStartingPackagePresets: Readonly<Record<string, Readonly<Record<'A' | 'B', StartingEquipmentPackage>>>> = {
+        Artificer: {
+            A: {
+                label: 'Leather Armor, Light Crossbow, Bolts (20), Thieves\' Tools, Tinker\'s Tools, Dungeoneer\'s Pack, and 5 GP',
+                items: [
+                    { name: 'Leather Armor', category: 'Armor', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+                    { name: 'Light Crossbow', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Crossbow Bolts (20)', category: 'Ammunition', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Thieves' Tools", category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+                    { name: "Tinker's Tools", category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 5 }
+            },
+            B: {
+                label: '100 GP',
+                items: [],
+                currency: { gp: 100 }
+            }
+        },
         Barbarian: {
             A: {
                 label: 'Greataxe, 4 Handaxes, Explorer\'s Pack, and 15 GP',
@@ -1113,6 +1153,204 @@ export class NewCharacterStandardPageComponent {
                 label: '75 GP',
                 items: classStartingPackages.B.items,
                 currency: classStartingPackages.B.currency
+            }
+        },
+        Bard: {
+            A: {
+                label: 'Leather Armor, Dagger, Musical Instrument, Entertainer\'s Pack, and 19 GP',
+                items: [
+                    { name: 'Leather Armor', category: 'Armor', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Lute', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+                    { name: "Entertainer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 19 }
+            },
+            B: {
+                label: '90 GP',
+                items: [],
+                currency: { gp: 90 }
+            }
+        },
+        Cleric: {
+            A: {
+                label: 'Mace, Scale Mail, Shield, Holy Symbol, Priest\'s Pack, and 7 GP',
+                items: [
+                    { name: 'Mace', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Scale Mail', category: 'Armor', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+                    { name: 'Shield', category: 'Armor', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+                    { name: 'Holy Symbol', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Priest's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 7 }
+            },
+            B: {
+                label: '110 GP',
+                items: [],
+                currency: { gp: 110 }
+            }
+        },
+        Druid: {
+            A: {
+                label: 'Leather Armor, Shield, Scimitar, Druidic Focus, Explorer\'s Pack, and 9 GP',
+                items: [
+                    { name: 'Leather Armor', category: 'Armor', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+                    { name: 'Shield', category: 'Armor', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+                    { name: 'Scimitar', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Druidic Focus', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Explorer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 9 }
+            },
+            B: {
+                label: '55 GP',
+                items: [],
+                currency: { gp: 55 }
+            }
+        },
+        Fighter: {
+            A: {
+                label: 'Chain Mail, Longsword, Shield, Light Crossbow, Bolts (20), Dungeoneer\'s Pack, and 5 GP',
+                items: [
+                    { name: 'Chain Mail', category: 'Armor', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+                    { name: 'Longsword', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Shield', category: 'Armor', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+                    { name: 'Light Crossbow', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Crossbow Bolts (20)', category: 'Ammunition', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 5 }
+            },
+            B: {
+                label: '155 GP',
+                items: [],
+                currency: { gp: 155 }
+            }
+        },
+        Monk: {
+            A: {
+                label: 'Spear, Dungeoneer\'s Pack, and 11 GP',
+                items: [
+                    { name: 'Spear', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 11 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Paladin: {
+            A: {
+                label: 'Chain Mail, Longsword, Shield, Javelin (5), Holy Symbol, Priest\'s Pack, and 14 GP',
+                items: [
+                    { name: 'Chain Mail', category: 'Armor', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+                    { name: 'Longsword', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Shield', category: 'Armor', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+                    { name: 'Javelin', category: 'Weapon', quantity: 5, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Holy Symbol', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Priest's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 14 }
+            },
+            B: {
+                label: '150 GP',
+                items: [],
+                currency: { gp: 150 }
+            }
+        },
+        Ranger: {
+            A: {
+                label: 'Studded Leather Armor, Scimitar, Shortsword, Longbow, Arrows (20), Quiver, Explorer\'s Pack, and 7 GP',
+                items: [
+                    { name: 'Studded Leather Armor', category: 'Armor', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+                    { name: 'Scimitar', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Shortsword', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Longbow', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Arrow', category: 'Ammunition', quantity: 20, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Quiver', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Explorer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 7 }
+            },
+            B: {
+                label: '150 GP',
+                items: [],
+                currency: { gp: 150 }
+            }
+        },
+        Rogue: {
+            A: {
+                label: 'Leather Armor, 2 Daggers, Shortsword, Shortbow, Arrows (20), Thieves\' Tools, Burglar\'s Pack, and 8 GP',
+                items: [
+                    { name: 'Leather Armor', category: 'Armor', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+                    { name: 'Dagger', category: 'Weapon', quantity: 2, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Shortsword', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Shortbow', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Arrow', category: 'Ammunition', quantity: 20, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Thieves' Tools", category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+                    { name: "Burglar's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 8 }
+            },
+            B: {
+                label: '100 GP',
+                items: [],
+                currency: { gp: 100 }
+            }
+        },
+        Sorcerer: {
+            A: {
+                label: 'Quarterstaff, Arcane Focus, Dungeoneer\'s Pack, and 28 GP',
+                items: [
+                    { name: 'Quarterstaff', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Arcane Focus', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 28 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Warlock: {
+            A: {
+                label: 'Leather Armor, Sickle, Dagger, Arcane Focus, Scholar\'s Pack, and 15 GP',
+                items: [
+                    { name: 'Leather Armor', category: 'Armor', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/armor' },
+                    { name: 'Sickle', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Arcane Focus', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Scholar's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '100 GP',
+                items: [],
+                currency: { gp: 100 }
+            }
+        },
+        Wizard: {
+            A: {
+                label: 'Quarterstaff, Dagger, Arcane Focus, Scholar\'s Pack, Spellbook, and 5 GP',
+                items: [
+                    { name: 'Quarterstaff', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Arcane Focus', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Scholar's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Spellbook', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 5 }
+            },
+            B: {
+                label: '55 GP',
+                items: [],
+                currency: { gp: 55 }
             }
         }
     };
@@ -1129,7 +1367,149 @@ export class NewCharacterStandardPageComponent {
                 items: backgroundStartingPackages.B.items,
                 currency: backgroundStartingPackages.B.currency
             }
+        },
+        Sage: {
+            A: {
+                label: 'Ink (1-ounce bottle), Ink Pen, Lamp, Oil (2 flasks), Paper (10 sheets), Scholar\'s Pack, and 8 GP',
+                items: [
+                    { name: 'Ink (1-ounce bottle)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Lamp', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Oil (flask)', category: 'Adventuring Gear', quantity: 2, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Paper (sheet)', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Scholar's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 8 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
         }
+    };
+
+    private readonly containerItemNames = new Set<string>([
+        'Backpack',
+        'Bag of Holding',
+        'Bag of Tricks',
+        'Handy Haversack',
+        'Portable Hole',
+        'Bandolier',
+        'Belt Pouch',
+        'Chest',
+        'Pouch',
+        'Sack',
+        'Waterskin',
+        'Barrel',
+        'Barrel',
+        'Basket',
+        'Bottle',
+        'Bucket',
+        'Crate',
+        'Jug',
+        'Keg',
+        'Quiver'
+    ]);
+
+    private readonly containerCapacities: Record<string, number> = {
+        'Backpack': 60,
+        'Bag of Holding': 500,
+        'Bag of Tricks': 65,
+        'Handy Haversack': 80,
+        'Portable Hole': 500,
+        'Bandolier': 15,
+        'Belt Pouch': 5,
+        'Chest': 100,
+        'Pouch': 5,
+        'Sack': 20,
+        'Waterskin': 1,
+        'Barrel': 50,
+        'Basket': 30,
+        'Bottle': 0.5,
+        'Bucket': 15,
+        'Crate': 100,
+        'Jug': 2,
+        'Keg': 75,
+        'Quiver': 2
+    };
+
+    private isContainerItem(itemName: string): boolean {
+        return this.containerItemNames.has(itemName);
+    }
+
+    private getContainerCapacity(itemName: string): number {
+        return this.containerCapacities[itemName] ?? 50;
+    }
+
+    private readonly startingPackContents: Readonly<Record<StartingPackName, ReadonlyArray<InventoryEntry>>> = {
+        "Explorer's Pack": [
+            { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Mess Kit', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Tinderbox', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Torch', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Hempen Rope (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+        ],
+        "Dungeoneer's Pack": [
+            { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Hammer', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Piton', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Torch', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Tinderbox', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Hempen Rope (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+        ],
+        "Scholar's Pack": [
+            { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Ink (1-ounce bottle)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Parchment (sheet)', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Little Bag of Sand', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Small Knife', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+        ],
+        "Priest's Pack": [
+            { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Blanket', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Candle', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Tinderbox', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Alms Box', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Block of Incense', category: 'Adventuring Gear', quantity: 2, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Censer', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Vestments', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 2, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+        ],
+        "Burglar's Pack": [
+            { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Ball Bearings (bag)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'String (10 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Bell', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Candle', category: 'Adventuring Gear', quantity: 5, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Hammer', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Piton', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Hooded Lantern', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Oil (flask)', category: 'Adventuring Gear', quantity: 2, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 5, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Tinderbox', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Hempen Rope (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+        ],
+        "Entertainer's Pack": [
+            { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Costume', category: 'Adventuring Gear', quantity: 2, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Candle', category: 'Adventuring Gear', quantity: 5, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 5, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+            { name: 'Disguise Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' }
+        ]
     };
 
     readonly equipmentClassName = computed(() => this.getPrimaryClassName() || 'Class');
@@ -3150,6 +3530,10 @@ export class NewCharacterStandardPageComponent {
         this.selectedEquipmentSourceUrl.update((current) => (current === url ? '' : url));
     }
 
+    onInventoryDestinationChanged(value: string | number): void {
+        this.selectedInventoryDestination.set(String(value));
+    }
+
     onClassStartingOptionChanged(value: string): void {
         this.selectedClassStartingOption.set((value === 'A' || value === 'B') ? value : '');
     }
@@ -3174,26 +3558,79 @@ export class NewCharacterStandardPageComponent {
         const backgroundKey = this.selectedBackgroundStartingOption() as 'A' | 'B';
         const classPackage = this.resolvedClassStartingPackages()[classKey];
         const backgroundPackage = this.resolvedBackgroundStartingPackages()[backgroundKey];
+        const expandedClassItems = this.expandStartingPackItems(classPackage.items);
+        const expandedBackgroundItems = this.expandStartingPackItems(backgroundPackage.items);
 
-        classPackage.items.forEach((item) => this.addInventoryItem(item));
-        backgroundPackage.items.forEach((item) => this.addInventoryItem(item));
+        expandedClassItems.forEach((item) => this.addInventoryItem(item));
+        expandedBackgroundItems.forEach((item) => this.addInventoryItem(item));
 
         this.addCurrency('gp', classPackage.currency.gp ?? 0);
         this.addCurrency('gp', backgroundPackage.currency.gp ?? 0);
     }
 
+    private expandStartingPackItems(items: ReadonlyArray<InventoryEntry>): InventoryEntry[] {
+        const expanded: InventoryEntry[] = [];
+
+        for (const item of items) {
+            const packItems = this.startingPackContents[item.name as StartingPackName];
+            if (!packItems) {
+                expanded.push(item);
+                continue;
+            }
+
+            // Create a container (backpack) with nested items
+            const backpackItem = packItems.find((p) => p.name === 'Backpack' || p.name.toLowerCase().includes('backpack'));
+            const nestedItems = packItems.filter((p) => p.name !== 'Backpack' && !p.name.toLowerCase().includes('backpack'));
+
+            if (backpackItem) {
+                expanded.push({
+                    name: backpackItem.name,
+                    category: backpackItem.category,
+                    quantity: backpackItem.quantity * Math.max(1, item.quantity),
+                    sourceUrl: backpackItem.sourceUrl,
+                    isContainer: true,
+                    maxCapacity: 60, // Standard backpack capacity in lbs (50-60 lbs based on D&D 5e)
+                    containedItems: nestedItems.map((nestedItem) => ({
+                        ...nestedItem,
+                        quantity: nestedItem.quantity * Math.max(1, item.quantity)
+                    }))
+                });
+            } else {
+                // If no backpack, just add all items normally
+                for (const packItem of packItems) {
+                    expanded.push({
+                        ...packItem,
+                        quantity: packItem.quantity * Math.max(1, item.quantity)
+                    });
+                }
+            }
+        }
+
+        return expanded;
+    }
+
     clearEquipmentSelections(): void {
         this.inventoryEntries.set([]);
         this.currency.set({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 });
+        this.selectedInventoryDestination.set('inventory');
     }
 
     addEquipmentItemToInventory(item: EquipmentItem): void {
-        this.addInventoryItem({
+        const destination = this.selectedInventoryDestination();
+        const inventoryEntry: InventoryEntry = {
             name: item.name,
             category: item.category,
             quantity: 1,
             sourceUrl: item.sourceUrl
-        });
+        };
+
+        const expandedPackItems = this.expandStartingPackItems([inventoryEntry]);
+        if (expandedPackItems.length > 1 || (expandedPackItems.length === 1 && expandedPackItems[0].name !== inventoryEntry.name)) {
+            expandedPackItems.forEach((expandedItem) => this.addInventoryItem(expandedItem, destination));
+            return;
+        }
+
+        this.addInventoryItem(inventoryEntry, destination);
     }
 
     onCurrencyInputChanged(key: keyof CurrencyState, value: string): void {
@@ -3202,20 +3639,63 @@ export class NewCharacterStandardPageComponent {
         this.currency.update((current) => ({ ...current, [key]: safeValue }));
     }
 
-    private addInventoryItem(item: InventoryEntry): void {
+    private addInventoryItem(item: InventoryEntry, destination = 'inventory'): void {
         this.inventoryEntries.update((entries) => {
+            const enrichedItem = this.createEnrichedInventoryItem(item);
+
+            if (destination !== 'inventory') {
+                const containerIndex = entries.findIndex((entry) => entry.isContainer && entry.name === destination);
+                if (containerIndex !== -1) {
+                    const next = [...entries];
+                    const targetContainer = next[containerIndex];
+                    const containedItems = [...(targetContainer.containedItems ?? [])];
+                    const nestedIndex = containedItems.findIndex((entry) => entry.name === enrichedItem.name);
+
+                    if (nestedIndex === -1) {
+                        containedItems.push({ ...enrichedItem });
+                    } else {
+                        containedItems[nestedIndex] = {
+                            ...containedItems[nestedIndex],
+                            quantity: containedItems[nestedIndex].quantity + enrichedItem.quantity,
+                            isContainer: enrichedItem.isContainer,
+                            maxCapacity: enrichedItem.maxCapacity,
+                            containedItems: enrichedItem.containedItems ?? containedItems[nestedIndex].containedItems
+                        };
+                    }
+
+                    next[containerIndex] = {
+                        ...targetContainer,
+                        containedItems
+                    };
+                    return next;
+                }
+            }
+
             const index = entries.findIndex((entry) => entry.name === item.name);
             if (index === -1) {
-                return [...entries, { ...item }];
+                return [...entries, { ...enrichedItem }];
             }
 
             const next = [...entries];
             next[index] = {
                 ...next[index],
-                quantity: next[index].quantity + item.quantity
+                quantity: next[index].quantity + enrichedItem.quantity,
+                isContainer: enrichedItem.isContainer,
+                maxCapacity: enrichedItem.maxCapacity,
+                containedItems: enrichedItem.containedItems ?? next[index].containedItems
             };
             return next;
         });
+    }
+
+    private createEnrichedInventoryItem(item: InventoryEntry): InventoryEntry {
+        const isContainer = this.isContainerItem(item.name);
+        return {
+            ...item,
+            isContainer: item.isContainer ?? isContainer,
+            maxCapacity: item.maxCapacity ?? (isContainer ? this.getContainerCapacity(item.name) : undefined),
+            containedItems: item.containedItems ?? []
+        };
     }
 
     private addCurrency(key: keyof CurrencyState, amount: number): void {
@@ -4144,9 +4624,14 @@ export class NewCharacterStandardPageComponent {
     private buildAutoBackstoryDirection(): string {
         const target = this.backstoryTargetCharacter();
         const lines: string[] = [];
+        const fallbackName = this.completionCharacterName().trim();
+        const characterName = target?.name?.trim() || fallbackName;
+
+        if (characterName) {
+            lines.push(`Character name: ${characterName}`);
+        }
 
         if (target) {
-            lines.push(`Character: ${target.name}`);
             lines.push(`Current class and level: ${target.className} ${target.level}`);
             lines.push(`Known background: ${target.background || 'Unknown background'}`);
             if (target.notes?.trim()) {
@@ -4187,24 +4672,16 @@ export class NewCharacterStandardPageComponent {
         }
 
         const traits = this.personalityTraits().slice(0, 3);
-        if (traits.length > 0) {
-            lines.push(`Emphasize these personality traits: ${traits.join('; ')}`);
-        }
+        lines.push(`Emphasize these personality traits: ${traits.length > 0 ? traits.join('; ') : 'none provided'}`);
 
         const ideals = this.ideals().slice(0, 2);
-        if (ideals.length > 0) {
-            lines.push(`Include these ideals: ${ideals.join('; ')}`);
-        }
+        lines.push(`Include these ideals: ${ideals.length > 0 ? ideals.join('; ') : 'none provided'}`);
 
         const bonds = this.bonds().slice(0, 2);
-        if (bonds.length > 0) {
-            lines.push(`Include these bonds: ${bonds.join('; ')}`);
-        }
+        lines.push(`Include these bonds: ${bonds.length > 0 ? bonds.join('; ') : 'none provided'}`);
 
         const flaws = this.flaws().slice(0, 2);
-        if (flaws.length > 0) {
-            lines.push(`Reflect these flaws: ${flaws.join('; ')}`);
-        }
+        lines.push(`Reflect these flaws: ${flaws.length > 0 ? flaws.join('; ') : 'none provided'}`);
 
         lines.push('Keep details grounded in campaign play and avoid contradicting known notes.');
 

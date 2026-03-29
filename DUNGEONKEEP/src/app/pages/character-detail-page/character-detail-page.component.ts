@@ -12,12 +12,11 @@ import { DungeonStoreService } from '../../state/dungeon-store.service';
 
 type AbilityKey = 'strength' | 'dexterity' | 'constitution' | 'intelligence' | 'wisdom' | 'charisma';
 
-type ActionType = 'attack' | 'action';
 type CombatTab = 'actions' | 'spells' | 'inventory' | 'features' | 'background' | 'notes' | 'extras';
 type SpellFilter = 'all' | '0' | '1' | '2' | '3';
 type ActionFilter = 'all' | 'attack' | 'action' | 'bonus-action' | 'reaction' | 'other' | 'limited-use';
 type BackgroundFilter = 'all' | 'background' | 'characteristics' | 'appearance';
-type InventoryFilter = 'all' | 'equipment' | 'backpack' | 'other';
+type InventoryFilter = string; // Can be 'all', 'equipment', 'other', or a container name
 type FeaturesFilter = 'all' | 'class-features' | 'species-traits' | 'feats';
 type NotesFilter = 'all' | 'orgs' | 'allies' | 'enemies' | 'backstory' | 'other';
 
@@ -25,6 +24,10 @@ interface PersistedInventoryEntry {
     name: string;
     category: string;
     quantity: number;
+    weight?: number;
+    isContainer?: boolean;
+    containedItems?: PersistedInventoryEntry[];
+    maxCapacity?: number;
 }
 
 interface PersistedCurrencyState {
@@ -65,14 +68,18 @@ interface PersistedBuilderState {
     classPreparedSpells?: Record<string, string[]>;
     classKnownSpellsByClass?: Record<string, string[]>;
     wizardSpellbookByClass?: Record<string, string[]>;
+    usedSpellSlotsByLevel?: Record<number, number>;
 }
 
-interface ActionRow {
+interface CombatRow {
     name: string;
-    type: ActionType;
+    subtitle: string;
+    range: string;
+    hitDcLabel: string;
     damage: string;
-    note: string;
-    bonusLabel: string;
+    notes: string;
+    concentration: boolean;
+    ritual: boolean;
 }
 
 @Component({
@@ -89,6 +96,27 @@ export class CharacterDetailPageComponent {
     private readonly cdr = inject(ChangeDetectorRef);
     private readonly builderStateStartTag = '[DK_BUILDER_STATE_START]';
     private readonly builderStateEndTag = '[DK_BUILDER_STATE_END]';
+    private readonly containerItemNames = new Set([
+        'backpack',
+        'bag of holding',
+        'bag',
+        'sack',
+        'pouch',
+        'chest',
+        'quiver',
+        'scroll case',
+        'map case',
+        'satchel',
+        'waterskin',
+        'vial',
+        'flask',
+        'bottle',
+        'barrel',
+        'basket',
+        'box',
+        'coffer',
+        'case'
+    ]);
 
     private readonly raceLookup = new Map(
         races.flatMap((race) => [
@@ -195,6 +223,11 @@ export class CharacterDetailPageComponent {
     readonly isUpdatingCampaign = signal(false);
     readonly campaignUpdateError = signal('');
     readonly usedSpellSlotsByLevel = signal<Record<number, number>>({});
+    readonly expandedContainers = signal<Set<string>>(new Set());
+
+    private lastCharacterId: string | null = null;
+    private saveSpellSlotTimeout: ReturnType<typeof setTimeout> | null = null;
+
 
     readonly combatTabs: Array<{ key: CombatTab; label: string }> = [
         { key: 'actions', label: 'Actions' },
@@ -231,12 +264,29 @@ export class CharacterDetailPageComponent {
         { key: 'appearance', label: 'Appearance' }
     ];
 
-    readonly inventoryFilters: Array<{ key: InventoryFilter; label: string }> = [
-        { key: 'all', label: 'All' },
-        { key: 'equipment', label: 'Equipment' },
-        { key: 'backpack', label: 'Backpack' },
-        { key: 'other', label: 'Other Possessions' }
-    ];
+    readonly inventoryFilters = computed(() => {
+        const entries = this.normalizedInventoryEntries();
+        const containerNames = new Set<string>();
+
+        for (const entry of entries) {
+            if (entry.isContainer) {
+                containerNames.add(entry.name);
+            }
+        }
+
+        const filters: Array<{ key: InventoryFilter; label: string }> = [
+            { key: 'all', label: 'All' },
+            { key: 'equipment', label: 'Equipment' },
+            { key: 'other', label: 'Gear' }
+        ];
+
+        // Add dynamic container tabs
+        for (const containerName of containerNames) {
+            filters.push({ key: containerName, label: containerName });
+        }
+
+        return filters;
+    });
 
     readonly featuresFilters: Array<{ key: FeaturesFilter; label: string }> = [
         { key: 'all', label: 'All' },
@@ -254,6 +304,20 @@ export class CharacterDetailPageComponent {
         { key: 'other', label: 'Other' }
     ];
 
+    readonly STANDARD_COMBAT_ACTIONS = [
+        'Attack', 'Dash', 'Disengage', 'Dodge', 'Grapple', 'Help',
+        'Hide', 'Improvise', 'Influence', 'Magic', 'Ready', 'Search', 'Shove', 'Study', 'Utilize'
+    ];
+    readonly STANDARD_BONUS_COMBAT_ACTIONS = ['Two-Weapon Fighting'];
+    readonly STANDARD_REACTIONS = ['Opportunity Attack'];
+    readonly STANDARD_OTHER_ACTIONS = ['Interact with an Object'];
+
+    private readonly SPELL_LEVEL_LABELS: Record<number, string> = {
+        0: 'Cantrip', 1: '1st Level', 2: '2nd Level', 3: '3rd Level',
+        4: '4th Level', 5: '5th Level', 6: '6th Level', 7: '7th Level',
+        8: '8th Level', 9: '9th Level'
+    };
+
     readonly character = computed(() =>
         this.store.characters().find((item) => item.id === this.characterId) || null
     );
@@ -261,6 +325,86 @@ export class CharacterDetailPageComponent {
     readonly parsedNotes = computed(() => this.parsePersistedNotes(this.character()?.notes ?? ''));
 
     readonly persistedBuilderState = computed(() => this.parsedNotes().state);
+
+    readonly normalizedInventoryEntries = computed<PersistedInventoryEntry[]>(() => {
+        const entries = this.persistedBuilderState()?.inventoryEntries;
+        if (!Array.isArray(entries)) {
+            return [];
+        }
+
+        return entries
+            .filter((entry) => entry && typeof entry.name === 'string' && typeof entry.category === 'string')
+            .map((entry) => {
+                const name = entry.name.trim();
+                const category = entry.category.trim();
+                const quantity = Math.max(1, Math.trunc(Number(entry.quantity) || 1));
+                const containedItems = Array.isArray(entry.containedItems) ? entry.containedItems : [];
+                const isContainer = Boolean(entry.isContainer) || this.isContainerItemName(name) || containedItems.length > 0;
+
+                return {
+                    ...entry,
+                    name,
+                    category,
+                    quantity,
+                    isContainer,
+                    containedItems,
+                    maxCapacity: entry.maxCapacity ?? (isContainer ? this.getContainerCapacity(name) : undefined)
+                };
+            })
+            .filter((entry) => entry.name.length > 0 && entry.category.length > 0);
+    });
+
+    readonly initialSpellSlots = computed(() => {
+        const state = this.persistedBuilderState();
+        if (state?.usedSpellSlotsByLevel && Object.keys(state.usedSpellSlotsByLevel).length > 0) {
+            return { ...state.usedSpellSlotsByLevel };
+        }
+        return {};
+    });
+
+    private saveSpellSlotUsage(): void {
+        // Clear any pending save
+        if (this.saveSpellSlotTimeout) {
+            clearTimeout(this.saveSpellSlotTimeout);
+        }
+
+        // Debounce the save by 1 second
+        this.saveSpellSlotTimeout = setTimeout(() => {
+            const char = this.character();
+            if (!char) {
+                return;
+            }
+
+            const currentState = this.persistedBuilderState() || {};
+            const updatedState: PersistedBuilderState = {
+                ...currentState,
+                usedSpellSlotsByLevel: this.usedSpellSlotsByLevel()
+            };
+
+            const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
+
+            this.store.updateCharacter(this.characterId, {
+                name: char.name,
+                playerName: char.playerName,
+                race: char.race,
+                className: char.className,
+                role: char.role,
+                level: char.level,
+                background: char.background,
+                notes: updatedNotes,
+                campaignId: char.campaignId
+            });
+        }, 1000);
+    }
+
+    private createPersistedNotesString(originalNotes: string, state: PersistedBuilderState): string {
+        const cleanedNotes = this.parsePersistedNotes(originalNotes).cleanedNotes;
+        const stateJson = JSON.stringify(state);
+        return `${cleanedNotes}\n\n${this.builderStateStartTag}${stateJson}${this.builderStateEndTag}`.trim();
+    }
+
+
+
 
     readonly displayBackground = computed(() => {
         const fromBuilder = this.persistedBuilderState()?.selectedBackgroundName?.trim() ?? '';
@@ -568,7 +712,7 @@ export class CharacterDetailPageComponent {
         const char = this.character();
         const persisted = this.persistedBuilderState();
         if (!char || !persisted) {
-            return [] as Array<{ name: string; level: number; hitDcLabel: string; range: string; damage: string; concentration: boolean; ritual: boolean }>;
+            return [] as Array<{ name: string; level: number; castingTime: string; hitDcLabel: string; range: string; damage: string; concentration: boolean; ritual: boolean }>;
         }
 
         const className = char.className;
@@ -603,6 +747,7 @@ export class CharacterDetailPageComponent {
                 return {
                     name,
                     level: this.getSpellLevelForDetails(className, name),
+                    castingTime: details?.castingTime ?? '—',
                     hitDcLabel,
                     range: details?.range ?? '—',
                     damage: 'Spell',
@@ -698,17 +843,13 @@ export class CharacterDetailPageComponent {
             return null;
         }
 
-        const persisted = this.persistedBuilderState();
-        const persistedEntries = Array.isArray(persisted?.inventoryEntries)
-            ? persisted.inventoryEntries
-                .filter((entry) => entry && typeof entry.name === 'string' && typeof entry.category === 'string')
-                .map((entry) => ({
-                    name: entry.name.trim(),
-                    category: entry.category.trim(),
-                    quantity: Math.max(1, Math.trunc(Number(entry.quantity) || 1))
-                }))
-                .filter((entry) => entry.name.length > 0)
-            : [];
+        const persistedEntries = this.normalizedInventoryEntries()
+            .filter((entry) => !entry.isContainer)
+            .map((entry) => ({
+                name: entry.name,
+                category: entry.category,
+                quantity: entry.quantity
+            }));
 
         if (persistedEntries.length > 0) {
             const weapons: string[] = [];
@@ -761,6 +902,7 @@ export class CharacterDetailPageComponent {
         };
     });
 
+
     readonly inventorySummary = computed(() => {
         const bag = this.inventory();
         if (!bag) {
@@ -775,60 +917,99 @@ export class CharacterDetailPageComponent {
         };
     });
 
-    readonly weaponActionRows = computed<ActionRow[]>(() => {
+    readonly containersByName = computed(() => {
+        const entries = this.normalizedInventoryEntries();
+        const containers = entries.filter((entry) => entry.isContainer);
+
+        // Group containers by name with index for unique identification
+        const grouped: Array<{ entry: PersistedInventoryEntry; index: number }> = [];
+
+        for (const container of containers) {
+            // Add one entry per quantity (so 2 backpacks = 2 separate expandable containers)
+            for (let i = 0; i < container.quantity; i++) {
+                grouped.push({ entry: container, index: i });
+            }
+        }
+
+        return grouped;
+    });
+
+
+    readonly weaponCombatRows = computed<CombatRow[]>(() => {
         const char = this.character();
         const bag = this.inventory();
         if (!char || !bag) {
-            return [] as ActionRow[];
+            return [];
         }
 
         return bag.weapons.map((weaponLabel) => {
             const weaponName = weaponLabel.replace(/\s+x\d+$/i, '').trim();
+            const isRanged = /bow|crossbow|sling|blowgun|pistol|musket|rifle|gun/i.test(weaponName);
             const useDexterity = /bow|crossbow|sling|dagger|rapier|shortsword/i.test(weaponName);
             const abilityKey: AbilityKey = useDexterity ? 'dexterity' : 'strength';
             const abilityMod = this.getAbilityModifier(this.effectiveAbilityScores()?.[abilityKey] ?? 10);
             const bonus = abilityMod + char.proficiencyBonus;
             return {
-                name: weaponLabel,
-                type: 'attack',
-                damage: 'Weapon damage',
-                note: 'Recorded inventory weapon',
-                bonusLabel: this.formatSigned(bonus)
+                name: weaponName,
+                subtitle: isRanged ? 'Ranged Weapon' : 'Melee Weapon',
+                range: isRanged ? 'Ranged' : '5 ft.',
+                hitDcLabel: this.formatSigned(bonus),
+                damage: '—',
+                notes: '—',
+                concentration: false,
+                ritual: false
             };
         });
     });
 
-    readonly actionRows = computed<ActionRow[]>(() => {
-        const weapons = this.weaponActionRows();
-        const spellRows = this.persistedSpellRows().map((spell) => ({
-            name: spell.name,
-            type: 'action' as ActionType,
-            damage: 'Spell',
-            note: spell.level === 0 ? 'Cantrip' : `Level ${spell.level} spell`,
-            bonusLabel: spell.hitDcLabel
-        }));
+    readonly spellCategoryRows = computed(() => {
+        const attack: CombatRow[] = [];
+        const action: CombatRow[] = [];
+        const bonusAction: CombatRow[] = [];
+        const reaction: CombatRow[] = [];
+        const other: CombatRow[] = [];
 
-        return [...weapons, ...spellRows];
+        for (const spell of this.persistedSpellRows()) {
+            const details = spellDetailsMap[spell.name];
+            const ct = (details?.castingTime ?? '').toLowerCase();
+            const as = details?.attackSave ?? '';
+
+            const row: CombatRow = {
+                name: spell.name,
+                subtitle: this.SPELL_LEVEL_LABELS[spell.level] ?? `Level ${spell.level}`,
+                range: spell.range,
+                hitDcLabel: spell.hitDcLabel,
+                damage: details?.damageEffect ?? '—',
+                notes: details?.components ?? '—',
+                concentration: spell.concentration,
+                ritual: spell.ritual
+            };
+
+            if (ct.includes('bonus')) bonusAction.push(row);
+            else if (ct.includes('reaction')) reaction.push(row);
+            else if (ct === '1 action') {
+                if (as.includes('Attack')) attack.push(row);
+                else action.push(row);
+            } else {
+                other.push(row);
+            }
+        }
+
+        return { attack, action, bonusAction, reaction, other };
     });
 
-    readonly filteredActionRows = computed(() => {
-        const filter = this.activeActionFilter();
-        const rows = this.actionRows();
+    readonly attackRows = computed<CombatRow[]>(() => [
+        ...this.weaponCombatRows(),
+        ...this.spellCategoryRows().attack
+    ]);
 
-        if (filter === 'all') {
-            return rows;
-        }
+    readonly actionSpellRows = computed(() => this.spellCategoryRows().action);
+    readonly bonusActionSpellRows = computed(() => this.spellCategoryRows().bonusAction);
+    readonly reactionSpellRows = computed(() => this.spellCategoryRows().reaction);
+    readonly otherSpellRows = computed(() => this.spellCategoryRows().other);
 
-        if (filter === 'attack') {
-            return rows.filter((row) => row.type === 'attack');
-        }
-
-        if (filter === 'action') {
-            return rows.filter((row) => row.type === 'action');
-        }
-
-        return [];
-    });
+    readonly bonusActionNames = computed(() => this.noteContext().bonusActions);
+    readonly reactionNames = computed(() => this.noteContext().reactions);
 
     readonly attacksPerAction = computed(() => {
         const value = Number(this.noteContext().attacksPerAction);
@@ -836,22 +1017,7 @@ export class CharacterDetailPageComponent {
             return Math.trunc(value);
         }
 
-        return Math.max(1, this.weaponActionRows().length > 0 ? 1 : 0);
-    });
-
-    readonly quickActions = computed(() => {
-        const char = this.character();
-        if (!char) {
-            return { actions: [], bonusActions: [] as string[], reactions: [] as string[] };
-        }
-
-        const context = this.noteContext();
-
-        return {
-            actions: this.actionRows(),
-            bonusActions: context.bonusActions,
-            reactions: context.reactions
-        };
+        return Math.max(1, this.weaponCombatRows().length > 0 ? 1 : 0);
     });
 
     readonly classFeatures = computed(() => {
@@ -866,14 +1032,8 @@ export class CharacterDetailPageComponent {
         for (const selectedValues of Object.values(selections)) {
             for (const value of selectedValues ?? []) {
                 const name = value.trim();
-                if (!name) {
-                    continue;
-                }
-
-                features.push({
-                    name,
-                    description: 'Selected during character creation.'
-                });
+                if (!name) continue;
+                features.push({ name, description: 'Selected during character creation.' });
             }
         }
 
@@ -882,35 +1042,22 @@ export class CharacterDetailPageComponent {
 
     readonly displayBackstoryText = computed(() => {
         const notes = this.parsedNotes().cleanedNotes.trim();
-        if (!notes) {
-            return '';
-        }
-
+        if (!notes) return '';
         const builderMarker = notes.search(/(?:^|\n)\s*(Builder class focus:|Species focus:|Alignment direction:|Lifestyle direction:|Emphasize these personality traits:|Include these ideals:|Include these bonds:|Reflect these flaws:|Physical characteristics:|Faith:)/i);
-        if (builderMarker > 0) {
-            return notes.slice(0, builderMarker).trim();
-        }
-
+        if (builderMarker > 0) return notes.slice(0, builderMarker).trim();
         return notes;
     });
 
     readonly formattedBackstoryHtml = computed(() => {
         const backstory = this.displayBackstoryText();
-        if (!backstory) {
-            return '';
-        }
-
+        if (!backstory) return '';
         return this.formatBackstoryRichText(backstory);
     });
 
     readonly roleplay = computed(() => {
         const char = this.character();
-        if (!char) {
-            return null;
-        }
-
+        if (!char) return null;
         const context = this.noteContext();
-
         return {
             personality: context.personality || 'Not recorded',
             ideals: context.ideals || 'Not recorded',
@@ -1041,6 +1188,22 @@ export class CharacterDetailPageComponent {
         this.activeInventoryFilter.set(filter);
     }
 
+    toggleContainerExpanded(containerName: string): void {
+        this.expandedContainers.update((expanded) => {
+            const newSet = new Set(expanded);
+            if (newSet.has(containerName)) {
+                newSet.delete(containerName);
+            } else {
+                newSet.add(containerName);
+            }
+            return newSet;
+        });
+    }
+
+    isContainerExpanded(containerName: string): boolean {
+        return this.expandedContainers().has(containerName);
+    }
+
     setFeaturesFilter(filter: FeaturesFilter): void {
         this.activeFeaturesFilter.set(filter);
     }
@@ -1059,6 +1222,16 @@ export class CharacterDetailPageComponent {
             return;
         }
 
+        // Initialize spell slots from persisted state if character has changed
+        const char = this.character();
+        if (char && this.lastCharacterId !== char.id) {
+            this.lastCharacterId = char.id;
+            const initial = this.initialSpellSlots();
+            if (Object.keys(initial).length > 0) {
+                this.usedSpellSlotsByLevel.set({ ...initial });
+            }
+        }
+
         this.usedSpellSlotsByLevel.update((current) => {
             const used = this.getUsedSpellSlots(level, maxSlots);
             const nextUsed = used >= maxSlots ? 0 : used + 1;
@@ -1067,6 +1240,9 @@ export class CharacterDetailPageComponent {
                 [level]: nextUsed
             };
         });
+
+        // Save changes
+        this.saveSpellSlotUsage();
     }
 
     private formatSigned(value: number): string {
@@ -1449,6 +1625,24 @@ export class CharacterDetailPageComponent {
 
     private isRitualSpell(spellName: string): boolean {
         return Boolean(spellDetailsMap[spellName]?.ritual);
+    }
+
+    private isContainerItemName(name: string): boolean {
+        return this.containerItemNames.has(name.trim().toLowerCase());
+    }
+
+    private getContainerCapacity(name: string): number | undefined {
+        const normalized = name.trim().toLowerCase();
+        if (normalized === 'backpack') {
+            return 60;
+        }
+        if (normalized === 'bag of holding') {
+            return 500;
+        }
+        if (normalized === 'quiver') {
+            return 20;
+        }
+        return undefined;
     }
 
     private parsePersistedNotes(notes: string): { cleanedNotes: string; state: PersistedBuilderState | null } {

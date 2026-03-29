@@ -74,6 +74,10 @@ export interface InventoryEntry {
     category: string;
     quantity: number;
     sourceUrl?: string;
+    weight?: number;
+    isContainer?: boolean;
+    containedItems?: InventoryEntry[];
+    maxCapacity?: number;
 }
 
 export interface CurrencyState {

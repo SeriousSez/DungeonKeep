@@ -643,6 +643,137 @@
     color: var(--text-main);
 }
 
+.actions-table--combat .actions-head,
+.actions-table--combat .actions-row {
+    grid-template-columns: 2fr 0.7fr 0.8fr 0.8fr 1.5fr;
+}
+
+.actions-row--combat span:nth-child(3),
+.actions-row--combat span:nth-child(4) {
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
+.combat-name-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.combat-name {
+    font-size: 0.88rem;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.combat-subtitle {
+    font-size: 0.71rem;
+    color: var(--text-soft);
+}
+
+.combat-damage-cell {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.hitdc-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    padding: 3px 7px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--accent-primary) 14%, var(--surface-raised));
+    border: 1px solid color-mix(in srgb, var(--accent-primary) 40%, var(--panel-border));
+    color: var(--text-main);
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.action-section {
+    display: grid;
+    gap: 6px;
+}
+
+.action-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent-primary);
+    padding-bottom: 5px;
+    border-bottom: 1px solid color-mix(in srgb, var(--accent-primary) 30%, var(--panel-border));
+}
+
+.header-meta {
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text-muted);
+}
+
+.action-group-label {
+    margin: 2px 0 0;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--text-soft);
+}
+
+.action-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.action-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--panel-border);
+    background: var(--surface-raised);
+    color: var(--text-muted);
+    font-size: 0.77rem;
+}
+
+.spell-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.spell-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--panel-border);
+    background: var(--surface-raised);
+    font-size: 0.77rem;
+}
+
+.spell-chip-name {
+    color: var(--text-main);
+    font-style: italic;
+}
+
+.spell-chip-meta {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
 .empty-state {
     text-align: center;
     padding: 60px 24px;
@@ -736,5 +867,174 @@
 
     .quick-lists {
         grid-template-columns: 1fr;
+    }
+}
+
+/* Inventory Container Styles */
+
+.inventory-section {
+    display: grid;
+    gap: 8px;
+}
+
+.container-item {
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    background: var(--surface-raised);
+    overflow: hidden;
+}
+
+.container-header {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    border: none;
+    background: var(--surface-raised);
+    color: var(--text-main);
+    padding: 12px 14px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: background-color 0.2s ease;
+    gap: 10px;
+
+    &:hover {
+        background: var(--surface-raised-hover, rgba(255, 255, 255, 0.05));
+    }
+
+    i {
+        flex-shrink: 0;
+        transition: transform 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    &.expanded i {
+        transform: rotate(0deg);
+    }
+
+    i:not(.expanded) {
+        transform: rotate(-90deg);
+    }
+}
+
+.container-name {
+    flex-grow: 1;
+    text-align: left;
+    font-family: var(--display-font);
+    letter-spacing: 0.5px;
+}
+
+.container-count {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--accent-primary);
+    color: var(--surface-raised);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.container-capacity {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(0, 0, 0, 0.15);
+    color: var(--text-muted);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.container-contents {
+    border-top: 1px solid var(--panel-border);
+    padding: 12px 14px;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.inventory-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.inventory-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.inventory-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 12px;
+    padding: 8px;
+    background: var(--surface-raised);
+    border-radius: 6px;
+    border: 1px solid var(--panel-border);
+    align-items: center;
+}
+
+.inventory-row td {
+    padding: 0;
+    color: var(--text-main);
+}
+
+.item-name {
+    font-weight: 500;
+    color: var(--text-main);
+}
+
+.item-quantity {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+    min-width: 40px;
+}
+
+.item-weight {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    text-align: right;
+    min-width: 50px;
+}
+
+.empty-container {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-style: italic;
+    text-align: center;
+    padding: 12px;
+}
+
+.regular-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    background: var(--surface-raised);
+    padding: 10px 12px;
+    font-size: 0.9rem;
+
+    .item-name {
+        flex-grow: 1;
+        font-weight: 500;
+        color: var(--text-main);
+    }
+
+    .item-quantity {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .item-weight {
+        color: var(--text-muted);
+        font-size: 0.85rem;
     }
 }

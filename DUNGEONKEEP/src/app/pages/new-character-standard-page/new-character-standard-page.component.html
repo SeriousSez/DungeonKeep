@@ -1664,6 +1664,9 @@
                 <label class="equipment-filter-label">Filter</label>
                 <input class="wide-input" type="text" placeholder="Weapon, Longsword, Vorpal Longsword, etc." [value]="equipmentSearchTerm()" (input)="onEquipmentSearchChanged($any($event.target).value)" />
 
+                <label class="equipment-filter-label">Add To</label>
+                <app-dropdown [id]="'inventory-destination'" [value]="selectedInventoryDestination()" [options]="inventoryDestinationOptions()" [minWidth]="220" size="compact" (changed)="onInventoryDestinationChanged($event)"></app-dropdown>
+
                 <div class="equipment-source-list">
                     @for (source of equipmentSources; track source.url) {
                     <button type="button" class="equipment-source-chip" [class.active]="selectedEquipmentSourceUrl() === source.url" (click)="onEquipmentSourceSelected(source.url)">
