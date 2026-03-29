@@ -15,6 +15,26 @@ public sealed record CharacterDto(
     string Backstory,
     DateTime CreatedAtUtc,
     bool CanEdit
+    , string Species
+    , string Alignment
+    , string Lifestyle
+    , string PersonalityTraits
+    , string Ideals
+    , string Bonds
+    , string Flaws
+    , string Equipment
+    , string AbilityScores
+    , string Skills
+    , string SavingThrows
+    , int HitPoints
+    , int ArmorClass
+    , string CombatStats
+    , string Spells
+    , int ExperiencePoints
+    , string PortraitUrl
+    , string Goals
+    , string Secrets
+    , string SessionHistory
 );
 
 public sealed record CreateCharacterRequest(
@@ -25,6 +45,26 @@ public sealed record CreateCharacterRequest(
     string Background,
     string Notes,
     Guid? CampaignId = null
+    , string Species = ""
+    , string Alignment = ""
+    , string Lifestyle = ""
+    , string PersonalityTraits = ""
+    , string Ideals = ""
+    , string Bonds = ""
+    , string Flaws = ""
+    , string Equipment = ""
+    , string AbilityScores = ""
+    , string Skills = ""
+    , string SavingThrows = ""
+    , int HitPoints = 0
+    , int ArmorClass = 0
+    , string CombatStats = ""
+    , string Spells = ""
+    , int ExperiencePoints = 0
+    , string PortraitUrl = ""
+    , string Goals = ""
+    , string Secrets = ""
+    , string SessionHistory = ""
 );
 
 public sealed record GenerateCharacterBackstoryRequest(
@@ -50,6 +90,26 @@ public sealed record UpdateCharacterRequest(
     string Background,
     string Notes,
     Guid? CampaignId = null
+    , string Species = ""
+    , string Alignment = ""
+    , string Lifestyle = ""
+    , string PersonalityTraits = ""
+    , string Ideals = ""
+    , string Bonds = ""
+    , string Flaws = ""
+    , string Equipment = ""
+    , string AbilityScores = ""
+    , string Skills = ""
+    , string SavingThrows = ""
+    , int HitPoints = 0
+    , int ArmorClass = 0
+    , string CombatStats = ""
+    , string Spells = ""
+    , int ExperiencePoints = 0
+    , string PortraitUrl = ""
+    , string Goals = ""
+    , string Secrets = ""
+    , string SessionHistory = ""
 );
 
 public sealed record UpdateCharacterBackstoryRequest(string Backstory);

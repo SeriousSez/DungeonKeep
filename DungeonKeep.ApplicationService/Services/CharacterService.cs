@@ -240,7 +240,27 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
             character.Notes,
             character.Backstory,
             character.CreatedAtUtc,
-            character.OwnerUserId == currentUserId
+            character.OwnerUserId == currentUserId,
+            character.Species,
+            character.Alignment,
+            character.Lifestyle,
+            character.PersonalityTraits,
+            character.Ideals,
+            character.Bonds,
+            character.Flaws,
+            character.Equipment,
+            character.AbilityScores,
+            character.Skills,
+            character.SavingThrows,
+            character.HitPoints,
+            character.ArmorClass,
+            character.CombatStats,
+            character.Spells,
+            character.ExperiencePoints,
+            character.PortraitUrl,
+            character.Goals,
+            character.Secrets,
+            character.SessionHistory
         );
     }
 

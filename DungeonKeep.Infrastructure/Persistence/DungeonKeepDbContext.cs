@@ -93,6 +93,28 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
             entity.Property(c => c.Backstory).HasMaxLength(8000);
             entity.Property(c => c.CreatedAtUtc).IsRequired();
 
+            // New D&D fields
+            entity.Property(c => c.Species).HasMaxLength(64);
+            entity.Property(c => c.Alignment).HasMaxLength(32);
+            entity.Property(c => c.Lifestyle).HasMaxLength(32);
+            entity.Property(c => c.PersonalityTraits).HasMaxLength(1000);
+            entity.Property(c => c.Ideals).HasMaxLength(1000);
+            entity.Property(c => c.Bonds).HasMaxLength(1000);
+            entity.Property(c => c.Flaws).HasMaxLength(1000);
+            entity.Property(c => c.Equipment).HasMaxLength(4000);
+            entity.Property(c => c.AbilityScores).HasMaxLength(500);
+            entity.Property(c => c.Skills).HasMaxLength(1000);
+            entity.Property(c => c.SavingThrows).HasMaxLength(500);
+            entity.Property(c => c.HitPoints).IsRequired();
+            entity.Property(c => c.ArmorClass).IsRequired();
+            entity.Property(c => c.CombatStats).HasMaxLength(2000);
+            entity.Property(c => c.Spells).HasMaxLength(4000);
+            entity.Property(c => c.ExperiencePoints).IsRequired();
+            entity.Property(c => c.PortraitUrl).HasMaxLength(500);
+            entity.Property(c => c.Goals).HasMaxLength(2000);
+            entity.Property(c => c.Secrets).HasMaxLength(2000);
+            entity.Property(c => c.SessionHistory).HasMaxLength(8000);
+
             entity.HasIndex(c => c.CampaignId);
 
             entity.HasOne(c => c.OwnerUser)
