@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -156,7 +156,17 @@ export interface ApiDndChatResponse {
 export class DungeonApiService {
 
     async deleteCharacter(characterId: string): Promise<void> {
-        await firstValueFrom(this.http.delete(`${this.baseUrl}/characters/${characterId}`));
+        try {
+            await firstValueFrom(this.http.delete(`${this.baseUrl}/characters/${characterId}`));
+        } catch (error) {
+            // Some hosts or middleware block DELETE and return 405; retry via a delete action endpoint.
+            if (error instanceof HttpErrorResponse && error.status === 405) {
+                await firstValueFrom(this.http.post(`${this.baseUrl}/characters/${characterId}/delete`, {}));
+                return;
+            }
+
+            throw error;
+        }
     }
     private readonly http = inject(HttpClient);
     private readonly baseUrl = environment.apiBaseUrl;

@@ -678,7 +678,7 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
 
     'Shield': {
         school: 'Abjuration',
-        castingTime: '1 reaction (when hit by attack or targeted by magic missile)',
+        castingTime: '1 reaction',
         range: 'Self',
         components: 'V, S',
         duration: '1 round',

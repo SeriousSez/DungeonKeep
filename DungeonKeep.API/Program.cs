@@ -104,6 +104,7 @@ using (var scope = app.Services.CreateScope())
     }
 
     EnsureCharactersCampaignIdIsNullable(dbContext);
+    EnsureCurrentSqliteSchema(dbContext);
 }
 
 if (app.Environment.IsDevelopment())
@@ -191,5 +192,71 @@ static void EnsureCharactersCampaignIdIsNullable(DungeonKeepDbContext dbContext)
         catch
         {
         }
+    }
+}
+
+static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)
+{
+    EnsureColumnExists(dbContext, "Campaigns", "OpenThreadsJson", "TEXT NOT NULL DEFAULT '[]'");
+
+    EnsureColumnExists(dbContext, "Characters", "Status", "TEXT NOT NULL DEFAULT 'Ready'");
+    EnsureColumnExists(dbContext, "Characters", "OwnerUserId", "TEXT NULL");
+    EnsureColumnExists(dbContext, "Characters", "Species", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Characters", "Alignment", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Characters", "Lifestyle", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Characters", "PersonalityTraits", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Characters", "Ideals", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Characters", "Bonds", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Characters", "Flaws", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Characters", "Equipment", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Characters", "AbilityScores", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Characters", "Skills", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Characters", "SavingThrows", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Characters", "HitPoints", "INTEGER NOT NULL DEFAULT 0");
+    EnsureColumnExists(dbContext, "Characters", "ArmorClass", "INTEGER NOT NULL DEFAULT 0");
+    EnsureColumnExists(dbContext, "Characters", "CombatStats", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Characters", "Spells", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Characters", "ExperiencePoints", "INTEGER NOT NULL DEFAULT 0");
+    EnsureColumnExists(dbContext, "Characters", "PortraitUrl", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Characters", "Goals", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Characters", "Secrets", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Characters", "SessionHistory", "TEXT NOT NULL DEFAULT ''");
+
+    EnsureIndexExists(dbContext, "IX_Characters_OwnerUserId", "Characters", "OwnerUserId");
+}
+
+static void EnsureColumnExists(DungeonKeepDbContext dbContext, string tableName, string columnName, string columnDefinition)
+{
+    try
+    {
+        using var connection = dbContext.Database.GetDbConnection();
+        if (connection.State != ConnectionState.Open)
+        {
+            connection.Open();
+        }
+
+        using var existsCommand = connection.CreateCommand();
+        existsCommand.CommandText = $"SELECT 1 FROM pragma_table_info('{tableName}') WHERE name = '{columnName}' LIMIT 1;";
+        var exists = existsCommand.ExecuteScalar() is not null;
+        if (exists)
+        {
+            return;
+        }
+
+        dbContext.Database.ExecuteSqlRaw($"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnDefinition};");
+    }
+    catch
+    {
+    }
+}
+
+static void EnsureIndexExists(DungeonKeepDbContext dbContext, string indexName, string tableName, string columnName)
+{
+    try
+    {
+        dbContext.Database.ExecuteSqlRaw($"CREATE INDEX IF NOT EXISTS {indexName} ON {tableName} ({columnName});");
+    }
+    catch
+    {
     }
 }

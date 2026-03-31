@@ -5,6 +5,7 @@ import { marked } from 'marked';
 
 import { DropdownComponent, type DropdownOption } from '../../components/dropdown/dropdown.component';
 import { classLevelOneFeatures } from '../../data/class-features.data';
+import { premadeCharacters, type PremadeCharacter } from '../../data/premade-characters.data';
 import { classSpellCatalog } from '../../data/class-spells.data';
 import { races } from '../../data/races';
 import { equipmentCatalog } from '../../data/new-character-standard-page.data';
@@ -102,6 +103,9 @@ export class CharacterDetailPageComponent {
     private readonly builderStateStartTag = '[DK_BUILDER_STATE_START]';
     private readonly builderStateEndTag = '[DK_BUILDER_STATE_END]';
     private readonly catalogLookup = new Map(equipmentCatalog.map((item) => [item.name.toLowerCase(), item]));
+    private readonly premadeCharacterLookup = new Map<string, PremadeCharacter>(
+        premadeCharacters.map((character) => [this.getPremadeLookupKey(character), character])
+    );
 
     private readonly weaponDamageMap: Record<string, string> = {
         'club': '1d4 Bludgeoning',
@@ -390,11 +394,15 @@ export class CharacterDetailPageComponent {
 
     readonly normalizedInventoryEntries = computed<PersistedInventoryEntry[]>(() => {
         const entries = this.persistedBuilderState()?.inventoryEntries;
-        if (!Array.isArray(entries)) {
+        const sourceEntries = Array.isArray(entries) && entries.length > 0
+            ? entries
+            : this.getPremadeInventoryEntries();
+
+        if (sourceEntries.length === 0) {
             return [];
         }
 
-        return entries
+        return sourceEntries
             .filter((entry) => entry && typeof entry.name === 'string' && typeof entry.category === 'string')
             .map((entry) => this.normalizeInventoryEntry(entry))
             .filter((entry) => entry.name.length > 0 && entry.category.length > 0);
@@ -424,6 +432,21 @@ export class CharacterDetailPageComponent {
             containedItems,
             maxCapacity: entry.maxCapacity ?? (isContainer ? this.getContainerCapacity(name) : undefined)
         };
+    }
+
+    private getPremadeInventoryEntries(): PersistedInventoryEntry[] {
+        const character = this.character();
+        if (!character) {
+            return [];
+        }
+
+        return this.premadeCharacterLookup.get(this.getPremadeLookupKey(character))?.inventoryEntries ?? [];
+    }
+
+    private getPremadeLookupKey(character: { name: string; race: string; className: string; background: string }): string {
+        return [character.name, character.race, character.className, character.background]
+            .map((value) => value.trim().toLowerCase())
+            .join('|');
     }
 
     readonly initialSpellSlots = computed(() => {

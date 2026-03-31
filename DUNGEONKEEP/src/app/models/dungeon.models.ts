@@ -147,8 +147,13 @@ export interface CharacterDraft {
     armorClass?: number;
     hitPoints?: number;
     maxHitPoints?: number;
+    gender?: string;
     alignment?: string;
+    faith?: string;
     lifestyle?: string;
+    classFeatures?: string[];
+    speciesTraits?: string[];
+    languages?: string[];
     personalityTraits?: string[];
     ideals?: string[];
     bonds?: string[];
