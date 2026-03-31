@@ -3,8 +3,53 @@
         <h1>Premade Characters</h1>
         <p>Browse ready-to-play character templates and pick one to start playing instantly.</p>
     </section>
+    <section class="panel filter-panel">
+        <div class="filter-controls">
+            <label class="filter-control">
+                <span>Filter by class</span>
+                <app-dropdown ariaLabel="Filter premade characters by class" [value]="selectedClassFilter()" [options]="classFilterOptions()" [minWidth]="220" size="compact" (changed)="onClassFilterChanged($event)"></app-dropdown>
+            </label>
+            <label class="filter-control">
+                <span>Filter by role</span>
+                <app-dropdown ariaLabel="Filter premade characters by role" [value]="selectedRoleFilter()" [options]="roleFilterOptions()" [minWidth]="220" size="compact" (changed)="onRoleFilterChanged($event)"></app-dropdown>
+            </label>
+            <label class="filter-control">
+                <span>Filter by race</span>
+                <app-dropdown ariaLabel="Filter premade characters by race" [value]="selectedRaceFilter()" [options]="raceFilterOptions()" [minWidth]="220" size="compact" (changed)="onRaceFilterChanged($event)"></app-dropdown>
+            </label>
+            <label class="filter-control">
+                <span>Filter by background</span>
+                <app-dropdown ariaLabel="Filter premade characters by background" [value]="selectedBackgroundFilter()" [options]="backgroundFilterOptions()" [minWidth]="220" size="compact" (changed)="onBackgroundFilterChanged($event)"></app-dropdown>
+            </label>
+            <label class="filter-control">
+                <span>Filter by spellcasting</span>
+                <app-dropdown ariaLabel="Filter premade characters by spellcasting" [value]="selectedSpellcastingFilter()" [options]="spellcastingFilterOptions" [minWidth]="220" size="compact" (changed)="onSpellcastingFilterChanged($event)"></app-dropdown>
+            </label>
+            <label class="filter-control">
+                <span>Filter by complexity</span>
+                <app-dropdown ariaLabel="Filter premade characters by complexity" [value]="selectedComplexityFilter()" [options]="complexityFilterOptions" [minWidth]="220" size="compact" (changed)="onComplexityFilterChanged($event)"></app-dropdown>
+            </label>
+            <label class="filter-control">
+                <span>Primary ability</span>
+                <app-dropdown ariaLabel="Filter premade characters by primary ability" [value]="selectedPrimaryAbilityFilter()" [options]="primaryAbilityFilterOptions" [minWidth]="220" size="compact" (changed)="onPrimaryAbilityFilterChanged($event)"></app-dropdown>
+            </label>
+            <label class="filter-control">
+                <span>Search scope</span>
+                <app-dropdown ariaLabel="Choose premade search scope" [value]="selectedSearchScope()" [options]="searchScopeOptions" [minWidth]="220" size="compact" (changed)="onSearchScopeChanged($event)"></app-dropdown>
+            </label>
+            <label class="filter-control">
+                <span>Search characters</span>
+                <input class="search-input" type="text" placeholder="Search characters..." [value]="classSearchTerm()" (input)="onClassSearchChanged($any($event.target).value)" />
+            </label>
+            @if (hasActiveFilters()) {
+            <button type="button" class="clear-filter" (click)="clearFilters()">Clear Filters</button>
+            }
+        </div>
+        <p class="filter-summary">Showing {{ filteredPremades().length }} of {{ premades.length }} premade characters.</p>
+    </section>
     <section class="premade-list">
-        <div class="premade-card" *ngFor="let character of premades">
+        @for (character of filteredPremades(); track character.id) {
+        <div class="premade-card">
             <div class="premade-portrait portrait-{{character.className.toLowerCase()}}">
                 @if (character.image) {
                 <img [src]="character.image" [alt]="character.name + ' portrait'" class="premade-img" />
@@ -19,5 +64,12 @@
                 <button class="premade-select" (click)="selectPremade(character)">Use This Character</button>
             </div>
         </div>
+        } @empty {
+        <section class="panel no-results" aria-live="polite">
+            <h2>No premades found</h2>
+            <p>Try a different class filter or search term.</p>
+            <button type="button" class="premade-select" (click)="clearFilters()">Reset Filters</button>
+        </section>
+        }
     </section>
 </main>

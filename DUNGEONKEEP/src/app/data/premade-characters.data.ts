@@ -290,7 +290,7 @@ export const premadeCharacters: PremadeCharacter[] = [
         classPreparedSpells: {
             'Bard': ['Vicious Mockery', 'Minor Illusion', 'Charm Person', 'Cure Wounds', 'Dissonant Whispers', 'Sleep']
         },
-        image: ''
+        image: '/assets/images/veshra-ashveil.png'
     },
     // ── Druid ────────────────────────────────────────────────────────────
     {
@@ -332,7 +332,7 @@ export const premadeCharacters: PremadeCharacter[] = [
         classPreparedSpells: {
             'Druid': ['Druidcraft', 'Shillelagh', 'Entangle', 'Speak with Animals', 'Cure Wounds', 'Healing Word']
         },
-        image: ''
+        image: '/assets/images/mira-thornwood.png'
     },
     // ── Fighter ──────────────────────────────────────────────────────────
     {
@@ -370,7 +370,7 @@ export const premadeCharacters: PremadeCharacter[] = [
             dungeoneersPack()
         ],
         spells: [],
-        image: ''
+        image: '/assets/images/grommash-ironback.png'
     },
     // ── Monk ─────────────────────────────────────────────────────────────
     {
@@ -406,7 +406,7 @@ export const premadeCharacters: PremadeCharacter[] = [
             explorerPack()
         ],
         spells: [],
-        image: ''
+        image: '/assets/images/kyra-swiftpaw.png'
     },
     // ── Paladin ──────────────────────────────────────────────────────────
     {
@@ -461,7 +461,7 @@ export const premadeCharacters: PremadeCharacter[] = [
         classPreparedSpells: {
             'Paladin': ['Bless', 'Cure Wounds', 'Shield of Faith']
         },
-        image: ''
+        image: '/assets/images/aldric-dawnblade.png'
     },
     // ── Ranger ───────────────────────────────────────────────────────────
     {
@@ -502,7 +502,7 @@ export const premadeCharacters: PremadeCharacter[] = [
         classPreparedSpells: {
             'Ranger': ["Hunter's Mark", 'Ensnaring Strike']
         },
-        image: ''
+        image: '/assets/images/sylvara-moonstep.png'
     },
     // ── Sorcerer ─────────────────────────────────────────────────────────
     {
@@ -541,7 +541,7 @@ export const premadeCharacters: PremadeCharacter[] = [
         classPreparedSpells: {
             'Sorcerer': ['Sorcerous Burst', 'Fire Bolt', 'Mage Hand', 'Prestidigitation', 'Chromatic Orb', 'Mage Armor']
         },
-        image: ''
+        image: "/assets/images/kaz'ra-emberfang.png"
     },
     // ── Warlock ──────────────────────────────────────────────────────────
     {
@@ -581,6 +581,6 @@ export const premadeCharacters: PremadeCharacter[] = [
         classPreparedSpells: {
             'Warlock': ['Eldritch Blast', 'Mage Hand', 'Armor of Agathys', 'Hex']
         },
-        image: ''
+        image: '/assets/images/nym-wickthorn.png'
     }
 ];
