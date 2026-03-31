@@ -111,7 +111,8 @@ export class DropdownComponent {
                 const availableSpace = shouldOpenUpward ? availableAbove : availableBelow;
 
                 this.opensUpward.set(shouldOpenUpward);
-                this.panelMaxHeight.set(Math.max(160, Math.min(this.defaultPanelMaxHeight, availableSpace)));
+                // Keep the dropdown panel within available viewport space.
+                this.panelMaxHeight.set(Math.max(120, Math.min(this.defaultPanelMaxHeight, availableSpace)));
             };
 
             const frameId = view.requestAnimationFrame(() => {
@@ -131,7 +132,9 @@ export class DropdownComponent {
     }
 
     getOptionsMaxHeight(): number {
-        return Math.max(120, this.panelMaxHeight() - (this.searchable() ? 50 : 0));
+        // Reserve vertical space for panel padding/border and optional search input.
+        const panelChromeHeight = this.searchable() ? 58 : 18;
+        return Math.max(96, this.panelMaxHeight() - panelChromeHeight);
     }
 
     onValueChange(newValue: string | number): void {
