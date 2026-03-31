@@ -198,6 +198,9 @@ static void EnsureCharactersCampaignIdIsNullable(DungeonKeepDbContext dbContext)
 static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)
 {
     EnsureColumnExists(dbContext, "Campaigns", "OpenThreadsJson", "TEXT NOT NULL DEFAULT '[]'");
+    EnsureColumnExists(dbContext, "Campaigns", "Tone", "TEXT NOT NULL DEFAULT 'Heroic'");
+    EnsureColumnExists(dbContext, "Campaigns", "Hook", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Campaigns", "NextSession", "TEXT NOT NULL DEFAULT ''");
 
     EnsureColumnExists(dbContext, "Characters", "Status", "TEXT NOT NULL DEFAULT 'Ready'");
     EnsureColumnExists(dbContext, "Characters", "OwnerUserId", "TEXT NULL");

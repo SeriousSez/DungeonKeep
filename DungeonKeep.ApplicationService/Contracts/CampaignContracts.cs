@@ -4,6 +4,9 @@ public sealed record CampaignDto(
     Guid Id,
     string Name,
     string Setting,
+    string Tone,
+    string Hook,
+    string NextSession,
     string Summary,
     DateTime CreatedAtUtc,
     int CharacterCount,
@@ -23,6 +26,9 @@ public sealed record CampaignMemberDto(
 public sealed record CreateCampaignRequest(
     string Name,
     string Setting,
+    string Tone,
+    string Hook,
+    string NextSession,
     string Summary
 );
 

@@ -91,7 +91,11 @@ export class DungeonStoreService {
     }
 
     addCampaign(draft: CampaignDraft): void {
-        void this.addCampaignFromApi(draft);
+        void this.createCampaign(draft);
+    }
+
+    async createCampaign(draft: CampaignDraft): Promise<Campaign | null> {
+        return await this.addCampaignFromApi(draft);
     }
 
     addCharacter(draft: CharacterDraft): void {
@@ -185,8 +189,8 @@ export class DungeonStoreService {
         void this.cycleStatusFromApi(characterId);
     }
 
-    inviteMember(email: string): void {
-        void this.inviteMemberFromApi(email);
+    inviteMember(email: string): Promise<boolean> {
+        return this.inviteMemberFromApi(email);
     }
 
     async saveCharacterBackstory(characterId: string, backstory: string): Promise<boolean> {
@@ -214,19 +218,23 @@ export class DungeonStoreService {
         }
     }
 
-    private async addCampaignFromApi(draft: CampaignDraft): Promise<void> {
+    private async addCampaignFromApi(draft: CampaignDraft): Promise<Campaign | null> {
         try {
             const created = await this.api.createCampaign({
                 name: draft.name,
                 setting: draft.setting,
+                tone: draft.tone,
+                hook: draft.hook,
+                nextSession: draft.nextSession,
                 summary: draft.summary || 'A newly formed campaign waits for its first legend.'
             });
 
             const campaign = this.mapCampaignFromApi(created, []);
             this.campaigns.update((campaigns) => [campaign, ...campaigns]);
             this.selectedCampaignId.set(campaign.id);
+            return campaign;
         } catch {
-            return;
+            return null;
         }
     }
 
@@ -335,11 +343,11 @@ export class DungeonStoreService {
             id: campaign.id,
             name: campaign.name,
             setting: campaign.setting,
-            tone: 'Heroic',
+            tone: campaign.tone ?? 'Heroic',
             levelRange: 'Levels 1-4',
             summary: campaign.summary,
-            hook: 'A new adventure awaits.',
-            nextSession: 'TBD',
+            hook: campaign.hook || 'A new adventure awaits.',
+            nextSession: campaign.nextSession || 'TBD',
             partyCharacterIds,
             sessions: [],
             openThreads: campaign.openThreads ?? [],
@@ -633,10 +641,10 @@ export class DungeonStoreService {
         }
     }
 
-    private async inviteMemberFromApi(email: string): Promise<void> {
+    private async inviteMemberFromApi(email: string): Promise<boolean> {
         const selectedCampaign = this.selectedCampaign();
         if (!selectedCampaign || selectedCampaign.currentUserRole !== 'Owner') {
-            return;
+            return false;
         }
 
         try {
@@ -648,8 +656,9 @@ export class DungeonStoreService {
                         : campaign
                 )
             );
+            return true;
         } catch {
-            return;
+            return false;
         }
     }
 

@@ -18,45 +18,110 @@
         <form class="form-card" (ngSubmit)="addCampaign()">
             <div class="form-heading">
                 <h3>New campaign</h3>
-                <p>Create a world, drop in a hook, and start tracking it immediately.</p>
+                <p>Build a campaign in three quick steps and start with a clear first session plan.</p>
             </div>
 
-            <label>
-                <span>Campaign name</span>
-                <input type="text" name="campaignName" [ngModel]="campaignDraft().name" (ngModelChange)="updateCampaign('name', $event)" placeholder="The Blackglass Road" />
-            </label>
+            <div class="template-bank" role="group" aria-label="Campaign templates">
+                @for (template of campaignTemplates; track template.id) {
+                <button type="button" class="template-chip" [class.template-chip-active]="selectedTemplateId() === template.id" (click)="applyCampaignTemplate(template)">
+                    {{ template.title }}
+                </button>
+                }
+            </div>
 
-            <label>
-                <span>Setting</span>
-                <input type="text" name="campaignSetting" [ngModel]="campaignDraft().setting" (ngModelChange)="updateCampaign('setting', $event)" placeholder="Shattered Coast" />
-            </label>
+            <ol class="wizard-steps">
+                @for (step of campaignStepOrder; track step; let index = $index) {
+                <li class="wizard-step" [class.wizard-step-active]="campaignStepIndex() === index" [class.wizard-step-complete]="campaignStepIndex() > index">
+                    <span class="wizard-step-index">{{ index + 1 }}</span>
+                    <span class="wizard-step-label">
+                        @if (step === 'identity') {
+                        Campaign identity
+                        }
+                        @if (step === 'story') {
+                        Story seed
+                        }
+                        @if (step === 'review') {
+                        Review
+                        }
+                    </span>
+                </li>
+                }
+            </ol>
 
-            <label>
-                <span>Tone</span>
-                <select name="campaignTone" [ngModel]="campaignDraft().tone" (ngModelChange)="updateCampaign('tone', $event)">
-                    <option value="Heroic">Heroic</option>
-                    <option value="Grim">Grim</option>
-                    <option value="Mystic">Mystic</option>
-                    <option value="Chaotic">Chaotic</option>
-                </select>
-            </label>
+            @if (currentCampaignStep() === 'identity') {
+            <div class="step-panel">
+                <label>
+                    <span>Campaign name</span>
+                    <input type="text" name="campaignName" [ngModel]="campaignDraft().name" (ngModelChange)="updateCampaign('name', $event)" placeholder="The Blackglass Road" maxlength="120" />
+                    @if (campaignNameError()) {
+                    <small class="field-error">{{ campaignNameError() }}</small>
+                    }
+                </label>
 
-            <label>
-                <span>Hook</span>
-                <textarea name="campaignHook" [ngModel]="campaignDraft().hook" (ngModelChange)="updateCampaign('hook', $event)" rows="3" placeholder="A relic has gone missing and every guild wants it first."></textarea>
-            </label>
+                <label>
+                    <span>Setting</span>
+                    <input type="text" name="campaignSetting" [ngModel]="campaignDraft().setting" (ngModelChange)="updateCampaign('setting', $event)" placeholder="Shattered Coast" maxlength="120" />
+                    @if (campaignSettingError()) {
+                    <small class="field-error">{{ campaignSettingError() }}</small>
+                    }
+                </label>
 
-            <label>
-                <span>Next session</span>
-                <app-themed-datepicker name="campaignNextSession" [value]="campaignDraft().nextSession" (valueChange)="updateCampaign('nextSession', $event)" />
-            </label>
+                <label>
+                    <span>Tone</span>
+                    <app-dropdown id="campaign-tone" ariaLabel="Select campaign tone" [value]="campaignDraft().tone" [options]="toneOptions" [searchable]="false" [placeholder]="'Select tone'" (changed)="onToneChanged($event)" />
+                </label>
+            </div>
+            }
 
-            <label>
-                <span>Summary</span>
-                <textarea name="campaignSummary" [ngModel]="campaignDraft().summary" (ngModelChange)="updateCampaign('summary', $event)" rows="3" placeholder="What is the big picture for this campaign?"></textarea>
-            </label>
+            @if (currentCampaignStep() === 'story') {
+            <div class="step-panel">
+                <label>
+                    <span>Hook</span>
+                    <textarea name="campaignHook" [ngModel]="campaignDraft().hook" (ngModelChange)="updateCampaign('hook', $event)" rows="3" maxlength="500" placeholder="A relic has gone missing and every guild wants it first."></textarea>
+                    <div class="hint-actions">
+                        <button type="button" class="ghost-button" (click)="suggestCampaignHook()">Suggest hook</button>
+                    </div>
+                    @if (campaignHookError()) {
+                    <small class="field-error">{{ campaignHookError() }}</small>
+                    }
+                </label>
 
-            <button type="submit" class="primary-button">Create campaign</button>
+                <label>
+                    <span>Next session</span>
+                    <app-themed-datepicker name="campaignNextSession" [value]="campaignDraft().nextSession" (valueChange)="updateCampaign('nextSession', $event)" />
+                </label>
+
+                <label>
+                    <span>Summary</span>
+                    <textarea name="campaignSummary" [ngModel]="campaignDraft().summary" (ngModelChange)="updateCampaign('summary', $event)" rows="3" maxlength="1000" placeholder="What is the big picture for this campaign?"></textarea>
+                </label>
+            </div>
+            }
+
+            @if (currentCampaignStep() === 'review') {
+            <div class="step-panel">
+                <article class="preview-card" aria-live="polite">
+                    <p class="preview-eyebrow">Live preview</p>
+                    <h4>{{ previewTitle() }}</h4>
+                    <div class="preview-meta">
+                        <span class="pill">{{ campaignDraft().tone }}</span>
+                        <span class="pill">{{ campaignDraft().setting || 'Setting TBD' }}</span>
+                        <span class="pill">Next: {{ previewNextSession() }}</span>
+                    </div>
+                    <p class="preview-copy">{{ previewHook() }}</p>
+                    <p class="preview-copy muted">{{ previewSummary() }}</p>
+                </article>
+            </div>
+            }
+
+            <div class="wizard-actions">
+                <button type="button" class="ghost-button" [disabled]="!canGoToPreviousStep()" (click)="goToPreviousCampaignStep()">Back</button>
+                @if (canGoToNextStep()) {
+                <button type="button" class="primary-button" (click)="goToNextCampaignStep()">Continue</button>
+                } @else {
+                <button type="submit" class="primary-button" [disabled]="campaignSubmitAttempted() && hasCampaignValidationErrors()">Create campaign</button>
+                }
+            </div>
         </form>
         }
 
@@ -98,13 +163,7 @@
 
             <label>
                 <span>Role</span>
-                <select name="characterRole" [ngModel]="characterDraft().role" (ngModelChange)="updateCharacter('role', $event)">
-                    <option value="Tank">Tank</option>
-                    <option value="Support">Support</option>
-                    <option value="Scout">Scout</option>
-                    <option value="Striker">Striker</option>
-                    <option value="Caster">Caster</option>
-                </select>
+                <app-dropdown id="character-role" ariaLabel="Select character role" [value]="characterDraft().role" [options]="roleOptions" [searchable]="false" [placeholder]="'Select role'" (changed)="onCharacterRoleChanged($event)" />
             </label>
 
             <label>

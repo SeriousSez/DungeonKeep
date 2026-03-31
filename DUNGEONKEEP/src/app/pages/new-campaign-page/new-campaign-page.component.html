@@ -6,5 +6,145 @@
         <a routerLink="/campaigns" class="back-link">← Back to Campaigns</a>
     </section>
 
-    <app-creation-studio mode="campaign" (campaignCreated)="store.addCampaign($event)" />
+    <section class="panel creation-mode-panel" aria-label="Campaign creation type">
+        <h2>Choose campaign creation type</h2>
+        <div class="mode-options">
+            <button type="button" class="mode-card" [class.mode-card-active]="creationMode() === 'standard'" (click)="selectCreationMode('standard')">
+                <strong>Standard creation</strong>
+                <span>Build manually with the guided wizard.</span>
+            </button>
+            <button type="button" class="mode-card" [class.mode-card-active]="creationMode() === 'ai'" (click)="selectCreationMode('ai')">
+                <strong>AI generation (backend)</strong>
+                <span>Use OpenAI on the backend to draft a campaign seed, then create it.</span>
+            </button>
+        </div>
+    </section>
+
+    @if (creationMode() === 'standard') {
+    <app-creation-studio mode="campaign" [campaignSeedDraft]="campaignSeedDraft()" (campaignCreated)="createCampaign($event)" />
+    }
+
+    @if (creationMode() === 'ai') {
+    <section class="panel ai-panel">
+        <div class="ai-panel-heading">
+            <h2>Generate campaign draft</h2>
+            <p>Set tone and direction, then let the backend generate a ready-to-create campaign draft.</p>
+        </div>
+
+        <div class="ai-form-grid">
+            <label>
+                <span>Tone</span>
+                <app-dropdown id="ai-campaign-tone" ariaLabel="AI campaign tone" [value]="aiTone()" [options]="toneOptions" [searchable]="false" [placeholder]="'Select tone'" (changed)="onAiToneChanged($event)" />
+            </label>
+
+            <label>
+                <span>Setting hint</span>
+                <input type="text" [ngModel]="aiSettingHint()" (ngModelChange)="updateAiSettingHint($event)" placeholder="Forgotten Realms, Eberron, or your homebrew setting" maxlength="120" />
+            </label>
+
+            <label class="ai-direction-field">
+                <span>Additional direction</span>
+                <textarea [ngModel]="aiAdditionalDirection()" (ngModelChange)="updateAiAdditionalDirection($event)" rows="3" maxlength="500" placeholder="Example: focus on political intrigue, grim consequences, and urban factions."></textarea>
+            </label>
+        </div>
+
+        <div class="ai-actions-row">
+            <button type="button" class="ghost-button" [disabled]="aiGeneratePending()" (click)="generateAiCampaignDraft()">
+                {{ aiGeneratePending() ? 'Generating...' : 'Generate draft' }}
+            </button>
+            @if (generatedDraft()) {
+            <button type="button" class="primary-button" [disabled]="createPending()" (click)="createGeneratedCampaign()">
+                {{ createPending() ? 'Creating...' : 'Create generated campaign' }}
+            </button>
+            }
+        </div>
+
+        @if (aiGenerateError()) {
+        <p class="error-copy">{{ aiGenerateError() }}</p>
+        }
+
+        @if (generatedDraft(); as draft) {
+        <article class="ai-preview-card">
+            <p class="eyebrow">Generated draft</p>
+            <h3>{{ draft.name }}</h3>
+            <div class="ai-preview-meta">
+                <span class="pill">{{ draft.tone }}</span>
+                <span class="pill">{{ draft.setting }}</span>
+                <span class="pill">Next: {{ draft.nextSession || 'TBD' }}</span>
+            </div>
+            <p>{{ draft.hook }}</p>
+            <p class="muted-copy">{{ draft.summary }}</p>
+            <div class="ai-preview-actions">
+                <button type="button" class="ghost-button" (click)="editGeneratedCampaignInStandardWizard()">Edit in standard wizard</button>
+            </div>
+        </article>
+        }
+    </section>
+    }
+
+    @if (createPending() || createError()) {
+    <section class="panel creation-status" aria-live="polite">
+        @if (createPending()) {
+        <p>Creating campaign and preparing your campaign board...</p>
+        }
+        @if (createError()) {
+        <p class="error">{{ createError() }}</p>
+        }
+    </section>
+    }
+
+    @if (createdCampaign(); as campaign) {
+    <section class="panel kickoff-panel" aria-live="polite">
+        <div class="kickoff-heading">
+            <div>
+                <p class="eyebrow">Campaign ready</p>
+                <h2>{{ campaign.name }}</h2>
+                <p>Kick off your table setup now: invite players and attach characters before session one.</p>
+            </div>
+            <div class="kickoff-actions">
+                <button type="button" class="ghost-button" (click)="goToAddCharacter()">Add first character</button>
+                <button type="button" class="primary-button" (click)="goToCampaignBoard()">Open campaign board</button>
+            </div>
+        </div>
+
+        <div class="kickoff-grid">
+            <article class="kickoff-card">
+                <h3>Invite players</h3>
+                <p>Send an invite now so players appear in the campaign roster immediately.</p>
+                <div class="invite-row">
+                    <input type="email" [ngModel]="inviteEmail()" (ngModelChange)="updateInviteEmail($event)" placeholder="player@example.com" />
+                    <button type="button" class="ghost-button" [disabled]="invitePending()" (click)="invitePlayer()">
+                        {{ invitePending() ? 'Sending...' : 'Send invite' }}
+                    </button>
+                </div>
+                @if (inviteFeedback()) {
+                <p class="invite-feedback">{{ inviteFeedback() }}</p>
+                }
+            </article>
+
+            <article class="kickoff-card">
+                <h3>Attach unassigned characters</h3>
+                <p>Link your existing unassigned roster to this campaign in one click.</p>
+
+                @if (unassignedCharacters().length) {
+                <div class="attach-list">
+                    @for (character of unassignedCharacters(); track character.id) {
+                    <div class="attach-row">
+                        <div>
+                            <strong>{{ character.name }}</strong>
+                            <p>{{ character.className }} {{ character.level }} · {{ character.race }}</p>
+                        </div>
+                        <button type="button" class="ghost-button" [disabled]="isAttachingCharacter(character.id)" (click)="attachCharacterToCampaign(character.id)">
+                            {{ isAttachingCharacter(character.id) ? 'Linking...' : 'Link' }}
+                        </button>
+                    </div>
+                    }
+                </div>
+                } @else {
+                <p class="empty-state">No unassigned characters available right now.</p>
+                }
+            </article>
+        </div>
+    </section>
+    }
 </main>

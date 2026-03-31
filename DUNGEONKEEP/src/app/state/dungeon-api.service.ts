@@ -7,6 +7,9 @@ export interface ApiCampaignDto {
     id: string;
     name: string;
     setting: string;
+    tone: 'Heroic' | 'Grim' | 'Mystic' | 'Chaotic';
+    hook: string;
+    nextSession: string;
     summary: string;
     createdAtUtc: string;
     characterCount: number;
@@ -152,6 +155,21 @@ export interface ApiDndChatResponse {
     reply: string;
 }
 
+export interface ApiGenerateCampaignDraftRequest {
+    tone: 'Heroic' | 'Grim' | 'Mystic' | 'Chaotic';
+    settingHint: string;
+    additionalDirection: string;
+}
+
+export interface ApiGenerateCampaignDraftResponse {
+    name: string;
+    setting: string;
+    tone: 'Heroic' | 'Grim' | 'Mystic' | 'Chaotic';
+    hook: string;
+    nextSession: string;
+    summary: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class DungeonApiService {
 
@@ -175,8 +193,12 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.get<ApiCampaignDto[]>(`${this.baseUrl}/campaigns`));
     }
 
-    async createCampaign(payload: { name: string; setting: string; summary: string }): Promise<ApiCampaignDto> {
+    async createCampaign(payload: { name: string; setting: string; tone: 'Heroic' | 'Grim' | 'Mystic' | 'Chaotic'; hook: string; nextSession: string; summary: string }): Promise<ApiCampaignDto> {
         return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns`, payload));
+    }
+
+    async generateCampaignDraft(payload: ApiGenerateCampaignDraftRequest): Promise<ApiGenerateCampaignDraftResponse> {
+        return await firstValueFrom(this.http.post<ApiGenerateCampaignDraftResponse>(`${this.baseUrl}/campaigns/generate-draft`, payload));
     }
 
     async archiveCampaignThread(campaignId: string, thread: string): Promise<ApiCampaignDto> {

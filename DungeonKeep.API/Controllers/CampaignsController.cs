@@ -1,13 +1,21 @@
 using DungeonKeep.ApplicationService.Contracts;
 using DungeonKeep.ApplicationService.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace DungeonKeep.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public sealed class CampaignsController(ICampaignService campaignService, ICharacterService characterService, IAuthService authService) : ControllerBase
+public sealed class CampaignsController(ICampaignService campaignService, ICharacterService characterService, IAuthService authService, IHttpClientFactory httpClientFactory, IConfiguration configuration) : ControllerBase
 {
+    private const string DefaultModel = "gpt-4.1-mini";
+    private const string DefaultResponsesUrl = "https://api.openai.com/v1/responses";
+    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
+
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<CampaignDto>>> GetAll(CancellationToken cancellationToken)
     {
@@ -29,6 +37,16 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             return BadRequest("Campaign name is required.");
         }
 
+        if (string.IsNullOrWhiteSpace(request.Setting))
+        {
+            return BadRequest("Campaign setting is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Hook))
+        {
+            return BadRequest("Campaign hook is required.");
+        }
+
         var user = await GetAuthenticatedUserAsync(cancellationToken);
         if (user is null)
         {
@@ -37,6 +55,93 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
 
         var created = await campaignService.CreateAsync(request, user, cancellationToken);
         return CreatedAtAction(nameof(GetAll), new { id = created.Id }, created);
+    }
+
+    [HttpPost("generate-draft")]
+    public async Task<ActionResult<GenerateCampaignDraftResponse>> GenerateDraft([FromBody] GenerateCampaignDraftRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var apiKey = configuration["OpenAI:ApiKey"] ?? configuration["OPENAI_API_KEY"];
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            return Problem(title: "Campaign generation unavailable.", detail: "OpenAI API key is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
+        var responsesUrl = configuration["OpenAI:ResponsesUrl"] ?? DefaultResponsesUrl;
+        var model = configuration["OpenAI:Model"] ?? DefaultModel;
+
+        using var message = new HttpRequestMessage(HttpMethod.Post, responsesUrl)
+        {
+            Headers =
+            {
+                Authorization = new AuthenticationHeaderValue("Bearer", apiKey.Trim())
+            },
+            Content = JsonContent.Create(new
+            {
+                model,
+                temperature = 0.8,
+                max_output_tokens = 650,
+                input = BuildCampaignDraftPrompt(request)
+            })
+        };
+
+        var client = httpClientFactory.CreateClient();
+        using var response = await client.SendAsync(message, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var detail = body.Length > 240 ? body[..240] : body;
+            return Problem(title: "Campaign generation failed.", detail: detail, statusCode: StatusCodes.Status502BadGateway);
+        }
+
+        var payload = JsonSerializer.Deserialize<OpenAiResponsesApiResponse>(body, SerializerOptions);
+        var text = ExtractResponseText(payload);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return Problem(title: "Campaign generation failed.", detail: "The model returned no text.", statusCode: StatusCodes.Status502BadGateway);
+        }
+
+        GenerateCampaignDraftPayload? generated;
+        try
+        {
+            generated = JsonSerializer.Deserialize<GenerateCampaignDraftPayload>(text, SerializerOptions);
+        }
+        catch (JsonException)
+        {
+            return Problem(title: "Campaign generation failed.", detail: "Model output was not valid JSON.", statusCode: StatusCodes.Status502BadGateway);
+        }
+
+        if (generated is null)
+        {
+            return Problem(title: "Campaign generation failed.", detail: "Model returned an empty payload.", statusCode: StatusCodes.Status502BadGateway);
+        }
+
+        var normalizedTone = NormalizeTone(generated.Tone, request.Tone);
+        var normalizedSetting = string.IsNullOrWhiteSpace(generated.Setting)
+            ? (request.SettingHint?.Trim() ?? string.Empty)
+            : generated.Setting.Trim();
+
+        var draft = new GenerateCampaignDraftResponse(
+            Name: string.IsNullOrWhiteSpace(generated.Name) ? "Generated Campaign" : generated.Name.Trim(),
+            Setting: normalizedSetting,
+            Tone: normalizedTone,
+            Hook: string.IsNullOrWhiteSpace(generated.Hook) ? "A volatile mystery erupts and drags the party into the center of it." : generated.Hook.Trim(),
+            NextSession: string.IsNullOrWhiteSpace(generated.NextSession) ? string.Empty : generated.NextSession.Trim(),
+            Summary: string.IsNullOrWhiteSpace(generated.Summary) ? "A generated campaign draft ready for your table." : generated.Summary.Trim()
+        );
+
+        if (string.IsNullOrWhiteSpace(draft.Setting) || string.IsNullOrWhiteSpace(draft.Hook))
+        {
+            return Problem(title: "Campaign generation failed.", detail: "Model response missed required campaign fields.", statusCode: StatusCodes.Status502BadGateway);
+        }
+
+        return Ok(draft);
     }
 
     [HttpGet("{campaignId:guid}/characters")]
@@ -160,5 +265,99 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             : string.Empty;
 
         return await authService.GetAuthenticatedUserByTokenAsync(token, cancellationToken);
+    }
+
+    private static string BuildCampaignDraftPrompt(GenerateCampaignDraftRequest request)
+    {
+        var toneHint = string.IsNullOrWhiteSpace(request.Tone) ? "Any" : request.Tone.Trim();
+        var settingHint = string.IsNullOrWhiteSpace(request.SettingHint) ? "No setting hint provided" : request.SettingHint.Trim();
+        var direction = string.IsNullOrWhiteSpace(request.AdditionalDirection) ? "No additional direction provided" : request.AdditionalDirection.Trim();
+
+        return string.Join('\n',
+        [
+            "Generate a Dungeons & Dragons campaign draft for DungeonKeep.",
+            "Return only valid JSON with the fields: name, setting, tone, hook, nextSession, summary.",
+            "tone must be exactly one of: Heroic, Grim, Mystic, Chaotic.",
+            "name and setting should be concise and table-friendly.",
+            "hook should be one clear inciting incident.",
+            "nextSession should be a concrete first-session objective or date phrase.",
+            "summary should be 1-2 sentences.",
+            string.Empty,
+            $"Preferred tone: {toneHint}",
+            $"Setting hint: {settingHint}",
+            $"Additional direction: {direction}"
+        ]);
+    }
+
+    private static string NormalizeTone(string? generatedTone, string? requestedTone)
+    {
+        var candidate = string.IsNullOrWhiteSpace(generatedTone)
+            ? requestedTone
+            : generatedTone;
+
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            return "Heroic";
+        }
+
+        return candidate.Trim().ToLowerInvariant() switch
+        {
+            "grim" => "Grim",
+            "mystic" => "Mystic",
+            "chaotic" => "Chaotic",
+            _ => "Heroic"
+        };
+    }
+
+    private static string ExtractResponseText(OpenAiResponsesApiResponse? payload)
+    {
+        if (!string.IsNullOrWhiteSpace(payload?.OutputText))
+        {
+            return payload.OutputText.Trim();
+        }
+
+        var textParts = new List<string>();
+        foreach (var item in payload?.Output ?? [])
+        {
+            foreach (var content in item.Content ?? [])
+            {
+                if (string.Equals(content.Type, "output_text", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(content.Text))
+                {
+                    textParts.Add(content.Text.Trim());
+                }
+            }
+        }
+
+        return string.Join("\n", textParts).Trim();
+    }
+
+    public sealed record GenerateCampaignDraftRequest(string Tone, string SettingHint, string AdditionalDirection);
+
+    public sealed record GenerateCampaignDraftResponse(string Name, string Setting, string Tone, string Hook, string NextSession, string Summary);
+
+    private sealed record GenerateCampaignDraftPayload(string Name, string Setting, string Tone, string Hook, string NextSession, string Summary);
+
+    private sealed class OpenAiResponsesApiResponse
+    {
+        [JsonPropertyName("output_text")]
+        public string? OutputText { get; init; }
+
+        [JsonPropertyName("output")]
+        public List<OpenAiResponseOutputItem>? Output { get; init; }
+    }
+
+    private sealed class OpenAiResponseOutputItem
+    {
+        [JsonPropertyName("content")]
+        public List<OpenAiResponseContent>? Content { get; init; }
+    }
+
+    private sealed class OpenAiResponseContent
+    {
+        [JsonPropertyName("type")]
+        public string? Type { get; init; }
+
+        [JsonPropertyName("text")]
+        public string? Text { get; init; }
     }
 }

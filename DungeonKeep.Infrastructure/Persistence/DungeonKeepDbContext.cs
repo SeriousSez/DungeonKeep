@@ -44,6 +44,9 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
             entity.HasKey(c => c.Id);
             entity.Property(c => c.Name).HasMaxLength(120).IsRequired();
             entity.Property(c => c.Setting).HasMaxLength(120);
+            entity.Property(c => c.Tone).HasMaxLength(32).IsRequired();
+            entity.Property(c => c.Hook).HasMaxLength(500);
+            entity.Property(c => c.NextSession).HasMaxLength(120);
             entity.Property(c => c.Summary).HasMaxLength(1000);
             entity.Property(c => c.OpenThreadsJson).HasMaxLength(8000).IsRequired();
             entity.Property(c => c.CreatedAtUtc).IsRequired();
