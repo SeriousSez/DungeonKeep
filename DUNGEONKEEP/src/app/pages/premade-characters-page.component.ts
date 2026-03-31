@@ -270,14 +270,34 @@ export class PremadeCharactersPageComponent {
         };
         const created = await this.store.createCharacter(draft);
         if (created) {
-            this.router.navigate(['/characters', created.id]);
+            this.router.navigate(['/character', created.id]);
         }
+    }
+
+    private getStartingCurrencyForPremade(character: PremadeCharacter): { pp: number; gp: number; ep: number; sp: number; cp: number } {
+        const baseByClass: Record<string, { pp: number; gp: number; ep: number; sp: number; cp: number }> = {
+            Barbarian: { pp: 0, gp: 9, ep: 0, sp: 4, cp: 6 },
+            Bard: { pp: 0, gp: 11, ep: 0, sp: 6, cp: 2 },
+            Cleric: { pp: 0, gp: 10, ep: 0, sp: 5, cp: 0 },
+            Druid: { pp: 0, gp: 8, ep: 0, sp: 7, cp: 5 },
+            Fighter: { pp: 0, gp: 10, ep: 0, sp: 5, cp: 5 },
+            Monk: { pp: 0, gp: 7, ep: 0, sp: 8, cp: 4 },
+            Paladin: { pp: 0, gp: 12, ep: 0, sp: 3, cp: 0 },
+            Ranger: { pp: 0, gp: 9, ep: 0, sp: 6, cp: 8 },
+            Rogue: { pp: 0, gp: 8, ep: 0, sp: 9, cp: 1 },
+            Sorcerer: { pp: 0, gp: 7, ep: 0, sp: 7, cp: 9 },
+            Warlock: { pp: 0, gp: 8, ep: 0, sp: 8, cp: 2 },
+            Wizard: { pp: 0, gp: 9, ep: 0, sp: 5, cp: 7 }
+        };
+
+        return baseByClass[character.className] ?? { pp: 0, gp: 10, ep: 0, sp: 0, cp: 0 };
     }
 
     private createPersistedNotes(character: PremadeCharacter): string {
         const visibleNotes = character.notes?.trim() || 'No field notes yet.';
         const state: Record<string, unknown> = {
-            inventoryEntries: character.inventoryEntries
+            inventoryEntries: character.inventoryEntries,
+            currency: this.getStartingCurrencyForPremade(character)
         };
         if (character.classPreparedSpells) {
             state['classPreparedSpells'] = character.classPreparedSpells;

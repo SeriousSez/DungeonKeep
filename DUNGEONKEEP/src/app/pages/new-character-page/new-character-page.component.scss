@@ -5,6 +5,7 @@
 .page-stack {
     display: grid;
     gap: 24px;
+    padding-bottom: clamp(40px, 8vh, 72px);
 }
 
 .panel {
@@ -50,13 +51,20 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
+    align-items: start;
 }
 
 .method-card {
     display: grid;
     grid-template-rows: auto 1fr auto;
-    overflow: hidden;
+    overflow: visible;
     padding: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.method-card:has(.app-dropdown-host--open) {
+    z-index: 20;
 }
 
 .method-card.selected {
@@ -94,6 +102,25 @@
 .method-body p {
     margin: 0;
     color: var(--text-muted);
+}
+
+.build-controls {
+    margin-top: 8px;
+    display: grid;
+    gap: 10px;
+}
+
+.build-control {
+    display: grid;
+    gap: 6px;
+}
+
+.build-control span {
+    font-size: 0.78rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+    font-weight: 700;
 }
 
 .beginner-toggle {
@@ -143,6 +170,11 @@
     text-transform: uppercase;
     letter-spacing: 0.03em;
     cursor: pointer;
+
+    &:disabled {
+        opacity: 0.7;
+        cursor: wait;
+    }
 }
 
 .next-step {

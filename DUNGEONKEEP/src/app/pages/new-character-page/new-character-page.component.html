@@ -29,16 +29,36 @@
             <div class="method-body no-media">
                 <h2>Quick Build</h2>
                 <p>Choose species and class to generate a fast level 1 character.</p>
+                <div class="build-controls">
+                    <label class="build-control">
+                        <span>Species</span>
+                        <app-dropdown ariaLabel="Choose species for quick build" [value]="selectedQuickSpecies()" [options]="speciesOptions" [minWidth]="220" size="compact" (changed)="onQuickSpeciesChanged($event)"></app-dropdown>
+                    </label>
+                    <label class="build-control">
+                        <span>Class</span>
+                        <app-dropdown ariaLabel="Choose class for quick build" [value]="selectedQuickClass()" [options]="classOptions" [minWidth]="220" size="compact" (changed)="onQuickClassChanged($event)"></app-dropdown>
+                    </label>
+                </div>
             </div>
-            <button type="button" class="method-action">Start Building</button>
+            <button type="button" class="method-action" [disabled]="quickBuildPending()" (click)="createQuickBuild()">{{ quickBuildPending() ? 'Building...' : 'Start Building' }}</button>
         </article>
 
         <article class="panel method-card">
             <div class="method-body no-media">
                 <h2>Random</h2>
                 <p>Roll a randomized character, with optional level and class constraints.</p>
+                <div class="build-controls">
+                    <label class="build-control">
+                        <span>Class Constraint</span>
+                        <app-dropdown ariaLabel="Choose random build class constraint" [value]="selectedRandomClass()" [options]="randomClassOptions()" [minWidth]="220" size="compact" (changed)="onRandomClassChanged($event)"></app-dropdown>
+                    </label>
+                    <label class="build-control">
+                        <span>Starting Level</span>
+                        <app-dropdown ariaLabel="Choose random build starting level" [value]="selectedRandomLevel()" [options]="levelOptions" [minWidth]="220" size="compact" (changed)="onRandomLevelChanged($event)"></app-dropdown>
+                    </label>
+                </div>
             </div>
-            <button type="button" class="method-action">Start Building</button>
+            <button type="button" class="method-action" [disabled]="randomBuildPending()" (click)="createRandomBuild()">{{ randomBuildPending() ? 'Rolling...' : 'Start Building' }}</button>
         </article>
     </section>
 </main>
