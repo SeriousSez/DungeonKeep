@@ -111,6 +111,16 @@ export interface Character {
     maxHitPoints: number;
     proficiencyBonus: number;
     traits: string[];
+    gender?: string;
+    alignment?: string;
+    faith?: string;
+    lifestyle?: string;
+    classFeatures?: string[];
+    speciesTraits?: string[];
+    languages?: string[];
+    equipment?: string[];
+    spells?: string[];
+    image?: string;
 }
 
 export interface CampaignDraft {
@@ -137,4 +147,19 @@ export interface CharacterDraft {
     armorClass?: number;
     hitPoints?: number;
     maxHitPoints?: number;
+    alignment?: string;
+    lifestyle?: string;
+    personalityTraits?: string[];
+    ideals?: string[];
+    bonds?: string[];
+    flaws?: string[];
+    equipment?: string[];
+    savingThrows?: Record<string, boolean>;
+    combatStats?: Record<string, any>;
+    spells?: string[];
+    experiencePoints?: number;
+    image?: string;
+    goals?: string;
+    secrets?: string;
+    sessionHistory?: string;
 }

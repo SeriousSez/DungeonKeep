@@ -25,6 +25,7 @@ import { classSpellCatalog, type ClassSpellOption, spellcastingProgressionByClas
 import { spellDetailsMap, type SpellDetail } from '../../data/spell-details.data';
 import { deitiesList } from '../../data/deities.data';
 import { subclassFeatureProgressionByClass as sharedSubclassFeatureProgressionByClass, subclassConfigs as sharedSubclassConfigs, subclassChoiceTitles as sharedSubclassChoiceTitles, subclassOptionsByClass as sharedSubclassOptionsByClass, type SubclassConfig } from '../../data/subclass-features.data';
+import { premadeCharacters } from '../../data/premade-characters.data';
 
 type StandardStep = 'home' | 'class' | 'species' | 'background' | 'abilities' | 'equipment' | 'whats-next';
 type AbilityGenerationMethod = '' | 'standard-array' | 'manual-rolled' | 'point-buy';
@@ -189,6 +190,28 @@ export class NewCharacterStandardPageComponent {
             this.hydratedCharacterId.set(characterId);
         });
 
+        // If a premade character was selected, populate the builder with its data
+        effect(() => {
+            const queryParams = this.route.snapshot.queryParams;
+            const premadeId = queryParams['premade'];
+            if (premadeId) {
+                const premade = premadeCharacters.find(c => c.id === premadeId);
+                if (premade) {
+                    this.populateFromPremade(premade);
+                    localStorage.removeItem('selectedPremadeCharacter');
+                }
+            } else {
+                const premadeRaw = localStorage.getItem('selectedPremadeCharacter');
+                if (premadeRaw) {
+                    try {
+                        const premade: Character = JSON.parse(premadeRaw);
+                        this.populateFromPremade(premade);
+                        localStorage.removeItem('selectedPremadeCharacter');
+                    } catch { }
+                }
+            }
+        });
+
         effect((onCleanup) => {
             if (!this.faithDropdownOpen()) {
                 return;
@@ -211,6 +234,26 @@ export class NewCharacterStandardPageComponent {
                 this.document.removeEventListener('scroll', update, true);
             });
         });
+    }
+
+    populateFromPremade(premade: Character) {
+        // Set builder state from premade character
+        this.selectedClass.set(premade.className);
+        this.selectedSpeciesName.set(premade.race);
+        this.selectedBackgroundName.set(premade.background);
+        this.characterLevel.set(premade.level);
+        this.abilityBaseScores.set({
+            Strength: premade.abilityScores.strength,
+            Dexterity: premade.abilityScores.dexterity,
+            Constitution: premade.abilityScores.constitution,
+            Intelligence: premade.abilityScores.intelligence,
+            Wisdom: premade.abilityScores.wisdom,
+            Charisma: premade.abilityScores.charisma
+        });
+        this.personalityTraits.set(premade.traits || []);
+        // Set skills, notes, etc. as needed
+        // ...
+        this.cdr.detectChanges();
     }
 
     getBuilderStepRoute(step: StandardStep): string[] {

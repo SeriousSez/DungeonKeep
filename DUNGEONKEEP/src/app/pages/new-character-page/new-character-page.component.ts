@@ -1,8 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
-
-
+import { Router, RouterLink } from '@angular/router';
 
 @Component({
     selector: 'app-new-character-page',
@@ -10,4 +8,10 @@ import { RouterLink } from '@angular/router';
     templateUrl: './new-character-page.component.html',
     styleUrl: './new-character-page.component.scss'
 })
-export class NewCharacterPageComponent { }
+export class NewCharacterPageComponent {
+    constructor(private router: Router) { }
+
+    goToPremades() {
+        this.router.navigate(['/characters/new/premade']);
+    }
+}

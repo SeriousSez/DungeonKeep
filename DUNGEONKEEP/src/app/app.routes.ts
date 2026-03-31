@@ -7,6 +7,7 @@ import { NewCampaignPageComponent } from './pages/new-campaign-page/new-campaign
 import { NewCharacterPageComponent } from './pages/new-character-page/new-character-page.component';
 import { NewCharacterStandardPageComponent } from './pages/new-character-standard-page/new-character-standard-page.component';
 import { SessionsPageComponent } from './pages/sessions-page/sessions-page.component';
+import { PremadeCharactersPageComponent } from './pages/premade-characters-page.component';
 
 export const routes: Routes = [
     {
@@ -38,6 +39,16 @@ export const routes: Routes = [
         path: 'characters/new',
         component: NewCharacterPageComponent,
         data: { title: 'New Character', breadcrumb: 'New Character', parentCrumbs: [{ label: 'Characters', url: '/characters' }] }
+    },
+    {
+        path: 'characters/new/premade',
+        component: PremadeCharactersPageComponent,
+        data: {
+            title: 'Premade Characters', breadcrumb: 'Premade Characters', parentCrumbs: [
+                { label: 'Characters', url: '/characters' },
+                { label: 'New Character', url: '/characters/new' }
+            ]
+        }
     },
     {
         path: 'characters/new/standard',

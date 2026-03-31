@@ -13,4 +13,5 @@ public interface ICharacterService
     Task<CharacterDto?> UpdateBackstoryAsync(Guid characterId, UpdateCharacterBackstoryRequest request, Guid userId, CancellationToken cancellationToken = default);
     Task<CharacterDto?> UpdateStatusAsync(Guid characterId, UpdateCharacterStatusRequest request, Guid userId, CancellationToken cancellationToken = default);
     Task<CharacterDto?> PromoteAsync(Guid characterId, Guid userId, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAsync(Guid characterId, Guid userId, CancellationToken cancellationToken = default);
 }

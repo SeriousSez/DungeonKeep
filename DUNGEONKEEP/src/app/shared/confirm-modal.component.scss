@@ -1,0 +1,58 @@
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-card {
+    background: var(--color-surface-solid);
+    border-radius: 12px;
+    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.18);
+    padding: 2rem 2.5rem;
+    min-width: 320px;
+    max-width: 90vw;
+    color: var(--color-text);
+    text-align: center;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+}
+
+.danger-button {
+    background: var(--color-danger, #e53e3e);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.danger-button:hover {
+    background: #c53030;
+}
+
+.ghost-button {
+    background: transparent;
+    color: var(--color-text);
+    border: 1px solid var(--color-border, #dbe4f0);
+    border-radius: 6px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, border 0.2s;
+}
+
+.ghost-button:hover {
+    background: var(--color-surface-alt, #f8fafc);
+    border-color: #b3bfcf;
+}

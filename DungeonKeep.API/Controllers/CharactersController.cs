@@ -8,7 +8,29 @@ namespace DungeonKeep.API.Controllers;
 [Route("api/[controller]")]
 public sealed class CharactersController(ICharacterService characterService, IAuthService authService) : ControllerBase
 {
-    [HttpGet("mine/unassigned")]
+    [HttpDelete("{characterId:guid}")]
+    public async Task<IActionResult> Delete(Guid characterId, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            var deleted = await characterService.DeleteAsync(characterId, user.Id, cancellationToken);
+            if (!deleted)
+            {
+                return NotFound();
+            }
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+        [HttpGet("mine/unassigned")]
     public async Task<ActionResult<IReadOnlyList<CharacterDto>>> GetUnassignedOwned(CancellationToken cancellationToken)
     {
         var user = await GetAuthenticatedUserAsync(cancellationToken);

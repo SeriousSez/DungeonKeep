@@ -154,6 +154,10 @@ export interface ApiDndChatResponse {
 
 @Injectable({ providedIn: 'root' })
 export class DungeonApiService {
+
+    async deleteCharacter(characterId: string): Promise<void> {
+        await firstValueFrom(this.http.delete(`${this.baseUrl}/characters/${characterId}`));
+    }
     private readonly http = inject(HttpClient);
     private readonly baseUrl = environment.apiBaseUrl;
 
@@ -181,6 +185,7 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.get<ApiCharacterDto[]>(`${this.baseUrl}/characters/mine/unassigned`));
     }
 
+
     async createCharacter(payload: {
         name: string;
         playerName: string;
@@ -189,6 +194,26 @@ export class DungeonApiService {
         background: string;
         notes: string;
         campaignId?: string;
+        species?: string;
+        alignment?: string;
+        lifestyle?: string;
+        personalityTraits?: string;
+        ideals?: string;
+        bonds?: string;
+        flaws?: string;
+        equipment?: string;
+        abilityScores?: string;
+        skills?: string;
+        savingThrows?: string;
+        hitPoints?: number;
+        armorClass?: number;
+        combatStats?: string;
+        spells?: string;
+        experiencePoints?: number;
+        portraitUrl?: string;
+        goals?: string;
+        secrets?: string;
+        sessionHistory?: string;
     }): Promise<ApiCharacterDto> {
         return await firstValueFrom(this.http.post<ApiCharacterDto>(`${this.baseUrl}/characters`, payload));
     }

@@ -1,14 +1,14 @@
 <article class="panel roster-panel">
     <div class="panel-heading">
         <div>
-            <p class="eyebrow">{{ eyebrow() }}</p>
-            <h2>{{ title() }}</h2>
+            <p class="eyebrow">{{ eyebrow }}</p>
+            <h2>{{ title }}</h2>
         </div>
-        <span class="pill">{{ selectedParty().length }} {{ countLabel() }}</span>
+        <span class="pill">{{ selectedParty.length }} {{ countLabel }}</span>
     </div>
 
     <div class="character-grid">
-        @for (character of selectedParty(); track character.id) {
+        @for (character of selectedParty; track character.id) {
         <article class="character-card" [routerLink]="['/character', character.id]">
             <div class="character-card-top">
                 <div>
@@ -17,17 +17,15 @@
                 </div>
                 <span class="status-pill" [attr.data-status]="character.status">{{ character.status }}</span>
             </div>
-
             <div class="character-meta">
                 <span>{{ character.playerName }}</span>
                 <span>{{ character.role }}</span>
                 <span>Owner: {{ character.ownerDisplayName || character.playerName }}</span>
             </div>
-
             <div class="character-actions">
                 @if (character.canEdit !== false) {
                 <button type="button" class="ghost-button" [routerLink]="['/characters', character.id, 'builder', 'class', 'manage']" (click)="$event.stopPropagation()">Edit</button>
-                <button type="button" class="primary-button" disabled title="Character deletion is not implemented yet." (click)="$event.stopPropagation()">Delete</button>
+                <button type="button" class="primary-button" (click)="deleteCharacterClicked(character.id, $event)">Delete</button>
                 } @else {
                 <span class="readonly-note">View only</span>
                 }
@@ -35,10 +33,10 @@
         </article>
         }
 
-        @if (!selectedParty().length) {
+        @if (!selectedParty.length) {
         <div class="empty-state">
-            <h3>{{ emptyTitle() }}</h3>
-            <p>{{ emptyMessage() }}</p>
+            <h3>{{ emptyTitle }}</h3>
+            <p>{{ emptyMessage }}</p>
         </div>
         }
     </div>

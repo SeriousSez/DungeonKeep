@@ -1,0 +1,23 @@
+<main class="premade-characters-page">
+    <section class="panel page-intro">
+        <h1>Premade Characters</h1>
+        <p>Browse ready-to-play character templates and pick one to start playing instantly.</p>
+    </section>
+    <section class="premade-list">
+        <div class="premade-card" *ngFor="let character of premades">
+            <div class="premade-portrait portrait-{{character.className.toLowerCase()}}">
+                @if (character.image) {
+                <img [src]="character.image" [alt]="character.name + ' portrait'" class="premade-img" />
+                }
+            </div>
+            <div class="premade-info">
+                <h2>{{ character.name }}</h2>
+                <p class="premade-class">Level {{ character.level }} {{ character.race }} {{ character.className }}</p>
+                <p class="premade-notes">{{ character.notes }}</p>
+            </div>
+            <div class="premade-actions">
+                <button class="premade-select" (click)="selectPremade(character)">Use This Character</button>
+            </div>
+        </div>
+    </section>
+</main>

@@ -6,6 +6,19 @@ namespace DungeonKeep.ApplicationService.Services;
 
 public sealed class CharacterService(ICampaignRepository campaignRepository, ICharacterRepository characterRepository, IBackstoryGenerator backstoryGenerator) : ICharacterService
 {
+    public async Task<bool> DeleteAsync(Guid characterId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var character = await characterRepository.GetByIdAsync(characterId, cancellationToken);
+        if (character is null)
+        {
+            return false;
+        }
+        if (character.OwnerUserId != userId)
+        {
+            throw new UnauthorizedAccessException("Only the character owner can delete this character.");
+        }
+        return await characterRepository.DeleteAsync(characterId, cancellationToken);
+    }
     public async Task<IReadOnlyList<CharacterDto>> GetByCampaignAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default)
     {
         var isMember = await campaignRepository.IsActiveMemberAsync(campaignId, userId, cancellationToken);

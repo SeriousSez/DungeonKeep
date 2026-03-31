@@ -7,6 +7,21 @@ import { SessionService } from './session.service';
 
 @Injectable({ providedIn: 'root' })
 export class DungeonStoreService {
+
+    async deleteCharacter(characterId: string): Promise<void> {
+        try {
+            await this.api.deleteCharacter(characterId);
+            this.characters.update((characters) => characters.filter((c) => c.id !== characterId));
+            this.campaigns.update((campaigns) =>
+                campaigns.map((campaign) => ({
+                    ...campaign,
+                    partyCharacterIds: campaign.partyCharacterIds.filter((id) => id !== characterId)
+                }))
+            );
+        } catch {
+            // Optionally handle error (e.g., show notice)
+        }
+    }
     private static readonly UNASSIGNED_CAMPAIGN_ID = '00000000-0000-0000-0000-000000000000';
     private static readonly BUILDER_STATE_START_TAG = '[DK_BUILDER_STATE_START]';
     private static readonly BUILDER_STATE_END_TAG = '[DK_BUILDER_STATE_END]';
@@ -228,7 +243,27 @@ export class DungeonStoreService {
                 level: Math.max(1, draft.level),
                 background: draft.background || 'Freshly arrived adventurer',
                 notes: draft.notes || 'No field notes yet.',
-                campaignId: draft.campaignId
+                campaignId: draft.campaignId,
+                species: draft.race || '',
+                alignment: draft.alignment || '',
+                lifestyle: draft.lifestyle || '',
+                personalityTraits: Array.isArray(draft.personalityTraits) ? draft.personalityTraits.join(', ') : (draft.personalityTraits || ''),
+                ideals: Array.isArray(draft.ideals) ? draft.ideals.join(', ') : (draft.ideals || ''),
+                bonds: Array.isArray(draft.bonds) ? draft.bonds.join(', ') : (draft.bonds || ''),
+                flaws: Array.isArray(draft.flaws) ? draft.flaws.join(', ') : (draft.flaws || ''),
+                equipment: Array.isArray(draft.equipment) ? draft.equipment.join(', ') : (draft.equipment || ''),
+                abilityScores: draft.abilityScores ? JSON.stringify(draft.abilityScores) : '',
+                skills: draft.skills ? JSON.stringify(draft.skills) : '',
+                savingThrows: draft.savingThrows ? JSON.stringify(draft.savingThrows) : '',
+                hitPoints: draft.hitPoints ?? 0,
+                armorClass: draft.armorClass ?? 0,
+                combatStats: draft.combatStats ? JSON.stringify(draft.combatStats) : '',
+                spells: Array.isArray(draft.spells) ? draft.spells.join(', ') : (draft.spells || ''),
+                experiencePoints: draft.experiencePoints ?? 0,
+                portraitUrl: draft.image || '',
+                goals: draft.goals || '',
+                secrets: draft.secrets || '',
+                sessionHistory: draft.sessionHistory || ''
             });
 
             const character = this.mapCharacterFromApi(created, draft);
@@ -349,6 +384,7 @@ export class DungeonStoreService {
             ? Math.max(0, Math.min(maxHitPoints, Math.trunc(draftCurrentHitPoints as number)))
             : maxHitPoints;
 
+        // Map all available fields from ApiCharacterDto and draft
         return {
             id: character.id,
             campaignId: character.campaignId,
@@ -370,7 +406,17 @@ export class DungeonStoreService {
             hitPoints,
             maxHitPoints,
             proficiencyBonus,
-            traits: race?.traits ?? []
+            traits: race?.traits ?? [],
+            gender: (draft?.gender ?? (character as any).gender) || '',
+            alignment: (draft?.alignment ?? (character as any).alignment) || '',
+            faith: (draft?.faith ?? (character as any).faith) || '',
+            lifestyle: (draft?.lifestyle ?? (character as any).lifestyle) || '',
+            classFeatures: (draft?.classFeatures ?? (character as any).classFeatures) || [],
+            speciesTraits: (draft?.speciesTraits ?? (character as any).speciesTraits) || [],
+            languages: (draft?.languages ?? (character as any).languages) || [],
+            equipment: (draft?.equipment ?? (character as any).equipment) || [],
+            spells: (draft?.spells ?? (character as any).spells) || [],
+            image: (draft?.image ?? (character as any).image) || (character as any).portraitUrl || ''
         };
     }
 

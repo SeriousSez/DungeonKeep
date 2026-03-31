@@ -7,6 +7,17 @@ namespace DungeonKeep.Infrastructure.Repositories;
 
 public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : ICharacterRepository
 {
+    public async Task<bool> DeleteAsync(Guid characterId, CancellationToken cancellationToken = default)
+    {
+        var character = await dbContext.Characters.FirstOrDefaultAsync(c => c.Id == characterId, cancellationToken);
+        if (character is null)
+        {
+            return false;
+        }
+        dbContext.Characters.Remove(character);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
     public async Task<IReadOnlyList<Character>> GetByCampaignIdAsync(Guid campaignId, CancellationToken cancellationToken = default)
     {
         return await dbContext.Characters

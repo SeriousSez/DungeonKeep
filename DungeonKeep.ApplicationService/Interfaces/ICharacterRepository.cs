@@ -13,4 +13,5 @@ public interface ICharacterRepository
     Task<Character?> UpdateBackstoryAsync(Guid characterId, string backstory, CancellationToken cancellationToken = default);
     Task<Character?> UpdateStatusAsync(Guid characterId, string status, CancellationToken cancellationToken = default);
     Task<Character?> PromoteAsync(Guid characterId, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAsync(Guid characterId, CancellationToken cancellationToken = default);
 }
