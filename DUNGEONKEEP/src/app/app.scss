@@ -40,6 +40,7 @@
 
 // ── Topbar ────────────────────────────────────────────────────────────────────
 .topbar {
+    position: relative;
     max-width: 1480px;
     margin: 20px auto 0;
     padding: 14px 20px;
@@ -48,9 +49,7 @@
     border-radius: 24px;
     box-shadow: var(--panel-shadow);
     backdrop-filter: blur(18px);
-    position: sticky;
-    top: 10px;
-    z-index: 200;
+    z-index: 20000;
     // needed so the mobile nav dropdown positions relative to this panel
     isolation: isolate;
 }
@@ -157,7 +156,7 @@
     border-radius: 14px;
     padding: 8px;
     box-shadow: var(--panel-shadow);
-    z-index: 300;
+    z-index: 20010;
 
     .nav-group.is-open & {
         display: block;

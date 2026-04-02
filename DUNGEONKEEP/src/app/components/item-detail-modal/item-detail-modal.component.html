@@ -1,0 +1,79 @@
+<div class="modal-backdrop" (click)="close()">
+    <article class="item-detail-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+        <header class="item-strip">
+            <div class="item-strip-icon" aria-hidden="true">
+                <i class="fa-duotone fa-thin fa-sack"></i>
+            </div>
+            <div class="item-strip-copy">
+                <h3>{{ item().name }}</h3>
+                <p>{{ item().category }}</p>
+            </div>
+            <button type="button" class="close-modal" (click)="close()" aria-label="Close">
+                <i class="fa-duotone fa-thin fa-xmark"></i>
+            </button>
+        </header>
+
+        <div class="item-sheet-body">
+            <p class="item-meta-line">Legacy • {{ item().category | lowercase }}</p>
+
+            <hr class="sheet-divider" />
+
+            <dl class="item-facts">
+                <div>
+                    <dt>Weight:</dt>
+                    <dd>{{ item().weight != null ? (item().weight + ' lb.') : '—' }}</dd>
+                </div>
+                <div>
+                    <dt>Cost:</dt>
+                    <dd>{{ item().costGp != null ? (item().costGp + ' gp') : '—' }}</dd>
+                </div>
+                <div>
+                    <dt>Source:</dt>
+                    <dd>
+                        @if (item().sourceUrl) {
+                        <a [href]="item().sourceUrl" target="_blank" rel="noopener noreferrer">Reference link</a>
+                        } @else {
+                        —
+                        }
+                    </dd>
+                </div>
+            </dl>
+
+            <hr class="sheet-divider" />
+
+            <p class="item-description">{{ item().notes || 'No additional notes are available for this item yet.' }}</p>
+
+            @if (item().containedItems && item().containedItems!.length > 0) {
+            <div class="contained-items">
+                <p class="contained-items-title">Contains</p>
+                <ul>
+                    @for (contained of item().containedItems!; track contained.name) {
+                    <li>{{ contained.name }} @if (contained.quantity > 1) { <span>×{{ contained.quantity }}</span> }</li>
+                    }
+                </ul>
+            </div>
+            }
+
+            <div class="item-tags-row">
+                <span class="item-tags-label">TAGS:</span>
+                <span class="item-tag">{{ primaryTag() }}</span>
+            </div>
+
+            <hr class="sheet-divider" />
+
+            <div class="item-add-row">
+                <span class="item-add-label">Amount to add</span>
+                <div class="qty-control">
+                    <button type="button" (click)="decrementQuantity()" aria-label="Decrease quantity">
+                        <i class="fa-duotone fa-thin fa-minus"></i>
+                    </button>
+                    <input type="number" min="1" [value]="addQuantity()" (input)="onQuantityInputChanged($any($event.target).value)" aria-label="Item quantity" />
+                    <button type="button" (click)="incrementQuantity()" aria-label="Increase quantity">
+                        <i class="fa-duotone fa-thin fa-plus"></i>
+                    </button>
+                </div>
+                <button type="button" class="add-item-btn" (click)="requestAdd()">Add Item</button>
+            </div>
+        </div>
+    </article>
+</div>

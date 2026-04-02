@@ -2307,6 +2307,39 @@ input {
     font-size: 0.85rem;
 }
 
+.equipment-item-info-btn {
+    text-align: left;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--color-text);
+    font-family: inherit;
+    cursor: pointer;
+    transition: color 0.2s;
+    min-width: 0;
+
+    strong {
+        display: block;
+        font-weight: 700;
+    }
+
+    p {
+        margin: 2px 0 0;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+    }
+
+    &:hover {
+        color: var(--color-primary);
+    }
+
+    &:focus {
+        outline: 2px solid var(--color-primary);
+        outline-offset: -2px;
+        border-radius: 4px;
+    }
+}
+
 .inventory-grid-table {
     width: 100%;
     border-collapse: collapse;
@@ -2343,6 +2376,40 @@ input {
         margin: 2px 0 0;
         color: var(--text-muted);
         font-size: 0.76rem;
+    }
+}
+
+.item-name-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--color-text);
+    font-family: inherit;
+    cursor: pointer;
+    transition: color 0.2s;
+
+    strong {
+        display: block;
+        font-weight: 700;
+    }
+
+    p {
+        margin: 2px 0 0;
+        color: var(--text-muted);
+        font-size: 0.76rem;
+    }
+
+    &:hover {
+        color: var(--color-primary);
+    }
+
+    &:focus {
+        outline: 2px solid var(--color-primary);
+        outline-offset: -2px;
+        border-radius: 4px;
     }
 }
 

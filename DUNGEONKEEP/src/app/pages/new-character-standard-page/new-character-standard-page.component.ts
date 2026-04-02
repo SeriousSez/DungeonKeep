@@ -14,6 +14,7 @@ import { OptionMenuFilterComponent } from '../../components/option-menu-filter/o
 import { NewCharacterInfoModalComponent } from '../../components/new-character-info-modal/new-character-info-modal.component';
 import { CharacteristicsModalComponent } from '../../components/characteristics-modal/characteristics-modal.component';
 import { DeityPickerModalComponent } from '../../components/deity-picker-modal/deity-picker-modal.component';
+import { ItemDetailModalComponent } from '../../components/item-detail-modal/item-detail-modal.component';
 import { ChoiceBadgeComponent } from '../../components/choice-badge/choice-badge';
 import { DropdownComponent, type DropdownOption } from '../../components/dropdown/dropdown.component';
 import { HitPointManagerModalComponent } from '../../components/hit-point-manager-modal/hit-point-manager-modal.component';
@@ -132,7 +133,7 @@ interface PersistedBuilderState {
 
 @Component({
     selector: 'app-new-character-standard-page',
-    imports: [CommonModule, RouterLink, NewCharacterInfoModalComponent, CharacteristicsModalComponent, DeityPickerModalComponent, ChoiceBadgeComponent, DropdownComponent, HitPointManagerModalComponent, MultiSelectDropdownComponent, OptionMenuFilterComponent],
+    imports: [CommonModule, RouterLink, NewCharacterInfoModalComponent, CharacteristicsModalComponent, DeityPickerModalComponent, ItemDetailModalComponent, ChoiceBadgeComponent, DropdownComponent, HitPointManagerModalComponent, MultiSelectDropdownComponent, OptionMenuFilterComponent],
     templateUrl: './new-character-standard-page.component.html',
     styleUrl: './new-character-standard-page.component.scss'
 })
@@ -266,6 +267,7 @@ export class NewCharacterStandardPageComponent {
     }
 
     readonly activeInfoModal = signal<ActiveInfoModal | null>(null);
+    readonly activeItemDetailModal = signal<InventoryEntry | null>(null);
     readonly selectedClass = signal<string>('');
     readonly classSearchTerm = signal('');
     readonly characterLevel = signal<number>(1);
@@ -1434,6 +1436,1600 @@ export class NewCharacterStandardPageComponent {
                     { name: "Scholar's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
                 ],
                 currency: { gp: 8 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Anthropologist: {
+            A: {
+                label: 'Abacus, Book of Lore, Bedroll, Rope (50 feet), Waterskin, and 10 GP',
+                items: [
+                    { name: 'Abacus', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: 'Abacus, Book of Lore, Bedroll, Rope (50 feet), Waterskin, and 50 GP',
+                items: [
+                    { name: 'Abacus', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 50 }
+            }
+        },
+        Archaeologist: {
+            A: {
+                label: 'Bedroll, Book of Lore, Brush (fine), Crowbar, Lantern, Oil (2 flasks), and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Lantern, Hooded', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Oil (flask)', category: 'Adventuring Gear', quantity: 2, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: 'Bedroll, Book of Lore, Brush (fine), Crowbar, Lantern, Oil (2 flasks), and 50 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Lantern, Hooded', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Oil (flask)', category: 'Adventuring Gear', quantity: 2, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 50 }
+            }
+        },
+        Athlete: {
+            A: {
+                label: 'Bedroll, Blanket, Costume, Rope (50 feet), Towel, Waterskin, and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Charlatan: {
+            A: {
+                label: 'Disguise Kit, Fine Clothes, Forgery Kit, Tools of the Con, and 15 GP',
+                items: [
+                    { name: 'Disguise Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+                    { name: 'Fine Clothes', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Forgery Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'City Watch': {
+            A: {
+                label: 'Blue and Silver Uniform, Bedroll, Belted Longsword, Canvas Backpack, Common Clothes, and 17 GP',
+                items: [
+                    { name: 'Longsword', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 17 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Clan Crafter': {
+            A: {
+                label: 'Artisan\'s Tools (choice), Common Clothes, Crowbar, Dungeoneer\'s Pack, Locket, and 5 GP',
+                items: [
+                    { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 5 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Cloistered Scholar': {
+            A: {
+                label: 'Book of Lore, Bottle of Black Ink, Common Clothes, Ink Pen, Letter from Dead Colleague, Quill, and 10 GP',
+                items: [
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Ink (1-ounce bottle)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Paper (sheet)', category: 'Adventuring Gear', quantity: 10, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Courtier: {
+            A: {
+                label: 'Bedroll, Candlelight Courtesan\'s Outfit, Common Clothes, Fine Clothes, Ink Pen, and 25 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Fine Clothes', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 25 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Criminal: {
+            A: {
+                label: 'Crowbar, Dark Common Clothes (with hood), Pouch, Thieves\' Tools, and 15 GP',
+                items: [
+                    { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Thieves' Tools", category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Entertainer: {
+            A: {
+                label: 'Costume, Disguise Kit, Favor from Admirer, Musical Instrument (choice), and 15 GP',
+                items: [
+                    { name: 'Disguise Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+                    { name: 'Lute', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Faceless: {
+            A: {
+                label: 'Bedroll, Common Clothes, Dark Outfit with Hood, Dungeoneer\'s Pack, Mask, and 14 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 14 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Faction Agent': {
+            A: {
+                label: 'Bedroll, Bottle of Invisible Ink, Cipher Text, Clothes, Faction Insignia, Forgery Kit, and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Forgery Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+                    { name: 'Ink (1-ounce bottle)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Far Traveler': {
+            A: {
+                label: 'Bedroll, Book (cultural stories), Common Clothes, Costume, Cursed Talisman, and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Feylost: {
+            A: {
+                label: 'Bedroll, Bottle of Invisible Ink, Common Clothes, Fey Trinket, Shortbow, and 8 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Shortbow', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Ink (1-ounce bottle)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 8 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Fisher: {
+            A: {
+                label: 'Bedroll, Fishing Tackle, Mess Kit, Net, Rope (50 feet), Waterskin, and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Fishing Tackle', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Mess Kit', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Folk Hero': {
+            A: {
+                label: 'Artisan\'s Tools (choice), Common Clothes, Dungeoneer\'s Pack, Iron Pot, Shovel, and 10 GP',
+                items: [
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Shovel', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Giant Foundling': {
+            A: {
+                label: 'Bedroll, Common Clothes (oversized), Dungeoneer\'s Pack, Grappling Hook, Rope (50 feet), and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Grappling Hook', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Gladiator: {
+            A: {
+                label: 'Costume, Disguise Kit, Favor from Admirer, Unusual Weapon (choice), and 15 GP',
+                items: [
+                    { name: 'Disguise Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Guild Artisan': {
+            A: {
+                label: 'Artisan\'s Tools (choice), Backpack, Book of Lore, Common Clothes, Guild Membership Pack, Ink Pen, and 15 GP',
+                items: [
+                    { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Guild Merchant': {
+            A: {
+                label: 'Artisan\'s Tools (choice), Backpack, Brass Scale, Common Clothes, Letter of Introduction, Rope (50 feet), and 15 GP',
+                items: [
+                    { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Haunted One': {
+            A: {
+                label: 'Bedroll, Caltrops (20), Common Clothes, Crossbow Bolts (20), Crowbar, Dungeon Pack, Light Crossbow, Rope (50 feet), and 8 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Caltrops (Bag of 20)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Light Crossbow', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Crossbow Bolts (20)', category: 'Ammunition', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 8 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Hermit: {
+            A: {
+                label: 'Backpack, Bedroll, Bottle of Scented Oil, Bowl, Common Clothes, Fishing Tackle, Mess Kit, Rope (50 feet), Tent, Tinderbox, Torch, and an Herbalism Kit',
+                items: [
+                    { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Fishing Tackle', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Mess Kit', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Torch', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 5 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'House Agent': {
+            A: {
+                label: 'Bedroll, Book of Lore, Common Clothes, Dungeoneer\'s Pack, Hooded Lantern, Oil (2 flasks), and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Lantern, Hooded', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Oil (flask)', category: 'Adventuring Gear', quantity: 2, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Inheritor: {
+            A: {
+                label: 'Backpack, Bedroll, Book of Lore, Common Clothes, Entertainer\'s Pack, Fine Clothes, Trinket, and 15 GP',
+                items: [
+                    { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Entertainer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Fine Clothes', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Investigator (SCAG)': {
+            A: {
+                label: 'Bedroll, Book of Lore, Common Clothes, Disguise Kit, Forgery Kit, Grappling Hook, and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Disguise Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+                    { name: 'Forgery Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+                    { name: 'Grappling Hook', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Investigator (VRGR)': {
+            A: {
+                label: 'Bedroll, Book of Lore, Common Clothes, Disguise Kit, Forgery Kit, Grappling Hook, and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Disguise Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+                    { name: 'Forgery Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+                    { name: 'Grappling Hook', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Knight: {
+            A: {
+                label: 'Battlefield Scavenger, Fine Clothes, Longsword, Signet Ring, and 25 GP',
+                items: [
+                    { name: 'Longsword', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Fine Clothes', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 25 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Knight of the Order': {
+            A: {
+                label: 'Bedroll, Book (Order history), Common Clothes, Dungeoneer\'s Pack, Fine Clothes, Longsword, and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Fine Clothes', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Longsword', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Marine: {
+            A: {
+                label: 'Bedroll, Belted Scimitar, Canteen, Common Clothes, Dungeoneer\'s Pack, and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Scimitar', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Mercenary Veteran': {
+            A: {
+                label: 'Bedroll, Brass Dice, Common Clothes, Dungeoneer\'s Pack, Longsword, and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Longsword', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Noble: {
+            A: {
+                label: 'Clothes, Fine, Letter of Introduction, Purse, Signet Ring, and 25 GP',
+                items: [
+                    { name: 'Fine Clothes', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 25 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Outlander: {
+            A: {
+                label: 'Backpack, Bedroll, Blanket, Common Clothes, Dagger, Dungeoneer\'s Pack, Rope (50 feet), and 10 GP',
+                items: [
+                    { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Pirate: {
+            A: {
+                label: 'Bedroll, Common Clothes, Crossbow Bolts (20), Dagger, Light Crossbow, Pearl (100 gp value), Rope (50 feet), and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Crossbow Bolts (20)', category: 'Ammunition', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Light Crossbow', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Pearl (100 gp)', category: 'Gemstone', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Rewarded: {
+            A: {
+                label: 'Backpack, Book of Lore, Calligrapher\'s Supplies, Common Clothes, Fine Clothes, Ink Pen, and 50 GP',
+                items: [
+                    { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Fine Clothes', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 50 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Ruined: {
+            A: {
+                label: 'Bedroll, Book of Lore, Common Clothes, Crowbar, Dungeoneer\'s Pack, Rope (50 feet), and 1 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 1 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Rune Carver': {
+            A: {
+                label: 'Bedroll, Carver\'s Tools, Common Clothes, Gaming Set, Rope (50 feet), and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Sailor: {
+            A: {
+                label: 'Bedroll, Belted Scimitar, Canteen, Common Clothes, Dungeoneer\'s Pack, and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Scimitar', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Shipwright: {
+            A: {
+                label: 'Artisan\'s Tools (Woodcarver\'s), Common Clothes, Hooded Lantern, Miner\'s Pick, Rope (50 feet), and 10 GP',
+                items: [
+                    { name: "Miner's Pick", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Hooded Lantern', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Smuggler: {
+            A: {
+                label: 'Bedroll, Boat (tiny), Common Clothes, Crowbar, Dungeoneer\'s Pack, Thieves\' Tools, and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Thieves' Tools", category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Soldier: {
+            A: {
+                label: 'Backpack, Bedroll, Common Clothes, Insignia, Longsword, Mess Kit, and 10 GP',
+                items: [
+                    { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Longsword', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Mess Kit', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Spy: {
+            A: {
+                label: 'Crowbar, Dark Common Clothes (with hood), Pouch, Thieves\' Tools, and 15 GP',
+                items: [
+                    { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Thieves' Tools", category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Urban Bounty Hunter': {
+            A: {
+                label: 'Bedroll, Book of Lore, Common Clothes, Crossbow Bolts (20), Light Crossbow, Rope (50 feet), and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Crossbow Bolts (20)', category: 'Ammunition', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Light Crossbow', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Urchin: {
+            A: {
+                label: 'Bedroll, Common Clothes, Crowbar, Dagger, Dungeoneer\'s Pack, and 5 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 5 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Uthgardt Tribe Member': {
+            A: {
+                label: 'Bedroll, Common Clothes, Explorer\'s Pack, Hunting Trap, Insignia, Spear, and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Explorer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Hunting Trap', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Spear', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Waterdhavian Noble': {
+            A: {
+                label: 'Fine Clothes, Letter of Introduction, Purse, Signet Ring, and 25 GP',
+                items: [
+                    { name: 'Fine Clothes', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 25 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Witchlight Hand': {
+            A: {
+                label: 'Bedroll, Common Clothes, Disguise Kit, Dungeoneer\'s Pack, Mask, Pouch, and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Disguise Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Black Fist Double Agent': {
+            A: {
+                label: 'Badge, Book (false identity), Common Clothes, Dungeoneer\'s Pack, Signet Ring, and 10 GP',
+                items: [
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Dragon Casualty': {
+            A: {
+                label: 'Bedroll, Common Clothes, Crowbar, Dungeoneer\'s Pack, Rope (50 feet), and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Iron Route Bandit': {
+            A: {
+                label: 'Bedroll, Common Clothes, Crowbar, Dungeoneer\'s Pack, Rope (50 feet), and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Phlan Insurgent': {
+            A: {
+                label: 'Bedroll, Common Clothes, Dagger, Dungeoneer\'s Pack, Rope (50 feet), and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Stojanow Prisoner': {
+            A: {
+                label: 'Bedroll, Common Clothes, Dagger, Dungeoneer\'s Pack, and 5 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 5 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Ticklebelly Nomad': {
+            A: {
+                label: 'Bedroll, Common Clothes, Dungeoneer\'s Pack, Goat, Rope (50 feet), and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Caravan Specialist': {
+            A: {
+                label: 'Bedroll, Common Clothes, Dungeoneer\'s Pack, Map, and 15 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Earthspur Miner': {
+            A: {
+                label: "Bedroll, Common Clothes, Dungeoneer's Pack, Miner's Pick, and 10 GP",
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Miner's Pick", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Harborfolk: {
+            A: {
+                label: 'Bedroll, Common Clothes, Dungeoneer\'s Pack, Fishing Tackle, and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Fishing Tackle', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Mulmaster Aristocrat': {
+            A: {
+                label: 'Fine Clothes, Letter of Introduction, Purse, Signet Ring, and 25 GP',
+                items: [
+                    { name: 'Fine Clothes', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 25 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Phlan Refugee': {
+            A: {
+                label: 'Backpack, Bedroll, Common Clothes, Crowbar, Dungeoneer\'s Pack, and 1 GP',
+                items: [
+                    { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 1 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Cormanthor Refugee': {
+            A: {
+                label: 'Backpack, Bedroll, Common Clothes, Dungeoneer\'s Pack, and 1 GP',
+                items: [
+                    { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 1 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Gate Urchin': {
+            A: {
+                label: 'Bedroll, Common Clothes, Crowbar, Dagger, Dungeoneer\'s Pack, and 5 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 5 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Hillsfar Merchant': {
+            A: {
+                label: 'Backpack, Book of Lore, Common Clothes, Dungeoneer\'s Pack, Gaming Set, and 15 GP',
+                items: [
+                    { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Hillsfar Smuggler': {
+            A: {
+                label: 'Backpack, Common Clothes, Crowbar, Dungeoneer\'s Pack, Thieves\' Tools, and 15 GP',
+                items: [
+                    { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Thieves' Tools", category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Secret Identity': {
+            A: {
+                label: 'Book (false identity), Common Clothes, Disguise Kit, Dungeoneer\'s Pack, and 10 GP',
+                items: [
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Disguise Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Shade Fanatic': {
+            A: {
+                label: 'Book (forbidden dark knowledge), Common Clothes, Disguise Kit, Dungeoneer\'s Pack, and 10 GP',
+                items: [
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Disguise Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Trade Sheriff': {
+            A: {
+                label: 'Badge, Book of Lore, Common Clothes, Dungeoneer\'s Pack, Longsword, and 10 GP',
+                items: [
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Longsword', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        "Celebrity Adventurer's Scion": {
+            A: {
+                label: 'Book of Lore, Common Clothes, Costume, Fine Clothes, and 25 GP',
+                items: [
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Fine Clothes', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 25 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Failed Merchant': {
+            A: {
+                label: 'Backpack, Book of Lore, Common Clothes, Dungeoneer\'s Pack, and 15 GP',
+                items: [
+                    { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Gambler: {
+            A: {
+                label: 'Backpack, Common Clothes, Costume, Dice Set, Fine Clothes, and 15 GP',
+                items: [
+                    { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Fine Clothes', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Plaintiff: {
+            A: {
+                label: 'Backpack, Book of Lore, Common Clothes, Fine Clothes, Ink Pen, and 15 GP',
+                items: [
+                    { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Fine Clothes', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Rival Intern': {
+            A: {
+                label: 'Backpack, Book of Lore, Common Clothes, Dungeoneer\'s Pack, and 15 GP',
+                items: [
+                    { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Dissenter: {
+            A: {
+                label: 'Book (religious or philosophical), Common Clothes, Disguise Kit, Dungeoneer\'s Pack, and 10 GP',
+                items: [
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Disguise Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Initiate: {
+            A: {
+                label: 'Common Clothes, Holy Symbol, Mace, Prayer Book, and 15 GP',
+                items: [
+                    { name: 'Mace', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Vizier: {
+            A: {
+                label: 'Book of Lore, Common Clothes, Fine Clothes, Ink Pen, Lantern, and 20 GP',
+                items: [
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Fine Clothes', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Lantern, Hooded', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 20 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Knight of Solamnia': {
+            A: {
+                label: 'Bedroll, Book of Lore, Common Clothes, Dungeoneer\'s Pack, Longsword, and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Longsword', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Mage of High Sorcery': {
+            A: {
+                label: 'Book of Lore, Common Clothes, Dagger, Fine Clothes, Ink Pen, Spellbook, and 10 GP',
+                items: [
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Fine Clothes', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Spellbook', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Inquisitor: {
+            A: {
+                label: 'Book (holy text), Common Clothes, Dagger, Holy Symbol, and 15 GP',
+                items: [
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Gate Warden': {
+            A: {
+                label: 'Backpack, Book of Lore, Common Clothes, Dungeoneer\'s Pack, Lantern, and 10 GP',
+                items: [
+                    { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Lantern, Hooded', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Planar Philosopher': {
+            A: {
+                label: 'Book of Lore, Common Clothes, Ink Pen, Ink Vial, and 10 GP',
+                items: [
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Ink (1-ounce bottle)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Azorius Functionary': {
+            A: {
+                label: 'Book of Lore, Common Clothes, Fine Clothes, Ink Pen, and 20 GP',
+                items: [
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Fine Clothes', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 20 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Boros Legionnaire': {
+            A: {
+                label: 'Common Clothes, Dungeoneer\'s Pack, Insignia, Longsword, and 10 GP',
+                items: [
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Longsword', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Dimir Operative': {
+            A: {
+                label: 'Common Clothes, Dagger, Disguise Kit, Dungeoneer\'s Pack, Thieves\' Tools, and 10 GP',
+                items: [
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Disguise Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Thieves' Tools", category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Golgari Agent': {
+            A: {
+                label: 'Common Clothes, Dagger, Disguise Kit, Dungeoneer\'s Pack, Rope (50 feet), and 10 GP',
+                items: [
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Disguise Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Gruul Anarch': {
+            A: {
+                label: 'Common Clothes, Dagger, Dungeoneer\'s Pack, Handaxe, and 10 GP',
+                items: [
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Handaxe', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Izzet Engineer': {
+            A: {
+                label: 'Book of Lore, Common Clothes, Dungeoneer\'s Pack, Ink Pen, Tinker\'s Tools, and 10 GP',
+                items: [
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Tinker's Tools", category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Orzhov Representative': {
+            A: {
+                label: 'Common Clothes, Fine Clothes, Ink Pen, Ledger, and 20 GP',
+                items: [
+                    { name: 'Fine Clothes', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 20 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Rakdos Cultist': {
+            A: {
+                label: 'Common Clothes, Dagger, Dungeoneer\'s Pack, Scimitar, and 10 GP',
+                items: [
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Scimitar', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Selesnya Initiate': {
+            A: {
+                label: 'Common Clothes, Dagger, Dungeoneer\'s Pack, Holy Symbol, and 10 GP',
+                items: [
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Simic Scientist': {
+            A: {
+                label: 'Book of Lore, Common Clothes, Dungeoneer\'s Pack, Ink Pen, Ink Vial, and 10 GP',
+                items: [
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Ink (1-ounce bottle)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Lorehold Student': {
+            A: {
+                label: 'Book of Lore, Common Clothes, Dagger, Dungeoneer\'s Pack, Ink Pen, and 15 GP',
+                items: [
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Prismari Student': {
+            A: {
+                label: 'Colored Ink Vials, Common Clothes, Cosmetic Wand, Dagger, Entertainers\'s Pack, and 15 GP',
+                items: [
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: "Entertainer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Quandrix Student': {
+            A: {
+                label: 'Book of Lore, Common Clothes, Dagger, Dungeoneer\'s Pack, Ink Pen, and 15 GP',
+                items: [
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Silverquill Student': {
+            A: {
+                label: 'Book of Lore, Common Clothes, Dagger, Fine Clothes, Ink Pen, and 15 GP',
+                items: [
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Fine Clothes', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Witherbloom Student': {
+            A: {
+                label: 'Book of Lore, Common Clothes, Dagger, Herbalism Kit, and 15 GP',
+                items: [
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' }
+                ],
+                currency: { gp: 15 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Grinner: {
+            A: {
+                label: 'Common Clothes, Costume, Disguise Kit, Entertainers\'s Pack, and 10 GP',
+                items: [
+                    { name: 'Disguise Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+                    { name: "Entertainer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Volstrucker Agent': {
+            A: {
+                label: 'Black or Dark Red Clothes, Book (false identity), Dagger, Disguise Kit, Dungeoneer\'s Pack, and 10 GP',
+                items: [
+                    { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Dagger', category: 'Weapon', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/weapons' },
+                    { name: 'Disguise Kit', category: 'Tools', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/tools' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        'Astral Drifter': {
+            A: {
+                label: 'Backpack, Bedroll, Common Clothes, Dungeoneer\'s Pack, Map, and 5 GP',
+                items: [
+                    { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 5 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Wildspacer: {
+            A: {
+                label: 'Backpack, Bedroll, Common Clothes, Dungeoneer\'s Pack, Rope (50 feet), and 5 GP',
+                items: [
+                    { name: 'Backpack', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: 'Rope, Hempen (50 feet)', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 5 }
+            },
+            B: {
+                label: '50 GP',
+                items: [],
+                currency: { gp: 50 }
+            }
+        },
+        Ashari: {
+            A: {
+                label: 'Bedroll, Common Clothes, Dungeoneer\'s Pack, Holy Symbol, Ki-ichigo, and 10 GP',
+                items: [
+                    { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' },
+                    { name: "Dungeoneer's Pack", category: 'Adventuring Gear', quantity: 1, sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear' }
+                ],
+                currency: { gp: 10 }
             },
             B: {
                 label: '50 GP',
@@ -5367,6 +6963,37 @@ export class NewCharacterStandardPageComponent {
             .split(',')
             .map((value) => value.trim())
             .filter((value) => value.length > 0);
+    }
+
+    openItemModal(item: InventoryEntry): void {
+        this.activeItemDetailModal.set(item);
+    }
+
+    addActiveItemFromModal(quantity: number): void {
+        const activeItem = this.activeItemDetailModal();
+        if (!activeItem) {
+            return;
+        }
+
+        const safeQuantity = Math.max(1, Math.floor(quantity));
+        const equipmentItem: EquipmentItem = {
+            name: activeItem.name,
+            category: activeItem.category,
+            sourceUrl: activeItem.sourceUrl ?? '',
+            weight: activeItem.weight,
+            costGp: activeItem.costGp,
+            notes: activeItem.notes
+        };
+
+        for (let count = 0; count < safeQuantity; count++) {
+            this.addEquipmentItemToInventory(equipmentItem);
+        }
+
+        this.closeItemModal();
+    }
+
+    closeItemModal(): void {
+        this.activeItemDetailModal.set(null);
     }
 
 }

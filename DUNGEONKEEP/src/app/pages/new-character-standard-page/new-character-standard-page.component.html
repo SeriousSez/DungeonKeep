@@ -1649,8 +1649,10 @@
                         @for (entry of inventoryEntries(); track entry.name) {
                         <tr>
                             <td>
-                                <strong>{{ entry.name }}</strong>
-                                <p>{{ entry.category }}</p>
+                                <button type="button" class="item-name-btn" (click)="openItemModal(entry)" [attr.aria-label]="'View details for ' + entry.name">
+                                    <strong>{{ entry.name }}</strong>
+                                    <p>{{ entry.category }}</p>
+                                </button>
                             </td>
                             <td>{{ entry.weight != null ? (entry.weight + ' lb') : '—' }}</td>
                             <td>{{ entry.quantity }}</td>
@@ -1700,10 +1702,10 @@
                 <div class="equipment-item-list">
                     @for (item of filteredEquipmentItems(); track item.name) {
                     <div class="equipment-item-row">
-                        <div>
+                        <button type="button" class="equipment-item-info-btn" (click)="openItemModal({ name: item.name, category: item.category, quantity: 1, sourceUrl: item.sourceUrl, weight: item.weight, costGp: item.costGp, notes: item.notes })">
                             <strong>{{ item.name }}</strong>
                             <p>{{ item.category }}</p>
-                        </div>
+                        </button>
                         <button type="button" class="equipment-pill-action" (click)="addEquipmentItemToInventory(item)">Add</button>
                     </div>
                     }
@@ -1790,5 +1792,9 @@
 
     @if (deityPickerOpen()) {
     <app-deity-picker-modal [deities]="allDeities" [currentFaith]="selectedFaith()" (closed)="closeDeityPicker()" (confirmed)="onDeityConfirmed($event)"></app-deity-picker-modal>
+    }
+
+    @if (activeItemDetailModal(); as item) {
+    <app-item-detail-modal [item]="item" (closed)="closeItemModal()" (addRequested)="addActiveItemFromModal($event)"></app-item-detail-modal>
     }
 </main>
