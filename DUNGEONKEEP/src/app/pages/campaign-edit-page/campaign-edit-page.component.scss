@@ -1,0 +1,74 @@
+:host {
+    display: block;
+}
+
+.page-stack {
+    display: grid;
+    gap: 24px;
+}
+
+.panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 28px;
+    box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(18px);
+    padding: 24px;
+}
+
+.page-intro {
+    padding: 24px;
+}
+
+.page-intro>div {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.74rem;
+    color: var(--text-soft);
+    margin: 0;
+}
+
+.page-intro h1 {
+    margin: 0;
+    font-family: var(--display-font);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.page-intro p {
+    margin: 0;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+.error-box {
+    border-left: 3px solid #d32f2f;
+    background: rgba(211, 47, 47, 0.08);
+    color: #d32f2f;
+}
+
+.error-box p {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+@media (max-width: 720px) {
+    .page-stack {
+        gap: 16px;
+    }
+
+    .panel {
+        padding: 16px;
+        border-radius: 16px;
+    }
+
+    .page-intro {
+        padding: 16px;
+    }
+}

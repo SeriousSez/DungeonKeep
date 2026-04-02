@@ -6,6 +6,8 @@ export const seedCampaigns: Campaign[] = [
         name: 'Crown of Embers',
         setting: 'Ashfall Reach',
         tone: 'Heroic',
+        levelStart: 5,
+        levelEnd: 8,
         levelRange: 'Levels 5-8',
         summary: 'A frontier kingdom is rebuilding after a dragon siege, but the royal line is still haunted by the pact that saved it.',
         hook: 'Recover the ember crown before three rival houses awaken the furnace beneath Redglass Keep.',
@@ -29,7 +31,18 @@ export const seedCampaigns: Campaign[] = [
                 threat: 'Deadly'
             }
         ],
-        openThreads: ['The regent wears a warding sigil from the old dragon cult.', 'A missing scout was seen entering the soot market under illusion magic.'],
+        openThreads: [
+            {
+                id: 'thread-embers-1',
+                text: 'The regent wears a warding sigil from the old dragon cult.',
+                visibility: 'Party'
+            },
+            {
+                id: 'thread-embers-2',
+                text: 'A missing scout was seen entering the soot market under illusion magic.',
+                visibility: 'Party'
+            }
+        ],
         loot: ['Glasssteel buckler', 'Map to the Cinder Vault', 'Three sealed phoenix feathers'],
         npcs: ['Regent Maelis', 'Brother Tovin', 'Rook the soot broker']
     },
@@ -38,6 +51,8 @@ export const seedCampaigns: Campaign[] = [
         name: 'Moonwake Ledger',
         setting: 'The Pearl Coast',
         tone: 'Mystic',
+        levelStart: 3,
+        levelEnd: 5,
         levelRange: 'Levels 3-5',
         summary: 'A magical storm has begun rewriting ship logs, debts, and family histories across the coast.',
         hook: 'Track the cursed ledger before an entire harbor city forgets who rules it.',
@@ -53,7 +68,18 @@ export const seedCampaigns: Campaign[] = [
                 threat: 'High'
             }
         ],
-        openThreads: ['The harbor master appears in two places in the rewritten records.', 'A drowned saint is answering divinations in someone else\'s voice.'],
+        openThreads: [
+            {
+                id: 'thread-moonwake-1',
+                text: 'The harbor master appears in two places in the rewritten records.',
+                visibility: 'Party'
+            },
+            {
+                id: 'thread-moonwake-2',
+                text: 'A drowned saint is answering divinations in someone else\'s voice.',
+                visibility: 'Party'
+            }
+        ],
         loot: ['Whisper-shell compass', 'Stormglass vial'],
         npcs: ['Captain Nereza', 'Ledger-Keeper Sol', 'The Lantern Magistrate']
     },
@@ -62,6 +88,8 @@ export const seedCampaigns: Campaign[] = [
         name: 'The Wild Below',
         setting: 'Rootmaze Hollow',
         tone: 'Chaotic',
+        levelStart: 1,
+        levelEnd: 3,
         levelRange: 'Levels 1-3',
         summary: 'Ancient roots have opened a laughing underworld beneath the village orchards.',
         hook: 'Map the rootmaze before the midsummer fair turns into a fey migration.',
@@ -77,7 +105,13 @@ export const seedCampaigns: Campaign[] = [
                 threat: 'Low'
             }
         ],
-        openThreads: ['Every mushroom ring now points toward the mayor\'s cellar.'],
+        openThreads: [
+            {
+                id: 'thread-wild-1',
+                text: 'Every mushroom ring now points toward the mayor\'s cellar.',
+                visibility: 'Party'
+            }
+        ],
         loot: ['Honeyed iron key'],
         npcs: ['Mayor Fen', 'Pip the pie judge', 'The Moss Matron']
     }

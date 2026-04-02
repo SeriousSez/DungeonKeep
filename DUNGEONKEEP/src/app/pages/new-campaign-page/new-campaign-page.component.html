@@ -37,14 +37,24 @@
                 <app-dropdown id="ai-campaign-tone" ariaLabel="AI campaign tone" [value]="aiTone()" [options]="toneOptions" [searchable]="false" [placeholder]="'Select tone'" (changed)="onAiToneChanged($event)" />
             </label>
 
-            <label>
+            <label class="setting-hint-field">
                 <span>Setting hint</span>
-                <input type="text" [ngModel]="aiSettingHint()" (ngModelChange)="updateAiSettingHint($event)" placeholder="Forgotten Realms, Eberron, or your homebrew setting" maxlength="120" />
+                <input type="text" [ngModel]="aiSettingHint()" (ngModelChange)="updateAiSettingHint($event)" placeholder="Forgotten Realms, Eberron, or your homebrew setting" maxlength="500" />
+            </label>
+
+            <label>
+                <span>Starting level</span>
+                <input type="number" [ngModel]="aiLevelStart()" (ngModelChange)="onAiLevelStartChanged($event)" min="1" max="20" />
+            </label>
+
+            <label>
+                <span>Ending level</span>
+                <input type="number" [ngModel]="aiLevelEnd()" (ngModelChange)="onAiLevelEndChanged($event)" [min]="aiLevelStart()" max="20" />
             </label>
 
             <label class="ai-direction-field">
                 <span>Additional direction</span>
-                <textarea [ngModel]="aiAdditionalDirection()" (ngModelChange)="updateAiAdditionalDirection($event)" rows="3" maxlength="500" placeholder="Example: focus on political intrigue, grim consequences, and urban factions."></textarea>
+                <textarea [ngModel]="aiAdditionalDirection()" (ngModelChange)="updateAiAdditionalDirection($event)" rows="3" maxlength="2000" placeholder="Example: focus on political intrigue, grim consequences, and urban factions."></textarea>
             </label>
         </div>
 

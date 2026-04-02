@@ -15,12 +15,17 @@ a:focus-visible {
 .equipment-danger-action,
 .method-action,
 .next-actions>button:first-child {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-height: 44px;
     padding: 0 16px;
     border-radius: 14px;
     border: 1px solid transparent;
     background: var(--gradient-primary);
     color: var(--surface-raised-solid);
+    text-decoration: none;
+    white-space: nowrap;
     cursor: pointer;
     font: inherit;
     font-weight: 700;
@@ -45,12 +50,17 @@ a:focus-visible {
 .equipment-link-action,
 .equipment-pill-action,
 .next-actions>button:last-child {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-height: 42px;
     padding: 0 14px;
     border-radius: 12px;
     border: 1px solid var(--color-border-strong);
     background: color-mix(in srgb, var(--color-surface-solid) 70%, transparent);
     color: var(--color-text);
+    text-decoration: none;
+    white-space: nowrap;
     cursor: pointer;
     font: inherit;
     font-weight: 600;

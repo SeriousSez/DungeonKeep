@@ -4,6 +4,10 @@
         <i class="fa-duotone fa-thin fa-chevron-down" aria-hidden="true"></i>
     </button>
 
+    @if (selectedDescription()) {
+    <p class="app-dropdown-selected-description">{{ selectedDescription() }}</p>
+    }
+
     @if (isOpen()) {
     <div class="app-dropdown-panel" [style.max-height.px]="panelMaxHeight()" role="listbox">
         @if (searchable()) {
@@ -19,7 +23,12 @@
             }
             @for (option of grouped.options; track option.value) {
             <button type="button" role="option" class="app-dropdown-option" [class.active]="isOptionSelected(option)" [disabled]="option.disabled || false" (click)="onOptionPicked(option.value)">
-                <span>{{ option.label }}</span>
+                <div>
+                    <span>{{ option.label }}</span>
+                    @if (option.description) {
+                    <p class="app-dropdown-description">{{ option.description }}</p>
+                    }
+                </div>
                 @if (isOptionSelected(option)) {
                 <i class="fa-duotone fa-thin fa-check" aria-hidden="true"></i>
                 }

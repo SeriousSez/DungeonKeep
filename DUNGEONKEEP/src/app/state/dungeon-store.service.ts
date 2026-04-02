@@ -1,7 +1,7 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 
 import { raceMap } from '../data/races';
-import { AbilityScores, Campaign, CampaignDraft, Character, CharacterDraft, CharacterStatus, SkillProficiencies } from '../models/dungeon.models';
+import { AbilityScores, Campaign, CampaignDraft, CampaignThreadVisibility, Character, CharacterDraft, CharacterStatus, SkillProficiencies } from '../models/dungeon.models';
 import { ApiCampaignDto, ApiCharacterDto, DungeonApiService } from './dungeon-api.service';
 import { SessionService } from './session.service';
 
@@ -132,6 +132,50 @@ export class DungeonStoreService {
         }
     }
 
+    async deleteCampaign(campaignId: string): Promise<void> {
+        try {
+            await this.api.deleteCampaign(campaignId);
+            this.campaigns.update((campaigns) => campaigns.filter((c) => c.id !== campaignId));
+
+            // If the deleted campaign was selected, select the first remaining campaign
+            if (this.selectedCampaignId() === campaignId) {
+                const remaining = this.campaigns();
+                this.selectedCampaignId.set(remaining[0]?.id ?? '');
+            }
+        } catch {
+            // Optionally handle error (e.g., show notice)
+        }
+    }
+
+    async updateCampaign(campaignId: string, draft: CampaignDraft): Promise<Campaign | null> {
+        const campaignData = {
+            name: draft.name.trim(),
+            setting: draft.setting.trim(),
+            tone: (draft.tone ?? 'Heroic') as CampaignDraft['tone'],
+            levelStart: Math.max(1, Math.min(20, Math.floor(draft.levelStart))),
+            levelEnd: Math.max(
+                Math.floor(draft.levelStart),
+                Math.min(20, Math.floor(draft.levelEnd))
+            ),
+            hook: draft.hook.trim(),
+            nextSession: draft.nextSession.trim(),
+            summary: draft.summary.trim()
+        };
+
+        try {
+            const updated = await this.api.updateCampaign(campaignId, campaignData);
+            const campaign = this.mapCampaignFromApi(updated, updated.members.map(m => m.userId).filter(Boolean) as string[]);
+
+            this.campaigns.update((campaigns) =>
+                campaigns.map((c) => (c.id === campaignId ? campaign : c))
+            );
+
+            return campaign;
+        } catch {
+            return null;
+        }
+    }
+
     async setCharacterCampaign(characterId: string, campaignId: string | null): Promise<boolean> {
         const current = this.characters().find((character) => character.id === characterId);
         if (!current || current.canEdit === false) {
@@ -177,8 +221,16 @@ export class DungeonStoreService {
         }
     }
 
-    archiveThread(thread: string): void {
-        void this.archiveThreadFromApi(thread);
+    addThread(text: string, visibility: CampaignThreadVisibility): void {
+        void this.addThreadFromApi(text, visibility);
+    }
+
+    updateThread(threadId: string, text: string, visibility: CampaignThreadVisibility): void {
+        void this.updateThreadFromApi(threadId, text, visibility);
+    }
+
+    archiveThread(threadId: string): void {
+        void this.archiveThreadFromApi(threadId);
     }
 
     promoteCharacter(characterId: string): void {
@@ -224,6 +276,8 @@ export class DungeonStoreService {
                 name: draft.name,
                 setting: draft.setting,
                 tone: draft.tone,
+                levelStart: Math.min(Math.max(Math.trunc(draft.levelStart), 1), 20),
+                levelEnd: Math.min(Math.max(Math.trunc(draft.levelEnd), Math.min(Math.max(Math.trunc(draft.levelStart), 1), 20)), 20),
                 hook: draft.hook,
                 nextSession: draft.nextSession,
                 summary: draft.summary || 'A newly formed campaign waits for its first legend.'
@@ -339,18 +393,27 @@ export class DungeonStoreService {
     }
 
     private mapCampaignFromApi(campaign: ApiCampaignDto, partyCharacterIds: string[]): Campaign {
+        const levelStart = Math.min(Math.max(Math.trunc(campaign.levelStart ?? 1), 1), 20);
+        const levelEnd = Math.min(Math.max(Math.trunc(campaign.levelEnd ?? 4), levelStart), 20);
+
         return {
             id: campaign.id,
             name: campaign.name,
             setting: campaign.setting,
             tone: campaign.tone ?? 'Heroic',
-            levelRange: 'Levels 1-4',
+            levelStart,
+            levelEnd,
+            levelRange: `Levels ${levelStart}-${levelEnd}`,
             summary: campaign.summary,
             hook: campaign.hook || 'A new adventure awaits.',
             nextSession: campaign.nextSession || 'TBD',
             partyCharacterIds,
             sessions: [],
-            openThreads: campaign.openThreads ?? [],
+            openThreads: (campaign.openThreads ?? []).map((thread) => ({
+                id: thread.id,
+                text: thread.text,
+                visibility: thread.visibility
+            })),
             loot: ['Starter rumor map'],
             npcs: ['Unrevealed patron'],
             currentUserRole: campaign.currentUserRole,
@@ -576,15 +639,63 @@ export class DungeonStoreService {
         return baseAC[className] || (10 + dexMod);
     }
 
-    private async archiveThreadFromApi(thread: string): Promise<void> {
+    private async addThreadFromApi(text: string, visibility: CampaignThreadVisibility): Promise<void> {
         const selectedCampaign = this.selectedCampaign();
 
-        if (!selectedCampaign || selectedCampaign.currentUserRole !== 'Owner') {
+        if (!selectedCampaign || selectedCampaign.currentUserRole !== 'Owner' || !text.trim()) {
             return;
         }
 
         try {
-            const updated = await this.api.archiveCampaignThread(selectedCampaign.id, thread);
+            const updated = await this.api.createCampaignThread(selectedCampaign.id, {
+                text: text.trim(),
+                visibility
+            });
+            this.campaigns.update((campaigns) =>
+                campaigns.map((campaign) =>
+                    campaign.id === selectedCampaign.id
+                        ? this.mapCampaignFromApi(updated, campaign.partyCharacterIds)
+                        : campaign
+                )
+            );
+        } catch {
+            return;
+        }
+    }
+
+    private async updateThreadFromApi(threadId: string, text: string, visibility: CampaignThreadVisibility): Promise<void> {
+        const selectedCampaign = this.selectedCampaign();
+
+        if (!selectedCampaign || selectedCampaign.currentUserRole !== 'Owner' || !threadId || !text.trim()) {
+            return;
+        }
+
+        try {
+            const updated = await this.api.updateCampaignThread(selectedCampaign.id, threadId, {
+                text: text.trim(),
+                visibility
+            });
+            this.campaigns.update((campaigns) =>
+                campaigns.map((campaign) =>
+                    campaign.id === selectedCampaign.id
+                        ? this.mapCampaignFromApi(updated, campaign.partyCharacterIds)
+                        : campaign
+                )
+            );
+        } catch {
+            return;
+        }
+    }
+
+    private async archiveThreadFromApi(threadId: string): Promise<void> {
+        const selectedCampaign = this.selectedCampaign();
+
+        if (!selectedCampaign || selectedCampaign.currentUserRole !== 'Owner' || !threadId) {
+            return;
+        }
+
+        try {
+            const updated = await this.api.archiveCampaignThread(selectedCampaign.id, threadId);
             this.campaigns.update((campaigns) =>
                 campaigns.map((campaign) =>
                     campaign.id === selectedCampaign.id

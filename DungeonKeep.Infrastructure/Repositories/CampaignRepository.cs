@@ -38,7 +38,92 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         return campaign;
     }
 
-    public async Task<Campaign?> ArchiveThreadAsync(Guid campaignId, string thread, CancellationToken cancellationToken = default)
+    public async Task<Campaign?> UpdateAsync(Guid campaignId, string name, string setting, string tone, int levelStart, int levelEnd, string hook, string nextSession, string summary, CancellationToken cancellationToken = default)
+    {
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        campaign.Name = name;
+        campaign.Setting = setting;
+        campaign.Tone = tone;
+        campaign.LevelStart = levelStart;
+        campaign.LevelEnd = levelEnd;
+        campaign.Hook = hook;
+        campaign.NextSession = nextSession;
+        campaign.Summary = summary;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return await GetByIdAsync(campaignId, cancellationToken);
+    }
+
+    public async Task<Campaign?> AddThreadAsync(Guid campaignId, Guid threadId, string text, string visibility, CancellationToken cancellationToken = default)
+    {
+        var campaign = await dbContext.Campaigns
+            .Include(c => c.Characters)
+            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var threads = ParseThreads(campaign.OpenThreadsJson);
+        threads.Add(new PersistedCampaignThread(
+            threadId == Guid.Empty ? Guid.NewGuid() : threadId,
+            text.Trim(),
+            NormalizeVisibility(visibility)));
+
+        campaign.OpenThreadsJson = JsonSerializer.Serialize(threads);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return campaign;
+    }
+
+    public async Task<Campaign?> UpdateThreadAsync(Guid campaignId, Guid threadId, string text, string visibility, CancellationToken cancellationToken = default)
+    {
+        var campaign = await dbContext.Campaigns
+            .Include(c => c.Characters)
+            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var threads = ParseThreads(campaign.OpenThreadsJson);
+        var updated = false;
+
+        for (var i = 0; i < threads.Count; i++)
+        {
+            var current = threads[i];
+            if (current.Id != threadId)
+            {
+                continue;
+            }
+
+            threads[i] = current with
+            {
+                Text = text.Trim(),
+                Visibility = NormalizeVisibility(visibility)
+            };
+
+            updated = true;
+            break;
+        }
+
+        if (!updated)
+        {
+            return null;
+        }
+
+        campaign.OpenThreadsJson = JsonSerializer.Serialize(threads);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return campaign;
+    }
+
+    public async Task<Campaign?> ArchiveThreadAsync(Guid campaignId, Guid threadId, CancellationToken cancellationToken = default)
     {
         var campaign = await dbContext.Campaigns
             .Include(c => c.Characters)
@@ -51,8 +136,13 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
         var threads = ParseThreads(campaign.OpenThreadsJson);
         var updatedThreads = threads
-            .Where(item => !string.Equals(item, thread, StringComparison.OrdinalIgnoreCase))
+            .Where(item => item.Id != threadId)
             .ToList();
+
+        if (updatedThreads.Count == threads.Count)
+        {
+            return null;
+        }
 
         campaign.OpenThreadsJson = JsonSerializer.Serialize(updatedThreads);
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -105,7 +195,17 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             .AnyAsync(membership => membership.CampaignId == campaignId && membership.UserId == userId && membership.Status == "Active", cancellationToken);
     }
 
-    private static List<string> ParseThreads(string json)
+    public async Task DeleteAsync(Guid campaignId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        if (campaign is not null)
+        {
+            dbContext.Campaigns.Remove(campaign);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private static List<PersistedCampaignThread> ParseThreads(string json)
     {
         if (string.IsNullOrWhiteSpace(json))
         {
@@ -114,11 +214,39 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
         try
         {
-            return JsonSerializer.Deserialize<List<string>>(json) ?? [];
+            var threads = JsonSerializer.Deserialize<List<PersistedCampaignThread>>(json);
+            if (threads is { Count: > 0 })
+            {
+                return threads
+                    .Where(thread => !string.IsNullOrWhiteSpace(thread.Text))
+                    .Select(thread => new PersistedCampaignThread(
+                        thread.Id == Guid.Empty ? Guid.NewGuid() : thread.Id,
+                        thread.Text.Trim(),
+                        NormalizeVisibility(thread.Visibility)))
+                    .ToList();
+            }
+
+            var legacyThreads = JsonSerializer.Deserialize<List<string>>(json) ?? [];
+            return legacyThreads
+                .Where(thread => !string.IsNullOrWhiteSpace(thread))
+                .Select(thread => new PersistedCampaignThread(Guid.NewGuid(), thread.Trim(), "Party"))
+                .ToList();
         }
         catch
         {
             return [];
         }
     }
+
+    private static string NormalizeVisibility(string? visibility)
+    {
+        if (string.Equals(visibility, "GMOnly", StringComparison.OrdinalIgnoreCase))
+        {
+            return "GMOnly";
+        }
+
+        return "Party";
+    }
+
+    private sealed record PersistedCampaignThread(Guid Id, string Text, string Visibility);
 }

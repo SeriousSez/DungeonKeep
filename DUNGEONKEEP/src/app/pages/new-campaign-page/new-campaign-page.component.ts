@@ -29,7 +29,9 @@ export class NewCampaignPageComponent {
     readonly inviteFeedback = signal('');
     readonly attachingCharacterIds = signal<string[]>([]);
     readonly creationMode = signal<CampaignCreationMode>('standard');
-    readonly aiTone = signal<'Heroic' | 'Grim' | 'Mystic' | 'Chaotic'>('Heroic');
+    readonly aiTone = signal<CampaignDraft['tone']>('Heroic');
+    readonly aiLevelStart = signal(1);
+    readonly aiLevelEnd = signal(4);
     readonly aiSettingHint = signal('');
     readonly aiAdditionalDirection = signal('');
     readonly aiGeneratePending = signal(false);
@@ -42,10 +44,25 @@ export class NewCampaignPageComponent {
     private readonly unassignedCampaignId = '00000000-0000-0000-0000-000000000000';
 
     readonly toneOptions: ReadonlyArray<DropdownOption> = [
-        { value: 'Heroic', label: 'Heroic' },
-        { value: 'Grim', label: 'Grim' },
-        { value: 'Mystic', label: 'Mystic' },
-        { value: 'Chaotic', label: 'Chaotic' }
+        { value: 'Heroic', label: 'Heroic', description: 'Epic quests and triumphant victories against darkness.' },
+        { value: 'Grim', label: 'Grim', description: 'Serious stakes where every cost is felt deeply.' },
+        { value: 'Mystic', label: 'Mystic', description: 'Secrets, magic, and cosmic mysteries unfold.' },
+        { value: 'Chaotic', label: 'Chaotic', description: 'Unpredictable twists and delightful mayhem.' },
+        { value: 'Grimdark', label: 'Grimdark', description: 'A harsh world where heroes are morally gray.' },
+        { value: 'Gothic', label: 'Gothic', description: 'Oppressive atmosphere with ancient curses and decay.' },
+        { value: 'Horror', label: 'Horror', description: 'Creeping dread and unspeakable terrors lurk.' },
+        { value: 'Noblebright', label: 'Noblebright', description: 'Hopeful heroism where compassion and courage prevail.' },
+        { value: 'Sword-and-Sorcery', label: 'Sword-and-Sorcery', description: 'Gritty adventure, dangerous magic, and personal stakes.' },
+        { value: 'Political Intrigue', label: 'Political Intrigue', description: 'Schemes, alliances, and betrayal in halls of power.' },
+        { value: 'Mythic', label: 'Mythic', description: 'Legendary destiny arcs and world-shaping deeds.' },
+        { value: 'Survival', label: 'Survival', description: 'Scarcity, harsh travel, and endurance against the wild.' },
+        { value: 'Pulp Adventure', label: 'Pulp Adventure', description: 'Fast-paced action, cliffhangers, and dramatic reversals.' },
+        { value: 'Dark Fantasy', label: 'Dark Fantasy', description: 'Bleak wonder, dangerous magic, and costly victories.' },
+        { value: 'Whimsical', label: 'Whimsical', description: 'Playful oddities, charm, and fantastical surprises.' },
+        { value: 'Noir', label: 'Noir', description: 'Urban secrets, moral ambiguity, and hard consequences.' },
+        { value: 'Epic War', label: 'Epic War', description: 'Front lines, command choices, and large-scale conflict.' },
+        { value: 'Cosmic', label: 'Cosmic', description: 'Reality-bending mysteries and incomprehensible forces.' },
+        { value: 'Heroic Tragedy', label: 'Heroic Tragedy', description: 'Noble purpose with bittersweet sacrifices and loss.' }
     ];
 
     readonly createdCampaign = computed<Campaign | null>(() => {
@@ -79,7 +96,24 @@ export class NewCampaignPageComponent {
     }
 
     onAiToneChanged(value: string | number): void {
-        this.aiTone.set(String(value) as 'Heroic' | 'Grim' | 'Mystic' | 'Chaotic');
+        this.aiTone.set(String(value) as CampaignDraft['tone']);
+    }
+
+    onAiLevelStartChanged(value: string): void {
+        const parsed = Math.trunc(Number(value));
+        const levelStart = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), 20) : 1;
+        const levelEnd = Math.max(levelStart, this.aiLevelEnd());
+
+        this.aiLevelStart.set(levelStart);
+        this.aiLevelEnd.set(Math.min(levelEnd, 20));
+    }
+
+    onAiLevelEndChanged(value: string): void {
+        const parsed = Math.trunc(Number(value));
+        const levelStart = this.aiLevelStart();
+        const levelEnd = Number.isFinite(parsed) ? Math.min(Math.max(parsed, levelStart), 20) : levelStart;
+
+        this.aiLevelEnd.set(levelEnd);
     }
 
     async generateAiCampaignDraft(): Promise<void> {
@@ -96,13 +130,17 @@ export class NewCampaignPageComponent {
             const generated = await this.api.generateCampaignDraft({
                 tone: this.aiTone(),
                 settingHint: this.aiSettingHint().trim(),
-                additionalDirection: this.aiAdditionalDirection().trim()
+                additionalDirection: this.aiAdditionalDirection().trim(),
+                levelStart: this.aiLevelStart(),
+                levelEnd: this.aiLevelEnd()
             });
 
             this.generatedDraft.set({
                 name: generated.name,
                 setting: generated.setting,
                 tone: generated.tone,
+                levelStart: generated.levelStart,
+                levelEnd: generated.levelEnd,
                 hook: generated.hook,
                 nextSession: generated.nextSession,
                 summary: generated.summary
@@ -134,6 +172,8 @@ export class NewCampaignPageComponent {
             name: draft.name,
             setting: draft.setting,
             tone: draft.tone,
+            levelStart: draft.levelStart,
+            levelEnd: draft.levelEnd,
             hook: draft.hook,
             nextSession: draft.nextSession,
             summary: draft.summary

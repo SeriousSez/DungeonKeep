@@ -38,21 +38,35 @@
         </section>
 
         <section class="detail-card">
-            <h3>Open threads</h3>
+            <div class="thread-heading-row">
+                <h3>Open threads</h3>
+                @if (campaign.currentUserRole === 'Owner') {
+                <button type="button" class="ghost-button" (click)="openAddThreadModal()">Add Thread</button>
+                }
+            </div>
+
             <div class="thread-list">
-                @for (thread of campaign.openThreads; track thread) {
+                @for (thread of visibleThreads(campaign); track thread.id) {
                 <div class="thread-row">
-                    <p>{{ thread }}</p>
+                    <div class="thread-body">
+                        <p>{{ thread.text }}</p>
+                        <span class="pill" [class.pending-pill]="thread.visibility === 'GMOnly'">{{ thread.visibility === 'GMOnly' ? 'GM Only' : 'Party' }}</span>
+                    </div>
+
                     @if (campaign.currentUserRole === 'Owner') {
-                    <button type="button" class="ghost-button" (click)="archiveThread(thread)">Archive</button>
+                    <div class="thread-actions">
+                        <button type="button" class="ghost-button" (click)="openEditThreadModal(thread.id, thread.text, thread.visibility)">Edit</button>
+                        <button type="button" class="ghost-button" (click)="archiveThread(thread.id)">Archive</button>
+                    </div>
                     }
                 </div>
                 }
 
-                @if (!campaign.openThreads.length) {
+                @if (!visibleThreads(campaign).length) {
                 <p class="empty-copy">All open threads are resolved. Add a new complication before the next session.</p>
                 }
             </div>
+
         </section>
 
         <section class="detail-card compact-card">
@@ -107,3 +121,31 @@
     </div>
     }
 </article>
+
+@if (addThreadModalOpen()) {
+<div class="add-thread-modal-backdrop" (click)="closeAddThreadModal()">
+    <section class="panel add-thread-modal" role="dialog" aria-modal="true" aria-label="Add thread" (click)="$event.stopPropagation()">
+        <header class="add-thread-modal-header">
+            <h3>{{ threadModalMode() === 'edit' ? 'Edit Thread' : 'Add Thread' }}</h3>
+            <button type="button" class="ghost-button" (click)="closeAddThreadModal()">Cancel</button>
+        </header>
+
+        <div class="add-thread-modal-body">
+            <label class="add-thread-field">
+                <span>Thread</span>
+                <textarea [value]="newThreadText()" (input)="setNewThreadText($any($event.target).value)" rows="4" placeholder="Describe the unresolved thread..."></textarea>
+            </label>
+
+            <label class="add-thread-field">
+                <span>Visibility</span>
+                <app-dropdown ariaLabel="Thread visibility" [value]="newThreadVisibility()" [options]="threadVisibilityOptions" [optionDensity]="'dense'" [searchable]="false" [placeholder]="'Select visibility'" (changed)="setNewThreadVisibility($event)"></app-dropdown>
+            </label>
+        </div>
+
+        <footer class="add-thread-modal-actions">
+            <button type="button" class="ghost-button" (click)="closeAddThreadModal()">Cancel</button>
+            <button type="button" class="ghost-button" [disabled]="!newThreadText().trim()" (click)="submitThreadModal()">{{ threadModalMode() === 'edit' ? 'Save' : 'Add' }}</button>
+        </footer>
+    </section>
+</div>
+}

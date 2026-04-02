@@ -123,6 +123,12 @@
     font-size: 0.95rem;
 }
 
+.setting-hint-field::after {
+    content: '';
+    display: block;
+    margin-top: 6px;
+}
+
 .ai-form-grid input,
 .ai-form-grid textarea {
     width: 100%;
@@ -314,6 +320,7 @@
 }
 
 @media (max-width: 900px) {
+
     .mode-options,
     .ai-form-grid,
     .kickoff-grid {

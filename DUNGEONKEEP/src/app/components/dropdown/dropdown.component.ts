@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 export interface DropdownOption {
     value: string | number;
     label: string;
+    description?: string;
     disabled?: boolean;
     group?: string;
 }
@@ -14,7 +15,8 @@ export interface DropdownOption {
     imports: [CommonModule],
     host: {
         '(document:click)': 'onDocumentClick($event)',
-        '[class.app-dropdown-host--open]': 'isOpen()'
+        '[class.app-dropdown-host--open]': 'isOpen()',
+        '[class.app-dropdown-host--dense-options]': "optionDensity() === 'dense'"
     },
     templateUrl: './dropdown.component.html',
     styleUrl: './dropdown.component.scss',
@@ -32,6 +34,7 @@ export class DropdownComponent {
     readonly placeholder = input<string>('');
     readonly minWidth = input<number | null>(null);
     readonly size = input<'wide' | 'compact' | 'narrow'>('compact');
+    readonly optionDensity = input<'regular' | 'dense'>('regular');
     readonly disabled = input<boolean>(false);
     readonly searchable = input<boolean>(false);
     readonly searchPlaceholder = input<string>('Search options...');
@@ -55,6 +58,12 @@ export class DropdownComponent {
     readonly triggerLabel = computed(() => {
         const selected = this.options().find((option) => String(option.value) === String(this.value()));
         return selected?.label ?? this.placeholder() ?? '';
+    });
+
+    readonly selectedDescription = computed(() => {
+        const selected = this.options().find((option) => String(option.value) === String(this.value()));
+        const description = selected?.description?.trim() ?? '';
+        return description;
     });
 
     readonly showGroupHeaders = computed(() => {

@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, input, output } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { Campaign } from '../../../models/dungeon.models';
 
 @Component({
     selector: 'app-campaign-list',
-    imports: [CommonModule],
+    imports: [CommonModule, RouterLink],
     templateUrl: './campaign-list.component.html',
     styleUrl: './campaign-list.component.scss'
 })

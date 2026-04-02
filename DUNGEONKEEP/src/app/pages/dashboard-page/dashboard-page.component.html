@@ -2,7 +2,8 @@
     <app-hero-overview [title]="store.title()" [campaignCount]="store.campaignCount()" [characterCount]="store.characterCount()" [sessionCount]="store.sessionCount()" [readyCharacterCount]="store.readyCharacterCount()" />
 
     <div class="section-spacing">
-        <app-campaign-board [campaigns]="store.campaigns()" [selectedCampaignId]="store.selectedCampaignId()" [selectedCampaign]="store.selectedCampaign()" [openThreadCount]="store.openThreadCount()" (campaignSelected)="store.selectCampaign($event)" (threadArchived)="store.archiveThread($event)" />
+        <app-campaign-board [campaigns]="store.campaigns()" [selectedCampaignId]="store.selectedCampaignId()" [selectedCampaign]="store.selectedCampaign()" [openThreadCount]="store.openThreadCount()" (campaignSelected)="store.selectCampaign($event)"
+            (threadAdded)="store.addThread($event.text, $event.visibility)" (threadUpdated)="store.updateThread($event.threadId, $event.text, $event.visibility)" (threadArchived)="store.archiveThread($event)" />
     </div>
 
     <section class="bottom-grid">

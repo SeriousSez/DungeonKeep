@@ -3,7 +3,7 @@ import { Component, input, output } from '@angular/core';
 import { CampaignDetailComponent } from './campaign-detail/campaign-detail.component';
 import { CampaignListComponent } from './campaign-list/campaign-list.component';
 
-import { Campaign } from '../../models/dungeon.models';
+import { Campaign, CampaignThreadVisibility } from '../../models/dungeon.models';
 
 @Component({
     selector: 'app-campaign-board',
@@ -18,11 +18,21 @@ export class CampaignBoardComponent {
     readonly openThreadCount = input.required<number>();
 
     readonly campaignSelected = output<string>();
+    readonly threadAdded = output<{ text: string; visibility: CampaignThreadVisibility }>();
+    readonly threadUpdated = output<{ threadId: string; text: string; visibility: CampaignThreadVisibility }>();
     readonly threadArchived = output<string>();
     readonly memberInvited = output<string>();
 
     onCampaignSelected(campaignId: string): void {
         this.campaignSelected.emit(campaignId);
+    }
+
+    onThreadAdded(payload: { text: string; visibility: CampaignThreadVisibility }): void {
+        this.threadAdded.emit(payload);
+    }
+
+    onThreadUpdated(payload: { threadId: string; text: string; visibility: CampaignThreadVisibility }): void {
+        this.threadUpdated.emit(payload);
     }
 
     onThreadArchived(thread: string): void {

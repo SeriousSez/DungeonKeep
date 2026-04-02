@@ -19,6 +19,6 @@
     <section class="workspace-grid">
         <app-campaign-list [campaigns]="store.campaigns()" [selectedCampaignId]="store.selectedCampaignId()" [openThreadCount]="store.openThreadCount()" (campaignSelected)="store.selectCampaign($event)" />
 
-        <app-campaign-detail [selectedCampaign]="store.selectedCampaign()" (threadArchived)="store.archiveThread($event)" />
+        <app-campaign-detail [selectedCampaign]="store.selectedCampaign()" (threadAdded)="store.addThread($event.text, $event.visibility)" (threadUpdated)="store.updateThread($event.threadId, $event.text, $event.visibility)" (threadArchived)="store.archiveThread($event)" />
     </section>
 </main>

@@ -3,19 +3,48 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 
+type ApiCampaignTone =
+    | 'Heroic'
+    | 'Grim'
+    | 'Mystic'
+    | 'Chaotic'
+    | 'Grimdark'
+    | 'Gothic'
+    | 'Horror'
+    | 'Noblebright'
+    | 'Sword-and-Sorcery'
+    | 'Political Intrigue'
+    | 'Mythic'
+    | 'Survival'
+    | 'Pulp Adventure'
+    | 'Dark Fantasy'
+    | 'Whimsical'
+    | 'Noir'
+    | 'Epic War'
+    | 'Cosmic'
+    | 'Heroic Tragedy';
+
 export interface ApiCampaignDto {
     id: string;
     name: string;
     setting: string;
-    tone: 'Heroic' | 'Grim' | 'Mystic' | 'Chaotic';
+    tone: ApiCampaignTone;
+    levelStart: number;
+    levelEnd: number;
     hook: string;
     nextSession: string;
     summary: string;
     createdAtUtc: string;
     characterCount: number;
-    openThreads: string[];
+    openThreads: ApiCampaignThreadDto[];
     currentUserRole: 'Owner' | 'Member';
     members: ApiCampaignMemberDto[];
+}
+
+export interface ApiCampaignThreadDto {
+    id: string;
+    text: string;
+    visibility: 'Party' | 'GMOnly';
 }
 
 export interface ApiCampaignMemberDto {
@@ -156,15 +185,19 @@ export interface ApiDndChatResponse {
 }
 
 export interface ApiGenerateCampaignDraftRequest {
-    tone: 'Heroic' | 'Grim' | 'Mystic' | 'Chaotic';
+    tone: ApiCampaignTone;
     settingHint: string;
     additionalDirection: string;
+    levelStart: number;
+    levelEnd: number;
 }
 
 export interface ApiGenerateCampaignDraftResponse {
     name: string;
     setting: string;
-    tone: 'Heroic' | 'Grim' | 'Mystic' | 'Chaotic';
+    tone: ApiCampaignTone;
+    levelStart: number;
+    levelEnd: number;
     hook: string;
     nextSession: string;
     summary: string;
@@ -193,7 +226,7 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.get<ApiCampaignDto[]>(`${this.baseUrl}/campaigns`));
     }
 
-    async createCampaign(payload: { name: string; setting: string; tone: 'Heroic' | 'Grim' | 'Mystic' | 'Chaotic'; hook: string; nextSession: string; summary: string }): Promise<ApiCampaignDto> {
+    async createCampaign(payload: { name: string; setting: string; tone: ApiCampaignTone; levelStart: number; levelEnd: number; hook: string; nextSession: string; summary: string }): Promise<ApiCampaignDto> {
         return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns`, payload));
     }
 
@@ -201,8 +234,33 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.post<ApiGenerateCampaignDraftResponse>(`${this.baseUrl}/campaigns/generate-draft`, payload));
     }
 
-    async archiveCampaignThread(campaignId: string, thread: string): Promise<ApiCampaignDto> {
-        return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/threads/archive`, { thread }));
+    async deleteCampaign(campaignId: string): Promise<void> {
+        try {
+            await firstValueFrom(this.http.delete(`${this.baseUrl}/campaigns/${campaignId}`));
+        } catch (error: any) {
+            // Some hosts or middleware block DELETE and return 405; retry via a delete action endpoint.
+            if (error.status === 405) {
+                await firstValueFrom(this.http.post(`${this.baseUrl}/campaigns/${campaignId}/delete`, {}));
+            } else {
+                throw error;
+            }
+        }
+    }
+
+    async updateCampaign(campaignId: string, payload: { name: string; setting: string; tone: ApiCampaignTone; levelStart: number; levelEnd: number; hook: string; nextSession: string; summary: string }): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}`, payload));
+    }
+
+    async createCampaignThread(campaignId: string, payload: { text: string; visibility: 'Party' | 'GMOnly' }): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/threads`, payload));
+    }
+
+    async updateCampaignThread(campaignId: string, threadId: string, payload: { text: string; visibility: 'Party' | 'GMOnly' }): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/threads/${threadId}`, payload));
+    }
+
+    async archiveCampaignThread(campaignId: string, threadId: string): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/threads/${threadId}/archive`, {}));
     }
 
     async inviteCampaignMember(campaignId: string, email: string): Promise<ApiCampaignDto> {
@@ -298,3 +356,4 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.get<ApiAuthUserDto>(`${this.baseUrl}/auth/session`));
     }
 }
+

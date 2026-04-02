@@ -1,9 +1,29 @@
-export type CampaignTone = 'Heroic' | 'Grim' | 'Mystic' | 'Chaotic';
+export type CampaignTone =
+    | 'Heroic'
+    | 'Grim'
+    | 'Mystic'
+    | 'Chaotic'
+    | 'Grimdark'
+    | 'Gothic'
+    | 'Horror'
+    | 'Noblebright'
+    | 'Sword-and-Sorcery'
+    | 'Political Intrigue'
+    | 'Mythic'
+    | 'Survival'
+    | 'Pulp Adventure'
+    | 'Dark Fantasy'
+    | 'Whimsical'
+    | 'Noir'
+    | 'Epic War'
+    | 'Cosmic'
+    | 'Heroic Tragedy';
 export type ThreatLevel = 'Low' | 'Moderate' | 'High' | 'Deadly';
 export type PartyRole = 'Tank' | 'Support' | 'Scout' | 'Striker' | 'Caster';
 export type CharacterStatus = 'Ready' | 'Resting' | 'Recovering';
 export type CampaignMemberRole = 'Owner' | 'Member';
 export type CampaignMemberStatus = 'Active' | 'Pending';
+export type CampaignThreadVisibility = 'Party' | 'GMOnly';
 
 export interface SessionPrep {
     id: string;
@@ -22,18 +42,26 @@ export interface CampaignMember {
     status: CampaignMemberStatus;
 }
 
+export interface CampaignThread {
+    id: string;
+    text: string;
+    visibility: CampaignThreadVisibility;
+}
+
 export interface Campaign {
     id: string;
     name: string;
     setting: string;
     tone: CampaignTone;
+    levelStart: number;
+    levelEnd: number;
     levelRange: string;
     summary: string;
     hook: string;
     nextSession: string;
     partyCharacterIds: string[];
     sessions: SessionPrep[];
-    openThreads: string[];
+    openThreads: CampaignThread[];
     loot: string[];
     npcs: string[];
     currentUserRole?: CampaignMemberRole;
@@ -127,6 +155,8 @@ export interface CampaignDraft {
     name: string;
     setting: string;
     tone: CampaignTone;
+    levelStart: number;
+    levelEnd: number;
     hook: string;
     nextSession: string;
     summary: string;

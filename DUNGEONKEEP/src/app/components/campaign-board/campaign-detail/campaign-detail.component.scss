@@ -129,6 +129,14 @@
     border-bottom: 1px solid rgba(120, 88, 66, 0.12);
 }
 
+.thread-heading-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
 .thread-row:last-child {
     border-bottom: 0;
     padding-bottom: 0;
@@ -161,6 +169,91 @@
     border-top: 1px solid rgba(120, 88, 66, 0.12);
 }
 
+.thread-edit-box,
+.thread-actions,
+.thread-body {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.thread-edit-box input {
+    flex: 1;
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(118, 86, 63, 0.22);
+    background: rgba(255, 248, 233, 0.56);
+    color: var(--text-main);
+}
+
+.thread-edit-box app-dropdown {
+    min-width: 180px;
+}
+
+.add-thread-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(21, 19, 17, 0.62);
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    z-index: 1200;
+}
+
+.add-thread-modal {
+    width: min(640px, 100%);
+    display: grid;
+    gap: 14px;
+    border-radius: 20px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    box-shadow: var(--panel-shadow);
+    padding: 20px;
+}
+
+.add-thread-modal-header,
+.add-thread-modal-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.add-thread-modal-header h3 {
+    margin: 0;
+    font-family: var(--display-font);
+}
+
+.add-thread-modal-body {
+    display: grid;
+    gap: 12px;
+}
+
+.add-thread-field {
+    display: grid;
+    gap: 8px;
+}
+
+.add-thread-field span {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-soft);
+}
+
+.add-thread-field textarea {
+    width: 100%;
+    border: 1px solid rgba(118, 86, 63, 0.22);
+    border-radius: 12px;
+    padding: 10px 12px;
+    font: inherit;
+    color: var(--text-main);
+    background: rgba(255, 248, 233, 0.56);
+    resize: vertical;
+}
+
 .invite-label {
     color: var(--text-soft);
     font-size: 0.92rem;
@@ -183,6 +276,10 @@
 .thread-row p,
 .session-item p {
     margin: 0;
+}
+
+.thread-body {
+    flex-wrap: wrap;
 }
 
 .tag-list {
@@ -247,5 +344,14 @@
     .member-row,
     .invite-row {
         flex-direction: column;
+    }
+
+    .thread-heading-row,
+    .thread-edit-box,
+    .thread-actions,
+    .add-thread-modal-header,
+    .add-thread-modal-actions {
+        flex-direction: column;
+        align-items: stretch;
     }
 }

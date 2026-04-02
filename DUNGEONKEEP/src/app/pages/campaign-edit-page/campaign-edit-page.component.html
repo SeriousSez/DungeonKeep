@@ -1,0 +1,24 @@
+<main class="page-stack">
+    @if (editDraft(); as draft) {
+    <section class="panel page-intro">
+        <div>
+            <p class="eyebrow">Edit Campaign</p>
+            <h1>{{ selectedCampaign()?.name }}</h1>
+        </div>
+    </section>
+
+    @if (updateError()) {
+    <section class="panel error-box">
+        <p>{{ updateError() }}</p>
+    </section>
+    }
+
+    <app-creation-studio [mode]="'campaign'" [campaignAction]="'edit'" [campaignSeedDraft]="draft" (campaignCreated)="handleCampaignUpdate($event)"></app-creation-studio>
+    } @else {
+    <section class="panel page-intro">
+        <p class="eyebrow">Campaign not found</p>
+        <h1>Edit Campaign</h1>
+        <p>The campaign you're looking for could not be found.</p>
+    </section>
+    }
+</main>

@@ -1,0 +1,146 @@
+<main class="page-stack">
+    @if (selectedCampaign(); as campaign) {
+    <section class="panel page-intro">
+        <div class="page-intro-header">
+            <div>
+                <p class="eyebrow">Campaign details</p>
+                <h1>{{ campaign.name }}</h1>
+            </div>
+            <div class="header-actions">
+                <a routerLink="/campaigns" class="back-link">← Back to Campaigns</a>
+                <a [routerLink]="['/campaigns', campaign.id, 'edit']" class="primary-button">Edit Campaign</a>
+                <button type="button" class="ghost-button" (click)="handleRequestDelete()">Delete Campaign</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel campaign-details">
+        <div class="details-grid">
+            <div class="detail-group">
+                <label>Setting</label>
+                <p>{{ campaign.setting }}</p>
+            </div>
+
+            <div class="detail-group">
+                <label>Tone</label>
+                <p>{{ campaign.tone }}</p>
+            </div>
+
+            <div class="detail-group">
+                <label>Level Range</label>
+                <p>{{ campaign.levelRange }}</p>
+            </div>
+
+            <div class="detail-group">
+                <label>Next Session</label>
+                <p>{{ campaign.nextSession || 'TBD' }}</p>
+            </div>
+        </div>
+
+        <div class="full-width">
+            <label>Hook</label>
+            <p class="long-text">{{ campaign.hook }}</p>
+        </div>
+
+        <div class="full-width">
+            <label>Summary</label>
+            <p class="long-text">{{ campaign.summary }}</p>
+        </div>
+    </section>
+
+    <section class="panel party-section">
+        <div class="section-heading">
+            <h2>Party Members</h2>
+            <span class="count-badge">{{ partyMembers().length }}</span>
+        </div>
+
+        @if (partyMembers().length > 0) {
+        <div class="party-members-list">
+            @for (character of partyMembers(); track character.id) {
+            <a class="party-member-card" [routerLink]="['/character', character!.id]" [attr.aria-label]="'Open ' + character!.name">
+                <div class="member-info">
+                    <h3>{{ character!.name }}</h3>
+                    <p class="member-meta">{{ character!.className }} • Level {{ character!.level }} • {{ character!.status }}</p>
+                </div>
+                <span class="role-badge">{{ character!.role }}</span>
+            </a>
+            }
+        </div>
+        } @else {
+        <p class="empty-state">No party members assigned to this campaign yet.</p>
+        }
+    </section>
+
+    <section class="panel threads-section">
+        <div class="section-heading">
+            <h2>Open Threads</h2>
+            <div class="threads-heading-actions">
+                <span class="count-badge">{{ visibleThreads().length }}</span>
+                @if (campaign.currentUserRole === 'Owner') {
+                <button type="button" class="ghost-button" (click)="openAddThreadModal()">Add Thread</button>
+                }
+            </div>
+        </div>
+
+        @if (visibleThreads().length > 0) {
+        <div class="threads-list">
+            @for (thread of visibleThreads(); track thread.id) {
+            <div class="thread-row">
+                <div class="thread-body">
+                    <p>{{ thread.text }}</p>
+                    <span class="thread-visibility-pill">{{ thread.visibility === 'GMOnly' ? 'GM Only' : 'Party' }}</span>
+                </div>
+
+                @if (campaign.currentUserRole === 'Owner') {
+                <div class="thread-actions">
+                    <button type="button" class="ghost-button" (click)="openEditThreadModal(thread.id, thread.text, thread.visibility)">Edit</button>
+                    <button type="button" class="ghost-button" (click)="archiveThread(thread.id)">Archive</button>
+                </div>
+                }
+            </div>
+            }
+        </div>
+        } @else {
+        <p class="empty-state">No open threads yet.</p>
+        }
+    </section>
+    } @else {
+    <section class="panel page-intro">
+        <p class="eyebrow">Campaign not found</p>
+        <h1>Campaign Details</h1>
+        <p>The campaign you're looking for could not be found.</p>
+        <a routerLink="/campaigns" class="back-link">← Back to Campaigns</a>
+    </section>
+    }
+
+    <app-confirm-modal [open]="confirmDeleteOpen()" title="Delete Campaign?" message="Are you sure you want to delete this campaign? This action cannot be undone." confirmText="Delete" cancelText="Cancel" (confirmed)="handleDeleteConfirmed()"
+        (cancelled)="handleDeleteCancelled()"></app-confirm-modal>
+
+    @if (addThreadModalOpen()) {
+    <div class="add-thread-modal-backdrop" (click)="closeAddThreadModal()">
+        <section class="panel add-thread-modal" role="dialog" aria-modal="true" aria-label="Add thread" (click)="$event.stopPropagation()">
+            <header class="add-thread-modal-header">
+                <h3>{{ threadModalMode() === 'edit' ? 'Edit Thread' : 'Add Thread' }}</h3>
+                <button type="button" class="ghost-button" (click)="closeAddThreadModal()">Cancel</button>
+            </header>
+
+            <div class="add-thread-modal-body">
+                <label class="add-thread-field">
+                    <span>Thread</span>
+                    <textarea [value]="newThreadText()" (input)="updateNewThreadText($any($event.target).value)" rows="4" placeholder="Describe the unresolved thread..."></textarea>
+                </label>
+
+                <label class="add-thread-field">
+                    <span>Visibility</span>
+                    <app-dropdown ariaLabel="Thread visibility" [value]="newThreadVisibility()" [options]="threadVisibilityOptions" [optionDensity]="'dense'" [searchable]="false" [placeholder]="'Select visibility'" (changed)="updateThreadVisibility($event)"></app-dropdown>
+                </label>
+            </div>
+
+            <footer class="add-thread-modal-actions">
+                <button type="button" class="ghost-button" (click)="closeAddThreadModal()">Cancel</button>
+                <button type="button" class="primary-button" [disabled]="!newThreadText().trim()" (click)="submitThread()">{{ threadModalMode() === 'edit' ? 'Save' : 'Add' }}</button>
+            </footer>
+        </section>
+    </div>
+    }
+</main>

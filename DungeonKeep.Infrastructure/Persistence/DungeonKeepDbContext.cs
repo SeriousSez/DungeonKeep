@@ -45,6 +45,8 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
             entity.Property(c => c.Name).HasMaxLength(120).IsRequired();
             entity.Property(c => c.Setting).HasMaxLength(120);
             entity.Property(c => c.Tone).HasMaxLength(32).IsRequired();
+            entity.Property(c => c.LevelStart).IsRequired();
+            entity.Property(c => c.LevelEnd).IsRequired();
             entity.Property(c => c.Hook).HasMaxLength(500);
             entity.Property(c => c.NextSession).HasMaxLength(120);
             entity.Property(c => c.Summary).HasMaxLength(1000);

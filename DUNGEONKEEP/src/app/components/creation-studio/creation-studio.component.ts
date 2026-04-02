@@ -13,6 +13,8 @@ interface CampaignTemplate {
     title: string;
     setting: string;
     tone: CampaignDraft['tone'];
+    levelStart: number;
+    levelEnd: number;
     hook: string;
     nextSession: string;
     summary: string;
@@ -22,6 +24,8 @@ const emptyCampaignDraft = (): CampaignDraft => ({
     name: '',
     setting: '',
     tone: 'Heroic',
+    levelStart: 1,
+    levelEnd: 4,
     hook: '',
     nextSession: '',
     summary: ''
@@ -40,40 +44,70 @@ const emptyCharacterDraft = (): CharacterDraft => ({
 
 const campaignTemplates: ReadonlyArray<CampaignTemplate> = [
     {
-        id: 'urban-intrigue',
-        title: 'Urban Intrigue',
-        setting: 'Crownspire City',
-        tone: 'Mystic',
-        hook: 'A missing magistrate leaves coded notes tied to three rival guilds.',
+        id: 'court-of-knives',
+        title: 'Court of Knives',
+        setting: 'Velisport Senate',
+        tone: 'Political Intrigue',
+        levelStart: 3,
+        levelEnd: 9,
+        hook: 'An heir disappears on the eve of a treaty vote, and every faction claims innocence.',
         nextSession: '',
-        summary: 'A layered city conspiracy where social leverage matters as much as steel.'
+        summary: 'A social-pressure campaign of spies, leverage, and shifting alliances in a city-state on edge.'
     },
     {
-        id: 'frontier-hexcrawl',
-        title: 'Frontier Hexcrawl',
-        setting: 'The Ashen Marches',
-        tone: 'Heroic',
-        hook: 'Surveyors vanished beyond the last waypoint and the frontier map keeps changing overnight.',
+        id: 'last-light-caravan',
+        title: 'Last Light Caravan',
+        setting: 'The Glass Wastes',
+        tone: 'Survival',
+        levelStart: 1,
+        levelEnd: 7,
+        hook: 'The final supply caravan vanishes between waystations, leaving three settlements one storm from collapse.',
         nextSession: '',
-        summary: 'Exploration-driven campaign focused on dangerous wilderness, landmarks, and hard choices.'
+        summary: 'A scarcity-driven expedition where weather, routes, and ration choices matter as much as combat.'
     },
     {
-        id: 'horror-mystery',
-        title: 'Horror Mystery',
-        setting: 'Mourningfen',
-        tone: 'Grim',
-        hook: 'Each midnight, one villager forgets their own name and wakes with muddy footprints at the old crypt.',
+        id: 'banner-of-ash',
+        title: 'Banner of Ash',
+        setting: 'The Ember Front',
+        tone: 'Epic War',
+        levelStart: 5,
+        levelEnd: 12,
+        hook: 'A border fortress falls overnight, opening a road straight to the capital unless the line can be rebuilt.',
         nextSession: '',
-        summary: 'Investigation-heavy story with escalating dread and unreliable witness accounts.'
+        summary: 'A theater-scale war campaign with command decisions, supply lines, and decisive battlefield objectives.'
     },
     {
-        id: 'planar-chaos',
-        title: 'Planar Chaos',
-        setting: 'The Fractured Axis',
-        tone: 'Chaotic',
-        hook: 'Planar rifts appear above busy trade routes, spitting out relics and raiders in equal measure.',
+        id: 'starlit-reliquary',
+        title: 'Starlit Reliquary',
+        setting: 'The Meridian Observatory',
+        tone: 'Cosmic',
+        levelStart: 7,
+        levelEnd: 13,
+        hook: 'The night sky shifts into impossible constellations and an observatory vault unlocks itself for the first time in centuries.',
         nextSession: '',
-        summary: 'Fast-moving, high-variance campaign with faction politics across unstable portals.'
+        summary: 'A reality-bending mystery where star lore, ancient engines, and unknowable entities collide.'
+    },
+    {
+        id: 'clockwork-carnival',
+        title: 'Clockwork Carnival',
+        setting: 'The Wandering Midway',
+        tone: 'Whimsical',
+        levelStart: 2,
+        levelEnd: 8,
+        hook: 'A traveling carnival appears between towns overnight, but its attractions begin granting wishes with strange side effects.',
+        nextSession: '',
+        summary: 'A playful adventure full of odd magic, bright characters, and hidden stakes beneath the spectacle.'
+    },
+    {
+        id: 'black-briar-oath',
+        title: 'Black Briar Oath',
+        setting: 'Rookhollow Vale',
+        tone: 'Gothic',
+        levelStart: 4,
+        levelEnd: 10,
+        hook: 'A noble house breaks a century-old vow, and every grave marker in the valley turns toward their manor.',
+        nextSession: '',
+        summary: 'A moody curse-driven campaign of ancestral sins, haunted estates, and dangerous old promises.'
     }
 ];
 
@@ -89,15 +123,31 @@ const campaignStepOrder: ReadonlyArray<CampaignWizardStep> = ['identity', 'story
 export class CreationStudioComponent {
     readonly mode = input<'both' | 'campaign' | 'character'>('both');
     readonly campaignSeedDraft = input<CampaignDraft | null>(null);
+    readonly campaignAction = input<'create' | 'edit'>('create');
 
     readonly campaignCreated = output<CampaignDraft>();
     readonly characterCreated = output<CharacterDraft>();
 
     readonly toneOptions: ReadonlyArray<DropdownOption> = [
-        { value: 'Heroic', label: 'Heroic' },
-        { value: 'Grim', label: 'Grim' },
-        { value: 'Mystic', label: 'Mystic' },
-        { value: 'Chaotic', label: 'Chaotic' }
+        { value: 'Heroic', label: 'Heroic', description: 'Epic quests and triumphant victories against darkness.' },
+        { value: 'Grim', label: 'Grim', description: 'Serious stakes where every cost is felt deeply.' },
+        { value: 'Mystic', label: 'Mystic', description: 'Secrets, magic, and cosmic mysteries unfold.' },
+        { value: 'Chaotic', label: 'Chaotic', description: 'Unpredictable twists and delightful mayhem.' },
+        { value: 'Grimdark', label: 'Grimdark', description: 'A harsh world where heroes are morally gray.' },
+        { value: 'Gothic', label: 'Gothic', description: 'Oppressive atmosphere with ancient curses and decay.' },
+        { value: 'Horror', label: 'Horror', description: 'Creeping dread and unspeakable terrors lurk.' },
+        { value: 'Noblebright', label: 'Noblebright', description: 'Hopeful heroism where compassion and courage prevail.' },
+        { value: 'Sword-and-Sorcery', label: 'Sword-and-Sorcery', description: 'Gritty adventure, dangerous magic, and personal stakes.' },
+        { value: 'Political Intrigue', label: 'Political Intrigue', description: 'Schemes, alliances, and betrayal in halls of power.' },
+        { value: 'Mythic', label: 'Mythic', description: 'Legendary destiny arcs and world-shaping deeds.' },
+        { value: 'Survival', label: 'Survival', description: 'Scarcity, harsh travel, and endurance against the wild.' },
+        { value: 'Pulp Adventure', label: 'Pulp Adventure', description: 'Fast-paced action, cliffhangers, and dramatic reversals.' },
+        { value: 'Dark Fantasy', label: 'Dark Fantasy', description: 'Bleak wonder, dangerous magic, and costly victories.' },
+        { value: 'Whimsical', label: 'Whimsical', description: 'Playful oddities, charm, and fantastical surprises.' },
+        { value: 'Noir', label: 'Noir', description: 'Urban secrets, moral ambiguity, and hard consequences.' },
+        { value: 'Epic War', label: 'Epic War', description: 'Front lines, command choices, and large-scale conflict.' },
+        { value: 'Cosmic', label: 'Cosmic', description: 'Reality-bending mysteries and incomprehensible forces.' },
+        { value: 'Heroic Tragedy', label: 'Heroic Tragedy', description: 'Noble purpose with bittersweet sacrifices and loss.' }
     ];
 
     readonly roleOptions: ReadonlyArray<DropdownOption> = [
@@ -144,12 +194,29 @@ export class CreationStudioComponent {
         return this.campaignDraft().hook.trim() ? '' : 'Hook is required.';
     });
 
+    readonly campaignLevelRangeError = computed(() => {
+        if (!this.campaignSubmitAttempted()) {
+            return '';
+        }
+
+        return this.campaignDraft().levelEnd >= this.campaignDraft().levelStart
+            ? ''
+            : 'Ending level must be greater than or equal to starting level.';
+    });
+
     readonly hasCampaignValidationErrors = computed(
-        () => !!this.campaignNameError() || !!this.campaignSettingError() || !!this.campaignHookError()
+        () =>
+            !!this.campaignNameError() ||
+            !!this.campaignSettingError() ||
+            !!this.campaignHookError() ||
+            !!this.campaignLevelRangeError()
     );
 
     readonly hasIdentityValidationErrors = computed(
-        () => !this.campaignDraft().name.trim() || !this.campaignDraft().setting.trim()
+        () =>
+            !this.campaignDraft().name.trim() ||
+            !this.campaignDraft().setting.trim() ||
+            this.campaignDraft().levelEnd < this.campaignDraft().levelStart
     );
 
     readonly hasStoryValidationErrors = computed(() => !this.campaignDraft().hook.trim());
@@ -174,6 +241,14 @@ export class CreationStudioComponent {
         return summary || 'No campaign summary yet.';
     });
 
+    readonly isEditCampaignMode = computed(() => this.mode() === 'campaign' && this.campaignAction() === 'edit');
+
+    readonly campaignPanelHeading = computed(() => (this.isEditCampaignMode() ? 'Edit campaign' : 'Create new campaign'));
+
+    readonly campaignFormTitle = computed(() => (this.isEditCampaignMode() ? 'Edit campaign' : 'New campaign'));
+
+    readonly campaignSubmitLabel = computed(() => (this.isEditCampaignMode() ? 'Update campaign' : 'Create campaign'));
+
     constructor() {
         effect(() => {
             const seed = this.campaignSeedDraft();
@@ -185,6 +260,8 @@ export class CreationStudioComponent {
                 name: seed.name,
                 setting: seed.setting,
                 tone: seed.tone,
+                levelStart: seed.levelStart,
+                levelEnd: seed.levelEnd,
                 hook: seed.hook,
                 nextSession: seed.nextSession,
                 summary: seed.summary
@@ -206,6 +283,26 @@ export class CreationStudioComponent {
     onToneChanged(value: string | number): void {
         const tone = String(value) as CampaignDraft['tone'];
         this.updateCampaign('tone', tone);
+    }
+
+    onLevelStartChanged(value: string | number): void {
+        const parsed = Math.trunc(Number(value));
+        const levelStart = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), 20) : 1;
+        const levelEnd = Math.max(levelStart, this.campaignDraft().levelEnd);
+
+        this.campaignDraft.update((draft) => ({
+            ...draft,
+            levelStart,
+            levelEnd: Math.min(levelEnd, 20)
+        }));
+    }
+
+    onLevelEndChanged(value: string | number): void {
+        const parsed = Math.trunc(Number(value));
+        const levelStart = this.campaignDraft().levelStart;
+        const levelEnd = Number.isFinite(parsed) ? Math.min(Math.max(parsed, levelStart), 20) : levelStart;
+
+        this.updateCampaign('levelEnd', levelEnd);
     }
 
     onCharacterRoleChanged(value: string | number): void {
@@ -244,6 +341,8 @@ export class CreationStudioComponent {
             ...draft,
             setting: template.setting,
             tone: template.tone,
+            levelStart: template.levelStart,
+            levelEnd: template.levelEnd,
             hook: template.hook,
             nextSession: template.nextSession,
             summary: template.summary
@@ -259,7 +358,22 @@ export class CreationStudioComponent {
             Heroic: `A desperate messenger arrives from ${setting} with a plea that only ${campaignName} can answer.`,
             Grim: `A trusted ally in ${setting} vanishes after uncovering a buried atrocity tied to ${campaignName}.`,
             Mystic: `Ancient omens flare across ${setting}, pointing to a sealed secret at the heart of ${campaignName}.`,
-            Chaotic: `A cascade of arcane mishaps in ${setting} forces ${campaignName} into a race against unpredictable fallout.`
+            Chaotic: `A cascade of arcane mishaps in ${setting} forces ${campaignName} into a race against unpredictable fallout.`,
+            Grimdark: `A ruthless power in ${setting} offers ${campaignName} a victory that demands an unforgivable price.`,
+            Gothic: `Whispers from a ruined manor in ${setting} draw ${campaignName} toward a family curse that refuses to die.`,
+            Horror: `Something unseen stalks ${setting}, and ${campaignName} must identify it before the next dawn takes another victim.`,
+            Noblebright: `A small community in ${setting} risks everything to defend hope, and ${campaignName} is their last chance.`,
+            'Sword-and-Sorcery': `A stolen relic from ${setting} promises fortune and ruin, pulling ${campaignName} into a brutal race for power.`,
+            'Political Intrigue': `A fragile pact in ${setting} begins to fracture, and ${campaignName} must expose the hand behind the betrayal.`,
+            Mythic: `Ancient prophecies across ${setting} awaken, naming ${campaignName} as key to an age-defining trial.`,
+            Survival: `Supplies fail in ${setting} after a sudden catastrophe, forcing ${campaignName} to secure shelter before nightfall.`,
+            'Pulp Adventure': `A daring lead in ${setting} launches ${campaignName} from one perilous set-piece to the next.`,
+            'Dark Fantasy': `A cursed bargain resurfaces in ${setting}, and ${campaignName} must choose which evil can be endured.`,
+            Whimsical: `A delightful impossibility appears in ${setting}, and ${campaignName} soon discovers the playful mystery hides real stakes.`,
+            Noir: `A vanished witness in ${setting} leaves clues in smoke and rumor, drawing ${campaignName} into a case no one wants solved.`,
+            'Epic War': `War drums echo across ${setting}, and ${campaignName} is tasked with turning one decisive front before dawn.`,
+            Cosmic: `Strange patterns in ${setting} hint at minds beyond reality, and ${campaignName} must act before the veil tears.`,
+            'Heroic Tragedy': `To save ${setting}, ${campaignName} must pursue a victory that may cost what they value most.`
         };
 
         this.updateCampaign('hook', hookByTone[tone]);

@@ -9,7 +9,7 @@
 
     <div class="campaign-list">
         @for (campaign of campaigns(); track campaign.id) {
-        <button type="button" class="campaign-card" [class.is-selected]="campaign.id === selectedCampaignId()" (click)="selectCampaign(campaign.id)">
+        <button type="button" class="campaign-card" [class.is-selected]="campaign.id === selectedCampaignId()" (click)="selectCampaign(campaign.id)" [routerLink]="['/campaigns', campaign.id]">
             <div class="campaign-card-top">
                 <div>
                     <h3>{{ campaign.name }}</h3>

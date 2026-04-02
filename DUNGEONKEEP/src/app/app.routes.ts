@@ -1,4 +1,6 @@
 import { Routes } from '@angular/router';
+import { CampaignDetailPageComponent } from './pages/campaign-detail-page/campaign-detail-page.component';
+import { CampaignEditPageComponent } from './pages/campaign-edit-page/campaign-edit-page.component';
 import { CampaignsPageComponent } from './pages/campaigns-page/campaigns-page.component';
 import { CharacterDetailPageComponent } from './pages/character-detail-page/character-detail-page.component';
 import { CharactersPageComponent } from './pages/characters-page/characters-page.component';
@@ -29,6 +31,16 @@ export const routes: Routes = [
         path: 'campaigns/new',
         component: NewCampaignPageComponent,
         data: { title: 'New Campaign', breadcrumb: 'New Campaign' }
+    },
+    {
+        path: 'campaigns/:id',
+        component: CampaignDetailPageComponent,
+        data: { title: 'Campaign', breadcrumb: 'Campaign', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }] }
+    },
+    {
+        path: 'campaigns/:id/edit',
+        component: CampaignEditPageComponent,
+        data: { title: 'Edit Campaign', breadcrumb: 'Edit', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }] }
     },
     {
         path: 'characters',

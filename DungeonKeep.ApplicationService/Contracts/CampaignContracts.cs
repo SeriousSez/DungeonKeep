@@ -5,14 +5,22 @@ public sealed record CampaignDto(
     string Name,
     string Setting,
     string Tone,
+    int LevelStart,
+    int LevelEnd,
     string Hook,
     string NextSession,
     string Summary,
     DateTime CreatedAtUtc,
     int CharacterCount,
-    IReadOnlyList<string> OpenThreads,
+    IReadOnlyList<CampaignThreadDto> OpenThreads,
     string CurrentUserRole,
     IReadOnlyList<CampaignMemberDto> Members
+);
+
+public sealed record CampaignThreadDto(
+    Guid Id,
+    string Text,
+    string Visibility
 );
 
 public sealed record CampaignMemberDto(
@@ -27,10 +35,25 @@ public sealed record CreateCampaignRequest(
     string Name,
     string Setting,
     string Tone,
+    int LevelStart,
+    int LevelEnd,
     string Hook,
     string NextSession,
     string Summary
 );
 
-public sealed record ArchiveCampaignThreadRequest(string Thread);
+public sealed record UpdateCampaignRequest(
+    string Name,
+    string Setting,
+    string Tone,
+    int LevelStart,
+    int LevelEnd,
+    string Hook,
+    string NextSession,
+    string Summary
+);
+
+public sealed record CreateCampaignThreadRequest(string Text, string Visibility);
+public sealed record UpdateCampaignThreadRequest(string Text, string Visibility);
+public sealed record ArchiveCampaignThreadRequest(Guid ThreadId);
 public sealed record InviteCampaignMemberRequest(string Email);

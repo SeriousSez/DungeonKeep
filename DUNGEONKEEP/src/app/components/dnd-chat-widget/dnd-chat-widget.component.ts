@@ -179,7 +179,9 @@ export class DndChatWidgetComponent {
                     flaws: narrative.flaws
                 };
             }),
-            openThreads: [...campaign.openThreads],
+            openThreads: campaign.openThreads
+                .filter((thread) => campaign.currentUserRole === 'Owner' || thread.visibility === 'Party')
+                .map((thread) => thread.text),
             npcs: [...campaign.npcs],
             loot: [...campaign.loot]
         };
