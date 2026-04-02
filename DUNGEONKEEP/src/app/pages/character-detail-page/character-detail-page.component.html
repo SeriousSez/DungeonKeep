@@ -39,7 +39,7 @@
             <h2 class="section-title">Ability Scores</h2>
             <div class="summary-strip abilities-strip">
                 @for (ability of abilityCards(); track ability.key) {
-                <div class="summary-item ability-card">
+                <div class="summary-item ability-card detail-trigger" role="button" tabindex="0" (click)="openAbilityDetail(ability)" (keydown.enter)="openAbilityDetail(ability)" (keydown.space)="openAbilityDetail(ability)">
                     <span class="summary-label">{{ ability.abbr }}</span>
                     <strong class="summary-value">{{ ability.score }}</strong>
                     <span class="summary-mod">{{ ability.modifierLabel }}</span>
@@ -65,7 +65,7 @@
                 </div>
                 <div class="summary-item">
                     <span class="summary-label">Armor Class</span>
-                    <strong class="summary-value">{{ char.armorClass }}</strong>
+                    <strong class="summary-value detail-trigger" (click)="openArmorClassDetail(char.armorClass)">{{ char.armorClass }}</strong>
                 </div>
                 <div class="summary-item">
                     <span class="summary-label">Heroic Inspiration</span>
@@ -95,26 +95,29 @@
 
             <h3 class="subsection-title">Senses</h3>
             <div class="passive-list">
-                <div class="passive-row"><span>Passive Perception</span><strong>{{ passivePerception() }}</strong></div>
-                <div class="passive-row"><span>Passive Investigation</span><strong>{{ passiveInvestigation() }}</strong></div>
-                <div class="passive-row"><span>Passive Insight</span><strong>{{ passiveInsight() }}</strong></div>
+                <div class="passive-row detail-trigger-row" role="button" tabindex="0" (click)="openSenseDetail('Passive Perception', passivePerception())" (keydown.enter)="openSenseDetail('Passive Perception', passivePerception())"
+                    (keydown.space)="openSenseDetail('Passive Perception', passivePerception())"><span>Passive Perception</span><strong>{{ passivePerception() }}</strong></div>
+                <div class="passive-row detail-trigger-row" role="button" tabindex="0" (click)="openSenseDetail('Passive Investigation', passiveInvestigation())" (keydown.enter)="openSenseDetail('Passive Investigation', passiveInvestigation())"
+                    (keydown.space)="openSenseDetail('Passive Investigation', passiveInvestigation())"><span>Passive Investigation</span><strong>{{ passiveInvestigation() }}</strong></div>
+                <div class="passive-row detail-trigger-row" role="button" tabindex="0" (click)="openSenseDetail('Passive Insight', passiveInsight())" (keydown.enter)="openSenseDetail('Passive Insight', passiveInsight())" (keydown.space)="openSenseDetail('Passive Insight', passiveInsight())">
+                    <span>Passive Insight</span><strong>{{ passiveInsight() }}</strong></div>
             </div>
 
             <h3 class="subsection-title">Proficiencies & Training</h3>
             <div class="training-grid">
-                <div class="training-block">
+                <div class="training-block detail-trigger-card" role="button" tabindex="0" (click)="openTrainingDetail('Armor', training().armor)" (keydown.enter)="openTrainingDetail('Armor', training().armor)" (keydown.space)="openTrainingDetail('Armor', training().armor)">
                     <span class="label">Armor</span>
                     <p>{{ training().armor.length ? training().armor.join(', ') : 'Not recorded' }}</p>
                 </div>
-                <div class="training-block">
+                <div class="training-block detail-trigger-card" role="button" tabindex="0" (click)="openTrainingDetail('Weapons', training().weapons)" (keydown.enter)="openTrainingDetail('Weapons', training().weapons)" (keydown.space)="openTrainingDetail('Weapons', training().weapons)">
                     <span class="label">Weapons</span>
                     <p>{{ training().weapons.length ? training().weapons.join(', ') : 'Not recorded' }}</p>
                 </div>
-                <div class="training-block">
+                <div class="training-block detail-trigger-card" role="button" tabindex="0" (click)="openTrainingDetail('Tools', training().tools)" (keydown.enter)="openTrainingDetail('Tools', training().tools)" (keydown.space)="openTrainingDetail('Tools', training().tools)">
                     <span class="label">Tools</span>
                     <p>{{ training().tools.length ? training().tools.join(', ') : 'Not recorded' }}</p>
                 </div>
-                <div class="training-block">
+                <div class="training-block detail-trigger-card" role="button" tabindex="0" (click)="openTrainingDetail('Languages', languageList())" (keydown.enter)="openTrainingDetail('Languages', languageList())" (keydown.space)="openTrainingDetail('Languages', languageList())">
                     <span class="label">Languages</span>
                     <p>{{ languageList().length ? languageList().join(', ') : 'Not recorded' }}</p>
                 </div>
@@ -125,7 +128,7 @@
             <h2 class="section-title">Skills</h2>
             <div class="skills-list">
                 @for (skill of skillRows(); track skill.key) {
-                <div class="skill-row" [class.proficient]="skill.proficient">
+                <div class="skill-row detail-trigger-row" role="button" tabindex="0" [class.proficient]="skill.proficient" (click)="openSkillDetail(skill)" (keydown.enter)="openSkillDetail(skill)" (keydown.space)="openSkillDetail(skill)">
                     <span class="skill-prof">@if (skill.proficient) { ● } @else { ○ }</span>
                     <span class="skill-name">{{ skill.name }}</span>
                     <span class="skill-ability">{{ skill.ability }}</span>
@@ -189,7 +192,7 @@
                             <span>Notes</span>
                         </div>
                         @for (row of attackRows(); track row.name) {
-                        <div class="actions-row actions-row--combat">
+                        <div class="actions-row actions-row--combat detail-trigger-row" (click)="openActionDetail(row)">
                             <span class="combat-name-cell">
                                 <strong class="combat-name">{{ row.name }}</strong>
                                 <span class="combat-subtitle">{{ row.subtitle }}</span>
@@ -218,14 +221,15 @@
                     <h4 class="action-group-label">Actions in Combat</h4>
                     <div class="action-chips">
                         @for (a of STANDARD_COMBAT_ACTIONS; track a) {
-                        <span class="action-chip">{{ a }}</span>
+                        <span class="action-chip detail-trigger" role="button" tabindex="0" (click)="openActionDetail({ name: a, subtitle: 'Action' })" (keydown.enter)="openActionDetail({ name: a, subtitle: 'Action' })" (keydown.space)="openActionDetail({ name: a, subtitle: 'Action' })">{{ a
+                            }}</span>
                         }
                     </div>
                     @if (actionSpellRows().length) {
                     <h4 class="action-group-label">Spells</h4>
                     <div class="spell-chip-list">
                         @for (row of actionSpellRows(); track row.name) {
-                        <span class="spell-chip">
+                        <span class="spell-chip detail-trigger" role="button" tabindex="0" (click)="openSpellDetail(row)" (keydown.enter)="openSpellDetail(row)" (keydown.space)="openSpellDetail(row)">
                             <span class="spell-chip-name">{{ row.name }}</span>
                             <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}</span>
                         </span>
@@ -244,17 +248,19 @@
                     <h4 class="action-group-label">Actions in Combat</h4>
                     <div class="action-chips">
                         @for (a of STANDARD_BONUS_COMBAT_ACTIONS; track a) {
-                        <span class="action-chip">{{ a }}</span>
+                        <span class="action-chip detail-trigger" role="button" tabindex="0" (click)="openActionDetail({ name: a, subtitle: 'Bonus Action' })" (keydown.enter)="openActionDetail({ name: a, subtitle: 'Bonus Action' })"
+                            (keydown.space)="openActionDetail({ name: a, subtitle: 'Bonus Action' })">{{ a }}</span>
                         }
                         @for (a of bonusActionNames(); track a) {
-                        <span class="action-chip">{{ a }}</span>
+                        <span class="action-chip detail-trigger" role="button" tabindex="0" (click)="openActionDetail({ name: a, subtitle: 'Bonus Action' })" (keydown.enter)="openActionDetail({ name: a, subtitle: 'Bonus Action' })"
+                            (keydown.space)="openActionDetail({ name: a, subtitle: 'Bonus Action' })">{{ a }}</span>
                         }
                     </div>
                     @if (bonusActionSpellRows().length) {
                     <h4 class="action-group-label">Spells</h4>
                     <div class="spell-chip-list">
                         @for (row of bonusActionSpellRows(); track row.name) {
-                        <span class="spell-chip">
+                        <span class="spell-chip detail-trigger" role="button" tabindex="0" (click)="openSpellDetail(row)" (keydown.enter)="openSpellDetail(row)" (keydown.space)="openSpellDetail(row)">
                             <span class="spell-chip-name">{{ row.name }}</span>
                             <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}</span>
                         </span>
@@ -273,17 +279,19 @@
                     <h4 class="action-group-label">Actions in Combat</h4>
                     <div class="action-chips">
                         @for (a of STANDARD_REACTIONS; track a) {
-                        <span class="action-chip">{{ a }}</span>
+                        <span class="action-chip detail-trigger" role="button" tabindex="0" (click)="openActionDetail({ name: a, subtitle: 'Reaction' })" (keydown.enter)="openActionDetail({ name: a, subtitle: 'Reaction' })" (keydown.space)="openActionDetail({ name: a, subtitle: 'Reaction' })">{{ a
+                            }}</span>
                         }
                         @for (a of reactionNames(); track a) {
-                        <span class="action-chip">{{ a }}</span>
+                        <span class="action-chip detail-trigger" role="button" tabindex="0" (click)="openActionDetail({ name: a, subtitle: 'Reaction' })" (keydown.enter)="openActionDetail({ name: a, subtitle: 'Reaction' })" (keydown.space)="openActionDetail({ name: a, subtitle: 'Reaction' })">{{ a
+                            }}</span>
                         }
                     </div>
                     @if (reactionSpellRows().length) {
                     <h4 class="action-group-label">Spells</h4>
                     <div class="spell-chip-list">
                         @for (row of reactionSpellRows(); track row.name) {
-                        <span class="spell-chip">
+                        <span class="spell-chip detail-trigger" role="button" tabindex="0" (click)="openSpellDetail(row)" (keydown.enter)="openSpellDetail(row)" (keydown.space)="openSpellDetail(row)">
                             <span class="spell-chip-name">{{ row.name }}</span>
                             <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}</span>
                         </span>
@@ -302,14 +310,14 @@
                     <h4 class="action-group-label">Actions in Combat</h4>
                     <div class="action-chips">
                         @for (a of STANDARD_OTHER_ACTIONS; track a) {
-                        <span class="action-chip">{{ a }}</span>
+                        <span class="action-chip detail-trigger" role="button" tabindex="0" (click)="openActionDetail({ name: a, subtitle: 'Other' })" (keydown.enter)="openActionDetail({ name: a, subtitle: 'Other' })" (keydown.space)="openActionDetail({ name: a, subtitle: 'Other' })">{{ a }}</span>
                         }
                     </div>
                     @if (otherSpellRows().length) {
                     <h4 class="action-group-label">Spells</h4>
                     <div class="spell-chip-list">
                         @for (row of otherSpellRows(); track row.name) {
-                        <span class="spell-chip">
+                        <span class="spell-chip detail-trigger" role="button" tabindex="0" (click)="openSpellDetail(row)" (keydown.enter)="openSpellDetail(row)" (keydown.space)="openSpellDetail(row)">
                             <span class="spell-chip-name">{{ row.name }}</span>
                             <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (row.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}</span>
                         </span>
@@ -350,7 +358,7 @@
                             <span>Effect</span>
                         </div>
                         @for (spellRow of spellCantrips(); track spellRow.name) {
-                        <div class="actions-row">
+                        <div class="actions-row detail-trigger-row" (click)="openSpellDetail(spellRow)">
                             <span class="spell-name-cell">{{ spellRow.name }}@if (spellRow.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (spellRow.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}</span>
                             <span>{{ spellRow.castingTime }}</span>
                             <span>{{ spellRow.range }}</span>
@@ -394,7 +402,7 @@
                             <span>Effect</span>
                         </div>
                         @for (spellRow of group.spells; track spellRow.name) {
-                        <div class="actions-row">
+                        <div class="actions-row detail-trigger-row" (click)="openSpellDetail(spellRow)">
                             <span class="spell-name-cell">{{ spellRow.name }}@if (spellRow.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (spellRow.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}</span>
                             <span>{{ spellRow.castingTime }}</span>
                             <span>{{ spellRow.range }}</span>
@@ -473,7 +481,7 @@
                         </thead>
                         <tbody>
                             @for (item of filteredInventoryItems(); track item.name + '_' + item.category) {
-                            <tr class="inventory-row">
+                            <tr class="inventory-row detail-trigger-row" (click)="openInventoryItemDetail(item)">
                                 <td class="item-name">{{ item.name }}</td>
                                 <td class="item-weight">{{ item.weight != null ? (item.weight + ' lb') : '—' }}</td>
                                 <td class="item-quantity">{{ item.quantity }}</td>
@@ -514,7 +522,7 @@
                                 </thead>
                                 <tbody>
                                     @for (item of containerItem.entry.containedItems || []; track item.name) {
-                                    <tr class="inventory-row">
+                                    <tr class="inventory-row detail-trigger-row" (click)="openInventoryItemDetail(item)">
                                         <td class="item-name">{{ item.name }}</td>
                                         <td class="item-weight">{{ item.weight != null ? (item.weight + ' lb') : '—' }}</td>
                                         <td class="item-quantity">{{ item.quantity }}</td>
@@ -547,7 +555,7 @@
                 @if (activeFeaturesFilter() === 'all' || activeFeaturesFilter() === 'class-features') {
                 <ul class="mini-list feature-list">
                     @for (feature of classFeatures(); track feature.name) {
-                    <li>
+                    <li class="detail-trigger-row" (click)="openFeatureDetail(feature.name, feature.description, 'Class Feature')">
                         <strong>{{ feature.name }}</strong>
                         <p>{{ feature.description }}</p>
                     </li>
@@ -560,7 +568,7 @@
                 @if (activeFeaturesFilter() === 'all' || activeFeaturesFilter() === 'species-traits') {
                 <ul class="traits-list">
                     @for (trait of speciesTraits(); track $index) {
-                    <li>{{ trait }}</li>
+                    <li class="detail-trigger-row" (click)="openFeatureDetail(trait, trait, 'Species Trait')">{{ trait }}</li>
                     }
                     @if (!speciesTraits().length) {
                     <li>No species traits recorded</li>
@@ -568,7 +576,7 @@
                 </ul>
                 }
                 @if (activeFeaturesFilter() === 'feats') {
-                <p class="notes-block">No feats recorded yet.</p>
+                <p class="notes-block detail-trigger-row" (click)="openFeatureDetail('Feats', 'No feats are currently recorded for this character.', 'Feats')">No feats recorded yet.</p>
                 }
                 } @else if (activeCombatTab() === 'background') {
                 <h3 class="subsection-title">Background</h3>
@@ -674,5 +682,26 @@
         <p>The character you're looking for doesn't exist.</p>
         <a routerLink="/characters" class="back-link">← Back to Characters</a>
     </div>
+    }
+
+    @if (activeDetailDrawer(); as detail) {
+    <aside class="panel detail-popup" role="dialog" [attr.aria-label]="detail.title">
+        <header class="detail-drawer-header">
+            <div>
+                <p class="eyebrow">Reference</p>
+                <h3>{{ detail.title }}</h3>
+                <p class="detail-drawer-subtitle">{{ detail.subtitle }}</p>
+            </div>
+            <button type="button" class="ghost-button" (click)="closeDetailDrawer()">Close</button>
+        </header>
+
+        <p class="detail-drawer-description">{{ detail.description }}</p>
+
+        <ul class="detail-drawer-list">
+            @for (bullet of detail.bullets; track bullet) {
+            <li>{{ bullet }}</li>
+            }
+        </ul>
+    </aside>
     }
 </main>

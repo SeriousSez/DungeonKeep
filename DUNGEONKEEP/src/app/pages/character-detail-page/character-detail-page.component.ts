@@ -88,6 +88,13 @@ interface CombatRow {
     ritual: boolean;
 }
 
+interface DetailDrawerContent {
+    title: string;
+    subtitle: string;
+    description: string;
+    bullets: string[];
+}
+
 @Component({
     selector: 'app-character-detail-page',
     imports: [CommonModule, RouterLink, DropdownComponent],
@@ -277,6 +284,7 @@ export class CharacterDetailPageComponent {
     readonly campaignUpdateError = signal('');
     readonly usedSpellSlotsByLevel = signal<Record<number, number>>({});
     readonly expandedContainers = signal<Set<string>>(new Set());
+    readonly activeDetailDrawer = signal<DetailDrawerContent | null>(null);
 
     private lastCharacterId: string | null = null;
     private saveSpellSlotTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -1412,6 +1420,131 @@ export class CharacterDetailPageComponent {
 
     setCombatTab(tab: CombatTab): void {
         this.activeCombatTab.set(tab);
+    }
+
+    closeDetailDrawer(): void {
+        this.activeDetailDrawer.set(null);
+    }
+
+    openAbilityDetail(ability: { name: string; score: number; modifierLabel: string }): void {
+        this.activeDetailDrawer.set({
+            title: `${ability.name} (${ability.score})`,
+            subtitle: `Ability Score • Modifier ${ability.modifierLabel}`,
+            description: `${ability.name} influences core rolls tied to this stat and its modifier.`,
+            bullets: [
+                'Higher scores improve related checks and saving throws.',
+                'Ability modifiers are used in attacks, skills, and class features.',
+                'Ability Score Improvements can raise this value over time.'
+            ]
+        });
+    }
+
+    openSenseDetail(label: string, value: number): void {
+        this.activeDetailDrawer.set({
+            title: `${label}: ${value}`,
+            subtitle: 'Senses',
+            description: `${label} is your passive awareness for this sense.`,
+            bullets: [
+                'Passive scores are usually 10 + relevant modifiers.',
+                'They apply when the GM checks awareness without an active roll.',
+                'Proficiency and expertise can raise passive values.'
+            ]
+        });
+    }
+
+    openTrainingDetail(title: string, values: string[]): void {
+        const entries = values.length ? values : ['Not recorded'];
+        this.activeDetailDrawer.set({
+            title,
+            subtitle: 'Proficiencies & Training',
+            description: `These are your current ${title.toLowerCase()} proficiencies.`,
+            bullets: entries
+        });
+    }
+
+    openSkillDetail(skill: { name: string; ability: string; modifierLabel: string; proficient: boolean }): void {
+        this.activeDetailDrawer.set({
+            title: skill.name,
+            subtitle: `Skill (${skill.ability}) • ${skill.modifierLabel}`,
+            description: `This skill uses ${skill.ability} and ${skill.proficient ? 'includes' : 'does not include'} proficiency bonus.`,
+            bullets: [
+                'Roll this when attempting related tasks under pressure.',
+                'Proficiency adds your proficiency bonus to the check.',
+                'Class, species, and background choices can grant skill proficiency.'
+            ]
+        });
+    }
+
+    openArmorClassDetail(value: number): void {
+        this.activeDetailDrawer.set({
+            title: `Armor Class ${value}`,
+            subtitle: 'Core Stat',
+            description: 'Armor Class determines how hard you are to hit with attack rolls.',
+            bullets: [
+                'Attack rolls must meet or exceed your AC to hit.',
+                'Armor, shields, Dexterity, and features can affect AC.',
+                'Temporary effects may increase or reduce your AC.'
+            ]
+        });
+    }
+
+    openActionDetail(action: { name: string; subtitle?: string; range?: string; hitDcLabel?: string; damage?: string; notes?: string }): void {
+        const bullets = [
+            action.subtitle ? `Type: ${action.subtitle}` : 'Type: Combat option',
+            action.range ? `Range: ${action.range}` : '',
+            action.hitDcLabel ? `Hit / DC: ${action.hitDcLabel}` : '',
+            action.damage ? `Damage / Effect: ${action.damage}` : '',
+            action.notes ? `Notes: ${action.notes}` : ''
+        ].filter((entry) => entry.length > 0);
+
+        this.activeDetailDrawer.set({
+            title: action.name,
+            subtitle: 'Action Detail',
+            description: 'Detailed context for this combat option.',
+            bullets
+        });
+    }
+
+    openSpellDetail(spell: { name: string; castingTime?: string; range?: string; hitDcLabel?: string; damage?: string }): void {
+        const details = spellDetailsMap[spell.name];
+        this.activeDetailDrawer.set({
+            title: spell.name,
+            subtitle: 'Spell Detail',
+            description: details?.description ?? 'Spell details for this entry.',
+            bullets: [
+                spell.castingTime ? `Casting Time: ${spell.castingTime}` : '',
+                spell.range ? `Range: ${spell.range}` : '',
+                spell.hitDcLabel ? `Hit / DC: ${spell.hitDcLabel}` : '',
+                spell.damage ? `Effect: ${spell.damage}` : '',
+                details?.components ? `Components: ${details.components}` : ''
+            ].filter((entry) => entry.length > 0)
+        });
+    }
+
+    openInventoryItemDetail(item: { name: string; category: string; quantity: number; weight?: number; costGp?: number; notes?: string }): void {
+        this.activeDetailDrawer.set({
+            title: item.name,
+            subtitle: `Inventory • ${item.category}`,
+            description: item.notes?.trim() || 'Tracked inventory item details.',
+            bullets: [
+                `Quantity: ${item.quantity}`,
+                `Weight: ${item.weight != null ? `${item.weight} lb` : '—'}`,
+                `Cost: ${item.costGp != null ? `${item.costGp} gp` : '—'}`
+            ]
+        });
+    }
+
+    openFeatureDetail(name: string, description: string, category: string): void {
+        this.activeDetailDrawer.set({
+            title: name,
+            subtitle: category,
+            description,
+            bullets: [
+                'This feature can modify combat, exploration, or roleplay options.',
+                'Review trigger conditions and action economy when using it.',
+                'Check class/species progression for scaling details.'
+            ]
+        });
     }
 
     setSpellFilter(filter: SpellFilter): void {
