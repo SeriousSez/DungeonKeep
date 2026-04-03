@@ -508,11 +508,11 @@
                         <div class="info-row"><span class="value">Weight Carried: {{ inventorySummary().weight }}</span></div>
                     </div>
                     <div class="currency-piece-strip" (click)="openCurrencyManager()">
-                        <div class="currency-piece"><i class="fa-duotone fa-thin fa-gem"></i><span>PP</span><strong>{{ bag.currency.pp }}</strong></div>
-                        <div class="currency-piece"><i class="fa-duotone fa-thin fa-coins"></i><span>GP</span><strong>{{ bag.currency.gp }}</strong></div>
-                        <div class="currency-piece"><i class="fa-duotone fa-thin fa-hourglass-half"></i><span>EP</span><strong>{{ bag.currency.ep }}</strong></div>
-                        <div class="currency-piece"><i class="fa-duotone fa-thin fa-circle"></i><span>SP</span><strong>{{ bag.currency.sp }}</strong></div>
-                        <div class="currency-piece"><i class="fa-duotone fa-thin fa-square"></i><span>CP</span><strong>{{ bag.currency.cp }}</strong></div>
+                        <div class="currency-piece"><i class="fa-duotone fa-thin fa-gem coin-icon-pp"></i><span>PP</span><strong>{{ bag.currency.pp }}</strong></div>
+                        <div class="currency-piece"><i class="fa-duotone fa-thin fa-coins coin-icon-gp"></i><span>GP</span><strong>{{ bag.currency.gp }}</strong></div>
+                        <div class="currency-piece"><i class="fa-duotone fa-thin fa-hourglass-half coin-icon-ep"></i><span>EP</span><strong>{{ bag.currency.ep }}</strong></div>
+                        <div class="currency-piece"><i class="fa-duotone fa-thin fa-circle coin-icon-sp"></i><span>SP</span><strong>{{ bag.currency.sp }}</strong></div>
+                        <div class="currency-piece"><i class="fa-duotone fa-thin fa-square coin-icon-cp"></i><span>CP</span><strong>{{ bag.currency.cp }}</strong></div>
                     </div>
                 </div>
                 <div class="actions-meta-row">
@@ -862,11 +862,11 @@
         <section class="coin-popup-section">
             <h4>My Coin</h4>
             <div class="coin-rows">
-                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-gem"></i> Platinum (PP)</span><strong>{{ bag.currency.pp }}</strong></div>
-                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-coins"></i> Gold (GP)</span><strong>{{ bag.currency.gp }}</strong></div>
-                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-hourglass-half"></i> Electrum (EP)</span><strong>{{ bag.currency.ep }}</strong></div>
-                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-circle"></i> Silver (SP)</span><strong>{{ bag.currency.sp }}</strong></div>
-                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-square"></i> Copper (CP)</span><strong>{{ bag.currency.cp }}</strong></div>
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-gem coin-icon-pp"></i> Platinum (PP)</span><strong>{{ bag.currency.pp }}</strong></div>
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-coins coin-icon-gp"></i> Gold (GP)</span><strong>{{ bag.currency.gp }}</strong></div>
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-hourglass-half coin-icon-ep"></i> Electrum (EP)</span><strong>{{ bag.currency.ep }}</strong></div>
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-circle coin-icon-sp"></i> Silver (SP)</span><strong>{{ bag.currency.sp }}</strong></div>
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-square coin-icon-cp"></i> Copper (CP)</span><strong>{{ bag.currency.cp }}</strong></div>
             </div>
         </section>
 
@@ -907,11 +907,11 @@
             @if (currentCampaign(); as campaign) {
             <p class="coin-party-campaign">Shared with: {{ campaign.name }}</p>
             <div class="coin-rows">
-                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-gem"></i> Platinum (PP)</span><strong>{{ partyCurrency().pp }}</strong></div>
-                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-coins"></i> Gold (GP)</span><strong>{{ partyCurrency().gp }}</strong></div>
-                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-hourglass-half"></i> Electrum (EP)</span><strong>{{ partyCurrency().ep }}</strong></div>
-                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-circle"></i> Silver (SP)</span><strong>{{ partyCurrency().sp }}</strong></div>
-                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-square"></i> Copper (CP)</span><strong>{{ partyCurrency().cp }}</strong></div>
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-gem coin-icon-pp"></i> Platinum (PP)</span><strong>{{ partyCurrency().pp }}</strong></div>
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-coins coin-icon-gp"></i> Gold (GP)</span><strong>{{ partyCurrency().gp }}</strong></div>
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-hourglass-half coin-icon-ep"></i> Electrum (EP)</span><strong>{{ partyCurrency().ep }}</strong></div>
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-circle coin-icon-sp"></i> Silver (SP)</span><strong>{{ partyCurrency().sp }}</strong></div>
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-square coin-icon-cp"></i> Copper (CP)</span><strong>{{ partyCurrency().cp }}</strong></div>
             </div>
             <div class="coin-adjust-grid">
                 <label><span>PP</span><input type="number" min="0" [value]="partyCoinAdjustInput().pp" (input)="onPartyCoinAdjustInputChanged('pp', $any($event.target).value)" [disabled]="!canEditPartyCurrency()" /></label>

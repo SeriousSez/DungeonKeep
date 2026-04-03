@@ -816,7 +816,6 @@
     font-size: 0.8rem;
 
     i {
-        color: var(--accent-primary);
         font-size: 0.86rem;
     }
 
@@ -830,6 +829,26 @@
     strong {
         font-size: 0.84rem;
     }
+}
+
+.coin-icon-pp {
+    color: #8eafc2;
+}
+
+.coin-icon-gp {
+    color: #d4861a;
+}
+
+.coin-icon-ep {
+    color: #6b9ab8;
+}
+
+.coin-icon-sp {
+    color: #9aacb8;
+}
+
+.coin-icon-cp {
+    color: #b5763a;
 }
 
 @media (max-width: 900px) {
@@ -1643,10 +1662,6 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
-    }
-
-    i {
-        color: var(--accent-primary);
     }
 }
 
