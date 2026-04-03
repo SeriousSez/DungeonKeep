@@ -106,15 +106,20 @@
 }
 
 .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     align-self: start;
     color: var(--accent-primary);
     text-decoration: none;
     font-size: 0.92rem;
-    transition: opacity 0.2s ease;
+    font-weight: 600;
+    transition: color 0.18s ease, opacity 0.18s ease, transform 0.18s ease;
 
     &:hover {
-        opacity: 0.8;
-        text-decoration: underline;
+        color: var(--accent-primary);
+        opacity: 0.82;
+        transform: translateY(-1px);
     }
 }
 
