@@ -1,10 +1,142 @@
 import { Character } from '../models/dungeon.models';
 import type { InventoryEntry } from './new-character-standard-page.types';
 
+interface PremadeAppearanceProfile {
+    age: string;
+    height: string;
+    weight: string;
+    hair: string;
+    eyes: string;
+    skin: string;
+}
+
 export interface PremadeCharacter extends Character {
     inventoryEntries: InventoryEntry[];
     classPreparedSpells?: Record<string, string[]>;
     wizardSpellbookByClass?: Record<string, string[]>;
+    appearance?: PremadeAppearanceProfile;
+}
+
+const classRoleplayDefaults: Record<string, { personalityTraits: string[]; ideals: string[]; bonds: string[]; flaws: string[] }> = {
+    Barbarian: {
+        personalityTraits: ['Direct and fearless', 'Protective of companions'],
+        ideals: ['Strength should shield others', 'Freedom over tyranny'],
+        bonds: ['Tribe and travel companions'],
+        flaws: ['Quick to anger when provoked']
+    },
+    Bard: {
+        personalityTraits: ['Charismatic storyteller', 'Always collecting rumors'],
+        ideals: ['Art keeps hope alive', 'Truth can be revealed through song'],
+        bonds: ['A mentor performer and old troupe'],
+        flaws: ['Can overpromise in the moment']
+    },
+    Cleric: {
+        personalityTraits: ['Calm under pressure', 'Compassionate even to strangers'],
+        ideals: ['Service to the vulnerable', 'Faith tempered by wisdom'],
+        bonds: ['Sacred vows and temple teachings'],
+        flaws: ['Takes others burdens personally']
+    },
+    Druid: {
+        personalityTraits: ['Patient observer of nature', 'Speaks in measured words'],
+        ideals: ['Balance between civilization and wilds', 'Protect sacred places'],
+        bonds: ['An ancient grove and its spirits'],
+        flaws: ['Distrusts crowded cities']
+    },
+    Fighter: {
+        personalityTraits: ['Disciplined and practical', 'Keeps gear meticulously maintained'],
+        ideals: ['Preparation wins battles', 'Loyalty to the unit'],
+        bonds: ['Veteran comrades and old commander'],
+        flaws: ['Judges reckless plans harshly']
+    },
+    Monk: {
+        personalityTraits: ['Centered and deliberate', 'Values restraint'],
+        ideals: ['Mastery through practice', 'Self-control before force'],
+        bonds: ['Monastery teachings and sworn siblings'],
+        flaws: ['Can seem emotionally distant']
+    },
+    Paladin: {
+        personalityTraits: ['Noble bearing', 'Speaks with conviction'],
+        ideals: ['Justice with mercy', 'Keep every oath'],
+        bonds: ['Sacred oath and those under protection'],
+        flaws: ['Struggles to forgive personal betrayal']
+    },
+    Ranger: {
+        personalityTraits: ['Quiet tracker', 'Keenly attentive to surroundings'],
+        ideals: ['Guard borders of civilization', 'Live lightly on the land'],
+        bonds: ['A threatened wilderness and its folk'],
+        flaws: ['Reluctant to ask for help']
+    },
+    Rogue: {
+        personalityTraits: ['Quick-witted and sly', 'Always watching exits'],
+        ideals: ['Independence above all', 'Outsmart the powerful'],
+        bonds: ['A debt to an old accomplice'],
+        flaws: ['Keeps too many secrets']
+    },
+    Sorcerer: {
+        personalityTraits: ['Confident in innate power', 'Curious about magical anomalies'],
+        ideals: ['Power should be mastered, not feared', 'Freedom to define your own path'],
+        bonds: ['Family line touched by magic'],
+        flaws: ['Impulsive when emotions run hot']
+    },
+    Warlock: {
+        personalityTraits: ['Clever negotiator', 'Masks fear with humor'],
+        ideals: ['Knowledge at any cost', 'Power can be leveraged for good'],
+        bonds: ['A dangerous pact and its terms'],
+        flaws: ['Tempted by shortcuts']
+    },
+    Wizard: {
+        personalityTraits: ['Methodical scholar', 'Endlessly inquisitive'],
+        ideals: ['Knowledge must be preserved', 'Reason over superstition'],
+        bonds: ['Spellbook and academic mentor'],
+        flaws: ['Overthinks in urgent moments']
+    }
+};
+
+const raceAppearanceDefaults: Record<string, PremadeAppearanceProfile> = {
+    Dwarf: { age: '68', height: '4 ft 6 in', weight: '156 lb', hair: 'Braided auburn', eyes: 'Hazel', skin: 'Weathered tan' },
+    Elf: { age: '118', height: '5 ft 10 in', weight: '135 lb', hair: 'Silver-blond', eyes: 'Emerald', skin: 'Pale bronze' },
+    Goliath: { age: '29', height: '7 ft 2 in', weight: '322 lb', hair: 'Shaved', eyes: 'Gray-blue', skin: 'Stone-gray' },
+    Halfling: { age: '31', height: '3 ft 2 in', weight: '42 lb', hair: 'Chestnut curls', eyes: 'Brown', skin: 'Warm umber' },
+    Tiefling: { age: '24', height: '5 ft 8 in', weight: '142 lb', hair: 'Black with copper streaks', eyes: 'Amber', skin: 'Crimson' },
+    Human: { age: '26', height: '5 ft 11 in', weight: '174 lb', hair: 'Dark brown', eyes: 'Hazel', skin: 'Olive' },
+    Orc: { age: '23', height: '6 ft 5 in', weight: '246 lb', hair: 'Black topknot', eyes: 'Amber', skin: 'Green-gray' },
+    Tabaxi: { age: '20', height: '6 ft 1 in', weight: '158 lb', hair: 'Striped tawny fur', eyes: 'Gold', skin: 'Furred coat' },
+    Aasimar: { age: '27', height: '6 ft 0 in', weight: '186 lb', hair: 'Platinum blond', eyes: 'Silver', skin: 'Luminous fair' },
+    Dragonborn: { age: '24', height: '6 ft 4 in', weight: '236 lb', hair: 'No hair, horn crest', eyes: 'Burnished gold', skin: 'Scarlet scales' },
+    Gnome: { age: '63', height: '3 ft 4 in', weight: '38 lb', hair: 'Copper-brown', eyes: 'Violet', skin: 'Tan' }
+};
+
+function getRoleplayDefaults(character: PremadeCharacter): { personalityTraits: string[]; ideals: string[]; bonds: string[]; flaws: string[] } {
+    return classRoleplayDefaults[character.className] ?? {
+        personalityTraits: ['Adaptable and determined'],
+        ideals: ['Protect the party'],
+        bonds: ['Companions on the road'],
+        flaws: ['Takes on too much alone']
+    };
+}
+
+function getAppearanceDefaults(character: PremadeCharacter): PremadeAppearanceProfile {
+    return raceAppearanceDefaults[character.race] ?? {
+        age: '25',
+        height: '5 ft 8 in',
+        weight: '160 lb',
+        hair: 'Brown',
+        eyes: 'Brown',
+        skin: 'Fair'
+    };
+}
+
+function enrichPremade(character: PremadeCharacter): PremadeCharacter {
+    const roleplayDefaults = getRoleplayDefaults(character);
+
+    return {
+        ...character,
+        personalityTraits: character.personalityTraits?.length ? character.personalityTraits : roleplayDefaults.personalityTraits,
+        ideals: character.ideals?.length ? character.ideals : roleplayDefaults.ideals,
+        bonds: character.bonds?.length ? character.bonds : roleplayDefaults.bonds,
+        flaws: character.flaws?.length ? character.flaws : roleplayDefaults.flaws,
+        appearance: character.appearance ?? getAppearanceDefaults(character)
+    };
 }
 
 function inventoryItem(name: string, category: string, quantity = 1, extras: Partial<InventoryEntry> = {}): InventoryEntry {
@@ -71,7 +203,7 @@ function dungeoneersPack(): InventoryEntry {
     });
 }
 
-export const premadeCharacters: PremadeCharacter[] = [
+const basePremadeCharacters: PremadeCharacter[] = [
     {
         id: 'premade-dwarf-cleric',
         campaignId: '',
@@ -584,3 +716,5 @@ export const premadeCharacters: PremadeCharacter[] = [
         image: '/assets/images/nym-wickthorn.png'
     }
 ];
+
+export const premadeCharacters: PremadeCharacter[] = basePremadeCharacters.map((character) => enrichPremade(character));

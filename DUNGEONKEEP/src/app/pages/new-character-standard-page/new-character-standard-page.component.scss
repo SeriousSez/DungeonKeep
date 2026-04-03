@@ -1292,6 +1292,22 @@ input {
     z-index: 5200;
 }
 
+.measurement-field {
+    display: grid;
+    gap: 6px;
+}
+
+.measurement-input-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 112px;
+    gap: 8px;
+    align-items: center;
+}
+
+.measurement-unit-picker {
+    width: 100%;
+}
+
 .field-description {
     margin: 6px 0 0;
     font-size: 0.8rem;

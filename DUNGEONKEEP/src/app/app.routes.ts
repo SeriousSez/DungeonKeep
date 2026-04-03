@@ -20,7 +20,7 @@ export const routes: Routes = [
     {
         path: 'dashboard',
         component: DashboardPageComponent,
-        data: { title: 'Dashboard', breadcrumb: 'Dashboard' }
+        data: { title: 'Home', breadcrumb: 'Home' }
     },
     {
         path: 'campaigns',

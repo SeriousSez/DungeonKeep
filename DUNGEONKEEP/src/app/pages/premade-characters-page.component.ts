@@ -254,10 +254,10 @@ export class PremadeCharactersPageComponent {
             classFeatures: character.classFeatures || [],
             speciesTraits: character.speciesTraits || [],
             languages: character.languages || [],
-            personalityTraits: [],
-            ideals: [],
-            bonds: [],
-            flaws: [],
+            personalityTraits: character.personalityTraits || [],
+            ideals: character.ideals || [],
+            bonds: character.bonds || [],
+            flaws: character.flaws || [],
             equipment: character.equipment || [],
             savingThrows: {},
             combatStats: {},
@@ -295,6 +295,24 @@ export class PremadeCharactersPageComponent {
 
     private createPersistedNotes(character: PremadeCharacter): string {
         const visibleNotes = character.notes?.trim() || 'No field notes yet.';
+        const roleplayLines = [
+            `Alignment direction: ${character.alignment || 'Unaligned'}`,
+            `Lifestyle direction: ${character.lifestyle || 'Unrecorded'}`,
+            `Faith: ${character.faith || 'Unrecorded'}`,
+            `Experience: 0 XP`,
+            `Emphasize these personality traits: ${(character.personalityTraits ?? []).join(', ') || 'Not recorded'}`,
+            `Include these ideals: ${(character.ideals ?? []).join(', ') || 'Not recorded'}`,
+            `Include these bonds: ${(character.bonds ?? []).join(', ') || 'Not recorded'}`,
+            `Reflect these flaws: ${(character.flaws ?? []).join(', ') || 'Not recorded'}`
+        ];
+
+        if (character.appearance) {
+            roleplayLines.push(
+                `Physical characteristics: Gender: ${character.gender || 'Not set'}; Age: ${character.appearance.age}; Height: ${character.appearance.height}; Weight: ${character.appearance.weight}; Hair: ${character.appearance.hair}; Eyes: ${character.appearance.eyes}; Skin: ${character.appearance.skin}`
+            );
+        }
+
+        const composedVisibleNotes = `${visibleNotes}\n\n${roleplayLines.join('\n')}`;
         const state: Record<string, unknown> = {
             inventoryEntries: character.inventoryEntries,
             currency: this.getStartingCurrencyForPremade(character)
@@ -306,6 +324,6 @@ export class PremadeCharactersPageComponent {
             state['wizardSpellbookByClass'] = character.wizardSpellbookByClass;
         }
         const serializedState = JSON.stringify(state);
-        return `${visibleNotes}\n\n${this.builderStateStartTag}\n${serializedState}\n${this.builderStateEndTag}`;
+        return `${composedVisibleNotes}\n\n${this.builderStateStartTag}\n${serializedState}\n${this.builderStateEndTag}`;
     }
 }

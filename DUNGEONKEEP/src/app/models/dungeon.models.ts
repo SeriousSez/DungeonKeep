@@ -136,6 +136,8 @@ export interface Character {
     skills: SkillProficiencies;
     armorClass: number;
     hitPoints: number;
+    deathSaveFailures?: number;
+    deathSaveSuccesses?: number;
     maxHitPoints: number;
     proficiencyBonus: number;
     traits: string[];
@@ -146,8 +148,13 @@ export interface Character {
     classFeatures?: string[];
     speciesTraits?: string[];
     languages?: string[];
+    personalityTraits?: string[];
+    ideals?: string[];
+    bonds?: string[];
+    flaws?: string[];
     equipment?: string[];
     spells?: string[];
+    experiencePoints?: number;
     image?: string;
 }
 
@@ -176,6 +183,8 @@ export interface CharacterDraft {
     skills?: SkillProficiencies;
     armorClass?: number;
     hitPoints?: number;
+    deathSaveFailures?: number;
+    deathSaveSuccesses?: number;
     maxHitPoints?: number;
     gender?: string;
     alignment?: string;

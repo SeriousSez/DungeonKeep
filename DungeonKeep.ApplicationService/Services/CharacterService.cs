@@ -72,6 +72,28 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
             Background = request.Background.Trim(),
             Notes = request.Notes.Trim(),
             Backstory = string.Empty,
+            Species = request.Species.Trim(),
+            Alignment = request.Alignment.Trim(),
+            Lifestyle = request.Lifestyle.Trim(),
+            PersonalityTraits = request.PersonalityTraits.Trim(),
+            Ideals = request.Ideals.Trim(),
+            Bonds = request.Bonds.Trim(),
+            Flaws = request.Flaws.Trim(),
+            Equipment = request.Equipment.Trim(),
+            AbilityScores = request.AbilityScores.Trim(),
+            Skills = request.Skills.Trim(),
+            SavingThrows = request.SavingThrows.Trim(),
+            HitPoints = Math.Max(0, request.HitPoints),
+            DeathSaveFailures = Math.Clamp(request.DeathSaveFailures, 0, 3),
+            DeathSaveSuccesses = Math.Clamp(request.DeathSaveSuccesses, 0, 3),
+            ArmorClass = Math.Max(0, request.ArmorClass),
+            CombatStats = request.CombatStats.Trim(),
+            Spells = request.Spells.Trim(),
+            ExperiencePoints = Math.Max(0, request.ExperiencePoints),
+            PortraitUrl = request.PortraitUrl.Trim(),
+            Goals = request.Goals.Trim(),
+            Secrets = request.Secrets.Trim(),
+            SessionHistory = request.SessionHistory.Trim(),
             CreatedAtUtc = DateTime.UtcNow
         };
 
@@ -116,6 +138,28 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
             request.Background.Trim(),
             request.Notes.Trim(),
             normalizedCampaignId,
+            request.HitPoints.HasValue ? Math.Max(0, request.HitPoints.Value) : existing.HitPoints,
+            request.DeathSaveFailures.HasValue ? Math.Clamp(request.DeathSaveFailures.Value, 0, 3) : existing.DeathSaveFailures,
+            request.DeathSaveSuccesses.HasValue ? Math.Clamp(request.DeathSaveSuccesses.Value, 0, 3) : existing.DeathSaveSuccesses,
+            request.ArmorClass.HasValue ? Math.Max(0, request.ArmorClass.Value) : existing.ArmorClass,
+            ResolveOptionalText(request.Species, existing.Species),
+            ResolveOptionalText(request.Alignment, existing.Alignment),
+            ResolveOptionalText(request.Lifestyle, existing.Lifestyle),
+            ResolveOptionalText(request.PersonalityTraits, existing.PersonalityTraits),
+            ResolveOptionalText(request.Ideals, existing.Ideals),
+            ResolveOptionalText(request.Bonds, existing.Bonds),
+            ResolveOptionalText(request.Flaws, existing.Flaws),
+            ResolveOptionalText(request.Equipment, existing.Equipment),
+            ResolveOptionalText(request.AbilityScores, existing.AbilityScores),
+            ResolveOptionalText(request.Skills, existing.Skills),
+            ResolveOptionalText(request.SavingThrows, existing.SavingThrows),
+            ResolveOptionalText(request.CombatStats, existing.CombatStats),
+            ResolveOptionalText(request.Spells, existing.Spells),
+            request.ExperiencePoints.HasValue ? Math.Max(0, request.ExperiencePoints.Value) : existing.ExperiencePoints,
+            ResolveOptionalText(request.PortraitUrl, existing.PortraitUrl),
+            ResolveOptionalText(request.Goals, existing.Goals),
+            ResolveOptionalText(request.Secrets, existing.Secrets),
+            ResolveOptionalText(request.SessionHistory, existing.SessionHistory),
             cancellationToken
         );
 
@@ -266,6 +310,8 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
             character.Skills,
             character.SavingThrows,
             character.HitPoints,
+            character.DeathSaveFailures,
+            character.DeathSaveSuccesses,
             character.ArmorClass,
             character.CombatStats,
             character.Spells,
@@ -286,6 +332,16 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
     {
         var normalized = value?.Trim();
         return string.IsNullOrWhiteSpace(normalized) ? fallback : normalized;
+    }
+
+    private static string ResolveOptionalText(string? incomingValue, string existingValue)
+    {
+        if (incomingValue is null)
+        {
+            return existingValue;
+        }
+
+        return incomingValue.Trim();
     }
 
     private static string[] NormalizeCollection(string[]? values)

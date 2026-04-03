@@ -36,6 +36,8 @@ type ClassPanelTab = 'class-features' | 'spells';
 type WizardSpellSubTab = 'prepared' | 'spellbook' | 'catalog';
 type AbilityScoreImprovementMode = '' | 'plus-two' | 'plus-one-plus-one';
 type HitPointMode = 'fixed' | 'rolled';
+type HeightUnit = 'cm' | 'm' | 'ft' | 'in';
+type WeightUnit = 'kg' | 'lb';
 
 interface AbilityScoreImprovementChoice {
     mode: AbilityScoreImprovementMode;
@@ -121,7 +123,9 @@ interface PersistedBuilderState {
     physicalSkin: string;
     physicalEyes: string;
     physicalHeight: string;
+    physicalHeightUnit: HeightUnit;
     physicalWeight: string;
+    physicalWeightUnit: WeightUnit;
     physicalAge: string;
     physicalGender: string;
     classPreparedSpells: Record<string, string[]>;
@@ -625,11 +629,23 @@ export class NewCharacterStandardPageComponent {
     };
     readonly selectedLifestyle = signal('');
     readonly selectedLifestyleDescription = computed(() => this.lifestyleDescriptions[this.selectedLifestyle()] ?? '');
+    readonly heightUnitOptions: ReadonlyArray<DropdownOption> = [
+        { value: 'ft', label: 'ft' },
+        { value: 'in', label: 'in' },
+        { value: 'cm', label: 'cm' },
+        { value: 'm', label: 'm' }
+    ];
+    readonly weightUnitOptions: ReadonlyArray<DropdownOption> = [
+        { value: 'lb', label: 'lb' },
+        { value: 'kg', label: 'kg' }
+    ];
     readonly physicalHair = signal('');
     readonly physicalSkin = signal('');
     readonly physicalEyes = signal('');
     readonly physicalHeight = signal('');
+    readonly physicalHeightUnit = signal<HeightUnit>('ft');
     readonly physicalWeight = signal('');
+    readonly physicalWeightUnit = signal<WeightUnit>('lb');
     readonly physicalAge = signal('');
     readonly physicalGender = signal('');
     readonly selectedSpeciesSortMode = signal<SpeciesSortMode>('lineage');
@@ -6222,7 +6238,9 @@ export class NewCharacterStandardPageComponent {
             this.physicalSkin.set(persisted.physicalSkin || '');
             this.physicalEyes.set(persisted.physicalEyes || '');
             this.physicalHeight.set(persisted.physicalHeight || '');
+            this.physicalHeightUnit.set(this.resolveHeightUnit(persisted.physicalHeightUnit, persisted.physicalHeight));
             this.physicalWeight.set(persisted.physicalWeight || '');
+            this.physicalWeightUnit.set(this.resolveWeightUnit(persisted.physicalWeightUnit, persisted.physicalWeight));
             this.physicalAge.set(persisted.physicalAge || '');
             this.physicalGender.set(persisted.physicalGender || '');
 
@@ -6282,7 +6300,9 @@ export class NewCharacterStandardPageComponent {
             physicalSkin: this.physicalSkin(),
             physicalEyes: this.physicalEyes(),
             physicalHeight: this.physicalHeight(),
+            physicalHeightUnit: this.physicalHeightUnit(),
             physicalWeight: this.physicalWeight(),
+            physicalWeightUnit: this.physicalWeightUnit(),
             physicalAge: this.physicalAge(),
             physicalGender: this.physicalGender(),
             classPreparedSpells: this.classPreparedSpells(),
@@ -6377,8 +6397,8 @@ export class NewCharacterStandardPageComponent {
         const physicalDetails = [
             ['Gender', this.physicalGender().trim()],
             ['Age', this.physicalAge().trim()],
-            ['Height', this.physicalHeight().trim()],
-            ['Weight', this.physicalWeight().trim()],
+            ['Height', this.formatPhysicalMeasurement(this.physicalHeight().trim(), this.physicalHeightUnit())],
+            ['Weight', this.formatPhysicalMeasurement(this.physicalWeight().trim(), this.physicalWeightUnit())],
             ['Hair', this.physicalHair().trim()],
             ['Eyes', this.physicalEyes().trim()],
             ['Skin', this.physicalSkin().trim()]
@@ -6901,6 +6921,154 @@ export class NewCharacterStandardPageComponent {
                 this.physicalGender.set(value);
                 break;
         }
+    }
+
+    onPhysicalMeasurementUnitChanged(field: 'height' | 'weight', unit: string | number): void {
+        const nextUnit = String(unit);
+
+        if (field === 'height') {
+            if (!this.isHeightUnit(nextUnit)) {
+                return;
+            }
+
+            const currentUnit = this.physicalHeightUnit();
+            if (currentUnit === nextUnit) {
+                return;
+            }
+
+            const converted = this.convertHeightValue(this.physicalHeight(), currentUnit, nextUnit);
+            this.physicalHeightUnit.set(nextUnit);
+            if (converted != null) {
+                this.physicalHeight.set(converted);
+            }
+            return;
+        }
+
+        if (!this.isWeightUnit(nextUnit)) {
+            return;
+        }
+
+        const currentUnit = this.physicalWeightUnit();
+        if (currentUnit === nextUnit) {
+            return;
+        }
+
+        const converted = this.convertWeightValue(this.physicalWeight(), currentUnit, nextUnit);
+        this.physicalWeightUnit.set(nextUnit);
+        if (converted != null) {
+            this.physicalWeight.set(converted);
+        }
+    }
+
+    private isHeightUnit(value: string): value is HeightUnit {
+        return value === 'cm' || value === 'm' || value === 'ft' || value === 'in';
+    }
+
+    private isWeightUnit(value: string): value is WeightUnit {
+        return value === 'kg' || value === 'lb';
+    }
+
+    private resolveHeightUnit(persistedUnit: string | undefined, heightValue: string): HeightUnit {
+        if (persistedUnit && this.isHeightUnit(persistedUnit)) {
+            return persistedUnit;
+        }
+
+        const normalized = heightValue.trim().toLowerCase();
+        if (/\bcm\b|centimeter/.test(normalized)) return 'cm';
+        if (/\bm\b|meter/.test(normalized)) return 'm';
+        if (/\bft\b|foot|feet|\'/.test(normalized)) return 'ft';
+        if (/\bin\b|inch/.test(normalized)) return 'in';
+
+        return 'ft';
+    }
+
+    private resolveWeightUnit(persistedUnit: string | undefined, weightValue: string): WeightUnit {
+        if (persistedUnit && this.isWeightUnit(persistedUnit)) {
+            return persistedUnit;
+        }
+
+        const normalized = weightValue.trim().toLowerCase();
+        if (/\bkg\b|kilogram/.test(normalized)) return 'kg';
+        if (/\blb\b|\blbs\b|pound/.test(normalized)) return 'lb';
+
+        return 'lb';
+    }
+
+    private formatPhysicalMeasurement(value: string, unit: HeightUnit | WeightUnit): string {
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return '';
+        }
+
+        if (/[a-zA-Z]/.test(trimmed)) {
+            return trimmed;
+        }
+
+        return `${trimmed} ${unit}`;
+    }
+
+    private convertHeightValue(rawValue: string, fromUnit: HeightUnit, toUnit: HeightUnit): string | null {
+        const parsed = this.parseLeadingNumber(rawValue);
+        if (parsed == null) {
+            return null;
+        }
+
+        const valueInCm = this.heightToCm(parsed, fromUnit);
+        const converted = this.cmToHeightUnit(valueInCm, toUnit);
+        return this.roundMeasurement(converted, toUnit === 'm' ? 2 : 1);
+    }
+
+    private convertWeightValue(rawValue: string, fromUnit: WeightUnit, toUnit: WeightUnit): string | null {
+        const parsed = this.parseLeadingNumber(rawValue);
+        if (parsed == null) {
+            return null;
+        }
+
+        const valueInKg = fromUnit === 'kg' ? parsed : parsed * 0.45359237;
+        const converted = toUnit === 'kg' ? valueInKg : valueInKg / 0.45359237;
+        return this.roundMeasurement(converted, 1);
+    }
+
+    private parseLeadingNumber(input: string): number | null {
+        const match = input.trim().match(/^-?\d+(?:\.\d+)?/);
+        if (!match) {
+            return null;
+        }
+
+        const value = Number(match[0]);
+        return Number.isFinite(value) ? value : null;
+    }
+
+    private heightToCm(value: number, unit: HeightUnit): number {
+        switch (unit) {
+            case 'cm':
+                return value;
+            case 'm':
+                return value * 100;
+            case 'ft':
+                return value * 30.48;
+            case 'in':
+                return value * 2.54;
+        }
+    }
+
+    private cmToHeightUnit(valueInCm: number, unit: HeightUnit): number {
+        switch (unit) {
+            case 'cm':
+                return valueInCm;
+            case 'm':
+                return valueInCm / 100;
+            case 'ft':
+                return valueInCm / 30.48;
+            case 'in':
+                return valueInCm / 2.54;
+        }
+    }
+
+    private roundMeasurement(value: number, decimals: number): string {
+        const factor = Math.pow(10, decimals);
+        const rounded = Math.round(value * factor) / factor;
+        return rounded.toFixed(decimals).replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
     }
 
     private syncBackgroundLanguageChoiceSelections(values: string[]): void {

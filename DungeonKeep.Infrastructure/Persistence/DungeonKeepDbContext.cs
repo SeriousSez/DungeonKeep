@@ -111,6 +111,8 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
             entity.Property(c => c.Skills).HasMaxLength(1000);
             entity.Property(c => c.SavingThrows).HasMaxLength(500);
             entity.Property(c => c.HitPoints).IsRequired();
+            entity.Property(c => c.DeathSaveFailures).IsRequired();
+            entity.Property(c => c.DeathSaveSuccesses).IsRequired();
             entity.Property(c => c.ArmorClass).IsRequired();
             entity.Property(c => c.CombatStats).HasMaxLength(2000);
             entity.Property(c => c.Spells).HasMaxLength(4000);

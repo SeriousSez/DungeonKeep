@@ -1,22 +1,77 @@
-<main class="page-shell">
-    <app-hero-overview [title]="store.title()" [campaignCount]="store.campaignCount()" [characterCount]="store.characterCount()" [sessionCount]="store.sessionCount()" [readyCharacterCount]="store.readyCharacterCount()" />
+<main class="home-shell">
+    <section class="panel home-hero">
+        <p class="eyebrow">Welcome to DungeonKeep</p>
+        <h1>Your tabletop campaign command center</h1>
+        <p class="hero-copy">Build characters, organize party progress, prep sessions, and keep your world notes in one place.</p>
 
-    <div class="section-spacing">
-        <app-campaign-board [campaigns]="store.campaigns()" [selectedCampaignId]="store.selectedCampaignId()" [selectedCampaign]="store.selectedCampaign()" [openThreadCount]="store.openThreadCount()" (campaignSelected)="store.selectCampaign($event)"
-            (threadAdded)="store.addThread($event.text, $event.visibility)" (threadUpdated)="store.updateThread($event.threadId, $event.text, $event.visibility)" (threadArchived)="store.archiveThread($event)" />
-    </div>
+        <div class="hero-stats">
+            <article>
+                <span>Campaigns</span>
+                <strong>{{ store.campaignCount() }}</strong>
+            </article>
+            <article>
+                <span>Characters</span>
+                <strong>{{ store.characterCount() }}</strong>
+            </article>
+            <article>
+                <span>Ready to Play</span>
+                <strong>{{ store.readyCharacterCount() }}</strong>
+            </article>
+            <article>
+                <span>Session Threads</span>
+                <strong>{{ store.openThreadCount() }}</strong>
+            </article>
+        </div>
 
-    <section class="bottom-grid">
-        <app-party-roster [selectedParty]="store.selectedParty()" (statusCycled)="store.cycleStatus($event)" (characterPromoted)="store.promoteCharacter($event)" />
+        <div class="hero-actions">
+            <a routerLink="/characters/new" class="hero-btn hero-btn--primary">Create Character</a>
+            <a routerLink="/campaigns/new" class="hero-btn">Start Campaign</a>
+            <a routerLink="/sessions" class="hero-btn">Plan Session</a>
+        </div>
+    </section>
 
-        <article class="panel action-panel">
-            <p class="eyebrow">Creation</p>
-            <h2>Start something new</h2>
-            <p class="muted">Use dedicated pages for campaign and character creation.</p>
-            <div class="action-links">
-                <a routerLink="/campaigns/new" class="action-link">New Campaign</a>
-                <a routerLink="/characters/new" class="action-link">New Character</a>
-            </div>
-        </article>
+    <section class="panel possibilities-panel">
+        <div class="section-heading">
+            <p class="eyebrow">Possibilities</p>
+            <h2>What you can do in DungeonKeep</h2>
+        </div>
+
+        <div class="possibility-grid">
+            <article class="possibility-card">
+                <h3>Character Creation Studio</h3>
+                <p>Run a guided step-by-step builder, pick species/background/class options, and set up equipment in minutes.</p>
+                <a routerLink="/characters/new">Open Character Builder</a>
+            </article>
+
+            <article class="possibility-card">
+                <h3>Campaign Management</h3>
+                <p>Create campaign spaces, switch between active stories, and keep your session prep threads organized by visibility.</p>
+                <a routerLink="/campaigns">View Campaigns</a>
+            </article>
+
+            <article class="possibility-card">
+                <h3>Party Roster Tracking</h3>
+                <p>Promote characters to active party members, update status, and keep your table's adventurers easy to scan.</p>
+                <a routerLink="/characters">Manage Characters</a>
+            </article>
+
+            <article class="possibility-card">
+                <h3>Session Prep Workspace</h3>
+                <p>Use dedicated session pages to plan encounters, scenes, and beats before your next game night.</p>
+                <a routerLink="/sessions">Go to Session Prep</a>
+            </article>
+
+            <article class="possibility-card">
+                <h3>Premade Character Fast Start</h3>
+                <p>Jump in with premade heroes when you need to get a game moving quickly.</p>
+                <a routerLink="/characters/new/premade">Browse Premades</a>
+            </article>
+
+            <article class="possibility-card">
+                <h3>Persistent World Notes</h3>
+                <p>Capture details for backstory, organizations, allies, and enemies as your campaign evolves.</p>
+                <a routerLink="/characters/new/standard/background">Start Tracking Notes</a>
+            </article>
+        </div>
     </section>
 </main>

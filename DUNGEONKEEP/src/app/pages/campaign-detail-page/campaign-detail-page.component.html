@@ -1,5 +1,6 @@
 <main class="page-stack">
     @if (selectedCampaign(); as campaign) {
+    <a routerLink="/campaigns" class="back-link">← Back to Campaigns</a>
     <section class="panel page-intro">
         <div class="page-intro-header">
             <div>
@@ -7,7 +8,6 @@
                 <h1>{{ campaign.name }}</h1>
             </div>
             <div class="header-actions">
-                <a routerLink="/campaigns" class="back-link">← Back to Campaigns</a>
                 <a [routerLink]="['/campaigns', campaign.id, 'edit']" class="primary-button">Edit Campaign</a>
                 <button type="button" class="ghost-button" (click)="handleRequestDelete()">Delete Campaign</button>
             </div>

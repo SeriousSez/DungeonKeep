@@ -40,7 +40,7 @@
     }
 
     <form class="composer" (ngSubmit)="sendMessage()">
-        <textarea [ngModel]="draft()" (ngModelChange)="draft.set($event)" name="chatPrompt" rows="2" placeholder="Ask about D&D rules, classes, spells..." [disabled]="isLoading()"></textarea>
+        <textarea [ngModel]="draft()" (ngModelChange)="draft.set($event)" name="chatPrompt" rows="2" placeholder="Ask about D&D rules, classes, spells..." [disabled]="isLoading()" (keydown.enter)="onTextareaEnter($event)"></textarea>
         <button type="submit" [disabled]="isLoading() || draft().trim().length === 0">
             <i class="fa-duotone fa-thin fa-wand-magic-sparkles"></i>
             {{ isLoading() ? 'Thinking...' : 'Ask' }}

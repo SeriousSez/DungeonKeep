@@ -35,12 +35,12 @@
 }
 
 .back-link {
+    align-self: start;
     text-decoration: none;
     color: var(--text-main);
     font-size: 0.95rem;
     transition: color 160ms ease;
     white-space: nowrap;
-    order: -1;
 }
 
 .back-link:hover {
@@ -66,18 +66,6 @@
     font-size: 0.74rem;
     color: var(--text-soft);
     margin: 0 0 8px 0;
-}
-
-.back-link {
-    text-decoration: none;
-    color: var(--text-main);
-    font-size: 0.95rem;
-    transition: color 160ms ease;
-    white-space: nowrap;
-}
-
-.back-link:hover {
-    color: var(--accent-primary);
 }
 
 .details-grid {

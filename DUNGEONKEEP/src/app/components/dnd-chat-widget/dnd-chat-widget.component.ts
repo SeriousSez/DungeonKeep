@@ -70,6 +70,15 @@ export class DndChatWidgetComponent {
         }) as string;
     }
 
+    onTextareaEnter(event: Event): void {
+        const keyboardEvent = event as KeyboardEvent;
+        if (keyboardEvent.shiftKey) {
+            return;
+        }
+        keyboardEvent.preventDefault();
+        this.sendMessage();
+    }
+
     async sendMessage(): Promise<void> {
         const prompt = this.draft().trim();
         if (!prompt || this.isLoading()) {

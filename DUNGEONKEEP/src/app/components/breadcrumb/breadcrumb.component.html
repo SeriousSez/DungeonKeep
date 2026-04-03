@@ -1,5 +1,5 @@
 <nav class="breadcrumb-nav">
-    <a routerLink="/dashboard" class="breadcrumb-link">Dashboard</a>
+    <a routerLink="/dashboard" class="breadcrumb-link">Home</a>
     @for (crumb of crumbs(); track crumb.label; let last = $last) {
     <span class="breadcrumb-separator">/</span>
     @if (crumb.url && !last) {

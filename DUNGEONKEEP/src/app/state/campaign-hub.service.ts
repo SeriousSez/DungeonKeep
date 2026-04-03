@@ -1,0 +1,61 @@
+import { Injectable, inject } from '@angular/core';
+import { HubConnection, HubConnectionBuilder, HubConnectionState } from '@microsoft/signalr';
+import { Subject } from 'rxjs';
+
+import { environment } from '../../environments/environment';
+import { SessionService } from './session.service';
+
+export interface PartyCurrencyUpdatedEvent {
+    campaignId: string;
+    summary: string;
+}
+
+@Injectable({ providedIn: 'root' })
+export class CampaignHubService {
+    private readonly session = inject(SessionService);
+
+    private connection: HubConnection | null = null;
+    private joinedCampaignId: string | null = null;
+
+    private readonly _partyCurrencyUpdated = new Subject<PartyCurrencyUpdatedEvent>();
+    readonly partyCurrencyUpdated$ = this._partyCurrencyUpdated.asObservable();
+
+    async joinCampaign(campaignId: string): Promise<void> {
+        if (this.joinedCampaignId === campaignId && this.connection?.state === HubConnectionState.Connected) {
+            return;
+        }
+
+        await this.disconnect();
+
+        const hubUrl = environment.apiBaseUrl.replace(/\/api$/, '') + '/hubs/campaign';
+
+        this.connection = new HubConnectionBuilder()
+            .withUrl(hubUrl, { accessTokenFactory: () => this.session.token() ?? '' })
+            .withAutomaticReconnect()
+            .build();
+
+        this.connection.on('PartyCurrencyUpdated', (event: PartyCurrencyUpdatedEvent) => {
+            this._partyCurrencyUpdated.next(event);
+        });
+
+        await this.connection.start();
+        await this.connection.invoke('JoinCampaign', campaignId);
+        this.joinedCampaignId = campaignId;
+    }
+
+    async disconnect(): Promise<void> {
+        if (!this.connection) return;
+
+        try {
+            if (this.joinedCampaignId && this.connection.state === HubConnectionState.Connected) {
+                await this.connection.invoke('LeaveCampaign', this.joinedCampaignId);
+            }
+            await this.connection.stop();
+        } catch {
+            // Ignore teardown errors
+        } finally {
+            this.connection = null;
+            this.joinedCampaignId = null;
+        }
+    }
+}

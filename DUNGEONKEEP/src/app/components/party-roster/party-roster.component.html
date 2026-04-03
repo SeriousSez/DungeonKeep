@@ -37,6 +37,9 @@
         <div class="empty-state">
             <h3>{{ emptyTitle }}</h3>
             <p>{{ emptyMessage }}</p>
+            @if (emptyActionLabel && emptyActionLink) {
+            <a class="primary-button empty-state-button" [routerLink]="emptyActionLink">{{ emptyActionLabel }}</a>
+            }
         </div>
         }
     </div>

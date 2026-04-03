@@ -21,8 +21,8 @@
         </div>
     </section>
 
-    <app-party-roster [selectedParty]="ownedCharacters()" [eyebrow]="'Character vault'" [title]="'Your Characters'" [countLabel]="'total'" [emptyTitle]="'No characters created yet'" [emptyMessage]="'Create a character below to start building your roster.'" (statusCycled)="store.cycleStatus($event)"
-        (characterPromoted)="store.promoteCharacter($event)" (requestDelete)="handleRequestDelete($event)" />
+    <app-party-roster [selectedParty]="ownedCharacters()" [eyebrow]="'Character vault'" [title]="'Your Characters'" [countLabel]="'total'" [emptyTitle]="'No characters created yet'" [emptyMessage]="'Create a new character or choose a premade to start building your roster.'"
+        [emptyActionLabel]="'Create Character'" [emptyActionLink]="'/characters/new'" (statusCycled)="store.cycleStatus($event)" (characterPromoted)="store.promoteCharacter($event)" (requestDelete)="handleRequestDelete($event)" />
 
     <app-confirm-modal [open]="!!confirmDeleteId" title="Delete Character?" message="Are you sure you want to delete this character? This action cannot be undone." confirmText="Delete" cancelText="Cancel" (confirmed)="handleDeleteConfirmed()"
         (cancelled)="handleDeleteCancelled()"></app-confirm-modal>

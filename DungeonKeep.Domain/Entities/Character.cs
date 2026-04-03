@@ -28,6 +28,8 @@ public sealed class Character
     public string Skills { get; set; } = string.Empty; // JSON or delimited
     public string SavingThrows { get; set; } = string.Empty; // JSON or delimited
     public int HitPoints { get; set; } = 0;
+    public int DeathSaveFailures { get; set; } = 0;
+    public int DeathSaveSuccesses { get; set; } = 0;
     public int ArmorClass { get; set; } = 0;
     public string CombatStats { get; set; } = string.Empty; // JSON or delimited
     public string Spells { get; set; } = string.Empty; // JSON or delimited

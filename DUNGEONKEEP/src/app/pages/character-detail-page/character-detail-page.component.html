@@ -51,39 +51,97 @@
         <section class="panel summary-panel">
             <h2 class="section-title">Core Stats</h2>
             <div class="summary-strip secondary-stats-strip">
-                <div class="summary-item">
+                <div class="summary-item detail-trigger" role="button" tabindex="0" (click)="openProficiencyDetail()" (keydown.enter)="openProficiencyDetail()" (keydown.space)="openProficiencyDetail()">
                     <span class="summary-label">Proficiency</span>
                     <strong class="summary-value">+{{ char.proficiencyBonus }}</strong>
                 </div>
-                <div class="summary-item">
+                <div class="summary-item detail-trigger" role="button" tabindex="0" (click)="openSpeedDetail()" (keydown.enter)="openSpeedDetail()" (keydown.space)="openSpeedDetail()">
                     <span class="summary-label">Speed</span>
                     <strong class="summary-value">{{ speed() }} ft</strong>
                 </div>
-                <div class="summary-item">
+                <div class="summary-item detail-trigger" role="button" tabindex="0" (click)="openInitiativeDetail()" (keydown.enter)="openInitiativeDetail()" (keydown.space)="openInitiativeDetail()">
                     <span class="summary-label">Initiative</span>
                     <strong class="summary-value">{{ initiative() >= 0 ? '+' : '' }}{{ initiative() }}</strong>
                 </div>
-                <div class="summary-item">
+                <div class="summary-item detail-trigger" role="button" tabindex="0" (click)="openArmorClassDetail(char.armorClass)" (keydown.enter)="openArmorClassDetail(char.armorClass)" (keydown.space)="openArmorClassDetail(char.armorClass)">
                     <span class="summary-label">Armor Class</span>
-                    <strong class="summary-value detail-trigger" (click)="openArmorClassDetail(char.armorClass)">{{ char.armorClass }}</strong>
+                    <strong class="summary-value">{{ char.armorClass }}</strong>
                 </div>
-                <div class="summary-item">
-                    <span class="summary-label">Heroic Inspiration</span>
-                    <strong class="summary-value">No</strong>
+                @if (!isZeroHp()) {
+                <div class="summary-item detail-trigger" role="button" tabindex="0" (click)="toggleInspiration()" (keydown.enter)="toggleInspiration()" (keydown.space)="toggleInspiration()">
+                    <span class="summary-label summary-label-link" role="button" tabindex="0" (click)="$event.stopPropagation(); openHeroicInspirationDetail()" (keydown.enter)="$event.stopPropagation(); openHeroicInspirationDetail()"
+                        (keydown.space)="$event.preventDefault(); $event.stopPropagation(); openHeroicInspirationDetail()" aria-label="Open Heroic Inspiration information">
+                        Heroic Inspiration
+                    </span>
+                    @if (heroicInspiration()) {
+                    <strong class="summary-value inspiration-active">
+                        <i class="fa-duotone fa-light fa-lightbulb-on" style="--fa-primary-color: #f59e0b; --fa-secondary-color: #fde68a;"></i>
+                    </strong>
+                    <span class="summary-meta">Active</span>
+                    } @else {
+                    <strong class="summary-value inspiration-inactive">
+                        <i class="fa-duotone fa-light fa-lightbulb"></i>
+                    </strong>
                     <span class="summary-meta">Inactive</span>
+                    }
                 </div>
-                <div class="summary-item hp">
+                <div class="summary-item hp detail-trigger" role="button" tabindex="0" (click)="openHpManager()" (keydown.enter)="openHpManager()" (keydown.space)="openHpManager()">
                     <span class="summary-label">Hit Points</span>
-                    <strong class="summary-value">{{ char.hitPoints }} / {{ char.maxHitPoints }}</strong>
-                    <span class="summary-meta">Temp HP: 0</span>
+                    <strong class="summary-value">
+                        {{ char.hitPoints }} /
+                        @if (activeMaxHpOverride(); as overrideMax) {
+                        <span class="hp-max-override">{{ overrideMax }}</span>
+                        <span class="hp-max-base">({{ char.maxHitPoints }})</span>
+                        } @else {
+                        {{ char.maxHitPoints }}
+                        }
+                    </strong>
+                    @if (tempHitPoints() > 0) {
+                    <span class="summary-meta">Temp HP: {{ tempHitPoints() }}</span>
+                    }
                 </div>
+                } @else {
+                <section class="death-save-track" aria-label="Death saves tracker">
+                    <div class="inspiration-slot detail-trigger" role="button" tabindex="0" [class.active]="heroicInspiration()" [attr.aria-pressed]="heroicInspiration()"
+                        [attr.aria-label]="heroicInspiration() ? 'Heroic inspiration active. Click to toggle off.' : 'Heroic inspiration inactive. Click to toggle on.'" (click)="toggleInspiration()" (keydown.enter)="toggleInspiration()" (keydown.space)="$event.preventDefault(); toggleInspiration()">
+                        @if (heroicInspiration()) {
+                        <i class="fa-duotone fa-light fa-lightbulb-on" style="--fa-primary-color: #f59e0b; --fa-secondary-color: #fde68a;"></i>
+                        } @else {
+                        <i class="fa-duotone fa-light fa-lightbulb"></i>
+                        }
+                    </div>
+                    <div class="death-save-panel detail-trigger-card" role="button" tabindex="0" (click)="openHpManager()" (keydown.enter)="openHpManager()" (keydown.space)="openHpManager()">
+                        <div class="death-save-row">
+                            <span class="death-save-label">Failure</span>
+                            <div class="death-save-pips" aria-label="Failures">
+                                @for (pip of [0, 1, 2]; track pip) {
+                                <span class="death-pip death-pip--failure" [class.filled]="pip < deathSaveFailures()"></span>
+                                }
+                            </div>
+                        </div>
+                        <div class="death-save-row">
+                            <span class="death-save-label">Success</span>
+                            <div class="death-save-pips" aria-label="Successes">
+                                @for (pip of [0, 1, 2]; track pip) {
+                                <span class="death-pip death-pip--success" [class.filled]="pip < deathSaveSuccesses()"></span>
+                                }
+                            </div>
+                        </div>
+                        <p class="death-save-title">Death Saves</p>
+                    </div>
+                </section>
+                }
             </div>
         </section>
     </div>
 
     <div class="sheet-grid">
         <section class="panel left-column">
-            <h2 class="section-title">Saving Throws</h2>
+            <h2 class="section-title">
+                <span class="section-title-link" role="button" tabindex="0" (click)="openSavingThrowsDetail()" (keydown.enter)="openSavingThrowsDetail()" (keydown.space)="openSavingThrowsDetail()">
+                    Saving Throws
+                </span>
+            </h2>
             <div class="save-list">
                 @for (save of savingThrows(); track save.key) {
                 <div class="save-card" [class.proficient]="save.proficient">
@@ -95,12 +153,11 @@
 
             <h3 class="subsection-title">Senses</h3>
             <div class="passive-list">
-                <div class="passive-row detail-trigger-row" role="button" tabindex="0" (click)="openSenseDetail('Passive Perception', passivePerception())" (keydown.enter)="openSenseDetail('Passive Perception', passivePerception())"
-                    (keydown.space)="openSenseDetail('Passive Perception', passivePerception())"><span>Passive Perception</span><strong>{{ passivePerception() }}</strong></div>
-                <div class="passive-row detail-trigger-row" role="button" tabindex="0" (click)="openSenseDetail('Passive Investigation', passiveInvestigation())" (keydown.enter)="openSenseDetail('Passive Investigation', passiveInvestigation())"
-                    (keydown.space)="openSenseDetail('Passive Investigation', passiveInvestigation())"><span>Passive Investigation</span><strong>{{ passiveInvestigation() }}</strong></div>
-                <div class="passive-row detail-trigger-row" role="button" tabindex="0" (click)="openSenseDetail('Passive Insight', passiveInsight())" (keydown.enter)="openSenseDetail('Passive Insight', passiveInsight())" (keydown.space)="openSenseDetail('Passive Insight', passiveInsight())">
-                    <span>Passive Insight</span><strong>{{ passiveInsight() }}</strong></div>
+                <div class="passive-row detail-trigger-row" role="button" tabindex="0" (click)="openSensesDetail()" (keydown.enter)="openSensesDetail()" (keydown.space)="openSensesDetail()"><span>Passive Perception</span><strong>{{ passivePerception() }}</strong></div>
+                <div class="passive-row detail-trigger-row" role="button" tabindex="0" (click)="openSensesDetail()" (keydown.enter)="openSensesDetail()" (keydown.space)="openSensesDetail()"><span>Passive Investigation</span><strong>{{ passiveInvestigation() }}</strong></div>
+                <div class="passive-row detail-trigger-row" role="button" tabindex="0" (click)="openSensesDetail()" (keydown.enter)="openSensesDetail()" (keydown.space)="openSensesDetail()">
+                    <span>Passive Insight</span><strong>{{ passiveInsight() }}</strong>
+                </div>
             </div>
 
             <h3 class="subsection-title">Proficiencies & Training</h3>
@@ -128,10 +185,13 @@
             <h2 class="section-title">Skills</h2>
             <div class="skills-list">
                 @for (skill of skillRows(); track skill.key) {
-                <div class="skill-row detail-trigger-row" role="button" tabindex="0" [class.proficient]="skill.proficient" (click)="openSkillDetail(skill)" (keydown.enter)="openSkillDetail(skill)" (keydown.space)="openSkillDetail(skill)">
+                <div class="skill-row detail-trigger-row" role="button" tabindex="0" [class.proficient]="skill.proficient" [class.disadvantaged]="skill.hasDisadvantage" (click)="openSkillDetail(skill)" (keydown.enter)="openSkillDetail(skill)" (keydown.space)="openSkillDetail(skill)">
                     <span class="skill-prof">@if (skill.proficient) { ● } @else { ○ }</span>
                     <span class="skill-name">{{ skill.name }}</span>
                     <span class="skill-ability">{{ skill.ability }}</span>
+                    @if (skill.hasDisadvantage) {
+                    <span class="skill-flag">DIS</span>
+                    }
                     <span class="skill-mod">{{ skill.modifierLabel }}</span>
                 </div>
                 }
@@ -447,7 +507,7 @@
                     <div class="info-rows">
                         <div class="info-row"><span class="value">Weight Carried: {{ inventorySummary().weight }}</span></div>
                     </div>
-                    <div class="currency-piece-strip">
+                    <div class="currency-piece-strip" (click)="openCurrencyManager()">
                         <div class="currency-piece"><i class="fa-duotone fa-thin fa-gem"></i><span>PP</span><strong>{{ bag.currency.pp }}</strong></div>
                         <div class="currency-piece"><i class="fa-duotone fa-thin fa-coins"></i><span>GP</span><strong>{{ bag.currency.gp }}</strong></div>
                         <div class="currency-piece"><i class="fa-duotone fa-thin fa-hourglass-half"></i><span>EP</span><strong>{{ bag.currency.ep }}</strong></div>
@@ -617,7 +677,10 @@
                 }
                 }
                 @if (activeBackgroundFilter() === 'all' || activeBackgroundFilter() === 'appearance') {
-                <h3 class="subsection-title">Appearance</h3>
+                <div class="subsection-title-row">
+                    <h3 class="subsection-title">Appearance</h3>
+                    <button type="button" class="action-filter" (click)="toggleAppearanceMeasurementSystem()">{{ appearanceMeasurementToggleLabel() }}</button>
+                </div>
                 <div class="info-rows">
                     @for (item of appearanceRows(); track item.label) {
                     <div class="info-row">
@@ -684,6 +747,199 @@
     </div>
     }
 
+    @if (hpManagerOpen()) {
+    <aside class="panel hp-popup" role="dialog" aria-label="HP Management">
+        <header class="hp-popup-header">
+            <h3>HP Management</h3>
+            <button type="button" class="ghost-button" (click)="closeHpManager()">Close</button>
+        </header>
+
+        @if (isZeroHp()) {
+        <section class="hp-death-save-track" aria-label="Death saves tracker">
+            <header class="hp-death-save-header">
+                <h4>Death Saves</h4>
+            </header>
+            <div class="hp-death-save-row">
+                <span class="death-save-label">Failures</span>
+                <div class="death-save-pips" aria-label="Failures">
+                    @for (pip of [0, 1, 2]; track pip) {
+                    <button type="button" class="death-pip death-pip--failure hp-death-pip" [class.filled]="pip < hpDraftDeathSaveFailures()" [attr.aria-pressed]="pip < hpDraftDeathSaveFailures()" [attr.aria-label]="'Toggle failure ' + (pip + 1)" (click)="toggleHpDeathSaveFailure(pip)">
+                    </button>
+                    }
+                </div>
+            </div>
+            <div class="hp-death-save-row">
+                <span class="death-save-label">Successes</span>
+                <div class="death-save-pips" aria-label="Successes">
+                    @for (pip of [0, 1, 2]; track pip) {
+                    <button type="button" class="death-pip death-pip--success hp-death-pip" [class.filled]="pip < hpDraftDeathSaveSuccesses()" [attr.aria-pressed]="pip < hpDraftDeathSaveSuccesses()" [attr.aria-label]="'Toggle success ' + (pip + 1)" (click)="toggleHpDeathSaveSuccess(pip)">
+                    </button>
+                    }
+                </div>
+            </div>
+            <div class="hp-death-save-info-block">
+                <p>A Death Saving Throw is made at the start of your turn while you have 0 HP.</p>
+                <ul>
+                    <li>10 or higher is a success. 9 or lower is a failure.</li>
+                    <li>3 successes means you become stable. 3 failures means you die.</li>
+                    <li>A natural 1 counts as two failures. A natural 20 restores 1 HP.</li>
+                    <li>Damage at 0 HP causes one failure (two on a critical hit), and instant death if the damage equals or exceeds your max HP.</li>
+                    <li>Any healing resets both counters to zero.</li>
+                </ul>
+            </div>
+        </section>
+        }
+
+        <div class="hp-top-stats">
+            <label class="hp-stat">
+                <span>Current</span>
+                <input type="number" min="0" [max]="hpResolvedMax()" [value]="hpDraftCurrent()" (input)="onHpCurrentInputChanged($any($event.target).value)" />
+            </label>
+            <div class="hp-divider">/</div>
+            <label class="hp-stat">
+                <span>Max</span>
+                <input type="number" min="1" [value]="hpDraftMax()" (input)="onHpMaxInputChanged($any($event.target).value)" />
+            </label>
+            <label class="hp-stat">
+                <span>Temp</span>
+                <input type="number" min="0" [value]="hpDraftTemp()" (input)="onHpTempInputChanged($any($event.target).value)" />
+            </label>
+        </div>
+
+        <div class="hp-direct-edit">
+            <button type="button" class="secondary-btn" [disabled]="isSavingHp()" (click)="applyCurrentAndTempHp()">Apply Current & Temp</button>
+        </div>
+
+        <div class="hp-adjust-grid">
+            <div class="hp-adjust-row">
+                <label class="hp-box hp-box--heal">
+                    <span>Healing</span>
+                    <input type="number" min="0" [value]="hpHealingInput()" (input)="onHpHealingInputChanged($any($event.target).value)" />
+                </label>
+                <button type="button" class="hp-action hp-action--heal" [disabled]="isSavingHp()" (click)="applyHealing()"><i class="fa-duotone fa-thin fa-plus"></i></button>
+            </div>
+
+            <div class="hp-adjust-row">
+                <label class="hp-box hp-box--damage">
+                    <span>Damage</span>
+                    <input type="number" min="0" [value]="hpDamageInput()" (input)="onHpDamageInputChanged($any($event.target).value)" />
+                </label>
+                <button type="button" class="hp-action hp-action--damage" [disabled]="isSavingHp()" (click)="applyDamage()"><i class="fa-duotone fa-thin fa-minus"></i></button>
+            </div>
+
+            <div class="hp-preview">
+                <span>New HP</span>
+                <strong [class.positive]="hpChangeColor() === 'positive'" [class.negative]="hpChangeColor() === 'negative'">{{ hpPreviewNetResult() }}</strong>
+            </div>
+        </div>
+
+        <div class="hp-max-controls">
+            <label>
+                <span>Max HP Modifier</span>
+                <input type="number" [value]="hpMaxModifierInput()" (input)="onHpMaxModifierInputChanged($any($event.target).value)" />
+            </label>
+            <label>
+                <span>Override Max HP</span>
+                <input type="number" min="1" placeholder="—" [value]="hpOverrideInput()" (input)="onHpOverrideInputChanged($any($event.target).value)" />
+            </label>
+            <div class="hp-max-preview">
+                <span>Resolved Max HP</span>
+                <strong>{{ hpResolvedMax() }}</strong>
+            </div>
+            <button type="button" class="secondary-btn" [disabled]="isSavingHp()" (click)="applyMaxHpChanges()">Apply Max HP</button>
+        </div>
+    </aside>
+    }
+
+    @if (coinManagerOpen()) {
+    <aside class="panel coin-popup" role="dialog" aria-label="Manage Coin">
+        <header class="coin-popup-header">
+            <h3>Manage Coin</h3>
+            <button type="button" class="ghost-button" (click)="closeCurrencyManager()">Close</button>
+        </header>
+
+        @if (inventory(); as bag) {
+        <section class="coin-popup-section">
+            <h4>My Coin</h4>
+            <div class="coin-rows">
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-gem"></i> Platinum (PP)</span><strong>{{ bag.currency.pp }}</strong></div>
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-coins"></i> Gold (GP)</span><strong>{{ bag.currency.gp }}</strong></div>
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-hourglass-half"></i> Electrum (EP)</span><strong>{{ bag.currency.ep }}</strong></div>
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-circle"></i> Silver (SP)</span><strong>{{ bag.currency.sp }}</strong></div>
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-square"></i> Copper (CP)</span><strong>{{ bag.currency.cp }}</strong></div>
+            </div>
+        </section>
+
+        <section class="coin-popup-section">
+            <h4>Adjust Coin</h4>
+            <div class="coin-adjust-grid">
+                <label><span>PP</span><input type="number" min="0" [value]="coinAdjustInput().pp" (input)="onCoinAdjustInputChanged('pp', $any($event.target).value)" /></label>
+                <label><span>GP</span><input type="number" min="0" [value]="coinAdjustInput().gp" (input)="onCoinAdjustInputChanged('gp', $any($event.target).value)" /></label>
+                <label><span>EP</span><input type="number" min="0" [value]="coinAdjustInput().ep" (input)="onCoinAdjustInputChanged('ep', $any($event.target).value)" /></label>
+                <label><span>SP</span><input type="number" min="0" [value]="coinAdjustInput().sp" (input)="onCoinAdjustInputChanged('sp', $any($event.target).value)" /></label>
+                <label><span>CP</span><input type="number" min="0" [value]="coinAdjustInput().cp" (input)="onCoinAdjustInputChanged('cp', $any($event.target).value)" /></label>
+            </div>
+            <div class="coin-adjust-actions">
+                <button type="button" class="secondary-btn coin-add" (click)="applyCoinAdjustment('add')">+ Add</button>
+                <button type="button" class="secondary-btn coin-remove" (click)="applyCoinAdjustment('remove')">- Remove</button>
+                <button type="button" class="secondary-btn" (click)="applyCoinAdjustment('clear')">Clear</button>
+            </div>
+        </section>
+
+        <section class="coin-popup-section">
+            <h4>Lifestyle Expenses</h4>
+            <app-dropdown [value]="selectedLifestyleExpense()" [options]="lifestyleExpenseOptions" [searchable]="true" [placeholder]="'Choose lifestyle...'" size="wide" (changed)="onLifestyleExpenseChanged($event)"></app-dropdown>
+            <button type="button" class="coin-lifestyle-toggle" (click)="toggleLifestyleExpenseDetails()">
+                <span>{{ selectedLifestyleExpense() | titlecase }} Details</span>
+                <i class="fa-duotone fa-thin" [class.fa-chevron-up]="coinLifestyleExpanded()" [class.fa-chevron-down]="!coinLifestyleExpanded()"></i>
+            </button>
+            @if (coinLifestyleExpanded()) {
+            <p class="coin-lifestyle-description">{{ selectedLifestyleExpenseDescription() }}</p>
+            }
+        </section>
+
+        <section class="coin-popup-section">
+            <button type="button" class="coin-section-toggle" (click)="togglePartyCurrencyDetails()">
+                <span>Party Coin</span>
+                <i class="fa-duotone fa-thin" [class.fa-chevron-up]="partyCurrencyExpanded()" [class.fa-chevron-down]="!partyCurrencyExpanded()"></i>
+            </button>
+            @if (partyCurrencyExpanded()) {
+            @if (currentCampaign(); as campaign) {
+            <p class="coin-party-campaign">Shared with: {{ campaign.name }}</p>
+            <div class="coin-rows">
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-gem"></i> Platinum (PP)</span><strong>{{ partyCurrency().pp }}</strong></div>
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-coins"></i> Gold (GP)</span><strong>{{ partyCurrency().gp }}</strong></div>
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-hourglass-half"></i> Electrum (EP)</span><strong>{{ partyCurrency().ep }}</strong></div>
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-circle"></i> Silver (SP)</span><strong>{{ partyCurrency().sp }}</strong></div>
+                <div class="coin-row"><span><i class="fa-duotone fa-thin fa-square"></i> Copper (CP)</span><strong>{{ partyCurrency().cp }}</strong></div>
+            </div>
+            <div class="coin-adjust-grid">
+                <label><span>PP</span><input type="number" min="0" [value]="partyCoinAdjustInput().pp" (input)="onPartyCoinAdjustInputChanged('pp', $any($event.target).value)" [disabled]="!canEditPartyCurrency()" /></label>
+                <label><span>GP</span><input type="number" min="0" [value]="partyCoinAdjustInput().gp" (input)="onPartyCoinAdjustInputChanged('gp', $any($event.target).value)" [disabled]="!canEditPartyCurrency()" /></label>
+                <label><span>EP</span><input type="number" min="0" [value]="partyCoinAdjustInput().ep" (input)="onPartyCoinAdjustInputChanged('ep', $any($event.target).value)" [disabled]="!canEditPartyCurrency()" /></label>
+                <label><span>SP</span><input type="number" min="0" [value]="partyCoinAdjustInput().sp" (input)="onPartyCoinAdjustInputChanged('sp', $any($event.target).value)" [disabled]="!canEditPartyCurrency()" /></label>
+                <label><span>CP</span><input type="number" min="0" [value]="partyCoinAdjustInput().cp" (input)="onPartyCoinAdjustInputChanged('cp', $any($event.target).value)" [disabled]="!canEditPartyCurrency()" /></label>
+            </div>
+            <div class="coin-adjust-actions">
+                <button type="button" class="secondary-btn coin-add" (click)="applyPartyCoinAdjustment('add')" [disabled]="!canEditPartyCurrency()">+ Add</button>
+                <button type="button" class="secondary-btn coin-remove" (click)="applyPartyCoinAdjustment('remove')" [disabled]="!canEditPartyCurrency()">- Remove</button>
+                <button type="button" class="secondary-btn" (click)="applyPartyCoinAdjustment('clear')" [disabled]="!canEditPartyCurrency()">Clear</button>
+            </div>
+            @if (!canEditPartyCurrency()) {
+            <p class="coin-party-note">Only campaign owners can edit party coin.</p>
+            }
+            @if (partyCurrencySaveError()) {
+            <p class="coin-party-error">{{ partyCurrencySaveError() }}</p>
+            }
+            } @else {
+            <p class="coin-party-note">Assign this character to a campaign to use shared party coin.</p>
+            }
+            }
+        </section>
+        }
+    </aside>
+    }
+
     @if (activeDetailDrawer(); as detail) {
     <aside class="panel detail-popup" role="dialog" [attr.aria-label]="detail.title">
         <header class="detail-drawer-header">
@@ -695,13 +951,33 @@
             <button type="button" class="ghost-button" (click)="closeDetailDrawer()">Close</button>
         </header>
 
+        @if (detail.lineItems && detail.lineItems.length > 0) {
+        <div class="detail-breakdown-list">
+            @for (item of detail.lineItems; track item.label) {
+            <div class="detail-breakdown-row">
+                <strong class="detail-breakdown-value">{{ item.value }}</strong>
+                <span class="detail-breakdown-label">{{ item.label }} @if (item.note) { <em>{{ item.note }}</em> }</span>
+            </div>
+            }
+        </div>
+        }
+
+        @if (detail.secondaryHeading) {
+        <button type="button" class="detail-secondary-toggle" aria-expanded="true">
+            <span>{{ detail.secondaryHeading }}</span>
+            <i class="fa-duotone fa-thin fa-chevron-down"></i>
+        </button>
+        }
+
         <p class="detail-drawer-description">{{ detail.description }}</p>
 
+        @if (detail.bullets && detail.bullets.length > 0) {
         <ul class="detail-drawer-list">
             @for (bullet of detail.bullets; track bullet) {
             <li>{{ bullet }}</li>
             }
         </ul>
+        }
     </aside>
     }
 </main>

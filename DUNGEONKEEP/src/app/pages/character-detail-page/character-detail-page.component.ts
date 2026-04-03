@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { marked } from 'marked';
 
@@ -11,6 +12,7 @@ import { races } from '../../data/races';
 import { equipmentCatalog } from '../../data/new-character-standard-page.data';
 import { spellDetailsMap } from '../../data/spell-details.data';
 import type { SkillProficiencies } from '../../models/dungeon.models';
+import { CampaignHubService } from '../../state/campaign-hub.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
 type AbilityKey = 'strength' | 'dexterity' | 'constitution' | 'intelligence' | 'wisdom' | 'charisma';
@@ -22,6 +24,7 @@ type BackgroundFilter = 'all' | 'background' | 'characteristics' | 'appearance';
 type InventoryFilter = string; // Can be 'all', 'equipment', 'other', or a container name
 type FeaturesFilter = 'all' | 'class-features' | 'species-traits' | 'feats';
 type NotesFilter = 'all' | 'orgs' | 'allies' | 'enemies' | 'backstory' | 'other';
+type MeasurementSystem = 'imperial' | 'metric';
 
 interface PersistedInventoryEntry {
     name: string;
@@ -71,10 +74,16 @@ interface PersistedBuilderState {
     bgAbilityScoreFor1?: string;
     inventoryEntries?: PersistedInventoryEntry[];
     currency?: PersistedCurrencyState;
+    lifestyleExpense?: string;
     classPreparedSpells?: Record<string, string[]>;
     classKnownSpellsByClass?: Record<string, string[]>;
     wizardSpellbookByClass?: Record<string, string[]>;
     usedSpellSlotsByLevel?: Record<number, number>;
+    hpMaxOverride?: number | null;
+    tempHitPoints?: number;
+    heroicInspiration?: boolean;
+    deathSaveFailures?: number;
+    deathSaveSuccesses?: number;
 }
 
 interface CombatRow {
@@ -92,7 +101,9 @@ interface DetailDrawerContent {
     title: string;
     subtitle: string;
     description: string;
-    bullets: string[];
+    bullets?: string[];
+    lineItems?: Array<{ value: string; label: string; note?: string }>;
+    secondaryHeading?: string;
 }
 
 @Component({
@@ -107,8 +118,12 @@ export class CharacterDetailPageComponent {
     private readonly store = inject(DungeonStoreService);
     private readonly route = inject(ActivatedRoute);
     private readonly cdr = inject(ChangeDetectorRef);
+    private readonly destroyRef = inject(DestroyRef);
+    private readonly campaignHub = inject(CampaignHubService);
     private readonly builderStateStartTag = '[DK_BUILDER_STATE_START]';
     private readonly builderStateEndTag = '[DK_BUILDER_STATE_END]';
+    private readonly partyCurrencyStartTag = '[DK_PARTY_CURRENCY_START]';
+    private readonly partyCurrencyEndTag = '[DK_PARTY_CURRENCY_END]';
     private readonly catalogLookup = new Map(equipmentCatalog.map((item) => [item.name.toLowerCase(), item]));
     private readonly premadeCharacterLookup = new Map<string, PremadeCharacter>(
         premadeCharacters.map((character) => [this.getPremadeLookupKey(character), character])
@@ -153,6 +168,46 @@ export class CharacterDetailPageComponent {
         'blunderbuss': '3d8 Piercing',
         'pepperbox': '4d10 Piercing'
     };
+
+    private readonly armorClassProfiles: Record<string, { base: number; dexCap: number | null }> = {
+        'padded armor': { base: 11, dexCap: null },
+        'leather armor': { base: 11, dexCap: null },
+        'studded leather armor': { base: 12, dexCap: null },
+        'hide armor': { base: 12, dexCap: 2 },
+        'chain shirt': { base: 13, dexCap: 2 },
+        'scale mail': { base: 14, dexCap: 2 },
+        'breastplate': { base: 14, dexCap: 2 },
+        'half plate': { base: 15, dexCap: 2 },
+        'ring mail': { base: 14, dexCap: 0 },
+        'chain mail': { base: 16, dexCap: 0 },
+        'splint armor': { base: 17, dexCap: 0 },
+        'plate armor': { base: 18, dexCap: 0 }
+    };
+
+    private readonly armorCategoryByName: Record<string, 'light' | 'medium' | 'heavy'> = {
+        'padded armor': 'light',
+        'leather armor': 'light',
+        'studded leather armor': 'light',
+        'hide armor': 'medium',
+        'chain shirt': 'medium',
+        'scale mail': 'medium',
+        'breastplate': 'medium',
+        'half plate': 'medium',
+        'ring mail': 'heavy',
+        'chain mail': 'heavy',
+        'splint armor': 'heavy',
+        'plate armor': 'heavy'
+    };
+
+    private readonly stealthDisadvantageArmor = new Set([
+        'padded armor',
+        'scale mail',
+        'half plate',
+        'ring mail',
+        'chain mail',
+        'splint armor',
+        'plate armor'
+    ]);
 
     private readonly containerItemNames = new Set([
         'backpack',
@@ -285,11 +340,55 @@ export class CharacterDetailPageComponent {
     readonly usedSpellSlotsByLevel = signal<Record<number, number>>({});
     readonly expandedContainers = signal<Set<string>>(new Set());
     readonly activeDetailDrawer = signal<DetailDrawerContent | null>(null);
+    readonly hpManagerOpen = signal(false);
+    readonly hpHealingInput = signal('0');
+    readonly hpDamageInput = signal('0');
+    readonly hpMaxModifierInput = signal('0');
+    readonly hpOverrideInput = signal('');
+    readonly hpDraftCurrent = signal(0);
+    readonly hpDraftMax = signal(0);
+    readonly tempHitPoints = signal(0);
+    readonly hpDraftTemp = signal(0);
+    readonly hpDraftDeathSaveFailures = signal(0);
+    readonly hpDraftDeathSaveSuccesses = signal(0);
+    readonly appliedMaxHpOverride = signal<number | null>(null);
+    readonly isSavingHp = signal(false);
+    readonly heroicInspiration = signal(false);
+    readonly coinManagerOpen = signal(false);
+    readonly coinAdjustInput = signal<PersistedCurrencyState>({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 });
+    readonly partyCoinAdjustInput = signal<PersistedCurrencyState>({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 });
+    readonly coinLifestyleExpanded = signal(false);
+    readonly partyCurrencyExpanded = signal(false);
+    readonly selectedLifestyleExpense = signal('modest');
+    readonly partyCurrencySaveError = signal('');
+    readonly appearanceMeasurementSystem = signal<MeasurementSystem>('imperial');
 
     private lastCharacterId: string | null = null;
     private saveSpellSlotTimeout: ReturnType<typeof setTimeout> | null = null;
 
     constructor() {
+        // Join SignalR campaign group when campaign is available; leave on destroy.
+        effect(() => {
+            const campaign = this.currentCampaign();
+            if (campaign) {
+                void this.campaignHub.joinCampaign(campaign.id);
+            }
+        });
+
+        this.campaignHub.partyCurrencyUpdated$
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe((event) => {
+                const campaign = this.currentCampaign();
+                if (campaign && event.campaignId === campaign.id) {
+                    this.store.patchCampaignSummary(event.campaignId, event.summary);
+                    this.cdr.detectChanges();
+                }
+            });
+
+        this.destroyRef.onDestroy(() => {
+            void this.campaignHub.disconnect();
+        });
+
         // Seed usedSpellSlotsByLevel from persisted state whenever the character
         // or their saved data changes (e.g. on first load or navigation).
         effect(() => {
@@ -300,6 +399,29 @@ export class CharacterDetailPageComponent {
                 this.lastCharacterId = char.id;
                 this.usedSpellSlotsByLevel.set({ ...initial });
             }
+        });
+
+        effect(() => {
+            const persistedOverride = this.persistedBuilderState()?.hpMaxOverride;
+            if (typeof persistedOverride !== 'number' || !Number.isFinite(persistedOverride)) {
+                this.appliedMaxHpOverride.set(null);
+                return;
+            }
+
+            this.appliedMaxHpOverride.set(Math.max(1, Math.trunc(persistedOverride)));
+        });
+
+        effect(() => {
+            const persistedTempHp = this.persistedBuilderState()?.tempHitPoints;
+            if (typeof persistedTempHp === 'number' && Number.isFinite(persistedTempHp)) {
+                this.tempHitPoints.set(Math.max(0, Math.trunc(persistedTempHp)));
+            } else {
+                this.tempHitPoints.set(0);
+            }
+        });
+
+        effect(() => {
+            this.heroicInspiration.set(this.persistedBuilderState()?.heroicInspiration ?? false);
         });
     }
 
@@ -378,6 +500,26 @@ export class CharacterDetailPageComponent {
         { key: 'other', label: 'Other' }
     ];
 
+    readonly lifestyleExpenseOptions: ReadonlyArray<DropdownOption> = [
+        { value: 'wretched', label: 'Wretched (free, but miserable)' },
+        { value: 'squalid', label: 'Squalid (1 SP/day)' },
+        { value: 'poor', label: 'Poor (2 SP/day)' },
+        { value: 'modest', label: 'Modest (1 GP/day)' },
+        { value: 'comfortable', label: 'Comfortable (2 GP/day)' },
+        { value: 'wealthy', label: 'Wealthy (4 GP/day)' },
+        { value: 'aristocratic', label: 'Aristocratic (10+ GP/day)' }
+    ];
+
+    private readonly lifestyleExpenseDescriptions: Readonly<Record<string, string>> = {
+        wretched: 'No real cost, but you endure harsh conditions, instability, and constant discomfort.',
+        squalid: 'You survive in filthy, unsafe surroundings with only the barest essentials.',
+        poor: 'Simple meals and rough lodging keep you going, but comfort and privacy are limited.',
+        modest: 'A modest lifestyle keeps you out of the slums and ensures that you can maintain your equipment.',
+        comfortable: 'You maintain good lodging, quality meals, and enough means to avoid daily hardship.',
+        wealthy: 'You enjoy fine accommodations, quality goods, and influence among well-off circles.',
+        aristocratic: 'Lavish living, elite expectations, and expensive appearances define your daily life.'
+    };
+
     readonly STANDARD_COMBAT_ACTIONS = [
         'Attack', 'Dash', 'Disengage', 'Dodge', 'Grapple', 'Help',
         'Hide', 'Improvise', 'Influence', 'Magic', 'Ready', 'Search', 'Shove', 'Study', 'Utilize'
@@ -448,7 +590,15 @@ export class CharacterDetailPageComponent {
             return [];
         }
 
-        return this.premadeCharacterLookup.get(this.getPremadeLookupKey(character))?.inventoryEntries ?? [];
+        return this.getPremadeCharacter(character)?.inventoryEntries ?? [];
+    }
+
+    private getPremadeCharacter(character: { name: string; race: string; className: string; background: string } | null): PremadeCharacter | null {
+        if (!character) {
+            return null;
+        }
+
+        return this.premadeCharacterLookup.get(this.getPremadeLookupKey(character)) ?? null;
     }
 
     private getPremadeLookupKey(character: { name: string; race: string; className: string; background: string }): string {
@@ -580,6 +730,26 @@ export class CharacterDetailPageComponent {
         return this.store.campaigns().find((campaign) => campaign.id === char.campaignId)?.name ?? 'Unassigned';
     });
 
+    readonly currentCampaign = computed(() => {
+        const char = this.character();
+        if (!char || char.campaignId === CharacterDetailPageComponent.UNASSIGNED_CAMPAIGN_ID) {
+            return null;
+        }
+
+        return this.store.campaigns().find((campaign) => campaign.id === char.campaignId) ?? null;
+    });
+
+    readonly partyCurrency = computed<PersistedCurrencyState>(() => {
+        const campaign = this.currentCampaign();
+        if (!campaign) {
+            return this.createEmptyCurrencyState();
+        }
+
+        return this.parseCampaignPartyCurrency(campaign.summary ?? '').currency;
+    });
+
+    readonly canEditPartyCurrency = computed(() => this.currentCampaign()?.currentUserRole === 'Owner');
+
     readonly assignableCampaignOptions = computed<DropdownOption[]>(() =>
         this.store.campaigns().map((campaign) => ({ value: campaign.id, label: campaign.name }))
     );
@@ -600,31 +770,48 @@ export class CharacterDetailPageComponent {
         }
 
         const noteContext = this.noteContext();
+        const premade = this.getPremadeCharacter(char);
+        const experiencePoints = char.experiencePoints;
 
         return [
             { label: 'Name', value: char.name },
             { label: 'Class & Level', value: `${char.className} ${char.level}` },
             { label: 'Race', value: char.race },
             { label: 'Background', value: this.displayBackground() },
-            { label: 'Alignment', value: noteContext.alignment || 'Not recorded' },
-            { label: 'Lifestyle', value: noteContext.lifestyle || 'Not recorded' },
-            { label: 'Faith', value: noteContext.faith || 'Not recorded' },
-            { label: 'Experience', value: noteContext.experience || 'Not recorded' }
+            { label: 'Alignment', value: noteContext.alignment || char.alignment || premade?.alignment || 'Not recorded' },
+            { label: 'Lifestyle', value: noteContext.lifestyle || char.lifestyle || premade?.lifestyle || 'Not recorded' },
+            { label: 'Faith', value: noteContext.faith || char.faith || premade?.faith || 'Not recorded' },
+            {
+                label: 'Experience',
+                value: noteContext.experience
+                    || (typeof experiencePoints === 'number' && Number.isFinite(experiencePoints)
+                        ? `${Math.max(0, Math.trunc(experiencePoints))} XP`
+                        : 'Not recorded')
+            }
         ];
     });
 
     readonly appearanceRows = computed(() => {
+        const char = this.character();
         const context = this.noteContext();
+        const premade = this.getPremadeCharacter(char);
+        const rawHeight = context.physical.height || premade?.appearance?.height || '';
+        const rawWeight = context.physical.weight || premade?.appearance?.weight || '';
+
         return [
-            { label: 'Gender', value: context.physical.gender || 'Not set' },
-            { label: 'Age', value: context.physical.age || 'Not set' },
-            { label: 'Height', value: context.physical.height || 'Not set' },
-            { label: 'Weight', value: context.physical.weight || 'Not set' },
-            { label: 'Hair', value: context.physical.hair || 'Not set' },
-            { label: 'Eyes', value: context.physical.eyes || 'Not set' },
-            { label: 'Skin', value: context.physical.skin || 'Not set' }
+            { label: 'Gender', value: context.physical.gender || char?.gender || premade?.gender || 'Not set' },
+            { label: 'Age', value: context.physical.age || premade?.appearance?.age || 'Not set' },
+            { label: 'Height', value: this.formatHeightForDisplay(rawHeight) },
+            { label: 'Weight', value: this.formatWeightForDisplay(rawWeight) },
+            { label: 'Hair', value: context.physical.hair || premade?.appearance?.hair || 'Not set' },
+            { label: 'Eyes', value: context.physical.eyes || premade?.appearance?.eyes || 'Not set' },
+            { label: 'Skin', value: context.physical.skin || premade?.appearance?.skin || 'Not set' }
         ];
     });
+
+    readonly appearanceMeasurementToggleLabel = computed(() =>
+        this.appearanceMeasurementSystem() === 'imperial' ? 'Show cm/kg' : 'Show ft/lb'
+    );
 
     readonly speed = computed(() => {
         const char = this.character();
@@ -645,6 +832,105 @@ export class CharacterDetailPageComponent {
         return this.getAbilityModifier(scores.dexterity);
     });
 
+    readonly isZeroHp = computed(() => {
+        const char = this.character();
+        return (char?.hitPoints ?? 0) <= 0;
+    });
+
+    readonly hpResolvedMax = computed(() => {
+        const overrideValue = this.parseOptionalInteger(this.hpOverrideInput());
+        if (overrideValue != null) {
+            return Math.max(1, overrideValue);
+        }
+
+        const appliedOverride = this.appliedMaxHpOverride();
+        if (appliedOverride != null) {
+            return appliedOverride;
+        }
+
+        const modifier = this.parseInteger(this.hpMaxModifierInput());
+        return Math.max(1, this.hpDraftMax() + modifier);
+    });
+
+    readonly activeMaxHpOverride = computed(() => {
+        const char = this.character();
+        const overrideValue = this.appliedMaxHpOverride();
+        if (!char || overrideValue == null || overrideValue === char.maxHitPoints) {
+            return null;
+        }
+
+        return overrideValue;
+    });
+
+    readonly hpPreviewAfterHealing = computed(() => {
+        const healing = this.parseInteger(this.hpHealingInput());
+        return Math.min(this.hpResolvedMax(), Math.max(0, this.hpDraftCurrent() + Math.max(0, healing)));
+    });
+
+    readonly hpPreviewAfterDamage = computed(() => {
+        const damage = this.parseInteger(this.hpDamageInput());
+        return Math.max(0, this.hpDraftCurrent() - Math.max(0, damage));
+    });
+
+    readonly hpNetChange = computed(() => {
+        const healing = Math.max(0, this.parseInteger(this.hpHealingInput()));
+        const damage = Math.max(0, this.parseInteger(this.hpDamageInput()));
+        return healing - damage;
+    });
+
+    readonly hpPreviewNetResult = computed(() => {
+        const healing = Math.max(0, this.parseInteger(this.hpHealingInput()));
+        const damage = Math.max(0, this.parseInteger(this.hpDamageInput()));
+        // No max cap here — show the raw effect so users can see healing working even at full hp.
+        // The cap is applied when the change is actually committed.
+        return Math.max(0, this.hpDraftCurrent() + healing - damage);
+    });
+
+    readonly hpChangeColor = computed(() => {
+        const netChange = this.hpNetChange();
+        if (netChange > 0) return 'positive';
+        if (netChange < 0) return 'negative';
+        return 'neutral';
+    });
+
+    readonly deathSaveFailures = computed(() => {
+        const char = this.character();
+        if (!char || !this.isZeroHp()) {
+            return 0;
+        }
+
+        const persistedBackendFailures = Number(char.deathSaveFailures);
+        if (Number.isFinite(persistedBackendFailures)) {
+            return this.clampDeathSaveCount(persistedBackendFailures);
+        }
+
+        const persistedFailures = this.persistedBuilderState()?.deathSaveFailures;
+        if (typeof persistedFailures === 'number' && Number.isFinite(persistedFailures)) {
+            return this.clampDeathSaveCount(persistedFailures);
+        }
+
+        return char.status === 'Recovering' ? 1 : 0;
+    });
+
+    readonly deathSaveSuccesses = computed(() => {
+        const char = this.character();
+        if (!char || !this.isZeroHp()) {
+            return 0;
+        }
+
+        const persistedBackendSuccesses = Number(char.deathSaveSuccesses);
+        if (Number.isFinite(persistedBackendSuccesses)) {
+            return this.clampDeathSaveCount(persistedBackendSuccesses);
+        }
+
+        const persistedSuccesses = this.persistedBuilderState()?.deathSaveSuccesses;
+        if (typeof persistedSuccesses === 'number' && Number.isFinite(persistedSuccesses)) {
+            return this.clampDeathSaveCount(persistedSuccesses);
+        }
+
+        return char.status === 'Ready' ? 1 : 0;
+    });
+
     readonly passivePerception = computed(() => this.getPassiveSkillValue('perception'));
     readonly passiveInvestigation = computed(() => this.getPassiveSkillValue('investigation'));
     readonly passiveInsight = computed(() => this.getPassiveSkillValue('insight'));
@@ -659,7 +945,7 @@ export class CharacterDetailPageComponent {
         return [
             { label: 'Current HP', value: `${char.hitPoints}` },
             { label: 'Max HP', value: `${char.maxHitPoints}` },
-            { label: 'Temporary HP', value: '0' },
+            { label: 'Temporary HP', value: `${this.tempHitPoints()}` },
             { label: 'Hit Dice', value: `${char.level}d${hitDie}` },
             { label: 'Death Saves', value: char.status === 'Recovering' ? '1 failure' : '0 failures' }
         ];
@@ -730,12 +1016,15 @@ export class CharacterDetailPageComponent {
             const abilityScore = this.effectiveAbilityScores()?.[abilityKey] ?? 10;
             const proficient = this.isSkillProficient(skill.key, char.skills);
             const modifier = this.getAbilityModifier(abilityScore) + (proficient ? char.proficiencyBonus : 0);
+            const disadvantageReason = this.getArmorDisadvantageReasonForSkill(skill.key, this.abilityKeyMap[abilityKey]);
 
             return {
                 ...skill,
                 ability: this.abilityKeyMap[abilityKey],
                 proficient,
-                modifierLabel: this.formatSigned(modifier)
+                modifierLabel: this.formatSigned(modifier),
+                hasDisadvantage: disadvantageReason != null,
+                disadvantageReason
             };
         });
     });
@@ -1058,6 +1347,10 @@ export class CharacterDetailPageComponent {
         };
     });
 
+    readonly selectedLifestyleExpenseDescription = computed(() =>
+        this.lifestyleExpenseDescriptions[this.selectedLifestyleExpense()] ?? ''
+    );
+
     readonly filteredInventoryItems = computed(() => {
         const bag = this.inventory();
         if (!bag) {
@@ -1088,6 +1381,61 @@ export class CharacterDetailPageComponent {
             0
         );
         return ownWeight + containedWeight;
+    }
+
+    private createEmptyCurrencyState(): PersistedCurrencyState {
+        return { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 };
+    }
+
+    private parseNonNegativeInteger(value: string): number {
+        return Math.max(0, this.parseInteger(value));
+    }
+
+    private normalizeLifestyleExpense(value: string): string {
+        const normalized = value.trim().toLowerCase();
+        return this.lifestyleExpenseOptions.some((option) => option.value === normalized) ? normalized : 'modest';
+    }
+
+    private parseCampaignPartyCurrency(summary: string): { cleanedSummary: string; currency: PersistedCurrencyState } {
+        const raw = summary?.trim() ?? '';
+        if (!raw) {
+            return { cleanedSummary: '', currency: this.createEmptyCurrencyState() };
+        }
+
+        const start = raw.indexOf(this.partyCurrencyStartTag);
+        const end = raw.indexOf(this.partyCurrencyEndTag);
+
+        if (start === -1 || end === -1 || end < start) {
+            return { cleanedSummary: raw, currency: this.createEmptyCurrencyState() };
+        }
+
+        const jsonStart = start + this.partyCurrencyStartTag.length;
+        const jsonText = raw.slice(jsonStart, end).trim();
+        const before = raw.slice(0, start).trimEnd();
+        const after = raw.slice(end + this.partyCurrencyEndTag.length).trimStart();
+        const cleanedSummary = [before, after].filter((part) => part.length > 0).join('\n\n').trim();
+
+        try {
+            const parsed = JSON.parse(jsonText) as Partial<PersistedCurrencyState>;
+            return {
+                cleanedSummary,
+                currency: {
+                    pp: this.parseNonNegativeInteger(String(parsed.pp ?? 0)),
+                    gp: this.parseNonNegativeInteger(String(parsed.gp ?? 0)),
+                    ep: this.parseNonNegativeInteger(String(parsed.ep ?? 0)),
+                    sp: this.parseNonNegativeInteger(String(parsed.sp ?? 0)),
+                    cp: this.parseNonNegativeInteger(String(parsed.cp ?? 0))
+                }
+            };
+        } catch {
+            return { cleanedSummary, currency: this.createEmptyCurrencyState() };
+        }
+    }
+
+    private createCampaignSummaryWithPartyCurrency(originalSummary: string, currency: PersistedCurrencyState): string {
+        const parsed = this.parseCampaignPartyCurrency(originalSummary);
+        const stateJson = JSON.stringify(currency);
+        return `${parsed.cleanedSummary}\n\n${this.partyCurrencyStartTag}${stateJson}${this.partyCurrencyEndTag}`.trim();
     }
 
     readonly containersByName = computed(() => {
@@ -1310,11 +1658,23 @@ export class CharacterDetailPageComponent {
         const char = this.character();
         if (!char) return null;
         const context = this.noteContext();
+        const premade = this.getPremadeCharacter(char);
+
+        const personalityFromCharacter = Array.isArray(char.personalityTraits) ? char.personalityTraits.join(', ') : '';
+        const idealsFromCharacter = Array.isArray(char.ideals) ? char.ideals.join(', ') : '';
+        const bondsFromCharacter = Array.isArray(char.bonds) ? char.bonds.join(', ') : '';
+        const flawsFromCharacter = Array.isArray(char.flaws) ? char.flaws.join(', ') : '';
+
+        const personalityFromPremade = Array.isArray(premade?.personalityTraits) ? premade.personalityTraits.join(', ') : '';
+        const idealsFromPremade = Array.isArray(premade?.ideals) ? premade.ideals.join(', ') : '';
+        const bondsFromPremade = Array.isArray(premade?.bonds) ? premade.bonds.join(', ') : '';
+        const flawsFromPremade = Array.isArray(premade?.flaws) ? premade.flaws.join(', ') : '';
+
         return {
-            personality: context.personality || 'Not recorded',
-            ideals: context.ideals || 'Not recorded',
-            bonds: context.bonds || 'Not recorded',
-            flaws: context.flaws || 'Not recorded',
+            personality: context.personality || personalityFromCharacter || personalityFromPremade || 'Not recorded',
+            ideals: context.ideals || idealsFromCharacter || idealsFromPremade || 'Not recorded',
+            bonds: context.bonds || bondsFromCharacter || bondsFromPremade || 'Not recorded',
+            flaws: context.flaws || flawsFromCharacter || flawsFromPremade || 'Not recorded',
             backstory: char.notes || ''
         };
     });
@@ -1426,66 +1786,1084 @@ export class CharacterDetailPageComponent {
         this.activeDetailDrawer.set(null);
     }
 
-    openAbilityDetail(ability: { name: string; score: number; modifierLabel: string }): void {
-        this.activeDetailDrawer.set({
-            title: `${ability.name} (${ability.score})`,
-            subtitle: `Ability Score • Modifier ${ability.modifierLabel}`,
+    private openDetailDrawer(content: DetailDrawerContent): void {
+        this.hpManagerOpen.set(false);
+        this.activeDetailDrawer.set(content);
+    }
+
+    openHpManager(): void {
+        const char = this.character();
+        if (!char) {
+            return;
+        }
+
+        this.activeDetailDrawer.set(null);
+        this.hpDraftCurrent.set(char.hitPoints);
+        this.hpDraftMax.set(char.maxHitPoints);
+        this.hpDraftTemp.set(this.tempHitPoints());
+        this.hpDraftDeathSaveFailures.set(this.deathSaveFailures());
+        this.hpDraftDeathSaveSuccesses.set(this.deathSaveSuccesses());
+        this.hpHealingInput.set('0');
+        this.hpDamageInput.set('0');
+        this.hpMaxModifierInput.set('0');
+        this.hpOverrideInput.set(this.appliedMaxHpOverride()?.toString() ?? '');
+        this.hpManagerOpen.set(true);
+    }
+
+    closeHpManager(): void {
+        this.hpManagerOpen.set(false);
+    }
+
+    onHpHealingInputChanged(value: string): void {
+        this.hpHealingInput.set(value);
+    }
+
+    onHpDamageInputChanged(value: string): void {
+        this.hpDamageInput.set(value);
+    }
+
+    onHpMaxModifierInputChanged(value: string): void {
+        this.hpMaxModifierInput.set(value);
+    }
+
+    onHpCurrentInputChanged(value: string): void {
+        const previousCurrent = this.hpDraftCurrent();
+        const resolvedMax = this.hpResolvedMax();
+        const nextCurrent = Math.max(0, Math.min(resolvedMax, this.parseInteger(value)));
+        this.hpDraftCurrent.set(nextCurrent);
+
+        if (nextCurrent > 0) {
+            this.hpDraftDeathSaveFailures.set(0);
+            this.hpDraftDeathSaveSuccesses.set(0);
+            return;
+        }
+
+        if (previousCurrent > 0) {
+            this.hpDraftDeathSaveFailures.set(0);
+            this.hpDraftDeathSaveSuccesses.set(0);
+        }
+    }
+
+    onHpMaxInputChanged(value: string): void {
+        const nextMax = Math.max(1, this.parseInteger(value));
+        this.hpDraftMax.set(nextMax);
+        this.hpDraftCurrent.set(Math.min(nextMax, this.hpDraftCurrent()));
+    }
+
+    onHpTempInputChanged(value: string): void {
+        this.hpDraftTemp.set(Math.max(0, this.parseInteger(value)));
+    }
+
+    onHpOverrideInputChanged(value: string): void {
+        this.hpOverrideInput.set(value);
+    }
+
+    async applyHealing(): Promise<void> {
+        const amount = Math.max(0, this.parseInteger(this.hpHealingInput()));
+        if (amount <= 0) {
+            return;
+        }
+
+        const nextCurrent = Math.min(this.hpResolvedMax(), this.hpDraftCurrent() + amount);
+        await this.persistCurrentHitPoints(nextCurrent);
+        if (nextCurrent > 0) {
+            this.hpDraftDeathSaveFailures.set(0);
+            this.hpDraftDeathSaveSuccesses.set(0);
+            await this.persistDeathSavesState(0, 0);
+        }
+        this.hpHealingInput.set('0');
+    }
+
+    async applyDamage(): Promise<void> {
+        const amount = Math.max(0, this.parseInteger(this.hpDamageInput()));
+        if (amount <= 0) {
+            return;
+        }
+
+        const wasAboveZero = this.hpDraftCurrent() > 0;
+        const nextCurrent = Math.max(0, this.hpDraftCurrent() - amount);
+        await this.persistCurrentHitPoints(nextCurrent);
+        if (nextCurrent === 0 && wasAboveZero) {
+            this.hpDraftDeathSaveFailures.set(0);
+            this.hpDraftDeathSaveSuccesses.set(0);
+            await this.persistDeathSavesState(0, 0);
+        }
+        this.hpDamageInput.set('0');
+    }
+
+    async applyMaxHpChanges(): Promise<void> {
+        const overrideValue = this.parseOptionalInteger(this.hpOverrideInput());
+        if (overrideValue != null) {
+            const nextOverride = Math.max(1, overrideValue);
+            const nextCurrent = Math.min(nextOverride, this.hpDraftCurrent());
+            await this.persistHpOverrideState(nextOverride);
+            this.appliedMaxHpOverride.set(nextOverride);
+            await this.persistCurrentHitPoints(nextCurrent);
+            return;
+        }
+
+        if (this.appliedMaxHpOverride() != null) {
+            await this.persistHpOverrideState(null);
+            this.appliedMaxHpOverride.set(null);
+        }
+
+        // Max HP modifier is display-only and does not persist to character data.
+        // Cap current HP if needed based on the resolved max (which includes modifier).
+        const resolvedMax = this.hpResolvedMax();
+        if (this.hpDraftCurrent() > resolvedMax) {
+            const nextCurrent = Math.max(0, resolvedMax);
+            await this.persistCurrentHitPoints(nextCurrent);
+        }
+    }
+
+    async applyCurrentAndTempHp(): Promise<void> {
+        const char = this.character();
+        if (!char) {
+            return;
+        }
+
+        const nextCurrent = Math.max(0, Math.min(this.hpResolvedMax(), this.hpDraftCurrent()));
+        const nextMax = this.hpDraftMax();
+        const nextTemp = Math.max(0, this.hpDraftTemp());
+
+        // If max HP has changed, persist the new max; otherwise just update current HP
+        if (nextMax !== char.maxHitPoints) {
+            await this.persistHitPoints(nextCurrent, nextMax);
+            await this.persistHpOverrideState(nextMax);
+            this.appliedMaxHpOverride.set(nextMax);
+        } else {
+            await this.persistCurrentHitPoints(nextCurrent);
+        }
+
+        // Persist temp HP separately
+        await this.persistTempHitPoints(nextTemp);
+        this.tempHitPoints.set(nextTemp);
+
+        if (nextCurrent > 0) {
+            this.hpDraftDeathSaveFailures.set(0);
+            this.hpDraftDeathSaveSuccesses.set(0);
+            await this.persistDeathSavesState(0, 0);
+        } else {
+            await this.persistDeathSavesState(this.hpDraftDeathSaveFailures(), this.hpDraftDeathSaveSuccesses());
+        }
+    }
+
+    async toggleHpDeathSaveFailure(pipIndex: number): Promise<void> {
+        if (this.hpDraftCurrent() !== 0) {
+            return;
+        }
+
+        const nextFailures = this.computeNextDeathSaveCount(this.hpDraftDeathSaveFailures(), pipIndex);
+        const nextSuccesses = nextFailures >= 3 ? 0 : this.hpDraftDeathSaveSuccesses();
+
+        this.hpDraftDeathSaveFailures.set(nextFailures);
+        if (nextFailures >= 3) {
+            this.hpDraftDeathSaveSuccesses.set(0);
+        }
+
+        await this.persistDeathSavesState(nextFailures, nextSuccesses);
+    }
+
+    async toggleHpDeathSaveSuccess(pipIndex: number): Promise<void> {
+        if (this.hpDraftCurrent() !== 0) {
+            return;
+        }
+
+        const nextSuccesses = this.computeNextDeathSaveCount(this.hpDraftDeathSaveSuccesses(), pipIndex);
+        const nextFailures = nextSuccesses >= 3 ? 0 : this.hpDraftDeathSaveFailures();
+
+        this.hpDraftDeathSaveSuccesses.set(nextSuccesses);
+        if (nextSuccesses >= 3) {
+            this.hpDraftDeathSaveFailures.set(0);
+        }
+
+        await this.persistDeathSavesState(nextFailures, nextSuccesses);
+    }
+
+    private async persistCurrentHitPoints(nextCurrent: number): Promise<void> {
+        const char = this.character();
+        if (!char) {
+            return;
+        }
+
+        await this.persistHitPoints(nextCurrent, char.maxHitPoints);
+    }
+
+    private async persistHpOverrideState(overrideValue: number | null): Promise<void> {
+        const char = this.character();
+        if (!char) {
+            return;
+        }
+
+        const currentState: PersistedBuilderState = this.persistedBuilderState() ?? {};
+        const updatedState: PersistedBuilderState = { ...currentState };
+
+        if (overrideValue == null) {
+            delete updatedState.hpMaxOverride;
+        } else {
+            updatedState.hpMaxOverride = overrideValue;
+        }
+
+        const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
+        await this.store.updateCharacter(this.characterId, {
+            name: char.name,
+            playerName: char.playerName,
+            race: char.race,
+            className: char.className,
+            role: char.role,
+            level: char.level,
+            background: char.background,
+            notes: updatedNotes,
+            campaignId: char.campaignId,
+            hitPoints: this.hpDraftCurrent(),
+            maxHitPoints: this.hpDraftMax()
+        });
+    }
+
+    async toggleInspiration(): Promise<void> {
+        const char = this.character();
+        if (!char) return;
+
+        const next = !this.heroicInspiration();
+        this.heroicInspiration.set(next);
+
+        const currentState: PersistedBuilderState = this.persistedBuilderState() ?? {};
+        const updatedState: PersistedBuilderState = { ...currentState };
+        if (next) {
+            updatedState.heroicInspiration = true;
+        } else {
+            delete updatedState.heroicInspiration;
+        }
+
+        const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
+        await this.store.updateCharacter(this.characterId, {
+            name: char.name,
+            playerName: char.playerName,
+            race: char.race,
+            className: char.className,
+            role: char.role,
+            level: char.level,
+            background: char.background,
+            notes: updatedNotes,
+            campaignId: char.campaignId,
+            hitPoints: this.hpDraftCurrent(),
+            maxHitPoints: this.hpDraftMax()
+        });
+    }
+
+    private async persistTempHitPoints(tempHpValue: number): Promise<void> {
+        const char = this.character();
+        if (!char) {
+            return;
+        }
+
+        const currentState: PersistedBuilderState = this.persistedBuilderState() ?? {};
+        const updatedState: PersistedBuilderState = { ...currentState };
+
+        if (tempHpValue > 0) {
+            updatedState.tempHitPoints = tempHpValue;
+        } else {
+            delete updatedState.tempHitPoints;
+        }
+
+        const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
+        await this.store.updateCharacter(this.characterId, {
+            name: char.name,
+            playerName: char.playerName,
+            race: char.race,
+            className: char.className,
+            role: char.role,
+            level: char.level,
+            background: char.background,
+            notes: updatedNotes,
+            campaignId: char.campaignId,
+            hitPoints: this.hpDraftCurrent(),
+            maxHitPoints: this.hpDraftMax()
+        });
+    }
+
+    private async persistCurrencyState(currencyValue: PersistedCurrencyState, lifestyleExpense?: string): Promise<void> {
+        const char = this.character();
+        if (!char) {
+            return;
+        }
+
+        const currentState: PersistedBuilderState = this.persistedBuilderState() ?? {};
+        const updatedState: PersistedBuilderState = {
+            ...currentState,
+            currency: {
+                pp: this.parseNonNegativeInteger(String(currencyValue.pp)),
+                gp: this.parseNonNegativeInteger(String(currencyValue.gp)),
+                ep: this.parseNonNegativeInteger(String(currencyValue.ep)),
+                sp: this.parseNonNegativeInteger(String(currencyValue.sp)),
+                cp: this.parseNonNegativeInteger(String(currencyValue.cp))
+            },
+            lifestyleExpense: this.normalizeLifestyleExpense(lifestyleExpense ?? this.selectedLifestyleExpense())
+        };
+
+        const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
+
+        try {
+            await this.store.updateCharacter(this.characterId, {
+                name: char.name,
+                playerName: char.playerName,
+                race: char.race,
+                className: char.className,
+                role: char.role,
+                level: char.level,
+                background: char.background,
+                notes: updatedNotes,
+                campaignId: char.campaignId,
+                hitPoints: char.hitPoints,
+                maxHitPoints: char.maxHitPoints
+            });
+        } finally {
+            this.cdr.detectChanges();
+        }
+    }
+
+    private async persistPartyCurrencyState(currencyValue: PersistedCurrencyState): Promise<boolean> {
+        const campaign = this.currentCampaign();
+        if (!campaign) {
+            this.partyCurrencySaveError.set('Assign this character to a campaign first.');
+            return false;
+        }
+
+        if (!this.canEditPartyCurrency()) {
+            this.partyCurrencySaveError.set('Only campaign owners can update party currency.');
+            return false;
+        }
+
+        const normalizedCurrency: PersistedCurrencyState = {
+            pp: this.parseNonNegativeInteger(String(currencyValue.pp)),
+            gp: this.parseNonNegativeInteger(String(currencyValue.gp)),
+            ep: this.parseNonNegativeInteger(String(currencyValue.ep)),
+            sp: this.parseNonNegativeInteger(String(currencyValue.sp)),
+            cp: this.parseNonNegativeInteger(String(currencyValue.cp))
+        };
+
+        const updatedSummary = this.createCampaignSummaryWithPartyCurrency(campaign.summary ?? '', normalizedCurrency);
+
+        const updated = await this.store.updateCampaign(campaign.id, {
+            name: campaign.name,
+            setting: campaign.setting,
+            tone: campaign.tone,
+            levelStart: campaign.levelStart,
+            levelEnd: campaign.levelEnd,
+            hook: campaign.hook,
+            nextSession: campaign.nextSession,
+            summary: updatedSummary
+        });
+
+        if (!updated) {
+            this.partyCurrencySaveError.set('Unable to update party currency right now.');
+            return false;
+        }
+
+        this.partyCurrencySaveError.set('');
+        this.cdr.detectChanges();
+        return true;
+    }
+
+    private async persistDeathSavesState(failures: number, successes: number): Promise<void> {
+        const char = this.character();
+        if (!char) {
+            return;
+        }
+
+        const clampedFailures = this.clampDeathSaveCount(failures);
+        const clampedSuccesses = this.clampDeathSaveCount(successes);
+        await this.store.updateCharacter(this.characterId, {
+            name: char.name,
+            playerName: char.playerName,
+            race: char.race,
+            className: char.className,
+            role: char.role,
+            level: char.level,
+            background: char.background,
+            notes: char.notes,
+            campaignId: char.campaignId,
+            hitPoints: this.hpDraftCurrent(),
+            maxHitPoints: this.hpDraftMax(),
+            deathSaveFailures: clampedFailures,
+            deathSaveSuccesses: clampedSuccesses
+        });
+    }
+
+    private async persistHitPoints(nextCurrent: number, nextMax: number): Promise<void> {
+        const char = this.character();
+        if (!char || this.isSavingHp()) {
+            return;
+        }
+
+        this.isSavingHp.set(true);
+
+        try {
+            const updated = await this.store.updateCharacter(this.characterId, {
+                name: char.name,
+                playerName: char.playerName,
+                race: char.race,
+                className: char.className,
+                level: char.level,
+                role: char.role,
+                background: char.background,
+                notes: char.notes,
+                campaignId: char.campaignId,
+                hitPoints: nextCurrent,
+                maxHitPoints: nextMax
+            });
+
+            if (updated) {
+                this.hpDraftCurrent.set(updated.hitPoints);
+                this.hpDraftMax.set(updated.maxHitPoints);
+            }
+        } finally {
+            this.isSavingHp.set(false);
+            this.cdr.detectChanges();
+        }
+    }
+
+    private parseInteger(value: string): number {
+        const parsed = Number.parseInt(value, 10);
+        return Number.isNaN(parsed) ? 0 : parsed;
+    }
+
+    private parseOptionalInteger(value: string): number | null {
+        const raw = value.trim();
+        if (!raw) {
+            return null;
+        }
+
+        const parsed = Number.parseInt(raw, 10);
+        return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    private clampDeathSaveCount(value: number): number {
+        return Math.max(0, Math.min(3, Math.trunc(value)));
+    }
+
+    private computeNextDeathSaveCount(currentValue: number, pipIndex: number): number {
+        return currentValue > pipIndex ? pipIndex : pipIndex + 1;
+    }
+
+    openAbilityDetail(ability: { key: string; name: string; score: number; modifierLabel: string }): void {
+        const mod = this.getAbilityModifier(ability.score);
+        const savingThrowMod = this.formatSigned(mod);
+        const char = this.character();
+        const profBonus = char?.proficiencyBonus ?? 2;
+
+        const abilityDescriptions: Record<string, { description: string; skills: string[]; usedFor: string[] }> = {
+            strength: {
+                description: 'Strength measures bodily power, athletic training, and the extent to which you can exert raw physical force. It governs melee weapon attacks, carrying capacity, and feats of physical might.',
+                skills: ['Athletics'],
+                usedFor: [
+                    'Melee weapon attack and damage rolls (unless finesse)',
+                    'Athletics checks (climbing, jumping, swimming)',
+                    'Carrying, pushing, lifting, or breaking objects',
+                    'Strength saving throws'
+                ]
+            },
+            dexterity: {
+                description: 'Dexterity measures agility, reflexes, and balance. It affects your ability to avoid harm, move silently, and perform delicate tasks requiring a steady hand.',
+                skills: ['Acrobatics', 'Sleight of Hand', 'Stealth'],
+                usedFor: [
+                    'Ranged weapon attack and damage rolls',
+                    'Finesse melee attack and damage rolls',
+                    'Armor Class (when wearing light or no armor)',
+                    'Initiative rolls',
+                    'Dexterity saving throws'
+                ]
+            },
+            constitution: {
+                description: 'Constitution represents your health, stamina, and vital force. It determines your hit point maximum and helps you withstand pain, illness, and hardship.',
+                skills: [],
+                usedFor: [
+                    'Hit point maximum (modifier × level added at character creation)',
+                    'Concentration checks to maintain spells',
+                    'Endurance-related checks (holding breath, forced marching)',
+                    'Constitution saving throws'
+                ]
+            },
+            intelligence: {
+                description: 'Intelligence measures mental acuity, accuracy of recall, and the ability to reason through problems. It fuels arcane magic and knowledge-based skills.',
+                skills: ['Arcana', 'History', 'Investigation', 'Nature', 'Religion'],
+                usedFor: [
+                    'Wizard spellcasting ability',
+                    'Knowledge and investigation checks',
+                    'Learning additional languages and tool proficiencies',
+                    'Intelligence saving throws'
+                ]
+            },
+            wisdom: {
+                description: 'Wisdom reflects how attuned you are to the world through perception and intuition. It governs divine magic and the ability to read people and situations.',
+                skills: ['Animal Handling', 'Insight', 'Medicine', 'Perception', 'Survival'],
+                usedFor: [
+                    'Cleric, Druid, and Ranger spellcasting ability',
+                    'Passive Perception score (10 + modifier)',
+                    'Insight, Perception, Survival checks',
+                    'Wisdom saving throws'
+                ]
+            },
+            charisma: {
+                description: 'Charisma measures your ability to interact effectively with others. It includes such factors as confidence and eloquence, and can represent a charming or commanding personality.',
+                skills: ['Deception', 'Intimidation', 'Performance', 'Persuasion'],
+                usedFor: [
+                    'Bard, Paladin, Sorcerer, and Warlock spellcasting ability',
+                    'Social interaction checks (persuade, deceive, intimidate)',
+                    'Performance and leadership situations',
+                    'Charisma saving throws'
+                ]
+            }
+        };
+
+        const info = abilityDescriptions[ability.key] ?? {
             description: `${ability.name} influences core rolls tied to this stat and its modifier.`,
+            skills: [],
+            usedFor: []
+        };
+
+        const lineItems: Array<{ value: string; label: string }> = [
+            { value: String(ability.score), label: 'Score' },
+            { value: this.formatSigned(mod), label: 'Modifier' },
+            { value: savingThrowMod, label: 'Saving Throw (no proficiency)' },
+            { value: this.formatSigned(mod + profBonus), label: 'Saving Throw (with proficiency)' },
+        ];
+
+        const bullets = [
+            ...info.usedFor,
+            ...(info.skills.length ? [`Related skills: ${info.skills.join(', ')}`] : [])
+        ];
+
+        this.openDetailDrawer({
+            title: ability.name,
+            subtitle: `Score ${ability.score} • Modifier ${ability.modifierLabel}`,
+            description: info.description,
+            lineItems,
+            bullets
+        });
+    }
+
+    openSensesDetail(): void {
+        const darkvisionTrait = (this.character()?.traits ?? []).find((trait) => /darkvision/i.test(trait));
+        const darkvisionRangeMatch = darkvisionTrait?.match(/(\d+)\s*feet?|(?:range of\s*)(\d+)/i);
+        const darkvisionRange = darkvisionRangeMatch
+            ? `${darkvisionRangeMatch[1] ?? darkvisionRangeMatch[2]} ft`
+            : 'Not recorded';
+
+        this.openDetailDrawer({
+            title: 'Senses',
+            subtitle: 'Senses',
+            description: "Passive checks are a special kind of ability check that doesn't involve dice rolls. They can represent repeated attempts or checks the DM resolves secretly.",
+            lineItems: [
+                { value: `${this.passivePerception()}`, label: 'Passive Perception' },
+                { value: `${this.passiveInvestigation()}`, label: 'Passive Investigation' },
+                { value: `${this.passiveInsight()}`, label: 'Passive Insight' },
+                { value: darkvisionRange, label: 'Darkvision' }
+            ],
             bullets: [
-                'Higher scores improve related checks and saving throws.',
-                'Ability modifiers are used in attacks, skills, and class features.',
-                'Ability Score Improvements can raise this value over time.'
+                'Blindsight: A creature with blindsight can perceive surroundings without relying on sight, within a specific radius.',
+                'Darkvision: A creature with darkvision sees in darkness as if it were dim light and in dim light as if it were bright light.',
+                'Tremorsense: A creature with tremorsense can detect vibrations through a connected surface within a specific radius.',
+                'Truesight: A creature with truesight can see in normal and magical darkness, spot invisible creatures, and perceive illusions.'
             ]
         });
     }
 
-    openSenseDetail(label: string, value: number): void {
-        this.activeDetailDrawer.set({
-            title: `${label}: ${value}`,
-            subtitle: 'Senses',
-            description: `${label} is your passive awareness for this sense.`,
+    openProficiencyDetail(): void {
+        const char = this.character();
+        const proficiencyBonus = char?.proficiencyBonus ?? 2;
+
+        this.openDetailDrawer({
+            title: `Proficiency Bonus: +${proficiencyBonus}`,
+            subtitle: 'Core Stat',
+            description: 'Characters have a proficiency bonus determined by level. This bonus is used for ability checks, saving throws, and attack rolls when proficiency applies.',
             bullets: [
-                'Passive scores are usually 10 + relevant modifiers.',
-                'They apply when the GM checks awareness without an active roll.',
-                'Proficiency and expertise can raise passive values.'
+                'Your proficiency bonus cannot be added to a single roll or check more than once, even if multiple rules could apply it.',
+                'Some features can multiply or divide your proficiency bonus before applying it (for example, Expertise can double it for certain ability checks).',
+                'If a feature would multiply proficiency for a check that does not include proficiency, the result still provides no benefit.',
+                'In general, proficiency is not multiplied for attack rolls or saving throws unless a feature explicitly says so.',
+                'This bonus is commonly included in proficient skill checks, proficient saving throws, weapon and spell attack rolls, and spell save DC calculations.'
+            ]
+        });
+    }
+
+    openSpeedDetail(): void {
+        const walkingSpeed = this.speed();
+        const strengthScore = this.effectiveAbilityScores()?.strength ?? 10;
+        const strengthModifier = this.getAbilityModifier(strengthScore);
+        const longJumpWithRun = strengthScore;
+        const longJumpStanding = Math.floor(longJumpWithRun / 2);
+        const highJumpWithRun = Math.max(0, 3 + strengthModifier);
+        const highJumpStanding = Math.floor(highJumpWithRun / 2);
+
+        this.openDetailDrawer({
+            title: `Speed: ${walkingSpeed} ft`,
+            subtitle: 'Core Stat',
+            description: 'Every character has a speed, which is the distance in feet that the character can walk in one round.',
+            lineItems: [
+                { value: `${walkingSpeed} ft`, label: 'Walking' },
+                { value: `${longJumpWithRun} ft`, label: 'Long Jump (with 10 ft run)' },
+                { value: `${longJumpStanding} ft`, label: 'Long Jump (standing)' },
+                { value: `${highJumpWithRun} ft`, label: 'High Jump (with 10 ft run)' },
+                { value: `${highJumpStanding} ft`, label: 'High Jump (standing)' }
+            ],
+            bullets: [
+                'While climbing or swimming, each foot of movement costs 1 extra foot (2 extra feet in difficult terrain) unless the creature has a climbing or swimming speed.',
+                'At the DM\'s option, climbing a slippery vertical surface or one with few handholds requires a Strength (Athletics) check. Gaining distance in rough water might also require a Strength (Athletics) check.',
+                'Long Jump: with at least 10 feet of movement immediately before the jump, you can cover feet up to your Strength score. Without the run-up, that distance is halved.',
+                'High Jump: with at least 10 feet of movement immediately before the jump, you leap into the air a number of feet equal to 3 + your Strength modifier (minimum 0). Without the run-up, that distance is halved.',
+                'Each foot you clear on a jump costs a foot of movement.',
+                'When you land in difficult terrain, you must succeed on a DC 10 Dexterity (Acrobatics) check to land on your feet; otherwise, you land prone.',
+                'You can extend your arms half your height above yourself during a jump to reach farther upward.'
+            ]
+        });
+    }
+
+    openInitiativeDetail(): void {
+        const initiativeModifier = this.initiative();
+        const initiativeScore = 10 + initiativeModifier;
+        const initiativeWithAdvantage = initiativeScore + 5;
+        const initiativeWithDisadvantage = initiativeScore - 5;
+
+        this.openDetailDrawer({
+            title: `Initiative: ${this.formatSigned(initiativeModifier)}`,
+            subtitle: 'Core Stat',
+            description: "Initiative scores can replace rolls at your DM's discretion. Your initiative score equals 10 plus your Dexterity modifier.",
+            lineItems: [
+                { value: `${initiativeScore}`, label: 'Initiative Score' },
+                { value: `${initiativeWithAdvantage}`, label: 'With Advantage (+5)' },
+                { value: `${initiativeWithDisadvantage}`, label: 'With Disadvantage (-5)' }
+            ],
+            bullets: [
+                'Initiative determines the order of turns during combat. When combat starts, each participant rolls Initiative using a Dexterity check.',
+                'If a combatant is surprised at the start of combat, that combatant has disadvantage on their Initiative roll.',
+                'A combatant\'s check total is called their Initiative order, from highest total to lowest.',
+                'If two creatures tie, the DM decides order among tied monsters, and players decide order among tied characters.',
+                'If your table uses initiative scores instead of rolling, apply +5 for advantage and -5 for disadvantage.'
+            ]
+        });
+    }
+
+    openHeroicInspirationDetail(): void {
+        this.openDetailDrawer({
+            title: 'Heroic Inspiration',
+            subtitle: 'Core Stat',
+            description: 'Sometimes the DM or a rule gives you Heroic Inspiration. If you have Heroic Inspiration, you can expend it to reroll a die immediately after rolling it, and you must use the new roll.',
+            bullets: [
+                'Only One at a Time: You can never have more than one instance of Heroic Inspiration. If something gives you Heroic Inspiration and you already have it, you can give it to a player character in your group who lacks it.',
+                'Gaining Heroic Inspiration: Your DM can give you Heroic Inspiration for a variety of reasons, especially for heroic, in-character, or entertaining play.',
+                'Other rules might allow your character to gain Heroic Inspiration independent of the DM\'s decision.'
+            ]
+        });
+    }
+
+    openSavingThrowsDetail(): void {
+        const rows = this.savingThrows();
+
+        this.openDetailDrawer({
+            title: 'Saving Throws',
+            subtitle: 'Saving Throw Modifiers',
+            lineItems: rows.map((row) => ({
+                value: row.modifierLabel,
+                label: row.label,
+                note: row.proficient ? '(Proficient)' : undefined
+            })),
+            description: 'A saving throw is a check you make to resist a harmful effect, such as a spell, trap, poison, disease, or another immediate threat.',
+            bullets: [
+                'To make a saving throw, roll a d20 and add the relevant ability modifier.',
+                'Situational bonuses or penalties can modify a save, and saves can be affected by advantage or disadvantage.',
+                'Class features grant saving throw proficiencies; when proficient, you add your proficiency bonus to that save.',
+                'The save DC is set by the effect causing it (for example, a caster\'s spell save DC for spells).',
+                'A successful or failed save has the outcome described by the effect, often reducing or avoiding harm on success.'
+            ]
+        });
+    }
+
+    openDeathSavesDetail(): void {
+        const failures = this.deathSaveFailures();
+        const successes = this.deathSaveSuccesses();
+
+        this.openDetailDrawer({
+            title: 'Death Saving Throws Rules',
+            subtitle: 'HP Management',
+            lineItems: [
+                { value: `${failures}`, label: 'Failures' },
+                { value: `${successes}`, label: 'Successes' }
+            ],
+            description: 'A player character must make a Death Saving Throw if they start their turn with 0 Hit Points.',
+            bullets: [
+                'When you start your turn with 0 Hit Points, roll a Death Saving Throw to see whether you move closer to death or hang on to life.',
+                'Three Successes/Failures: On 10 or higher you succeed; otherwise you fail. On your third success, you become Stable. On your third failure, you die.',
+                'Successes and failures do not need to be consecutive. Both reset to zero when you regain any Hit Points or become Stable.',
+                'Rolling a 1 or 20: A natural 1 counts as two failures. A natural 20 lets you regain 1 Hit Point.',
+                'Damage at 0 Hit Points: If you take damage at 0 HP, you suffer one failure. A critical hit causes two failures. If damage equals or exceeds your Hit Point maximum, you die.'
             ]
         });
     }
 
     openTrainingDetail(title: string, values: string[]): void {
         const entries = values.length ? values : ['Not recorded'];
-        this.activeDetailDrawer.set({
-            title,
+        const normalizedTitle = title.trim().toLowerCase();
+
+        const trainingInfo: Record<string, { subtitle: string; description: string; bullets: string[] }> = {
+            armor: {
+                subtitle: 'Proficiencies & Training',
+                description: 'Armor training determines which armor categories you can wear effectively without penalties to key checks and actions.',
+                bullets: [
+                    'Wearing armor you are not trained for can impose major drawbacks.',
+                    'Armor can affect Stealth depending on type.',
+                    'Shields are listed separately in many rules references but function as armor equipment.'
+                ]
+            },
+            weapons: {
+                subtitle: 'Proficiencies & Training',
+                description: 'Weapon proficiencies determine which weapons you can use with proper training in combat.',
+                bullets: [
+                    'When you are proficient with a weapon, you add your proficiency bonus to its attack roll.',
+                    'Simple and Martial categories are common groupings for weapon training.',
+                    'Class and background choices often grant additional weapon proficiencies.'
+                ]
+            },
+            tools: {
+                subtitle: 'Proficiencies & Training',
+                description: 'Tool proficiencies represent practiced training with specialized gear, crafts, vehicles, or kits.',
+                bullets: [
+                    'Tool proficiency can apply to checks when that tool is relevant.',
+                    'The DM decides when a specific tool proficiency is applicable.',
+                    'Some tools can overlap with skills; context determines which applies.'
+                ]
+            },
+            languages: {
+                subtitle: 'Proficiencies & Training',
+                description: 'Languages represent the tongues your character can speak, read, or understand based on origin and training.',
+                bullets: [
+                    'Languages often come from species, background, or custom choices.',
+                    'Knowing a language can unlock social and lore opportunities.',
+                    'Some communication may still require interpretation depending on context and literacy.'
+                ]
+            }
+        };
+
+        const info = trainingInfo[normalizedTitle] ?? {
             subtitle: 'Proficiencies & Training',
             description: `These are your current ${title.toLowerCase()} proficiencies.`,
-            bullets: entries
+            bullets: []
+        };
+
+        this.openDetailDrawer({
+            title,
+            subtitle: info.subtitle,
+            description: info.description,
+            bullets: [
+                ...entries,
+                ...info.bullets
+            ]
         });
     }
 
-    openSkillDetail(skill: { name: string; ability: string; modifierLabel: string; proficient: boolean }): void {
-        this.activeDetailDrawer.set({
+    openSkillDetail(skill: { name: string; ability: string; modifierLabel: string; proficient: boolean; hasDisadvantage?: boolean; disadvantageReason?: string | null }): void {
+        const skillInfo: Record<string, { description: string; usedFor: string[] }> = {
+            'Arcana': {
+                description: 'Knowledge of magic, spells, magical items, and supernatural phenomena.',
+                usedFor: ['Identify spells or magical effects', 'Recall lore about magical traditions (e.g., wizard schools)', 'Understand runes, enchantments, or planar magic']
+            },
+            'History': {
+                description: 'Knowledge of past events, civilizations, wars, and legends.',
+                usedFor: ['Recall historical events or famous figures', 'Recognize ancient ruins or artifacts', 'Understand political or cultural context']
+            },
+            'Investigation': {
+                description: 'Logical deduction and careful examination. Key difference from Perception: Investigation is thinking, not just noticing.',
+                usedFor: ['Search for hidden objects (clues, traps, compartments)', 'Analyze crime scenes or puzzles', 'Piece together how something happened']
+            },
+            'Nature': {
+                description: 'Understanding of the natural world (non-magical).',
+                usedFor: ['Identify plants, animals, terrain', 'Predict weather or natural hazards', 'Recall ecological knowledge']
+            },
+            'Religion': {
+                description: 'Knowledge of gods, cults, rituals, and divine magic.',
+                usedFor: ['Identify religious symbols or practices', 'Recall lore about deities or undead', 'Understand divine magic origins']
+            },
+            'Animal Handling': {
+                description: 'Ability to calm, train, or control animals.',
+                usedFor: ['Ride mounts effectively', 'Prevent animals from panicking', 'Influence animal behavior']
+            },
+            'Insight': {
+                description: "Reading people's emotions and intentions.",
+                usedFor: ['Detect lies or deception', 'Sense motives or hidden agendas', 'Understand emotional states']
+            },
+            'Medicine': {
+                description: 'Practical knowledge of health and anatomy.',
+                usedFor: ['Stabilize dying creatures', 'Diagnose illnesses', 'Provide basic treatment']
+            },
+            'Perception': {
+                description: 'Awareness of your surroundings. The most commonly used skill in the game.',
+                usedFor: ['Spot hidden enemies or traps', 'Hear distant sounds', 'Notice subtle details in your environment']
+            },
+            'Survival': {
+                description: 'Ability to live off the land and navigate the wilderness.',
+                usedFor: ['Track creatures', 'Hunt or forage for food and water', 'Navigate wilderness and predict environmental dangers']
+            },
+            'Athletics': {
+                description: 'Physical power, endurance, and movement.',
+                usedFor: ['Climb, swim, or jump', 'Grapple or shove enemies', 'Force open doors or obstacles']
+            },
+            'Acrobatics': {
+                description: 'Balance, agility, and flexibility.',
+                usedFor: ['Keep balance on narrow or unstable surfaces', 'Perform flips or rolls', 'Escape grapples']
+            },
+            'Sleight of Hand': {
+                description: 'Fine motor control and trickery.',
+                usedFor: ['Pickpocket or plant items on a person', 'Conceal objects on your body', 'Perform small tricks like cheating at cards']
+            },
+            'Stealth': {
+                description: 'Moving unseen and unheard.',
+                usedFor: ['Sneak past enemies', 'Hide in shadows or cover', 'Avoid detection during infiltration']
+            },
+            'Deception': {
+                description: 'Lying and misleading others convincingly.',
+                usedFor: ['Bluff your way through a situation', 'Create false identities or disguises', 'Mislead enemies or distract guards']
+            },
+            'Intimidation': {
+                description: 'Using fear or dominance to influence others.',
+                usedFor: ['Threaten others into cooperation', 'Coerce information from reluctant sources', 'Assert authority through fear']
+            },
+            'Performance': {
+                description: 'Entertaining an audience through art, music, or storytelling.',
+                usedFor: ['Act, sing, dance, or tell stories', 'Distract or impress crowds', 'Maintain a persona or disguise through performance']
+            },
+            'Persuasion': {
+                description: 'Influencing others through charm, logic, and tact.',
+                usedFor: ['Negotiate deals or agreements', 'Convince others to see your point of view', 'Build alliances and foster goodwill']
+            }
+        };
+
+        const info = skillInfo[skill.name] ?? {
+            description: `This skill uses ${skill.ability}.`,
+            usedFor: []
+        };
+
+        const commonBoostsByAbility: Record<string, string[]> = {
+            'STR': [
+                "Enhance Ability (Bull's Strength): advantage on Strength checks",
+                'Barbarian Rage: advantage on Strength checks',
+            ],
+            'DEX': [
+                "Enhance Ability (Cat's Grace): advantage on Dexterity checks",
+            ],
+            'CON': [
+                "Enhance Ability (Bear's Endurance): advantage on Constitution checks",
+            ],
+            'INT': [
+                "Enhance Ability (Fox's Cunning): advantage on Intelligence checks",
+            ],
+            'WIS': [
+                "Enhance Ability (Owl's Wisdom): advantage on Wisdom checks",
+            ],
+            'CHA': [
+                "Enhance Ability (Eagle's Splendor): advantage on Charisma checks",
+            ],
+        };
+
+        const skillSpecificBoosts: Record<string, string[]> = {
+            'Stealth': [
+                'Pass without Trace: +10 bonus to Stealth checks',
+                'Invisibility: often grants advantage on Stealth checks',
+            ],
+        };
+
+        const commonPenalties = [
+            'Hex: disadvantage on checks of one chosen ability score',
+            'Bestow Curse: can impose disadvantage on ability checks',
+            'Poisoned condition: disadvantage on all ability checks',
+            'Exhaustion (Level 1+): disadvantage on all ability checks',
+            'Frightened: disadvantage on checks while source of fear is in sight',
+            'Blinded: disadvantage on sight-based checks',
+        ];
+
+        const proficiencyNotes: string[] = [];
+        if (skill.proficient) {
+            proficiencyNotes.push('Expertise (if granted): double your proficiency bonus for this skill');
+        }
+
+        const referenceBullets = [
+            'Guidance: +1d4 to one ability check',
+            ...(commonBoostsByAbility[skill.ability] ?? []),
+            ...(skillSpecificBoosts[skill.name] ?? []),
+            ...proficiencyNotes,
+            ...commonPenalties,
+        ];
+
+        const statusBullets: string[] = [];
+        if (skill.hasDisadvantage && skill.disadvantageReason) {
+            statusBullets.push(`Current disadvantage source: ${skill.disadvantageReason}`);
+        }
+
+        this.openDetailDrawer({
             title: skill.name,
-            subtitle: `Skill (${skill.ability}) • ${skill.modifierLabel}`,
-            description: `This skill uses ${skill.ability} and ${skill.proficient ? 'includes' : 'does not include'} proficiency bonus.`,
-            bullets: [
-                'Roll this when attempting related tasks under pressure.',
-                'Proficiency adds your proficiency bonus to the check.',
-                'Class, species, and background choices can grant skill proficiency.'
-            ]
+            subtitle: `${skill.ability} Skill • ${skill.modifierLabel}${skill.proficient ? ' (Proficient)' : ''}${skill.hasDisadvantage ? ' • Disadvantage' : ''}`,
+            description: info.description,
+            bullets: [...statusBullets, ...info.usedFor, ...referenceBullets]
         });
     }
 
     openArmorClassDetail(value: number): void {
-        this.activeDetailDrawer.set({
-            title: `Armor Class ${value}`,
-            subtitle: 'Core Stat',
-            description: 'Armor Class determines how hard you are to hit with attack rolls.',
-            bullets: [
-                'Attack rolls must meet or exceed your AC to hit.',
-                'Armor, shields, Dexterity, and features can affect AC.',
-                'Temporary effects may increase or reduce your AC.'
-            ]
+        const char = this.character();
+        const dexterity = this.effectiveAbilityScores()?.dexterity ?? 10;
+        const dexterityMod = this.getAbilityModifier(dexterity);
+        const armorItems = this.inventory()?.armor ?? [];
+
+        let armorName = '';
+        let hasShield = false;
+        for (const item of armorItems) {
+            const normalized = this.stripInventoryQuantity(item).toLowerCase();
+            if (normalized.includes('shield')) {
+                hasShield = true;
+                continue;
+            }
+
+            if (!armorName) {
+                armorName = this.stripInventoryQuantity(item);
+            }
+        }
+
+        const profile = this.getArmorClassProfile(armorName);
+        const armorBase = profile?.base ?? 10;
+        const dexterityApplied = profile?.dexCap == null
+            ? dexterityMod
+            : Math.min(dexterityMod, profile.dexCap);
+        const shieldBonus = hasShield ? 2 : 0;
+        const expectedAc = armorBase + dexterityApplied + shieldBonus;
+        const magicBonus = value - expectedAc;
+        const armorWarnings: string[] = [];
+
+        const stealthReason = this.getArmorDisadvantageReasonForSkill('stealth', 'DEX');
+        if (stealthReason) {
+            armorWarnings.push(`Skill impact: ${stealthReason}`);
+        }
+
+        const armorCategory = armorName ? this.getArmorCategory(armorName) : null;
+        if (armorCategory && !this.hasArmorTrainingForCategory(armorCategory)) {
+            armorWarnings.push(`Training impact: while wearing ${armorName}, you have disadvantage on Strength and Dexterity checks.`);
+        }
+
+        const lineItems: Array<{ value: string; label: string; note?: string }> = [
+            {
+                value: `${armorBase}`,
+                label: armorName ? `Armor (${armorName})` : 'Base AC (Unarmored)'
+            },
+            {
+                value: this.formatSigned(dexterityApplied),
+                label: 'Dexterity Bonus',
+                note: profile?.dexCap === 2 ? '(Max 2)' : undefined
+            }
+        ];
+
+        if (hasShield) {
+            lineItems.push({ value: '+2', label: 'Shield Bonus' });
+        }
+
+        if (magicBonus !== 0) {
+            lineItems.push({ value: this.formatSigned(magicBonus), label: 'Magic Bonus' });
+        }
+
+        this.openDetailDrawer({
+            title: `Armor Class: ${value}`,
+            subtitle: 'Defense Breakdown',
+            lineItems,
+            description: 'Your Armor Class (AC) represents how well your character avoids being wounded in battle. Things that contribute to your AC include the armor you wear, the shield you carry, and your Dexterity modifier. Without armor or a shield, your AC equals 10 + your Dexterity modifier.',
+            bullets: armorWarnings
         });
+    }
+
+    private stripInventoryQuantity(label: string): string {
+        return label.replace(/\s+x\d+$/i, '').trim();
+    }
+
+    private getArmorClassProfile(armorName: string): { base: number; dexCap: number | null } | null {
+        if (!armorName) {
+            return null;
+        }
+
+        const normalized = armorName.trim().toLowerCase();
+
+        if (this.armorClassProfiles[normalized]) {
+            return this.armorClassProfiles[normalized];
+        }
+
+        const matchedKey = Object.keys(this.armorClassProfiles).find((key) => normalized.includes(key));
+        return matchedKey ? this.armorClassProfiles[matchedKey] : null;
+    }
+
+    private getEquippedArmorName(): string | null {
+        const armorItems = this.inventory()?.armor ?? [];
+        for (const item of armorItems) {
+            const normalized = this.stripInventoryQuantity(item).toLowerCase();
+            if (normalized.includes('shield')) {
+                continue;
+            }
+
+            return this.stripInventoryQuantity(item);
+        }
+
+        return null;
+    }
+
+    private getArmorCategory(armorName: string): 'light' | 'medium' | 'heavy' | null {
+        if (!armorName) {
+            return null;
+        }
+
+        const normalized = armorName.trim().toLowerCase();
+        const exact = this.armorCategoryByName[normalized];
+        if (exact) {
+            return exact;
+        }
+
+        const matchedKey = Object.keys(this.armorCategoryByName).find((key) => normalized.includes(key));
+        return matchedKey ? this.armorCategoryByName[matchedKey] : null;
+    }
+
+    private hasArmorTrainingForCategory(category: 'light' | 'medium' | 'heavy'): boolean {
+        const values = (this.training().armor ?? []).map((entry) => entry.toLowerCase());
+        if (values.length === 0) {
+            return false;
+        }
+
+        if (values.some((entry) => entry.includes('all armor'))) {
+            return true;
+        }
+
+        if (category === 'light') {
+            return values.some((entry) => entry.includes('light armor'));
+        }
+
+        if (category === 'medium') {
+            return values.some((entry) => entry.includes('medium armor') || entry.includes('heavy armor'));
+        }
+
+        return values.some((entry) => entry.includes('heavy armor'));
+    }
+
+    private getArmorDisadvantageReasonForSkill(skillKey: string, abilityAbbr: string): string | null {
+        const armorName = this.getEquippedArmorName();
+        if (!armorName) {
+            return null;
+        }
+
+        const normalizedArmor = armorName.toLowerCase();
+        const armorCategory = this.getArmorCategory(armorName);
+        const reasons: string[] = [];
+
+        if (skillKey === 'stealth' && this.stealthDisadvantageArmor.has(normalizedArmor)) {
+            reasons.push(`${armorName} imposes disadvantage on Stealth checks`);
+        }
+
+        const isStrengthOrDexterityCheck = abilityAbbr === 'STR' || abilityAbbr === 'DEX';
+        if (armorCategory && isStrengthOrDexterityCheck && !this.hasArmorTrainingForCategory(armorCategory)) {
+            reasons.push(`not proficient with worn ${armorCategory} armor (${armorName})`);
+        }
+
+        return reasons.length > 0 ? reasons.join('; ') : null;
     }
 
     openActionDetail(action: { name: string; subtitle?: string; range?: string; hitDcLabel?: string; damage?: string; notes?: string }): void {
@@ -1497,7 +2875,7 @@ export class CharacterDetailPageComponent {
             action.notes ? `Notes: ${action.notes}` : ''
         ].filter((entry) => entry.length > 0);
 
-        this.activeDetailDrawer.set({
+        this.openDetailDrawer({
             title: action.name,
             subtitle: 'Action Detail',
             description: 'Detailed context for this combat option.',
@@ -1507,7 +2885,7 @@ export class CharacterDetailPageComponent {
 
     openSpellDetail(spell: { name: string; castingTime?: string; range?: string; hitDcLabel?: string; damage?: string }): void {
         const details = spellDetailsMap[spell.name];
-        this.activeDetailDrawer.set({
+        this.openDetailDrawer({
             title: spell.name,
             subtitle: 'Spell Detail',
             description: details?.description ?? 'Spell details for this entry.',
@@ -1522,7 +2900,7 @@ export class CharacterDetailPageComponent {
     }
 
     openInventoryItemDetail(item: { name: string; category: string; quantity: number; weight?: number; costGp?: number; notes?: string }): void {
-        this.activeDetailDrawer.set({
+        this.openDetailDrawer({
             title: item.name,
             subtitle: `Inventory • ${item.category}`,
             description: item.notes?.trim() || 'Tracked inventory item details.',
@@ -1535,7 +2913,7 @@ export class CharacterDetailPageComponent {
     }
 
     openFeatureDetail(name: string, description: string, category: string): void {
-        this.activeDetailDrawer.set({
+        this.openDetailDrawer({
             title: name,
             subtitle: category,
             description,
@@ -1572,12 +2950,112 @@ export class CharacterDetailPageComponent {
         this.activeBackgroundFilter.set(filter);
     }
 
+    toggleAppearanceMeasurementSystem(): void {
+        this.appearanceMeasurementSystem.update((current) => current === 'imperial' ? 'metric' : 'imperial');
+    }
+
     setInventoryFilter(filter: InventoryFilter): void {
         this.activeInventoryFilter.set(filter);
     }
 
     onInventorySearchChanged(value: string): void {
         this.inventorySearchTerm.set(value);
+    }
+
+    openCurrencyManager(): void {
+        const char = this.character();
+        if (!char) {
+            return;
+        }
+
+        this.activeDetailDrawer.set(null);
+        this.hpManagerOpen.set(false);
+        this.coinAdjustInput.set(this.createEmptyCurrencyState());
+        this.partyCoinAdjustInput.set(this.createEmptyCurrencyState());
+        this.coinLifestyleExpanded.set(false);
+        this.partyCurrencyExpanded.set(false);
+        this.partyCurrencySaveError.set('');
+        const persistedLifestyle = this.persistedBuilderState()?.lifestyleExpense ?? 'modest';
+        this.selectedLifestyleExpense.set(this.normalizeLifestyleExpense(persistedLifestyle));
+        this.coinManagerOpen.set(true);
+    }
+
+    closeCurrencyManager(): void {
+        this.coinManagerOpen.set(false);
+    }
+
+    onCoinAdjustInputChanged(currencyKey: keyof PersistedCurrencyState, value: string): void {
+        const sanitizedValue = this.parseNonNegativeInteger(value);
+        this.coinAdjustInput.update((current) => ({
+            ...current,
+            [currencyKey]: sanitizedValue
+        }));
+    }
+
+    onPartyCoinAdjustInputChanged(currencyKey: keyof PersistedCurrencyState, value: string): void {
+        const sanitizedValue = this.parseNonNegativeInteger(value);
+        this.partyCoinAdjustInput.update((current) => ({
+            ...current,
+            [currencyKey]: sanitizedValue
+        }));
+    }
+
+    toggleLifestyleExpenseDetails(): void {
+        this.coinLifestyleExpanded.update((expanded) => !expanded);
+    }
+
+    togglePartyCurrencyDetails(): void {
+        this.partyCurrencyExpanded.update((expanded) => !expanded);
+    }
+
+    async onLifestyleExpenseChanged(value: string | number): Promise<void> {
+        const normalized = this.normalizeLifestyleExpense(String(value));
+        this.selectedLifestyleExpense.set(normalized);
+        await this.persistCurrencyState(this.inventory()?.currency ?? this.createEmptyCurrencyState(), normalized);
+    }
+
+    async applyCoinAdjustment(mode: 'add' | 'remove' | 'clear'): Promise<void> {
+        if (mode === 'clear') {
+            this.coinAdjustInput.set(this.createEmptyCurrencyState());
+            return;
+        }
+
+        const currentCurrency = this.inventory()?.currency ?? this.createEmptyCurrencyState();
+        const adjustment = this.coinAdjustInput();
+        const nextCurrency: PersistedCurrencyState = {
+            pp: mode === 'add' ? currentCurrency.pp + adjustment.pp : Math.max(0, currentCurrency.pp - adjustment.pp),
+            gp: mode === 'add' ? currentCurrency.gp + adjustment.gp : Math.max(0, currentCurrency.gp - adjustment.gp),
+            ep: mode === 'add' ? currentCurrency.ep + adjustment.ep : Math.max(0, currentCurrency.ep - adjustment.ep),
+            sp: mode === 'add' ? currentCurrency.sp + adjustment.sp : Math.max(0, currentCurrency.sp - adjustment.sp),
+            cp: mode === 'add' ? currentCurrency.cp + adjustment.cp : Math.max(0, currentCurrency.cp - adjustment.cp)
+        };
+
+        await this.persistCurrencyState(nextCurrency, this.selectedLifestyleExpense());
+        this.coinAdjustInput.set(this.createEmptyCurrencyState());
+    }
+
+    async applyPartyCoinAdjustment(mode: 'add' | 'remove' | 'clear'): Promise<void> {
+        this.partyCurrencySaveError.set('');
+
+        if (mode === 'clear') {
+            this.partyCoinAdjustInput.set(this.createEmptyCurrencyState());
+            return;
+        }
+
+        const currentCurrency = this.partyCurrency();
+        const adjustment = this.partyCoinAdjustInput();
+        const nextCurrency: PersistedCurrencyState = {
+            pp: mode === 'add' ? currentCurrency.pp + adjustment.pp : Math.max(0, currentCurrency.pp - adjustment.pp),
+            gp: mode === 'add' ? currentCurrency.gp + adjustment.gp : Math.max(0, currentCurrency.gp - adjustment.gp),
+            ep: mode === 'add' ? currentCurrency.ep + adjustment.ep : Math.max(0, currentCurrency.ep - adjustment.ep),
+            sp: mode === 'add' ? currentCurrency.sp + adjustment.sp : Math.max(0, currentCurrency.sp - adjustment.sp),
+            cp: mode === 'add' ? currentCurrency.cp + adjustment.cp : Math.max(0, currentCurrency.cp - adjustment.cp)
+        };
+
+        const didPersist = await this.persistPartyCurrencyState(nextCurrency);
+        if (didPersist) {
+            this.partyCoinAdjustInput.set(this.createEmptyCurrencyState());
+        }
     }
 
     toggleContainerExpanded(containerName: string): void {
@@ -2161,6 +3639,129 @@ export class CharacterDetailPageComponent {
             eyes: parsed['eyes'] ?? '',
             skin: parsed['skin'] ?? ''
         };
+    }
+
+    private formatHeightForDisplay(rawValue: string): string {
+        if (!rawValue) {
+            return 'Not set';
+        }
+
+        const heightCm = this.parseHeightToCentimeters(rawValue);
+        if (heightCm == null) {
+            return rawValue;
+        }
+
+        if (this.appearanceMeasurementSystem() === 'metric') {
+            return `${Math.round(heightCm)} cm`;
+        }
+
+        const totalInches = Math.round(heightCm / 2.54);
+        const feet = Math.floor(totalInches / 12);
+        const inches = totalInches % 12;
+        return `${feet} ft ${inches} in`;
+    }
+
+    private formatWeightForDisplay(rawValue: string): string {
+        if (!rawValue) {
+            return 'Not set';
+        }
+
+        const weightKg = this.parseWeightToKilograms(rawValue);
+        if (weightKg == null) {
+            return rawValue;
+        }
+
+        if (this.appearanceMeasurementSystem() === 'metric') {
+            return `${weightKg.toFixed(1)} kg`;
+        }
+
+        const pounds = Math.round(weightKg / 0.45359237);
+        return `${pounds} lb`;
+    }
+
+    private parseHeightToCentimeters(rawValue: string): number | null {
+        const normalized = rawValue.trim().toLowerCase();
+        if (!normalized) {
+            return null;
+        }
+
+        const feetInches = normalized.match(/(\d+(?:\.\d+)?)\s*(?:ft|foot|feet|')\s*(\d+(?:\.\d+)?)?\s*(?:in|inch|inches|\")?/i);
+        if (feetInches) {
+            const feet = Number(feetInches[1]);
+            const inches = feetInches[2] ? Number(feetInches[2]) : 0;
+            if (Number.isFinite(feet) && Number.isFinite(inches)) {
+                return (feet * 12 + inches) * 2.54;
+            }
+        }
+
+        const inchesOnly = normalized.match(/(\d+(?:\.\d+)?)\s*(?:in|inch|inches)/i);
+        if (inchesOnly) {
+            const inches = Number(inchesOnly[1]);
+            if (Number.isFinite(inches)) {
+                return inches * 2.54;
+            }
+        }
+
+        const meters = normalized.match(/(\d+(?:\.\d+)?)\s*(?:m|meter|meters)/i);
+        if (meters) {
+            const value = Number(meters[1]);
+            if (Number.isFinite(value)) {
+                return value * 100;
+            }
+        }
+
+        const centimeters = normalized.match(/(\d+(?:\.\d+)?)\s*(?:cm|centimeter|centimeters)/i);
+        if (centimeters) {
+            const value = Number(centimeters[1]);
+            if (Number.isFinite(value)) {
+                return value;
+            }
+        }
+
+        const plainNumber = Number(normalized);
+        if (Number.isFinite(plainNumber)) {
+            return plainNumber;
+        }
+
+        return null;
+    }
+
+    private parseWeightToKilograms(rawValue: string): number | null {
+        const normalized = rawValue.trim().toLowerCase();
+        if (!normalized) {
+            return null;
+        }
+
+        const pounds = normalized.match(/(\d+(?:\.\d+)?)\s*(?:lb|lbs|pound|pounds)/i);
+        if (pounds) {
+            const value = Number(pounds[1]);
+            if (Number.isFinite(value)) {
+                return value * 0.45359237;
+            }
+        }
+
+        const kilograms = normalized.match(/(\d+(?:\.\d+)?)\s*(?:kg|kilogram|kilograms)/i);
+        if (kilograms) {
+            const value = Number(kilograms[1]);
+            if (Number.isFinite(value)) {
+                return value;
+            }
+        }
+
+        const stone = normalized.match(/(\d+(?:\.\d+)?)\s*(?:st|stone)/i);
+        if (stone) {
+            const value = Number(stone[1]);
+            if (Number.isFinite(value)) {
+                return value * 6.35029318;
+            }
+        }
+
+        const plainNumber = Number(normalized);
+        if (Number.isFinite(plainNumber)) {
+            return plainNumber;
+        }
+
+        return null;
     }
 
     private formatBackstoryRichText(text: string): string {

@@ -119,7 +119,29 @@ export class DungeonStoreService {
                 level: Math.max(1, draft.level),
                 background: draft.background || 'Freshly arrived adventurer',
                 notes: draft.notes || 'No field notes yet.',
-                campaignId: draft.campaignId
+                campaignId: draft.campaignId,
+                species: draft.race,
+                alignment: draft.alignment,
+                lifestyle: draft.lifestyle,
+                personalityTraits: Array.isArray(draft.personalityTraits) ? draft.personalityTraits.join(', ') : undefined,
+                ideals: Array.isArray(draft.ideals) ? draft.ideals.join(', ') : undefined,
+                bonds: Array.isArray(draft.bonds) ? draft.bonds.join(', ') : undefined,
+                flaws: Array.isArray(draft.flaws) ? draft.flaws.join(', ') : undefined,
+                equipment: Array.isArray(draft.equipment) ? draft.equipment.join(', ') : undefined,
+                abilityScores: draft.abilityScores ? JSON.stringify(draft.abilityScores) : undefined,
+                skills: draft.skills ? JSON.stringify(draft.skills) : undefined,
+                savingThrows: draft.savingThrows ? JSON.stringify(draft.savingThrows) : undefined,
+                hitPoints: typeof draft.hitPoints === 'number' ? Math.max(0, Math.trunc(draft.hitPoints)) : undefined,
+                deathSaveFailures: typeof draft.deathSaveFailures === 'number' ? Math.max(0, Math.min(3, Math.trunc(draft.deathSaveFailures))) : undefined,
+                deathSaveSuccesses: typeof draft.deathSaveSuccesses === 'number' ? Math.max(0, Math.min(3, Math.trunc(draft.deathSaveSuccesses))) : undefined,
+                armorClass: typeof draft.armorClass === 'number' ? Math.max(0, Math.trunc(draft.armorClass)) : undefined,
+                combatStats: draft.combatStats ? JSON.stringify(draft.combatStats) : undefined,
+                spells: Array.isArray(draft.spells) ? draft.spells.join(', ') : undefined,
+                experiencePoints: typeof draft.experiencePoints === 'number' ? Math.max(0, Math.trunc(draft.experiencePoints)) : undefined,
+                portraitUrl: draft.image,
+                goals: draft.goals,
+                secrets: draft.secrets,
+                sessionHistory: draft.sessionHistory
             });
 
             const character = this.mapCharacterFromApi(updated, draft);
@@ -174,6 +196,12 @@ export class DungeonStoreService {
         } catch {
             return null;
         }
+    }
+
+    patchCampaignSummary(campaignId: string, summary: string): void {
+        this.campaigns.update((campaigns) =>
+            campaigns.map((c) => (c.id === campaignId ? { ...c, summary } : c))
+        );
     }
 
     async setCharacterCampaign(characterId: string, campaignId: string | null): Promise<boolean> {
@@ -318,6 +346,8 @@ export class DungeonStoreService {
                 skills: draft.skills ? JSON.stringify(draft.skills) : '',
                 savingThrows: draft.savingThrows ? JSON.stringify(draft.savingThrows) : '',
                 hitPoints: draft.hitPoints ?? 0,
+                deathSaveFailures: typeof draft.deathSaveFailures === 'number' ? Math.max(0, Math.min(3, Math.trunc(draft.deathSaveFailures))) : 0,
+                deathSaveSuccesses: typeof draft.deathSaveSuccesses === 'number' ? Math.max(0, Math.min(3, Math.trunc(draft.deathSaveSuccesses))) : 0,
                 armorClass: draft.armorClass ?? 0,
                 combatStats: draft.combatStats ? JSON.stringify(draft.combatStats) : '',
                 spells: Array.isArray(draft.spells) ? draft.spells.join(', ') : (draft.spells || ''),
@@ -428,32 +458,42 @@ export class DungeonStoreService {
     }
 
     private mapCharacterFromApi(character: ApiCharacterDto, draft?: CharacterDraft): Character {
-        let abilityScores = this.getDefaultAbilitiesByClass(character.className);
+        const raceFromApi = (character.species ?? '').trim();
         const raceFromDraft = draft?.race?.trim();
-        const race = raceMap.get((raceFromDraft || 'human').toLowerCase());
-
-        if (race) {
-            abilityScores = {
-                strength: abilityScores.strength + (race.abilityBonuses.strength || 0),
-                dexterity: abilityScores.dexterity + (race.abilityBonuses.dexterity || 0),
-                constitution: abilityScores.constitution + (race.abilityBonuses.constitution || 0),
-                intelligence: abilityScores.intelligence + (race.abilityBonuses.intelligence || 0),
-                wisdom: abilityScores.wisdom + (race.abilityBonuses.wisdom || 0),
-                charisma: abilityScores.charisma + (race.abilityBonuses.charisma || 0)
-            };
-        }
+        const normalizedRaceKey = (raceFromApi || raceFromDraft || 'human').toLowerCase();
+        const race = raceMap.get(normalizedRaceKey)
+            ?? [...raceMap.values()].find((entry) => entry.name.toLowerCase() === normalizedRaceKey)
+            ?? null;
+        let abilityScores = this.parseAbilityScores(character.abilityScores)
+            ?? draft?.abilityScores
+            ?? this.getDefaultAbilitiesByClass(character.className);
+        const resolvedNotes = this.resolveCharacterNotes(character, draft?.notes);
 
         const proficiencyBonus = Math.ceil(Math.max(character.level, 1) / 4) + 1;
-        const armorClass = this.calculateAC(character.className, abilityScores.dexterity);
+        const armorClass = Number.isFinite(Number(character.armorClass))
+            ? Math.max(0, Math.trunc(Number(character.armorClass)))
+            : this.calculateAC(character.className, abilityScores.dexterity);
         const fallbackHitPoints = this.calculateHitPoints(character.className, Math.max(character.level, 1), abilityScores.constitution);
+        const persistedMaxHpOverride = this.extractPersistedHpMaxOverride(resolvedNotes);
         const draftMaxHitPoints = draft?.maxHitPoints ?? draft?.hitPoints;
         const maxHitPoints = Number.isFinite(draftMaxHitPoints)
             ? Math.max(1, Math.trunc(draftMaxHitPoints as number))
-            : fallbackHitPoints;
+            : Number.isFinite(persistedMaxHpOverride)
+                ? Math.max(1, Math.trunc(persistedMaxHpOverride as number))
+                : fallbackHitPoints;
         const draftCurrentHitPoints = draft?.hitPoints;
+        const apiCurrentHitPoints = Number(character.hitPoints);
         const hitPoints = Number.isFinite(draftCurrentHitPoints)
             ? Math.max(0, Math.min(maxHitPoints, Math.trunc(draftCurrentHitPoints as number)))
-            : maxHitPoints;
+            : Number.isFinite(apiCurrentHitPoints)
+                ? Math.max(0, Math.min(maxHitPoints, Math.trunc(apiCurrentHitPoints)))
+                : maxHitPoints;
+        const deathSaveFailures = Number.isFinite(draft?.deathSaveFailures)
+            ? Math.max(0, Math.min(3, Math.trunc(draft!.deathSaveFailures as number)))
+            : Math.max(0, Math.min(3, Math.trunc(Number(character.deathSaveFailures) || 0)));
+        const deathSaveSuccesses = Number.isFinite(draft?.deathSaveSuccesses)
+            ? Math.max(0, Math.min(3, Math.trunc(draft!.deathSaveSuccesses as number)))
+            : Math.max(0, Math.min(3, Math.trunc(Number(character.deathSaveSuccesses) || 0)));
 
         // Map all available fields from ApiCharacterDto and draft
         return {
@@ -464,31 +504,155 @@ export class DungeonStoreService {
             canEdit: character.canEdit,
             name: character.name,
             playerName: character.playerName,
-            race: (race?.name ?? raceFromDraft) || 'Human',
+            race: race?.name || raceFromApi || raceFromDraft || 'Human',
             className: character.className,
             level: Math.max(character.level, 1),
             role: draft?.role ?? 'Striker',
             status: character.status,
             background: character.background,
-            notes: this.resolveCharacterNotes(character, draft?.notes),
+            notes: resolvedNotes,
             abilityScores,
-            skills: draft?.skills ?? this.getDefaultSkillsByClass(character.className),
+            skills: this.parseSkillProficiencies(character.skills)
+                ?? draft?.skills
+                ?? this.getDefaultSkillsByClass(character.className),
             armorClass,
             hitPoints,
+            deathSaveFailures,
+            deathSaveSuccesses,
             maxHitPoints,
             proficiencyBonus,
             traits: race?.traits ?? [],
             gender: (draft?.gender ?? (character as any).gender) || '',
-            alignment: (draft?.alignment ?? (character as any).alignment) || '',
+            alignment: draft?.alignment ?? character.alignment ?? '',
             faith: (draft?.faith ?? (character as any).faith) || '',
-            lifestyle: (draft?.lifestyle ?? (character as any).lifestyle) || '',
+            lifestyle: draft?.lifestyle ?? character.lifestyle ?? '',
             classFeatures: (draft?.classFeatures ?? (character as any).classFeatures) || [],
             speciesTraits: (draft?.speciesTraits ?? (character as any).speciesTraits) || [],
             languages: (draft?.languages ?? (character as any).languages) || [],
-            equipment: (draft?.equipment ?? (character as any).equipment) || [],
-            spells: (draft?.spells ?? (character as any).spells) || [],
-            image: (draft?.image ?? (character as any).image) || (character as any).portraitUrl || ''
+            personalityTraits: Array.isArray(draft?.personalityTraits)
+                ? draft.personalityTraits
+                : this.parseDelimitedValues(character.personalityTraits),
+            ideals: Array.isArray(draft?.ideals)
+                ? draft.ideals
+                : this.parseDelimitedValues(character.ideals),
+            bonds: Array.isArray(draft?.bonds)
+                ? draft.bonds
+                : this.parseDelimitedValues(character.bonds),
+            flaws: Array.isArray(draft?.flaws)
+                ? draft.flaws
+                : this.parseDelimitedValues(character.flaws),
+            equipment: draft?.equipment ?? this.parseDelimitedValues(character.equipment),
+            spells: draft?.spells ?? this.parseDelimitedValues(character.spells),
+            experiencePoints: Number.isFinite(draft?.experiencePoints)
+                ? Math.max(0, Math.trunc(draft!.experiencePoints as number))
+                : Math.max(0, Math.trunc(Number(character.experiencePoints) || 0)),
+            image: draft?.image || character.portraitUrl || ''
         };
+    }
+
+    private parseAbilityScores(raw: string | null | undefined): AbilityScores | null {
+        if (!raw || !raw.trim()) {
+            return null;
+        }
+
+        try {
+            const parsed = JSON.parse(raw) as Partial<AbilityScores>;
+            const values = {
+                strength: Number(parsed.strength),
+                dexterity: Number(parsed.dexterity),
+                constitution: Number(parsed.constitution),
+                intelligence: Number(parsed.intelligence),
+                wisdom: Number(parsed.wisdom),
+                charisma: Number(parsed.charisma)
+            };
+
+            if (Object.values(values).every((value) => Number.isFinite(value))) {
+                return {
+                    strength: Math.trunc(values.strength),
+                    dexterity: Math.trunc(values.dexterity),
+                    constitution: Math.trunc(values.constitution),
+                    intelligence: Math.trunc(values.intelligence),
+                    wisdom: Math.trunc(values.wisdom),
+                    charisma: Math.trunc(values.charisma)
+                };
+            }
+        } catch {
+            return null;
+        }
+
+        return null;
+    }
+
+    private parseSkillProficiencies(raw: string | null | undefined): SkillProficiencies | null {
+        if (!raw || !raw.trim()) {
+            return null;
+        }
+
+        try {
+            const parsed = JSON.parse(raw) as Partial<SkillProficiencies>;
+            return {
+                acrobatics: Boolean(parsed.acrobatics),
+                animalHandling: Boolean(parsed.animalHandling),
+                arcana: Boolean(parsed.arcana),
+                athletics: Boolean(parsed.athletics),
+                deception: Boolean(parsed.deception),
+                history: Boolean(parsed.history),
+                insight: Boolean(parsed.insight),
+                intimidation: Boolean(parsed.intimidation),
+                investigation: Boolean(parsed.investigation),
+                medicine: Boolean(parsed.medicine),
+                nature: Boolean(parsed.nature),
+                perception: Boolean(parsed.perception),
+                performance: Boolean(parsed.performance),
+                persuasion: Boolean(parsed.persuasion),
+                sleightOfHand: Boolean(parsed.sleightOfHand),
+                stealth: Boolean(parsed.stealth),
+                survival: Boolean(parsed.survival)
+            };
+        } catch {
+            return null;
+        }
+    }
+
+    private extractPersistedHpMaxOverride(notes: string): number | null {
+        const start = notes.indexOf(DungeonStoreService.BUILDER_STATE_START_TAG);
+        const end = notes.indexOf(DungeonStoreService.BUILDER_STATE_END_TAG);
+
+        if (start === -1 || end === -1 || end < start) {
+            return null;
+        }
+
+        const jsonStart = start + DungeonStoreService.BUILDER_STATE_START_TAG.length;
+        const rawJson = notes.slice(jsonStart, end).trim();
+        if (!rawJson) {
+            return null;
+        }
+
+        try {
+            const parsed = JSON.parse(rawJson) as { hpMaxOverride?: unknown };
+            if (typeof parsed.hpMaxOverride === 'number' && Number.isFinite(parsed.hpMaxOverride)) {
+                return parsed.hpMaxOverride;
+            }
+        } catch {
+            return null;
+        }
+
+        return null;
+    }
+
+    private parseDelimitedValues(value: unknown): string[] {
+        if (Array.isArray(value)) {
+            return value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0);
+        }
+
+        if (typeof value !== 'string' || value.trim().length === 0) {
+            return [];
+        }
+
+        return value
+            .split(',')
+            .map((entry) => entry.trim())
+            .filter((entry) => entry.length > 0);
     }
 
     private resolveCharacterNotes(character: ApiCharacterDto, previousNotes?: string): string {

@@ -68,6 +68,28 @@ export interface ApiCharacterDto {
     background: string;
     notes: string;
     backstory: string;
+    species: string;
+    alignment: string;
+    lifestyle: string;
+    personalityTraits: string;
+    ideals: string;
+    bonds: string;
+    flaws: string;
+    equipment: string;
+    abilityScores: string;
+    skills: string;
+    savingThrows: string;
+    hitPoints: number;
+    deathSaveFailures: number;
+    deathSaveSuccesses: number;
+    armorClass: number;
+    combatStats: string;
+    spells: string;
+    experiencePoints: number;
+    portraitUrl: string;
+    goals: string;
+    secrets: string;
+    sessionHistory: string;
     createdAtUtc: string;
     canEdit: boolean;
 }
@@ -296,6 +318,8 @@ export class DungeonApiService {
         skills?: string;
         savingThrows?: string;
         hitPoints?: number;
+        deathSaveFailures?: number;
+        deathSaveSuccesses?: number;
         armorClass?: number;
         combatStats?: string;
         spells?: string;
@@ -316,6 +340,28 @@ export class DungeonApiService {
         background: string;
         notes: string;
         campaignId?: string;
+        species?: string;
+        alignment?: string;
+        lifestyle?: string;
+        personalityTraits?: string;
+        ideals?: string;
+        bonds?: string;
+        flaws?: string;
+        equipment?: string;
+        abilityScores?: string;
+        skills?: string;
+        savingThrows?: string;
+        hitPoints?: number;
+        deathSaveFailures?: number;
+        deathSaveSuccesses?: number;
+        armorClass?: number;
+        combatStats?: string;
+        spells?: string;
+        experiencePoints?: number;
+        portraitUrl?: string;
+        goals?: string;
+        secrets?: string;
+        sessionHistory?: string;
     }): Promise<ApiCharacterDto> {
         return await firstValueFrom(this.http.put<ApiCharacterDto>(`${this.baseUrl}/characters/${characterId}`, payload));
     }

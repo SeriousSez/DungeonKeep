@@ -1199,8 +1199,20 @@
                     <label>Hair <input type="text" [value]="physicalHair()" (input)="onPhysicalCharacteristicChanged('hair', $any($event.target).value)" /></label>
                     <label>Skin <input type="text" [value]="physicalSkin()" (input)="onPhysicalCharacteristicChanged('skin', $any($event.target).value)" /></label>
                     <label>Eyes <input type="text" [value]="physicalEyes()" (input)="onPhysicalCharacteristicChanged('eyes', $any($event.target).value)" /></label>
-                    <label>Height <input type="text" [value]="physicalHeight()" (input)="onPhysicalCharacteristicChanged('height', $any($event.target).value)" /></label>
-                    <label>Weight <input type="text" [value]="physicalWeight()" (input)="onPhysicalCharacteristicChanged('weight', $any($event.target).value)" /></label>
+                    <label class="measurement-field">
+                        <span>Height</span>
+                        <div class="measurement-input-row">
+                            <input type="text" placeholder="e.g. 5.9 or 180" [value]="physicalHeight()" (input)="onPhysicalCharacteristicChanged('height', $any($event.target).value)" />
+                            <app-dropdown class="measurement-unit-picker" [value]="physicalHeightUnit()" [options]="heightUnitOptions" [searchable]="false" [placeholder]="'Unit'" (changed)="onPhysicalMeasurementUnitChanged('height', $any($event))"></app-dropdown>
+                        </div>
+                    </label>
+                    <label class="measurement-field">
+                        <span>Weight</span>
+                        <div class="measurement-input-row">
+                            <input type="text" placeholder="e.g. 165 or 75" [value]="physicalWeight()" (input)="onPhysicalCharacteristicChanged('weight', $any($event.target).value)" />
+                            <app-dropdown class="measurement-unit-picker" [value]="physicalWeightUnit()" [options]="weightUnitOptions" [searchable]="false" [placeholder]="'Unit'" (changed)="onPhysicalMeasurementUnitChanged('weight', $any($event))"></app-dropdown>
+                        </div>
+                    </label>
                     <label>Age <input type="text" [value]="physicalAge()" (input)="onPhysicalCharacteristicChanged('age', $any($event.target).value)" /></label>
                     <label>Gender <input type="text" [value]="physicalGender()" (input)="onPhysicalCharacteristicChanged('gender', $any($event.target).value)" /></label>
                 </div>

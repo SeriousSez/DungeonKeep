@@ -1,6 +1,8 @@
+using DungeonKeep.API.Hubs;
 using DungeonKeep.ApplicationService.Contracts;
 using DungeonKeep.ApplicationService.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -11,7 +13,7 @@ namespace DungeonKeep.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public sealed class CampaignsController(ICampaignService campaignService, ICharacterService characterService, IAuthService authService, IHttpClientFactory httpClientFactory, IConfiguration configuration) : ControllerBase
+public sealed class CampaignsController(ICampaignService campaignService, ICharacterService characterService, IAuthService authService, IHttpClientFactory httpClientFactory, IConfiguration configuration, IHubContext<CampaignHub> campaignHub) : ControllerBase
 {
     private const string DefaultModel = "gpt-4.1-mini";
     private const string DefaultResponsesUrl = "https://api.openai.com/v1/responses";
@@ -116,6 +118,10 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         {
             return NotFound("Campaign was not found.");
         }
+
+        await campaignHub.Clients
+            .Group($"campaign-{campaignId}")
+            .SendAsync("PartyCurrencyUpdated", new { campaignId = campaignId.ToString(), updated.Summary }, cancellationToken);
 
         return Ok(updated);
     }

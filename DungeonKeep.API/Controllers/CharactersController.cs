@@ -41,7 +41,7 @@ public sealed class CharactersController(ICharacterService characterService, IAu
             return StatusCode(403);
         }
     }
-        [HttpGet("mine/unassigned")]
+    [HttpGet("mine/unassigned")]
     public async Task<ActionResult<IReadOnlyList<CharacterDto>>> GetUnassignedOwned(CancellationToken cancellationToken)
     {
         var user = await GetAuthenticatedUserAsync(cancellationToken);

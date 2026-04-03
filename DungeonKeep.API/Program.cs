@@ -1,3 +1,4 @@
+using DungeonKeep.API.Hubs;
 using DungeonKeep.ApplicationService.Extensions;
 using DungeonKeep.Infrastructure.Extensions;
 using DungeonKeep.Infrastructure.Persistence;
@@ -34,6 +35,7 @@ builder.Services.AddDungeonKeepApplication();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddSignalR();
 
 builder.Services.AddCors(options =>
 {
@@ -41,7 +43,8 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
@@ -120,6 +123,7 @@ if (!app.Environment.IsDevelopment())
 app.UseCors("ClientApps");
 
 app.MapControllers();
+app.MapHub<CampaignHub>("/hubs/campaign");
 
 app.Run();
 
@@ -218,6 +222,8 @@ static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)
     EnsureColumnExists(dbContext, "Characters", "Skills", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "Characters", "SavingThrows", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "Characters", "HitPoints", "INTEGER NOT NULL DEFAULT 0");
+    EnsureColumnExists(dbContext, "Characters", "DeathSaveFailures", "INTEGER NOT NULL DEFAULT 0");
+    EnsureColumnExists(dbContext, "Characters", "DeathSaveSuccesses", "INTEGER NOT NULL DEFAULT 0");
     EnsureColumnExists(dbContext, "Characters", "ArmorClass", "INTEGER NOT NULL DEFAULT 0");
     EnsureColumnExists(dbContext, "Characters", "CombatStats", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "Characters", "Spells", "TEXT NOT NULL DEFAULT ''");
@@ -248,7 +254,7 @@ static void EnsureColumnExists(DungeonKeepDbContext dbContext, string tableName,
             return;
         }
 
-        dbContext.Database.ExecuteSqlRaw($"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnDefinition};");
+        dbContext.Database.ExecuteSqlRaw($"ALTER TABLE \"{tableName}\" ADD COLUMN \"{columnName}\" {columnDefinition};");
     }
     catch
     {
@@ -259,7 +265,7 @@ static void EnsureIndexExists(DungeonKeepDbContext dbContext, string indexName, 
 {
     try
     {
-        dbContext.Database.ExecuteSqlRaw($"CREATE INDEX IF NOT EXISTS {indexName} ON {tableName} ({columnName});");
+        dbContext.Database.ExecuteSqlRaw($"CREATE INDEX IF NOT EXISTS \"{indexName}\" ON \"{tableName}\" (\"{columnName}\");");
     }
     catch
     {

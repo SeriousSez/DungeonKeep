@@ -149,6 +149,14 @@
     text-align: center;
 }
 
+.empty-state-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    min-width: 200px;
+}
+
 @media (max-width: 1180px) {
     .character-grid {
         grid-template-columns: 1fr;
