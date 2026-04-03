@@ -69,8 +69,28 @@ jobs:
       - name: Generate production appsettings from secrets
         working-directory: ./DungeonKeep.API
         shell: pwsh
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SMTP_FROM_ADDRESS: ${{ secrets.SMTP_FROM_ADDRESS }}
+          SMTP_FROM_NAME: ${{ secrets.SMTP_FROM_NAME }}
+          SMTP_REPLY_TO_ADDRESS: ${{ secrets.SMTP_REPLY_TO_ADDRESS }}
+          SMTP_REPLY_TO_NAME: ${{ secrets.SMTP_REPLY_TO_NAME }}
+          SMTP_SECURE_SOCKET_OPTION: ${{ secrets.SMTP_SECURE_SOCKET_OPTION }}
         run: |
           $aiProvider = if ([string]::IsNullOrWhiteSpace($env:OPENAI_API_KEY)) { "Wikipedia" } else { "OpenAI" }
+          $smtpPort = 587
+
+          if (-not [string]::IsNullOrWhiteSpace($env:SMTP_PORT)) {
+            $parsedPort = 0
+            if ([int]::TryParse($env:SMTP_PORT, [ref]$parsedPort)) {
+              $smtpPort = $parsedPort
+            }
+          }
+
+          $emailEnabled = (-not [string]::IsNullOrWhiteSpace($env:SMTP_HOST)) -and (-not [string]::IsNullOrWhiteSpace($env:SMTP_FROM_ADDRESS))
 
           $config = @{
             ConnectionStrings = @{
@@ -88,6 +108,18 @@ jobs:
                 "https://dungeonkeep.sezginsahin.dk",
                 "https://www.dungeonkeep.sezginsahin.dk"
               )
+            }
+            Email = @{
+              Enabled = $emailEnabled
+              Host = $env:SMTP_HOST
+              Port = $smtpPort
+              Username = $env:SMTP_USERNAME
+              Password = $env:SMTP_PASSWORD
+              FromAddress = $env:SMTP_FROM_ADDRESS
+              FromName = if ([string]::IsNullOrWhiteSpace($env:SMTP_FROM_NAME)) { "DungeonKeep" } else { $env:SMTP_FROM_NAME }
+              ReplyToAddress = $env:SMTP_REPLY_TO_ADDRESS
+              ReplyToName = if ([string]::IsNullOrWhiteSpace($env:SMTP_REPLY_TO_NAME)) { "DungeonKeep" } else { $env:SMTP_REPLY_TO_NAME }
+              SecureSocketOption = if ([string]::IsNullOrWhiteSpace($env:SMTP_SECURE_SOCKET_OPTION)) { "StartTlsWhenAvailable" } else { $env:SMTP_SECURE_SOCKET_OPTION }
             }
             AllowedHosts = '*'
           }

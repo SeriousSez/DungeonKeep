@@ -1,11 +1,15 @@
 using DungeonKeep.ApplicationService.Contracts;
 using DungeonKeep.ApplicationService.Interfaces;
 using DungeonKeep.Domain.Entities;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
 namespace DungeonKeep.ApplicationService.Services;
 
-public sealed class CampaignService(ICampaignRepository campaignRepository) : ICampaignService
+public sealed class CampaignService(
+    ICampaignRepository campaignRepository,
+    ICampaignInviteEmailService campaignInviteEmailService,
+    ILogger<CampaignService> logger) : ICampaignService
 {
     private static readonly CampaignThreadDto[] DefaultOpenThreads =
     [
@@ -177,12 +181,14 @@ public sealed class CampaignService(ICampaignRepository campaignRepository) : IC
         return updated is null ? null : MapCampaign(updated, userId);
     }
 
-    public async Task<CampaignDto?> InviteMemberAsync(Guid campaignId, InviteCampaignMemberRequest request, AuthenticatedUser user, CancellationToken cancellationToken = default)
+    public async Task<CampaignDto?> InviteMemberAsync(Guid campaignId, InviteCampaignMemberRequest request, AuthenticatedUser user, string? clientBaseUrl, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.Email))
         {
             return null;
         }
+
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
 
         var campaign = await campaignRepository.GetByIdAsync(campaignId, cancellationToken);
         if (campaign is null)
@@ -196,8 +202,54 @@ public sealed class CampaignService(ICampaignRepository campaignRepository) : IC
             throw new UnauthorizedAccessException("Only campaign owners can invite members.");
         }
 
-        var updated = await campaignRepository.InviteMemberAsync(campaignId, request.Email.Trim(), user, cancellationToken);
-        return updated is null ? null : MapCampaign(updated, user.Id);
+        var existingMembership = campaign.Memberships.FirstOrDefault(member => member.Email == normalizedEmail);
+        if (existingMembership is not null)
+        {
+            return MapCampaign(campaign, user.Id);
+        }
+
+        var updated = await campaignRepository.InviteMemberAsync(campaignId, normalizedEmail, user, cancellationToken);
+        if (updated is null)
+        {
+            return null;
+        }
+
+        var invitedMembership = updated.Memberships.FirstOrDefault(member => member.Email == normalizedEmail);
+
+        try
+        {
+            var campaignUrl = BuildCampaignUrl(clientBaseUrl, updated.Id);
+
+            await campaignInviteEmailService.SendInvitationAsync(
+                new CampaignInvitationEmail(
+                    updated.Id,
+                    updated.Name,
+                    campaignUrl,
+                    normalizedEmail,
+                    user.DisplayName,
+                    user.Email,
+                    invitedMembership?.Status == "Active"),
+                cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "Failed to send campaign invite email for campaign {CampaignId} to {RecipientEmail}.",
+                updated.Id,
+                normalizedEmail);
+        }
+
+        return MapCampaign(updated, user.Id);
+    }
+
+    private static string BuildCampaignUrl(string? clientBaseUrl, Guid campaignId)
+    {
+        var normalizedBaseUrl = string.IsNullOrWhiteSpace(clientBaseUrl)
+            ? "http://localhost:4200"
+            : clientBaseUrl.Trim().TrimEnd('/');
+
+        return $"{normalizedBaseUrl}/campaigns/{campaignId}";
     }
 
     public async Task DeleteAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default)

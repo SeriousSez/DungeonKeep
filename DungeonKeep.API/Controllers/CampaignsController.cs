@@ -3,6 +3,7 @@ using DungeonKeep.ApplicationService.Contracts;
 using DungeonKeep.ApplicationService.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Primitives;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -390,7 +391,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         CampaignDto? updated;
         try
         {
-            updated = await campaignService.InviteMemberAsync(campaignId, request, user, cancellationToken);
+            updated = await campaignService.InviteMemberAsync(campaignId, request, user, GetClientBaseUrl(), cancellationToken);
         }
         catch (UnauthorizedAccessException)
         {
@@ -403,6 +404,41 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         }
 
         return Ok(updated);
+    }
+
+    private string? GetClientBaseUrl()
+    {
+        if (TryGetAbsoluteHttpUrl(Request.Headers.Origin, out var originBaseUrl))
+        {
+            return originBaseUrl;
+        }
+
+        if (TryGetAbsoluteHttpUrl(Request.Headers.Referer, out var refererBaseUrl))
+        {
+            return refererBaseUrl;
+        }
+
+        return null;
+    }
+
+    private static bool TryGetAbsoluteHttpUrl(StringValues headerValues, out string? baseUrl)
+    {
+        baseUrl = null;
+        var candidate = headerValues.FirstOrDefault();
+
+        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        baseUrl = uri.GetLeftPart(UriPartial.Authority);
+        return true;
     }
 
     [HttpDelete("{campaignId:guid}")]

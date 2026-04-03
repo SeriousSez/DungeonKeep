@@ -57,3 +57,13 @@ public sealed record CreateCampaignThreadRequest(string Text, string Visibility)
 public sealed record UpdateCampaignThreadRequest(string Text, string Visibility);
 public sealed record ArchiveCampaignThreadRequest(Guid ThreadId);
 public sealed record InviteCampaignMemberRequest(string Email);
+
+public sealed record CampaignInvitationEmail(
+    Guid CampaignId,
+    string CampaignName,
+    string CampaignUrl,
+    string RecipientEmail,
+    string InviterDisplayName,
+    string InviterEmail,
+    bool RecipientAlreadyHasAccess
+);
