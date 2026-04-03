@@ -200,6 +200,7 @@ export class NewCampaignPageComponent {
             this.createdCampaignId.set(created.id);
             this.inviteFeedback.set('');
             this.inviteEmail.set('');
+            await this.router.navigate(['/campaigns', created.id]);
         } finally {
             this.createPending.set(false);
             this.cdr.detectChanges();
