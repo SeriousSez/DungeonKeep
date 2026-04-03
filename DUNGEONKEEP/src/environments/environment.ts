@@ -1,4 +1,4 @@
 export const environment = {
     production: true,
-    apiBaseUrl: 'http://localhost:5098/api'
+    apiBaseUrl: 'https://dungeonkeep.api.sezginsahin.dk'
 };
