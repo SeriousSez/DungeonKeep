@@ -16,7 +16,8 @@ env:
   ANGULAR_DIST_PATH: "./DUNGEONKEEP/dist/DUNGEONKEEP"
   WEB_DEPLOY_PATH: "./web-dist"
   WEB_SERVER_DIR: "/DungeonKeep/"
-  API_HEALTH_URL: "https://dungeonkeep.api.sezginsahin.dk/api/health/ping"
+  API_SERVER_DIR: "/dungeonkeep.api/"
+  API_HEALTH_URL: "https://dungeonkeep.api.sezginsahin.dk/api/health"
   WEB_HEALTH_URL: "https://dungeonkeep.sezginsahin.dk/"
   API_USE_APP_OFFLINE: "false"
 
@@ -84,7 +85,8 @@ jobs:
             }
             Cors = @{
               AllowedOrigins = @(
-                "https://dungeonkeep.sezginsahin.dk"
+                "https://dungeonkeep.sezginsahin.dk",
+                "https://www.dungeonkeep.sezginsahin.dk"
               )
             }
             AllowedHosts = '*'
@@ -227,7 +229,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./app-offline-payload/
-          server-dir: /venli.api/
+          server-dir: ${{ env.API_SERVER_DIR }}
           dangerous-clean-slate: false
 
       - name: Wait for app to go offline
@@ -244,7 +246,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ${{ env.PUBLISH_PATH }}/
-          server-dir: /venli.api/
+          server-dir: ${{ env.API_SERVER_DIR }}
           dangerous-clean-slate: false
           exclude: |
             **/wwwroot/uploads/**
@@ -262,7 +264,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ${{ env.PUBLISH_PATH }}/
-          server-dir: /venli.api/
+          server-dir: ${{ env.API_SERVER_DIR }}
           dangerous-clean-slate: false
           exclude: |
             **/wwwroot/uploads/**
@@ -309,7 +311,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./app-offline-payload/
-          server-dir: /venli.api/
+          server-dir: ${{ env.API_SERVER_DIR }}
           dangerous-clean-slate: false
 
       - name: Wait for app to go offline (fallback)
@@ -325,7 +327,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ${{ env.PUBLISH_PATH }}/
-          server-dir: /venli.api/
+          server-dir: ${{ env.API_SERVER_DIR }}
           dangerous-clean-slate: false
           exclude: |
             **/wwwroot/uploads/**
@@ -344,7 +346,12 @@ jobs:
             throw "Missing FTP credentials for app_offline removal."
           }
 
-          $uri = "ftp://$server/venli.api/app_offline.htm"
+          $apiServerDir = "${{ env.API_SERVER_DIR }}".Trim('/')
+          if ([string]::IsNullOrWhiteSpace($apiServerDir)) {
+            $uri = "ftp://$server/app_offline.htm"
+          } else {
+            $uri = "ftp://$server/$apiServerDir/app_offline.htm"
+          }
           $request = [System.Net.FtpWebRequest]::Create($uri)
           $request.Method = [System.Net.WebRequestMethods+Ftp]::DeleteFile
           $request.Credentials = New-Object System.Net.NetworkCredential($username, $password)
@@ -367,62 +374,6 @@ jobs:
       - name: Wait for app to restart
         shell: pwsh
         run: Start-Sleep -Seconds 8
-
-      # - name: Health check API
-      #   id: health_check
-      #   continue-on-error: true
-      #   shell: pwsh
-      #   run: |
-      #     if ([string]::IsNullOrWhiteSpace($env:API_HEALTH_URL)) {
-      #       Write-Error "API_HEALTH_URL is not set"
-      #     }
-      #     Write-Host "Checking API health..."
-      #     Start-Sleep -Seconds 5
-
-      #     $retries = 5
-      #     for ($i=1; $i -le $retries; $i++) {
-      #       try {
-      #         $resp = Invoke-WebRequest -UseBasicParsing -TimeoutSec 10 -Uri $env:API_HEALTH_URL
-      #         if ($resp.StatusCode -ge 200 -and $resp.StatusCode -lt 500) {
-      #           Write-Host "✅ API healthy (status $($resp.StatusCode))"
-      #           exit 0
-      #         }
-      #         throw "Unexpected status code $($resp.StatusCode)"
-      #       } catch {
-      #         Write-Host "Attempt $i failed: $_"
-      #         if ($i -eq $retries) { throw }
-      #         Start-Sleep -Seconds 5
-      #       }
-      #     }
-
-      # - name: Fail if health check failed
-      #   if: steps.health_check.outcome == 'failure'
-      #   shell: pwsh
-      #   run: |
-      #     Write-Error "❌ API health check failed after deployment"
-      #     exit 1
-
-      # - name: Download previous successful API artifact for rollback
-      #   if: failure()
-      #   id: download_previous_api
-      #   continue-on-error: true
-      #   uses: dawidd6/action-download-artifact@v6
-      #   with:
-      #     workflow: deploy-to-simply.yml
-      #     workflow_conclusion: success
-      #     name: api-publish
-      #     path: ./rollback-api
-
-      # - name: Roll back API using FTP
-      #   if: failure() && steps.download_previous_api.outcome == 'success'
-      #   uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-      #   with:
-      #     server: ${{ secrets.FTP_SERVER }}
-      #     username: ${{ secrets.FTP_USERNAME }}
-      #     password: ${{ secrets.FTP_PASSWORD }}
-      #     local-dir: ./rollback-api/
-      #     server-dir: /venli.api/
-      #     dangerous-clean-slate: false
 
   deploy-web:
     runs-on: windows-latest
@@ -515,25 +466,3 @@ jobs:
               Start-Sleep -Seconds 5
             }
           }
-
-  #     - name: Download previous successful Web artifact for rollback
-  #       if: failure()
-  #       id: download_previous_web
-  #       continue-on-error: true
-  #       uses: dawidd6/action-download-artifact@v6
-  #       with:
-  #         workflow: deploy-to-simply.yml
-  #         workflow_conclusion: success
-  #         name: web-dist
-  #         path: ./rollback-web
-
-  #     - name: Roll back Web using FTP
-  #       if: failure() && steps.download_previous_web.outcome == 'success'
-  #       uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-  #       with:
-  #         server: ${{ secrets.FTP_SERVER }}
-  #         username: ${{ secrets.FTP_USERNAME }}
-  #         password: ${{ secrets.FTP_PASSWORD }}
-  #         local-dir: ./rollback-web/
-  #         server-dir: /venli/
-  #         dangerous-clean-slate: false
