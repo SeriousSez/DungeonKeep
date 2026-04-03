@@ -1192,7 +1192,8 @@ export class NewCharacterStandardPageComponent {
     readonly inventoryItemCount = computed(() => this.inventoryEntries().reduce((total, entry) => total + entry.quantity, 0));
     readonly totalCurrencyInGp = computed(() => {
         const value = this.currency();
-        return (value.pp * 10) + value.gp + (value.ep * 0.5) + (value.sp * 0.1) + (value.cp * 0.01);
+        const total = (value.pp * 10) + value.gp + (value.ep * 0.5) + (value.sp * 0.1) + (value.cp * 0.01);
+        return Math.round(total * 100) / 100;
     });
 
     private readonly classStartingPackagePresets: Readonly<Record<string, Readonly<Record<'A' | 'B', StartingEquipmentPackage>>>> = {
