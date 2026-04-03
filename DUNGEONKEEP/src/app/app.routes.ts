@@ -10,12 +10,18 @@ import { NewCharacterPageComponent } from './pages/new-character-page/new-charac
 import { NewCharacterStandardPageComponent } from './pages/new-character-standard-page/new-character-standard-page.component';
 import { SessionsPageComponent } from './pages/sessions-page/sessions-page.component';
 import { PremadeCharactersPageComponent } from './pages/premade-characters-page.component';
+import { AuthShellComponent } from './components/auth-shell/auth-shell.component';
 
 export const routes: Routes = [
     {
         path: '',
         pathMatch: 'full',
         redirectTo: 'dashboard'
+    },
+    {
+        path: 'auth',
+        component: AuthShellComponent,
+        data: { title: 'Sign In', breadcrumb: 'Sign In' }
     },
     {
         path: 'dashboard',
