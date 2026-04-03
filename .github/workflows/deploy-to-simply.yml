@@ -166,12 +166,24 @@ jobs:
         working-directory: ${{ env.ANGULAR_WORKING_DIR }}
         shell: pwsh
         run: |
-          $dist = Join-Path "dist/DUNGEONKEEP" "web.config"
           $source = "src/web.config"
-          if ((-not (Test-Path $dist)) -and (Test-Path $source)) {
+          $indexFile = Get-ChildItem -Path "dist" -Filter index.html -Recurse -File | Select-Object -First 1
+
+          if (-not (Test-Path $source)) {
+            Write-Host "web.config source not found, skipping copy."
+            exit 0
+          }
+
+          if (-not $indexFile) {
+            Write-Host "Angular dist index.html not found, skipping web.config copy."
+            exit 0
+          }
+
+          $dist = Join-Path $indexFile.DirectoryName "web.config"
+          if (-not (Test-Path $dist)) {
             Copy-Item $source $dist -Force
           } else {
-            Write-Host "web.config source not found, skipping copy."
+            Write-Host "web.config already present in resolved Angular output directory."
           }
 
       - name: Upload Web artifact
