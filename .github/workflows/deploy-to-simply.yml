@@ -68,23 +68,12 @@ jobs:
       - name: Generate production appsettings from secrets
         working-directory: ./DungeonKeep.API
         shell: pwsh
-        env:
-          MYSQL_CONNECTION_STRING: ${{ secrets.MYSQL_CONNECTION_STRING }}
         run: |
-          $required = @(
-            @{ Name = 'MYSQL_CONNECTION_STRING'; Value = $env:MYSQL_CONNECTION_STRING }
-          )
-
-          $missing = $required | Where-Object { -not $_.Value }
-          if ($missing) {
-            throw "Missing required secrets: $($missing.Name -join ', ')"
-          }
-
           $aiProvider = if ([string]::IsNullOrWhiteSpace($env:OPENAI_API_KEY)) { "Wikipedia" } else { "OpenAI" }
 
           $config = @{
             ConnectionStrings = @{
-              MySql = $env:MYSQL_CONNECTION_STRING
+              DungeonKeep = "Data Source=dungeonkeep.db"
             }
             Jwt = @{
               Issuer = "DungeonKeep"
@@ -134,13 +123,13 @@ jobs:
           }
 
           $json = $raw | ConvertFrom-Json
-          $mysql = $json.ConnectionStrings.MySql
+          $connStr = $json.ConnectionStrings.DungeonKeep
 
-          if ([string]::IsNullOrWhiteSpace($mysql)) {
-            throw "Published appsettings.Production.json has empty ConnectionStrings.MySql."
+          if ([string]::IsNullOrWhiteSpace($connStr)) {
+            throw "Published appsettings.Production.json has empty ConnectionStrings.DungeonKeep."
           }
 
-          Write-Host "Published config validation passed. ConnectionStrings.MySql is populated."
+          Write-Host "Published config validation passed. ConnectionStrings.DungeonKeep is populated."
 
       - name: Upload API artifact
         uses: actions/upload-artifact@v4
@@ -269,6 +258,9 @@ jobs:
             **/wwwroot/uploads/**
             **/uploads/**
             **/logs/**
+            **/*.db
+            **/*.db-shm
+            **/*.db-wal
 
       - name: Deploy API using FTP (retry while offline)
         if: env.API_USE_APP_OFFLINE == 'true' && steps.deploy_api_primary.outcome == 'failure'
@@ -284,6 +276,9 @@ jobs:
             **/wwwroot/uploads/**
             **/uploads/**
             **/logs/**
+            **/*.db
+            **/*.db-shm
+            **/*.db-wal
 
       - name: Create app_offline.htm (fallback)
         if: env.API_USE_APP_OFFLINE != 'true' && steps.deploy_api_primary.outcome == 'failure'
