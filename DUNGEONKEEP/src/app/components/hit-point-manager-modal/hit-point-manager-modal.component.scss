@@ -5,7 +5,7 @@
     backdrop-filter: blur(2px);
     display: grid;
     place-items: center;
-    z-index: 1200;
+    z-index: 30000;
     padding: 16px;
 }
 
@@ -136,6 +136,10 @@
 }
 
 @media (max-width: 640px) {
+    .class-hp-modal {
+        background: var(--panel-bg-solid);
+        backdrop-filter: none;
+    }
 
     .class-hp-modal__summary,
     .class-hp-modal__reference-grid {

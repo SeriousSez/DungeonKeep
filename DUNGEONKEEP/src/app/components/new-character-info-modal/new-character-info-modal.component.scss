@@ -1,7 +1,7 @@
 :host {
     position: fixed;
     inset: 0;
-    z-index: 50;
+    z-index: 30000;
 }
 
 .modal-backdrop {
@@ -288,6 +288,8 @@
         border-radius: 16px;
         padding: 14px;
         gap: 10px;
+        background: var(--panel-bg-solid);
+        backdrop-filter: none;
     }
 
     .info-modal-header {
@@ -351,6 +353,8 @@
         max-height: calc(100dvh - 8px);
         border-radius: 14px;
         padding: 12px;
+        background: var(--panel-bg-solid);
+        backdrop-filter: none;
     }
 
     .info-modal-footer {

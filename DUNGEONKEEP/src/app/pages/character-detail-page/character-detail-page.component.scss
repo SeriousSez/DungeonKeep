@@ -1579,7 +1579,7 @@
     border: 1px solid var(--panel-border);
     overflow: auto;
     padding: 18px;
-    z-index: 2500;
+    z-index: 30000;
     box-shadow: 0 14px 32px color-mix(in srgb, var(--text-main) 22%, transparent);
 }
 
@@ -1593,7 +1593,7 @@
     border: 1px solid var(--panel-border);
     overflow: auto;
     padding: 18px;
-    z-index: 2500;
+    z-index: 30000;
     box-shadow: 0 14px 32px color-mix(in srgb, var(--text-main) 22%, transparent);
     display: grid;
     gap: 14px;
@@ -1609,10 +1609,20 @@
     border: 1px solid var(--panel-border);
     overflow: visible;
     padding: 18px;
-    z-index: 2500;
+    z-index: 30000;
     box-shadow: 0 14px 32px color-mix(in srgb, var(--text-main) 22%, transparent);
     display: grid;
     gap: 12px;
+}
+
+@media (max-width: 720px) {
+
+    .hp-popup,
+    .detail-popup,
+    .coin-popup {
+        background: var(--panel-bg-solid);
+        backdrop-filter: none;
+    }
 }
 
 .coin-popup-header {
