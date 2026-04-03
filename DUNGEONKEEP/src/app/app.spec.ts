@@ -18,6 +18,6 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.brand-block h1')?.textContent).toContain('DungeonKeep');
+    expect(compiled.querySelector('.brand-name')?.textContent).toContain('DungeonKeep');
   });
 });

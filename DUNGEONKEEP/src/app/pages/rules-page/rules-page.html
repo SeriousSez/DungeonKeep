@@ -1,0 +1,93 @@
+<main class="rules-page">
+    <section class="rules-hero panel">
+        <div class="rules-hero-copy">
+            <p class="eyebrow">Rules Library</p>
+            <h1>Browse the table's rules toolkit without leaving DungeonKeep.</h1>
+            <p class="rules-hero-text">Every rules topic now lives inside the app with practical summaries, starter guidance, and session-focused reference notes. Use this library as your shared prep layer instead of bouncing players to external sites.</p>
+        </div>
+
+        <div class="rules-hero-actions">
+            <a routerLink="/dashboard" class="ghost-button">Back to Dashboard</a>
+            <a routerLink="/rules/basic-rules" class="primary-button">Start With Basic Rules</a>
+        </div>
+    </section>
+
+    <section class="rules-overview panel">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">At A Glance</p>
+                <h2>One library, fourteen internal reference pages</h2>
+            </div>
+            <p>Use the hub for broad browsing, then drill into a focused page for each topic.</p>
+        </div>
+
+        <div class="rules-stat-grid">
+            <article class="rules-stat-card">
+                <span class="rules-stat-value">{{ rulesEntries.length }}</span>
+                <span class="rules-stat-label">Detailed pages</span>
+            </article>
+            <article class="rules-stat-card">
+                <span class="rules-stat-value">{{ rulesBrowseLinks.length }}</span>
+                <span class="rules-stat-label">Browse topics</span>
+            </article>
+            <article class="rules-stat-card">
+                <span class="rules-stat-value">{{ rulesResourceLinks.length }}</span>
+                <span class="rules-stat-label">Reference resources</span>
+            </article>
+        </div>
+    </section>
+
+    <section class="rules-section panel">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Browse</p>
+                <h2>Character and creature references</h2>
+            </div>
+            <p>Open internal primers for player options, gear, treasure, and encounter reading.</p>
+        </div>
+
+        <div class="rules-card-grid">
+            @for (link of rulesBrowseLinks; track link.slug) {
+            <a class="rules-card" [routerLink]="link.routePath">
+                <span class="rules-card-icon">
+                    <i class="fa-duotone fa-thin" [class]="'fa-duotone fa-thin fa-' + link.icon"></i>
+                </span>
+                <div class="rules-card-copy">
+                    <h3>{{ link.label }}</h3>
+                    <p>{{ link.description }}</p>
+                </div>
+                <span class="rules-card-arrow">
+                    <i class="fa-duotone fa-thin fa-arrow-right"></i>
+                </span>
+            </a>
+            }
+        </div>
+    </section>
+
+    <section class="rules-section panel">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Resources</p>
+                <h2>Learning and reference material</h2>
+            </div>
+            <p>Use these when you need onboarding, glossary support, sheet guidance, or open-rules context.</p>
+        </div>
+
+        <div class="rules-card-grid rules-card-grid--resources">
+            @for (link of rulesResourceLinks; track link.slug) {
+            <a class="rules-card" [routerLink]="link.routePath">
+                <span class="rules-card-icon">
+                    <i class="fa-duotone fa-thin" [class]="'fa-duotone fa-thin fa-' + link.icon"></i>
+                </span>
+                <div class="rules-card-copy">
+                    <h3>{{ link.label }}</h3>
+                    <p>{{ link.description }}</p>
+                </div>
+                <span class="rules-card-arrow">
+                    <i class="fa-duotone fa-thin fa-arrow-right"></i>
+                </span>
+            </a>
+            }
+        </div>
+    </section>
+</main>

@@ -60,6 +60,52 @@
                 </div>
             </div>
 
+            <div class="nav-group" [class.is-open]="openDropdown() === 'rules'">
+                <button class="nav-group-btn" type="button" (click)="toggleDropdown('rules')">
+                    Rules
+                    <i class="fa-duotone fa-thin fa-chevron-down nav-chevron"></i>
+                </button>
+                <div class="nav-dropdown nav-dropdown--rules">
+                    <a class="nav-dropdown-hub-link" routerLink="/rules" routerLinkActive="is-active" (click)="closeDropdown(); closeMobileNav()">
+                        <span class="nav-dropdown-hub-icon">
+                            <i class="fa-duotone fa-thin fa-books"></i>
+                        </span>
+                        <span class="nav-dropdown-hub-copy">
+                            <span class="nav-dropdown-hub-title">Rules Library</span>
+                            <span class="nav-dropdown-hub-text">Open the in-app hub for detailed rule pages, references, and quick access.</span>
+                        </span>
+                    </a>
+
+                    <div class="nav-dropdown-rule"></div>
+
+                    <div class="nav-dropdown-grid">
+                        <section class="nav-dropdown-column">
+                            <p class="nav-dropdown-section">Browse</p>
+                            @for (link of rulesBrowseLinks; track link.slug) {
+                            <a class="nav-dropdown-link" [routerLink]="link.routePath" (click)="closeDropdown(); closeMobileNav()">
+                                <span class="nav-dropdown-link-icon">
+                                    <i class="fa-duotone fa-thin" [class]="'fa-duotone fa-thin fa-' + link.icon"></i>
+                                </span>
+                                <span class="nav-dropdown-link-title">{{ link.label }}</span>
+                            </a>
+                            }
+                        </section>
+
+                        <section class="nav-dropdown-column">
+                            <p class="nav-dropdown-section">Resources</p>
+                            @for (link of rulesResourceLinks; track link.slug) {
+                            <a class="nav-dropdown-link" [routerLink]="link.routePath" (click)="closeDropdown(); closeMobileNav()">
+                                <span class="nav-dropdown-link-icon">
+                                    <i class="fa-duotone fa-thin" [class]="'fa-duotone fa-thin fa-' + link.icon"></i>
+                                </span>
+                                <span class="nav-dropdown-link-title">{{ link.label }}</span>
+                            </a>
+                            }
+                        </section>
+                    </div>
+                </div>
+            </div>
+
             <a class="nav-direct" routerLink="/sessions" routerLinkActive="is-active" (click)="closeMobileNav(); closeDropdown()">
                 Session Prep
             </a>

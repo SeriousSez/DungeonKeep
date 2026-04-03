@@ -70,6 +70,7 @@ jobs:
         working-directory: ./DungeonKeep.API
         shell: pwsh
         env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
@@ -80,7 +81,6 @@ jobs:
           SMTP_REPLY_TO_NAME: ${{ secrets.SMTP_REPLY_TO_NAME }}
           SMTP_SECURE_SOCKET_OPTION: ${{ secrets.SMTP_SECURE_SOCKET_OPTION }}
         run: |
-          $aiProvider = if ([string]::IsNullOrWhiteSpace($env:OPENAI_API_KEY)) { "Wikipedia" } else { "OpenAI" }
           $smtpPort = 587
 
           if (-not [string]::IsNullOrWhiteSpace($env:SMTP_PORT)) {
@@ -95,6 +95,9 @@ jobs:
           $config = @{
             ConnectionStrings = @{
               DungeonKeep = "Data Source=dungeonkeep.db"
+            }
+            OpenAI = @{
+              ApiKey = $env:OPENAI_API_KEY
             }
             Jwt = @{
               Issuer = "DungeonKeep"

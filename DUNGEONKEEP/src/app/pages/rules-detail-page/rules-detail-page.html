@@ -1,0 +1,116 @@
+@if (entry(); as page) {
+<main class="rules-detail-page">
+    <section class="detail-hero panel">
+        <div class="detail-hero-copy">
+            <p class="eyebrow">{{ page.eyebrow }}</p>
+            <h1>{{ page.heroTitle }}</h1>
+            <p class="detail-hero-text">{{ page.heroSummary }}</p>
+        </div>
+
+        <div class="detail-hero-actions">
+            <a routerLink="/rules" class="ghost-button">Back to Rules Library</a>
+        </div>
+    </section>
+
+    <section class="detail-facts panel">
+        <div class="section-heading section-heading--stacked">
+            <p class="eyebrow">Quick Facts</p>
+            <h2>{{ page.label }} at a glance</h2>
+        </div>
+
+        <div class="fact-grid">
+            @for (fact of page.quickFacts; track fact.label) {
+            <article class="fact-card">
+                <h3>{{ fact.label }}</h3>
+                <p>{{ fact.value }}</p>
+            </article>
+            }
+        </div>
+    </section>
+
+    <section class="detail-highlights panel">
+        <div class="section-heading section-heading--stacked">
+            <p class="eyebrow">Focus Areas</p>
+            <h2>What matters most</h2>
+        </div>
+
+        <div class="highlight-grid">
+            @for (highlight of page.highlights; track highlight.title) {
+            <article class="highlight-card">
+                <h3>{{ highlight.title }}</h3>
+                <p>{{ highlight.text }}</p>
+            </article>
+            }
+        </div>
+    </section>
+
+    @for (section of page.sections; track section.heading) {
+    <section class="detail-section panel">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Deep Dive</p>
+                <h2>{{ section.heading }}</h2>
+            </div>
+            <p>{{ section.intro }}</p>
+        </div>
+
+        @if (section.entries?.length) {
+        <div class="entry-grid">
+            @for (entry of section.entries; track entry.label) {
+            <article class="entry-card">
+                <h3>{{ entry.label }}</h3>
+                <p>{{ entry.text }}</p>
+            </article>
+            }
+        </div>
+        }
+
+        @if (section.bullets?.length) {
+        <ul class="bullet-list">
+            @for (bullet of section.bullets; track bullet) {
+            <li>{{ bullet }}</li>
+            }
+        </ul>
+        }
+    </section>
+    }
+
+    @if (relatedEntries().length) {
+    <section class="detail-related panel">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Keep Reading</p>
+                <h2>Related pages</h2>
+            </div>
+            <p>Follow adjacent topics without leaving the library.</p>
+        </div>
+
+        <div class="related-grid">
+            @for (related of relatedEntries(); track related.slug) {
+            <a class="related-card" [routerLink]="related.routePath">
+                <span class="related-card-icon">
+                    <i class="fa-duotone fa-thin" [class]="'fa-duotone fa-thin fa-' + related.icon"></i>
+                </span>
+                <span class="related-card-copy">
+                    <span class="related-card-title">{{ related.label }}</span>
+                    <span class="related-card-text">{{ related.description }}</span>
+                </span>
+                <span class="related-card-arrow">
+                    <i class="fa-duotone fa-thin fa-arrow-right"></i>
+                </span>
+            </a>
+            }
+        </div>
+    </section>
+    }
+</main>
+} @else {
+<main class="rules-detail-page">
+    <section class="panel empty-state">
+        <p class="eyebrow">Rules Library</p>
+        <h1>That rules page could not be found.</h1>
+        <p>Return to the library and choose another topic.</p>
+        <a routerLink="/rules" class="ghost-button">Back to Rules Library</a>
+    </section>
+</main>
+}

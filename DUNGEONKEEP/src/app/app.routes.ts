@@ -11,6 +11,8 @@ import { NewCharacterStandardPageComponent } from './pages/new-character-standar
 import { SessionsPageComponent } from './pages/sessions-page/sessions-page.component';
 import { PremadeCharactersPageComponent } from './pages/premade-characters-page.component';
 import { AuthShellComponent } from './components/auth-shell/auth-shell.component';
+import { RulesPage } from './pages/rules-page/rules-page';
+import { RulesDetailPage } from './pages/rules-detail-page/rules-detail-page';
 
 export const routes: Routes = [
     {
@@ -111,6 +113,16 @@ export const routes: Routes = [
         path: 'sessions',
         component: SessionsPageComponent,
         data: { title: 'Session Prep', breadcrumb: 'Sessions' }
+    },
+    {
+        path: 'rules',
+        component: RulesPage,
+        data: { title: 'Rules Library', breadcrumb: 'Rules' }
+    },
+    {
+        path: 'rules/:slug',
+        component: RulesDetailPage,
+        data: { title: 'Rules Reference', breadcrumb: 'Reference', parentCrumbs: [{ label: 'Rules', url: '/rules' }] }
     },
     {
         path: 'character/:id',

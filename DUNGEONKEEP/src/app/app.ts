@@ -5,6 +5,7 @@ import { DungeonStoreService } from './state/dungeon-store.service';
 import { BreadcrumbComponent } from './components/breadcrumb/breadcrumb.component';
 import { DndChatWidgetComponent } from './components/dnd-chat-widget/dnd-chat-widget.component';
 import { SessionService } from './state/session.service';
+import { rulesBrowseLinks, rulesResourceLinks } from './data/rules-links';
 
 @Component({
   selector: 'app-root',
@@ -21,6 +22,8 @@ export class App {
   readonly openDropdown = signal<string | null>(null);
   readonly currentUser = computed(() => this.session.currentUser());
   readonly isInitialized = computed(() => this.session.initialized());
+  readonly rulesBrowseLinks = rulesBrowseLinks;
+  readonly rulesResourceLinks = rulesResourceLinks;
 
   constructor() {
     effect(() => {
