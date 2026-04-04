@@ -285,6 +285,13 @@ textarea {
     opacity: 0.75;
 }
 
+.generation-actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: center;
+}
+
 .scene-list,
 .stack-grid,
 .stack-list,
@@ -434,6 +441,15 @@ textarea {
 }
 
 @media (max-width: 800px) {
+
+    .generation-actions-row {
+        align-items: stretch;
+    }
+
+    .generation-actions-row .ghost-button,
+    .generation-actions-row .primary-button {
+        width: 100%;
+    }
 
     .editor-header,
     .scene-card-header,

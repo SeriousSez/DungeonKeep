@@ -16,6 +16,11 @@ import { marked } from 'marked';
 
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
 import { SESSION_EDITOR_SAMPLE_DRAFT } from '../../data/session-editor.mock';
+import {
+    persistStoredSessionEditorDraft,
+    readStoredSessionEditorDraft,
+    removeStoredSessionEditorDraft
+} from '../../data/session-editor.storage';
 import { ThreatLevel } from '../../models/dungeon.models';
 import {
     SessionEditorDraft,
@@ -93,6 +98,7 @@ type SessionEditorForm = FormGroup<{
     title: FormControl<string>;
     shortDescription: FormControl<string>;
     sessionNumber: FormControl<number>;
+    threatLevel: FormControl<ThreatLevel | ''>;
     campaignId: FormControl<string>;
     date: FormControl<string>;
     inGameLocation: FormControl<string>;
@@ -165,6 +171,7 @@ export class SessionEditorPageComponent {
     readonly pendingDelete = signal<PendingDelete | null>(null);
 
     readonly threatOptions: DropdownOption[] = [
+        { value: '', label: 'Auto', description: 'Infer threat from the session summary and notes when saving.' },
         { value: 'Low', label: 'Low', description: 'Straightforward pacing and modest pressure.' },
         { value: 'Moderate', label: 'Moderate', description: 'Balanced risk and table tension.' },
         { value: 'High', label: 'High', description: 'Escalated danger or meaningful complications.' },
@@ -179,6 +186,7 @@ export class SessionEditorPageComponent {
         title: this.fb.control('', { validators: [Validators.required] }),
         shortDescription: this.fb.control(''),
         sessionNumber: this.fb.control(1, { validators: [Validators.min(1)] }),
+        threatLevel: this.fb.control<ThreatLevel | ''>(''),
         campaignId: this.fb.control(''),
         date: this.fb.control(''),
         inGameLocation: this.fb.control(''),
@@ -355,7 +363,7 @@ export class SessionEditorPageComponent {
         }
 
         const draft = this.toDraft();
-        this.persistStoredDraft(draft, this.storageKey(this.sessionId() ?? draft.id));
+        persistStoredSessionEditorDraft(this.campaignId(), this.sessionId() ?? draft.id, draft);
 
         const campaignId = this.campaignId();
         if (!campaignId) {
@@ -381,10 +389,9 @@ export class SessionEditorPageComponent {
 
         const syncedSessionId = this.findPersistedSessionId(sessionSummary);
         if (syncedSessionId && !this.sessionId()) {
-            const previousKey = this.storageKey(draft.id);
-            const nextKey = this.storageKey(syncedSessionId);
-            this.persistStoredDraft({ ...draft, id: syncedSessionId }, nextKey);
-            this.removeStoredDraft(previousKey);
+            persistStoredSessionEditorDraft(campaignId, syncedSessionId, { ...draft, id: syncedSessionId });
+            removeStoredSessionEditorDraft(campaignId, 'new');
+            removeStoredSessionEditorDraft(campaignId, draft.id);
             this.sessionId.set(syncedSessionId);
             await this.router.navigate(['/campaigns', campaignId, 'sessions', syncedSessionId, 'edit'], { replaceUrl: true });
         }
@@ -517,8 +524,8 @@ export class SessionEditorPageComponent {
         control.setValue(typeof value === 'string' ? value : String(value));
     }
 
-    updateThreatControl(control: FormControl<ThreatLevel>, value: string | number): void {
-        const threat = value === 'Low' || value === 'High' || value === 'Deadly' ? value : 'Moderate';
+    updateThreatControl(control: FormControl<ThreatLevel | ''>, value: string | number): void {
+        const threat = value === 'Low' || value === 'High' || value === 'Deadly' || value === 'Moderate' ? value : '';
         control.setValue(threat);
     }
 
@@ -526,7 +533,17 @@ export class SessionEditorPageComponent {
         const campaignId = this.campaignId();
         const sessionId = this.sessionId();
 
-        const persistedDraft = this.readStoredDraft(this.storageKey(sessionId ?? 'new'));
+        if (!sessionId) {
+            removeStoredSessionEditorDraft(campaignId, 'new');
+
+            const freshDraft = this.createDraftFromCampaign(campaign, campaignId, null);
+            this.patchDraft(freshDraft);
+            this.initialized.set(true);
+            this.cdr.detectChanges();
+            return;
+        }
+
+        const persistedDraft = readStoredSessionEditorDraft(campaignId, sessionId ?? 'new');
         if (persistedDraft) {
             this.patchDraft(persistedDraft);
             this.initialized.set(true);
@@ -542,14 +559,18 @@ export class SessionEditorPageComponent {
 
     private createDraftFromCampaign(campaign: ReturnType<typeof this.currentCampaign>, campaignId: string, sessionId: string | null): SessionEditorDraft {
         const existingSession = campaign?.sessions.find((session) => session.id === sessionId);
+        const existingSessionIndex = existingSession
+            ? campaign?.sessions.findIndex((session) => session.id === existingSession.id) ?? -1
+            : -1;
 
         return {
             id: sessionId ?? this.generateId('session'),
             title: existingSession?.title ?? '',
             shortDescription: existingSession?.objective ?? '',
             sessionNumber: existingSession
-                ? Math.max(1, campaign?.sessions.findIndex((session) => session.id === existingSession.id) ?? 0 + 1)
+                ? Math.max(1, existingSessionIndex + 1)
                 : (campaign?.sessions.length ?? 0) + 1,
+            threatLevel: existingSession?.threat,
             campaignId,
             date: existingSession?.date ?? '',
             inGameLocation: existingSession?.location ?? '',
@@ -573,6 +594,7 @@ export class SessionEditorPageComponent {
             title: draft.title,
             shortDescription: draft.shortDescription,
             sessionNumber: draft.sessionNumber,
+            threatLevel: draft.threatLevel ?? '',
             campaignId: draft.campaignId,
             date: draft.date,
             inGameLocation: draft.inGameLocation,
@@ -599,6 +621,7 @@ export class SessionEditorPageComponent {
             title: this.titleControl.value.trim(),
             shortDescription: this.editorForm.controls.shortDescription.value.trim(),
             sessionNumber: this.editorForm.controls.sessionNumber.value,
+            threatLevel: this.editorForm.controls.threatLevel.value || undefined,
             campaignId: this.editorForm.controls.campaignId.value,
             date: this.editorForm.controls.date.value.trim(),
             inGameLocation: this.editorForm.controls.inGameLocation.value.trim(),
@@ -729,7 +752,7 @@ export class SessionEditorPageComponent {
             date: draft.date,
             location: draft.inGameLocation,
             objective: draft.shortDescription || firstSceneTitle || 'Session prep in progress.',
-            threat: this.deriveThreatFromDraft(draft)
+            threat: draft.threatLevel ?? this.deriveThreatFromDraft(draft)
         };
     }
 
@@ -760,7 +783,7 @@ export class SessionEditorPageComponent {
 
     private autosaveDraft(): void {
         const draft = this.toDraft();
-        this.persistStoredDraft(draft, this.storageKey(this.sessionId() ?? 'new'));
+        persistStoredSessionEditorDraft(this.campaignId(), this.sessionId() ?? 'new', draft);
         this.lastAutosavedAt.set(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     }
 
@@ -782,44 +805,6 @@ export class SessionEditorPageComponent {
         }
 
         return fallback;
-    }
-
-    private readStoredDraft(key: string): SessionEditorDraft | null {
-        if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
-            return null;
-        }
-
-        const raw = window.localStorage.getItem(key);
-        if (!raw) {
-            return null;
-        }
-
-        try {
-            return JSON.parse(raw) as SessionEditorDraft;
-        } catch {
-            window.localStorage.removeItem(key);
-            return null;
-        }
-    }
-
-    private persistStoredDraft(draft: SessionEditorDraft, key: string): void {
-        if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
-            return;
-        }
-
-        window.localStorage.setItem(key, JSON.stringify(draft));
-    }
-
-    private removeStoredDraft(key: string): void {
-        if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
-            return;
-        }
-
-        window.localStorage.removeItem(key);
-    }
-
-    private storageKey(sessionId: string): string {
-        return `dungeonkeep.session-editor.${this.campaignId()}.${sessionId}`;
     }
 
     private textEntryFromForm(entry: TextEntryForm): SessionTextEntry {

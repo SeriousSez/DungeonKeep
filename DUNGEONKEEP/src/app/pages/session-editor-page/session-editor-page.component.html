@@ -72,7 +72,7 @@
 
             <label class="field">
                 <span>Pacing Hint</span>
-                <input type="text" [value]="generationHints().estimatedLengthHint" (input)="updateGenerationEstimatedLengthHint($any($event.target).value)" placeholder="One social scene and one hard combat" />
+                <textarea rows="3" [value]="generationHints().estimatedLengthHint" (input)="updateGenerationEstimatedLengthHint($any($event.target).value)" placeholder="One social scene and one hard combat"></textarea>
             </label>
 
             <label class="field">
@@ -121,6 +121,11 @@
                     <label class="field">
                         <span>Session Number</span>
                         <input type="number" min="1" formControlName="sessionNumber" />
+                    </label>
+
+                    <label class="field">
+                        <span>Threat Level</span>
+                        <app-dropdown ariaLabel="Threat level" [value]="editorForm.controls.threatLevel.value" [options]="threatOptions" [searchable]="false" [placeholder]="'Auto derive from notes'" (changed)="updateThreatControl(editorForm.controls.threatLevel, $event)"></app-dropdown>
                     </label>
 
                     <label class="field">

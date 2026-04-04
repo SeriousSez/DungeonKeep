@@ -1,0 +1,202 @@
+<main class="monster-reference-page">
+    <section class="panel monster-hero">
+        <div class="monster-hero-copy">
+            <p class="eyebrow">Monster Reference</p>
+            <h1>Track official monster links, table tags, and your own prep notes in one place.</h1>
+            <p class="monster-hero-text">This page is a personal catalog for monsters you want quick access to during prep. DungeonKeep stores your CR tags, creature types, and notes locally, while the official source link remains the authority for the full monster entry.</p>
+        </div>
+
+        <div class="monster-hero-actions">
+            <a routerLink="/rules" class="ghost-button">Back to Rules Library</a>
+        </div>
+    </section>
+
+    <section class="panel monster-stats">
+        <div class="section-heading section-heading--stacked">
+            <p class="eyebrow">Catalog Health</p>
+            <h2>Your local monster shelf</h2>
+        </div>
+
+        <div class="stats-grid">
+            <article class="stat-card">
+                <span class="stat-value">{{ trackedCount() }}</span>
+                <span class="stat-label">Tracked monsters</span>
+            </article>
+            <article class="stat-card">
+                <span class="stat-value">{{ uniqueTypeCount() }}</span>
+                <span class="stat-label">Creature types</span>
+            </article>
+            <article class="stat-card">
+                <span class="stat-value">{{ uniqueTagCount() }}</span>
+                <span class="stat-label">Custom tags</span>
+            </article>
+            <article class="stat-card">
+                <span class="stat-value">{{ notedCount() }}</span>
+                <span class="stat-label">Entries with notes</span>
+            </article>
+        </div>
+    </section>
+
+    <section class="panel monster-shortcuts">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Official Sources</p>
+                <h2>Start from the canonical listing</h2>
+            </div>
+            <p>Open the official browse surface, then save only the monsters you want quick table access to here.</p>
+        </div>
+
+        <div class="shortcut-grid">
+            @for (shortcut of officialSourceShortcuts; track shortcut.url) {
+            <a class="shortcut-card" [href]="shortcut.url" target="_blank" rel="noopener noreferrer">
+                <span class="shortcut-icon"><i class="fa-duotone fa-thin fa-arrow-up-right-from-square"></i></span>
+                <span class="shortcut-copy">
+                    <span class="shortcut-title">{{ shortcut.label }}</span>
+                    <span class="shortcut-text">{{ shortcut.description }}</span>
+                </span>
+            </a>
+            }
+        </div>
+    </section>
+
+    <section class="monster-layout">
+        <section class="panel editor-panel">
+            <div class="section-heading section-heading--stacked">
+                <p class="eyebrow">Personal Catalog</p>
+                <h2>{{ isEditing() ? 'Edit monster reference' : 'Add monster reference' }}</h2>
+            </div>
+
+            <div class="editor-grid">
+                <label class="field full-span">
+                    <span>Monster Name</span>
+                    <input type="text" [value]="draft().name" (input)="updateDraftField('name', $any($event.target).value)" placeholder="Adult Red Dragon, Goblin Boss, Ghost, etc." />
+                </label>
+
+                <label class="field">
+                    <span>Challenge Rating</span>
+                    <input type="text" [value]="draft().challengeRating" (input)="updateDraftField('challengeRating', $any($event.target).value)" placeholder="1/4, 5, 17" />
+                </label>
+
+                <label class="field">
+                    <span>Creature Type</span>
+                    <app-dropdown ariaLabel="Creature type" [value]="draft().creatureType" [options]="creatureTypeOptions.slice(1)" [searchable]="false" [placeholder]="'Choose creature type'" (changed)="updateDraftCreatureType($event)"></app-dropdown>
+                </label>
+
+                <label class="field full-span">
+                    <span>Official Source URL</span>
+                    <input type="url" [value]="draft().sourceUrl" (input)="updateDraftField('sourceUrl', $any($event.target).value)" placeholder="https://www.dndbeyond.com/monsters/..." />
+                </label>
+
+                <label class="field">
+                    <span>Source Label</span>
+                    <input type="text" [value]="draft().sourceLabel" (input)="updateDraftField('sourceLabel', $any($event.target).value)" placeholder="D&D Beyond" />
+                </label>
+
+                <label class="field">
+                    <span>Tags</span>
+                    <input type="text" [value]="draft().tags" (input)="updateDraftField('tags', $any($event.target).value)" placeholder="boss, undead, sewer, ambush" />
+                </label>
+
+                <label class="field full-span">
+                    <span>Personal Notes</span>
+                    <textarea rows="6" [value]="draft().notes" (input)="updateDraftField('notes', $any($event.target).value)" placeholder="Legendary resistances matter, pair with cultists, vulnerable when isolated from minions, etc."></textarea>
+                </label>
+            </div>
+
+            @if (draftError()) {
+            <p class="feedback feedback-error">{{ draftError() }}</p>
+            }
+
+            @if (draftMessage()) {
+            <p class="feedback feedback-success">{{ draftMessage() }}</p>
+            }
+
+            <div class="editor-actions">
+                @if (isEditing()) {
+                <button type="button" class="ghost-button" (click)="cancelEdit()">Cancel</button>
+                }
+                <button type="button" class="primary-button" (click)="saveDraft()">{{ isEditing() ? 'Update Monster' : 'Save Monster' }}</button>
+            </div>
+        </section>
+
+        <section class="panel library-panel">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Quick Access</p>
+                    <h2>Monster shelf</h2>
+                </div>
+                <p>Filter your local references by name, CR, type, tags, or where the official entry lives.</p>
+            </div>
+
+            <div class="filter-grid">
+                <label class="field filter-field filter-field-search">
+                    <span>Search</span>
+                    <input type="search" [value]="searchTerm()" (input)="updateSearchTerm($any($event.target).value)" placeholder="Search by monster, CR, tag, or note" />
+                </label>
+
+                <label class="field filter-field">
+                    <span>Type</span>
+                    <app-dropdown ariaLabel="Filter by creature type" [value]="selectedType()" [options]="creatureTypeOptions" [searchable]="false" [placeholder]="'All Types'" (changed)="updateSelectedType($event)"></app-dropdown>
+                </label>
+
+                <label class="field filter-field">
+                    <span>Source</span>
+                    <app-dropdown ariaLabel="Filter by source" [value]="selectedSource()" [options]="sourceOptions()" [searchable]="false" [placeholder]="'All Sources'" (changed)="updateSelectedSource($event)"></app-dropdown>
+                </label>
+
+                <label class="field filter-field">
+                    <span>Sort</span>
+                    <app-dropdown ariaLabel="Sort monster references" [value]="selectedSort()" [options]="sortOptions" [searchable]="false" [placeholder]="'Recently Updated'" (changed)="updateSelectedSort($event)"></app-dropdown>
+                </label>
+            </div>
+
+            @if (filteredEntries().length === 0) {
+            <div class="empty-state">
+                <h3>No monster references yet.</h3>
+                <p>Save the monsters you actually use at your table here so your CR notes, encounter tags, and official links stay easy to reach.</p>
+            </div>
+            } @else {
+            <div class="monster-grid">
+                @for (entry of filteredEntries(); track entry.id) {
+                <article class="monster-card">
+                    <div class="monster-card-header">
+                        <div>
+                            <p class="monster-card-kicker">{{ entry.creatureType || 'Other' }}</p>
+                            <h3>{{ entry.name }}</h3>
+                        </div>
+                        <span class="cr-pill">{{ entry.challengeRating || 'CR ?' }}</span>
+                    </div>
+
+                    <div class="meta-row">
+                        <span class="source-pill">{{ entry.sourceLabel }}</span>
+                        <span class="updated-label">Updated {{ entry.lastUpdated | date: 'MMM d, y, h:mm a' }}</span>
+                    </div>
+
+                    @if (entry.tags.length > 0) {
+                    <div class="tag-list">
+                        @for (tag of entry.tags; track tag) {
+                        <span class="tag-pill">{{ tag }}</span>
+                        }
+                    </div>
+                    }
+
+                    @if (entry.notes) {
+                    <p class="monster-notes">{{ entry.notes }}</p>
+                    } @else {
+                    <p class="monster-notes monster-notes-muted">No personal notes yet.</p>
+                    }
+
+                    <div class="monster-actions">
+                        <a class="primary-button" [href]="entry.sourceUrl" target="_blank" rel="noopener noreferrer">Open Official Entry</a>
+                        <button type="button" class="ghost-button" (click)="editEntry(entry.id)">Edit</button>
+                        <button type="button" class="ghost-button" (click)="requestDelete(entry.id)">Remove</button>
+                    </div>
+                </article>
+                }
+            </div>
+            }
+        </section>
+    </section>
+
+    <app-confirm-modal [open]="deleteModalOpen()" title="Remove Monster Reference?" [message]="deleteModalMessage()" confirmText="Remove" cancelText="Cancel" (confirmed)="confirmDelete()" (cancelled)="closeDeleteModal()"></app-confirm-modal>
+</main>

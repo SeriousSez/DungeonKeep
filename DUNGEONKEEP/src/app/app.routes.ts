@@ -2,11 +2,13 @@ import { Routes } from '@angular/router';
 import { CampaignDetailPageComponent } from './pages/campaign-detail-page/campaign-detail-page.component';
 import { CampaignEditPageComponent } from './pages/campaign-edit-page/campaign-edit-page.component';
 import { CampaignSectionPageComponent } from './pages/campaign-section-page/campaign-section-page.component';
+import { SessionDetailPageComponent } from './pages/session-detail-page/session-detail-page.component';
 import { SessionEditorPageComponent } from './pages/session-editor-page/session-editor-page.component';
 import { CampaignsPageComponent } from './pages/campaigns-page/campaigns-page.component';
 import { CharacterDetailPageComponent } from './pages/character-detail-page/character-detail-page.component';
 import { CharactersPageComponent } from './pages/characters-page/characters-page.component';
 import { DashboardPageComponent } from './pages/dashboard-page/dashboard-page.component';
+import { MonsterReferencePageComponent } from './pages/monster-reference-page/monster-reference-page.component';
 import { NewCampaignPageComponent } from './pages/new-campaign-page/new-campaign-page.component';
 import { NewCharacterPageComponent } from './pages/new-character-page/new-character-page.component';
 import { NewCharacterStandardPageComponent } from './pages/new-character-standard-page/new-character-standard-page.component';
@@ -68,6 +70,11 @@ export const routes: Routes = [
         path: 'campaigns/:id/sessions/:sessionId/edit',
         component: SessionEditorPageComponent,
         data: { title: 'Edit Session', breadcrumb: 'Edit Session', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }, { label: 'Sessions', url: '/campaigns/:id/sessions' }] }
+    },
+    {
+        path: 'campaigns/:id/sessions/:sessionId',
+        component: SessionDetailPageComponent,
+        data: { title: 'Session Details', breadcrumb: 'Session', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }, { label: 'Sessions', url: '/campaigns/:id/sessions' }] }
     },
     {
         path: 'campaigns/:id/npcs',
@@ -192,6 +199,11 @@ export const routes: Routes = [
         path: 'rules',
         component: RulesPage,
         data: { title: 'Rules Library', breadcrumb: 'Rules' }
+    },
+    {
+        path: 'rules/monsters',
+        component: MonsterReferencePageComponent,
+        data: { title: 'Monster Reference', breadcrumb: 'Monsters', parentCrumbs: [{ label: 'Rules', url: '/rules' }] }
     },
     {
         path: 'rules/:slug',

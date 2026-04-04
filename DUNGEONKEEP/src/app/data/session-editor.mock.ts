@@ -5,6 +5,7 @@ export const SESSION_EDITOR_SAMPLE_DRAFT: SessionEditorDraft = {
     title: 'The Amber Vault Heist',
     shortDescription: 'The party infiltrates a sealed archive beneath the city while rival treasure-hunters close in from above.',
     sessionNumber: 8,
+    threatLevel: 'High',
     campaignId: 'sample-campaign-id',
     date: '2026-04-20',
     inGameLocation: 'Underkeep Archive, South Vault Wing',

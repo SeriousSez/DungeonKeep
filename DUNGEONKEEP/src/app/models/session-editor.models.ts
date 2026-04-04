@@ -1,3 +1,5 @@
+import { ThreatLevel } from './dungeon.models';
+
 export interface SessionTextEntry {
     id: string;
     text: string;
@@ -61,6 +63,7 @@ export interface SessionEditorDraft {
     title: string;
     shortDescription: string;
     sessionNumber: number;
+    threatLevel?: ThreatLevel;
     campaignId: string;
     date: string;
     inGameLocation: string;

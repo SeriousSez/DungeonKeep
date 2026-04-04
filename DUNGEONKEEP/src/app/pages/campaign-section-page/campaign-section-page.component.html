@@ -94,7 +94,7 @@
         @if (campaign.sessions.length > 0) {
         <div class="session-cards">
             @for (session of campaign.sessions; track session.id) {
-            <article class="session-card">
+            <article class="session-card session-card-clickable" tabindex="0" role="link" (click)="openSessionDetails(session.id)" (keydown.enter)="openSessionDetails(session.id)" (keydown.space)="openSessionDetails(session.id); $event.preventDefault()">
                 <div class="session-card-header">
                     <div>
                         <h3>{{ session.title }}</h3>
@@ -102,9 +102,10 @@
                     </div>
                     <div class="member-pill-group">
                         <span class="session-threat-pill">{{ session.threat }}</span>
+                        <a type="button" class="ghost-button" [routerLink]="['/campaigns', campaign.id, 'sessions', session.id]" (click)="$event.stopPropagation()">View</a>
                         @if (campaign.currentUserRole === 'Owner') {
-                        <a type="button" class="ghost-button" [routerLink]="['/campaigns', campaign.id, 'sessions', session.id, 'edit']">Edit</a>
-                        <button type="button" class="ghost-button" (click)="deleteSession(session.id)">Delete</button>
+                        <a type="button" class="ghost-button" [routerLink]="['/campaigns', campaign.id, 'sessions', session.id, 'edit']" (click)="$event.stopPropagation()">Edit</a>
+                        <button type="button" class="ghost-button" (click)="$event.stopPropagation(); deleteSession(session.id)">Delete</button>
                         }
                     </div>
                 </div>

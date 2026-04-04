@@ -193,6 +193,15 @@ export class CampaignSectionPageComponent {
         return this.section() === section;
     }
 
+    openSessionDetails(sessionId: string): void {
+        const campaignId = this.campaignId();
+        if (!campaignId || !sessionId) {
+            return;
+        }
+
+        void this.router.navigate(['/campaigns', campaignId, 'sessions', sessionId]);
+    }
+
     clearSectionFeedback(): void {
         this.sectionFeedback.set('');
     }

@@ -230,8 +230,10 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                 model,
                 BuildSessionDraftPrompt(campaign, request),
                 temperature: 0.9,
-                maxOutputTokens: 2200,
-                cancellationToken);
+                maxOutputTokens: 4200,
+                textFormat: BuildSessionDraftJsonSchemaFormat(),
+                fallbackToPlainTextOnBadRequest: true,
+                cancellationToken: cancellationToken);
 
             var generated = TryParseGeneratedSessionDraftPayload(text);
             if (generated is null)
@@ -241,7 +243,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                     responsesUrl,
                     model,
                     BuildSessionDraftRepairPrompt(text),
-                    maxOutputTokens: 2600,
+                    maxOutputTokens: 4600,
                     cancellationToken);
 
                 generated = TryParseGeneratedSessionDraftPayload(repairedText);
@@ -327,7 +329,9 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                 BuildNpcDraftPrompt(campaign, request),
                 temperature: 0.65,
                 maxOutputTokens: 1800,
-                cancellationToken);
+                textFormat: null,
+                fallbackToPlainTextOnBadRequest: false,
+                cancellationToken: cancellationToken);
 
             var generated = TryParseGeneratedNpcDraftPayload(text);
             if (generated is null)
@@ -846,26 +850,55 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         string prompt,
         double temperature,
         int maxOutputTokens,
+        object? textFormat,
+        bool fallbackToPlainTextOnBadRequest,
         CancellationToken cancellationToken)
     {
-        using var message = new HttpRequestMessage(HttpMethod.Post, responsesUrl)
-        {
-            Headers =
-            {
-                Authorization = new AuthenticationHeaderValue("Bearer", apiKey.Trim())
-            },
-            Content = JsonContent.Create(new
-            {
-                model,
-                temperature,
-                max_output_tokens = maxOutputTokens,
-                input = prompt
-            })
-        };
-
         var client = httpClientFactory.CreateClient();
-        using var response = await client.SendAsync(message, cancellationToken);
+
+        using var response = await SendResponsesApiRequestAsync(
+            client,
+            apiKey,
+            responsesUrl,
+            model,
+            prompt,
+            temperature,
+            maxOutputTokens,
+            textFormat,
+            cancellationToken);
+
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode && fallbackToPlainTextOnBadRequest && textFormat is not null && response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+        {
+            using var fallbackResponse = await SendResponsesApiRequestAsync(
+                client,
+                apiKey,
+                responsesUrl,
+                model,
+                prompt,
+                temperature,
+                maxOutputTokens,
+                textFormat: null,
+                cancellationToken: cancellationToken);
+
+            body = await fallbackResponse.Content.ReadAsStringAsync(cancellationToken);
+
+            if (!fallbackResponse.IsSuccessStatusCode)
+            {
+                var fallbackDetail = body.Length > 240 ? body[..240] : body;
+                throw new HttpRequestException($"OpenAI request failed ({(int)fallbackResponse.StatusCode}): {fallbackDetail}", null, fallbackResponse.StatusCode);
+            }
+
+            var fallbackPayload = JsonSerializer.Deserialize<OpenAiResponsesApiResponse>(body, SerializerOptions);
+            var fallbackText = ExtractResponseText(fallbackPayload);
+            if (string.IsNullOrWhiteSpace(fallbackText))
+            {
+                throw new InvalidOperationException("The model returned no text.");
+            }
+
+            return fallbackText;
+        }
 
         if (!response.IsSuccessStatusCode)
         {
@@ -883,6 +916,56 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         return text;
     }
 
+    private static HttpRequestMessage BuildResponsesApiRequest(
+        string apiKey,
+        string responsesUrl,
+        string model,
+        string prompt,
+        double temperature,
+        int maxOutputTokens,
+        object? textFormat)
+    {
+        var content = new Dictionary<string, object?>
+        {
+            ["model"] = model,
+            ["temperature"] = temperature,
+            ["max_output_tokens"] = maxOutputTokens,
+            ["input"] = prompt
+        };
+
+        if (textFormat is not null)
+        {
+            content["text"] = new Dictionary<string, object?>
+            {
+                ["format"] = textFormat
+            };
+        }
+
+        return new HttpRequestMessage(HttpMethod.Post, responsesUrl)
+        {
+            Headers =
+            {
+                Authorization = new AuthenticationHeaderValue("Bearer", apiKey.Trim())
+            },
+            Content = JsonContent.Create(content)
+        };
+    }
+
+    private static async Task<HttpResponseMessage> SendResponsesApiRequestAsync(
+        HttpClient client,
+        string apiKey,
+        string responsesUrl,
+        string model,
+        string prompt,
+        double temperature,
+        int maxOutputTokens,
+        object? textFormat,
+        CancellationToken cancellationToken)
+    {
+        using var message = BuildResponsesApiRequest(apiKey, responsesUrl, model, prompt, temperature, maxOutputTokens, textFormat);
+        return await client.SendAsync(message, cancellationToken);
+    }
+
     private async Task<string> RepairJsonAsync(
         string apiKey,
         string responsesUrl,
@@ -897,8 +980,154 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             model,
             repairPrompt,
             temperature: 0.1,
-            maxOutputTokens,
-            cancellationToken);
+            maxOutputTokens: maxOutputTokens,
+            textFormat: null,
+            fallbackToPlainTextOnBadRequest: false,
+            cancellationToken: cancellationToken);
+    }
+
+    private static object BuildSessionDraftJsonSchemaFormat()
+    {
+        return new Dictionary<string, object?>
+        {
+            ["type"] = "json_schema",
+            ["name"] = "session_draft",
+            ["strict"] = true,
+            ["schema"] = new Dictionary<string, object?>
+            {
+                ["type"] = "object",
+                ["additionalProperties"] = false,
+                ["required"] = new[]
+                {
+                    "title", "shortDescription", "date", "inGameLocation", "estimatedLength", "markdownNotes",
+                    "scenes", "npcs", "monsters", "locations", "loot", "skillChecks", "secrets", "branchingPaths", "nextSessionHooks"
+                },
+                ["properties"] = new Dictionary<string, object?>
+                {
+                    ["title"] = BuildJsonSchemaStringProperty(),
+                    ["shortDescription"] = BuildJsonSchemaStringProperty(),
+                    ["date"] = BuildJsonSchemaStringProperty(),
+                    ["inGameLocation"] = BuildJsonSchemaStringProperty(),
+                    ["estimatedLength"] = BuildJsonSchemaStringProperty(),
+                    ["markdownNotes"] = BuildJsonSchemaStringProperty("Detailed markdown DM notes with multiple sections such as summary, scene flow, complications, NPC portrayals, secrets, contingencies, and improvisation guidance. Make this substantially detailed rather than brief."),
+                    ["scenes"] = BuildJsonSchemaArrayProperty(new Dictionary<string, object?>
+                    {
+                        ["type"] = "object",
+                        ["additionalProperties"] = false,
+                        ["required"] = new[] { "title", "description", "trigger", "keyEvents", "possibleOutcomes" },
+                        ["properties"] = new Dictionary<string, object?>
+                        {
+                            ["title"] = BuildJsonSchemaStringProperty(),
+                            ["description"] = BuildJsonSchemaStringProperty("A usable scene description with concrete setup, stakes, and texture for the DM."),
+                            ["trigger"] = BuildJsonSchemaStringProperty("What causes this scene to begin or come into focus at the table."),
+                            ["keyEvents"] = BuildJsonSchemaStringArrayProperty(),
+                            ["possibleOutcomes"] = BuildJsonSchemaStringArrayProperty()
+                        }
+                    }),
+                    ["npcs"] = BuildJsonSchemaArrayProperty(new Dictionary<string, object?>
+                    {
+                        ["type"] = "object",
+                        ["additionalProperties"] = false,
+                        ["required"] = new[] { "name", "role", "personality", "motivation", "voiceNotes" },
+                        ["properties"] = new Dictionary<string, object?>
+                        {
+                            ["name"] = BuildJsonSchemaStringProperty(),
+                            ["role"] = BuildJsonSchemaStringProperty(),
+                            ["personality"] = BuildJsonSchemaStringProperty("Specific table-usable behavior cues rather than a single adjective."),
+                            ["motivation"] = BuildJsonSchemaStringProperty("Clear, immediate goal or pressure that can drive scene play."),
+                            ["voiceNotes"] = BuildJsonSchemaStringProperty("Distinct performance cues, cadence, attitude, or verbal habits for the DM.")
+                        }
+                    }),
+                    ["monsters"] = BuildJsonSchemaArrayProperty(new Dictionary<string, object?>
+                    {
+                        ["type"] = "object",
+                        ["additionalProperties"] = false,
+                        ["required"] = new[] { "name", "type", "challengeRating", "hp", "keyAbilities", "notes" },
+                        ["properties"] = new Dictionary<string, object?>
+                        {
+                            ["name"] = BuildJsonSchemaStringProperty(),
+                            ["type"] = BuildJsonSchemaStringProperty(),
+                            ["challengeRating"] = BuildJsonSchemaStringProperty(),
+                            ["hp"] = new Dictionary<string, object?> { ["type"] = "integer" },
+                            ["keyAbilities"] = BuildJsonSchemaStringProperty("Short tactical summary of notable attacks, traits, or encounter hooks."),
+                            ["notes"] = BuildJsonSchemaStringProperty("Encounter-useful notes for pacing, tactics, and presentation.")
+                        }
+                    }),
+                    ["locations"] = BuildJsonSchemaArrayProperty(new Dictionary<string, object?>
+                    {
+                        ["type"] = "object",
+                        ["additionalProperties"] = false,
+                        ["required"] = new[] { "name", "description", "secrets", "encounters" },
+                        ["properties"] = new Dictionary<string, object?>
+                        {
+                            ["name"] = BuildJsonSchemaStringProperty(),
+                            ["description"] = BuildJsonSchemaStringProperty("Evocative but practical location framing for the DM."),
+                            ["secrets"] = BuildJsonSchemaStringProperty("Hidden truths, clues, or dangers tied to this location."),
+                            ["encounters"] = BuildJsonSchemaStringProperty("Likely scenes, hazards, or interactions that can happen here.")
+                        }
+                    }),
+                    ["loot"] = BuildJsonSchemaArrayProperty(new Dictionary<string, object?>
+                    {
+                        ["type"] = "object",
+                        ["additionalProperties"] = false,
+                        ["required"] = new[] { "name", "type", "quantity", "notes" },
+                        ["properties"] = new Dictionary<string, object?>
+                        {
+                            ["name"] = BuildJsonSchemaStringProperty(),
+                            ["type"] = BuildJsonSchemaStringProperty(),
+                            ["quantity"] = new Dictionary<string, object?> { ["type"] = "integer" },
+                            ["notes"] = BuildJsonSchemaStringProperty("Why this reward matters, where it is found, or what complication comes with it.")
+                        }
+                    }),
+                    ["skillChecks"] = BuildJsonSchemaArrayProperty(new Dictionary<string, object?>
+                    {
+                        ["type"] = "object",
+                        ["additionalProperties"] = false,
+                        ["required"] = new[] { "situation", "skill", "dc", "successOutcome", "failureOutcome" },
+                        ["properties"] = new Dictionary<string, object?>
+                        {
+                            ["situation"] = BuildJsonSchemaStringProperty(),
+                            ["skill"] = BuildJsonSchemaStringProperty(),
+                            ["dc"] = new Dictionary<string, object?> { ["type"] = "integer" },
+                            ["successOutcome"] = BuildJsonSchemaStringProperty("Concrete positive result the party can act on immediately."),
+                            ["failureOutcome"] = BuildJsonSchemaStringProperty("Interesting setback, cost, or complication instead of a dead end.")
+                        }
+                    }),
+                    ["secrets"] = BuildJsonSchemaStringArrayProperty(),
+                    ["branchingPaths"] = BuildJsonSchemaStringArrayProperty(),
+                    ["nextSessionHooks"] = BuildJsonSchemaStringArrayProperty()
+                }
+            }
+        };
+    }
+
+    private static Dictionary<string, object?> BuildJsonSchemaStringProperty(string? description = null)
+    {
+        var property = new Dictionary<string, object?>
+        {
+            ["type"] = "string"
+        };
+
+        if (!string.IsNullOrWhiteSpace(description))
+        {
+            property["description"] = description;
+        }
+
+        return property;
+    }
+
+    private static Dictionary<string, object?> BuildJsonSchemaStringArrayProperty()
+    {
+        return BuildJsonSchemaArrayProperty(BuildJsonSchemaStringProperty());
+    }
+
+    private static Dictionary<string, object?> BuildJsonSchemaArrayProperty(object items)
+    {
+        return new()
+        {
+            ["type"] = "array",
+            ["items"] = items
+        };
     }
 
     private static string BuildCampaignDraftPrompt(GenerateCampaignDraftRequest request)
@@ -956,6 +1185,9 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             "Return only valid JSON.",
             "Use these exact top-level fields: title, shortDescription, date, inGameLocation, estimatedLength, markdownNotes, scenes, npcs, monsters, locations, loot, skillChecks, secrets, branchingPaths, nextSessionHooks.",
             "Do not wrap the JSON in a session, draft, data, result, or response object.",
+            "markdownNotes must be substantially detailed and useful at the table, not a short summary.",
+            "markdownNotes should read like a DM prep document with multiple markdown sections such as Overview, Scene Flow, NPC Plays, Secrets and Revelations, Combat or Tension Beats, Contingencies, and Improvisation Hooks.",
+            "Favor concrete table-ready material over vague atmosphere.",
             "scenes must be an array of objects with: title, description, trigger, keyEvents, possibleOutcomes.",
             "npcs must be an array of objects with: name, role, personality, motivation, voiceNotes.",
             "monsters must be an array of objects with: name, type, challengeRating, hp, keyAbilities, notes.",
@@ -963,6 +1195,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             "loot must be an array of objects with: name, type, quantity, notes.",
             "skillChecks must be an array of objects with: situation, skill, dc, successOutcome, failureOutcome.",
             "secrets, branchingPaths, and nextSessionHooks must be arrays of concise strings.",
+            "Write richer descriptions, stronger motivations, and more specific outcomes than a minimal outline would provide.",
             "Keep the session practical for a DM to run at the table.",
             "Ground the material in the existing campaign context and avoid contradicting it.",
             string.Empty,
@@ -993,6 +1226,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             "Do not add markdown, explanations, or code fences.",
             "Use these exact top-level fields: title, shortDescription, date, inGameLocation, estimatedLength, markdownNotes, scenes, npcs, monsters, locations, loot, skillChecks, secrets, branchingPaths, nextSessionHooks.",
             "Do not wrap the JSON in a session, draft, data, result, or response object.",
+            "markdownNotes must remain substantially detailed and preserve as much actionable DM prep as possible.",
             "scenes must be an array of objects with: title, description, trigger, keyEvents, possibleOutcomes.",
             "npcs must be an array of objects with: name, role, personality, motivation, voiceNotes.",
             "monsters must be an array of objects with: name, type, challengeRating, hp, keyAbilities, notes.",

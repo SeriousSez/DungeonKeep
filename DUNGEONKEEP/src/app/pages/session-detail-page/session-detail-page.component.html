@@ -1,0 +1,303 @@
+<div class="page-stack">
+    @if (!initialized()) {
+    <section class="panel skeleton-panel">
+        <div class="skeleton-line skeleton-eyebrow"></div>
+        <div class="skeleton-line skeleton-title"></div>
+        <div class="skeleton-line skeleton-copy"></div>
+        <div class="facts-grid skeleton-facts">
+            @for (fact of [1, 2, 3, 4, 5, 6]; track fact) {
+            <div class="fact-card skeleton-card">
+                <div class="skeleton-line skeleton-label"></div>
+                <div class="skeleton-line skeleton-value"></div>
+            </div>
+            }
+        </div>
+    </section>
+
+    <section class="content-grid">
+        <article class="panel skeleton-panel">
+            <div class="section-header">
+                <div class="skeleton-line skeleton-section-title"></div>
+            </div>
+            <div class="skeleton-stack">
+                @for (block of [1, 2, 3]; track block) {
+                <div class="detail-card skeleton-card">
+                    <div class="skeleton-line skeleton-copy"></div>
+                    <div class="skeleton-line skeleton-copy short"></div>
+                </div>
+                }
+            </div>
+        </article>
+    </section>
+    } @else if (loadError()) {
+    <a class="back-link" [routerLink]="backLink()">← Back to Sessions</a>
+
+    <section class="panel status-panel error-panel">
+        <p class="eyebrow">Session Brief</p>
+        <h1>Session unavailable</h1>
+        <p>{{ loadError() }}</p>
+    </section>
+    } @else if (sessionDetail(); as session) {
+    <a class="back-link" [routerLink]="backLink()">← Back to Sessions</a>
+
+    <section class="panel hero-panel">
+        <div class="hero-header">
+            <div class="hero-copy">
+                <p class="eyebrow">Session Brief</p>
+                <h1>{{ session.title }}</h1>
+                <p>{{ pageSummary() }}</p>
+            </div>
+
+            <div class="header-actions">
+                <span class="detail-pill">{{ session.threat }}</span>
+                @if (hasRichDraft()) {
+                <span class="detail-pill detail-pill-accent">Draft Loaded</span>
+                }
+                @if (canEdit()) {
+                <a class="ghost-button" [routerLink]="editLink()">Edit Session</a>
+                }
+            </div>
+        </div>
+
+        <div class="facts-grid">
+            @for (fact of overviewFacts(); track fact.label) {
+            <div class="fact-card">
+                <span>{{ fact.label }}</span>
+                <strong>{{ fact.value }}</strong>
+            </div>
+            }
+        </div>
+    </section>
+
+    @if (!hasRichDraft()) {
+    <section class="panel status-panel summary-panel">
+        <h2>Summary-only view</h2>
+        <p>This session has a synced campaign summary, but no locally saved detailed draft on this device yet. Open the editor to add scene flow, notes, and encounter prep.</p>
+    </section>
+    }
+
+    <div class="content-grid">
+        <section class="panel notes-panel">
+            <div class="section-header">
+                <div>
+                    <p class="section-kicker">DM Prep</p>
+                    <h2>Session Notes</h2>
+                </div>
+            </div>
+            <div class="markdown-preview" [innerHTML]="renderedMarkdown()"></div>
+        </section>
+
+        @if (session.scenes.length > 0) {
+        <section class="panel">
+            <div class="section-header">
+                <div>
+                    <p class="section-kicker">Flow</p>
+                    <h2>Scenes</h2>
+                </div>
+            </div>
+            <div class="detail-stack">
+                @for (scene of session.scenes; track scene.id; let index = $index) {
+                <article class="detail-card">
+                    <p class="card-index">Scene {{ index + 1 }}</p>
+                    <h3>{{ scene.title || 'Untitled scene' }}</h3>
+                    @if (scene.trigger) {
+                    <p class="detail-meta"><strong>Trigger:</strong> {{ scene.trigger }}</p>
+                    }
+                    @if (scene.description) {
+                    <p>{{ scene.description }}</p>
+                    }
+                    @if (scene.keyEvents.length > 0) {
+                    <div class="detail-subsection">
+                        <h4>Key Events</h4>
+                        <ul>
+                            @for (event of scene.keyEvents; track event) {
+                            <li>{{ event }}</li>
+                            }
+                        </ul>
+                    </div>
+                    }
+                    @if (scene.possibleOutcomes.length > 0) {
+                    <div class="detail-subsection">
+                        <h4>Possible Outcomes</h4>
+                        <ul>
+                            @for (outcome of scene.possibleOutcomes; track outcome) {
+                            <li>{{ outcome }}</li>
+                            }
+                        </ul>
+                    </div>
+                    }
+                </article>
+                }
+            </div>
+        </section>
+        }
+
+        @if (session.npcs.length > 0 || session.monsters.length > 0) {
+        <section class="panel">
+            <div class="section-header">
+                <div>
+                    <p class="section-kicker">Cast</p>
+                    <h2>NPCs and Monsters</h2>
+                </div>
+            </div>
+
+            <div class="split-grid">
+                @if (session.npcs.length > 0) {
+                <div class="detail-stack">
+                    @for (npc of session.npcs; track npc.id) {
+                    <article class="detail-card">
+                        <h3>{{ npc.name }}</h3>
+                        <p class="detail-meta">{{ npc.role || 'Unassigned role' }}</p>
+                        @if (npc.personality) {
+                        <p><strong>Personality:</strong> {{ npc.personality }}</p>
+                        }
+                        @if (npc.motivation) {
+                        <p><strong>Motivation:</strong> {{ npc.motivation }}</p>
+                        }
+                        @if (npc.voiceNotes) {
+                        <p><strong>Voice notes:</strong> {{ npc.voiceNotes }}</p>
+                        }
+                    </article>
+                    }
+                </div>
+                }
+
+                @if (session.monsters.length > 0) {
+                <div class="detail-stack">
+                    @for (monster of session.monsters; track monster.id) {
+                    <article class="detail-card">
+                        <h3>{{ monster.name }}</h3>
+                        <p class="detail-meta">{{ monster.type || 'Creature' }} · CR {{ monster.challengeRating || '?' }} · {{ monster.hp }} HP</p>
+                        @if (monster.keyAbilities) {
+                        <p><strong>Key abilities:</strong> {{ monster.keyAbilities }}</p>
+                        }
+                        @if (monster.notes) {
+                        <p><strong>Notes:</strong> {{ monster.notes }}</p>
+                        }
+                    </article>
+                    }
+                </div>
+                }
+            </div>
+        </section>
+        }
+
+        @if (session.locations.length > 0 || session.loot.length > 0) {
+        <section class="panel">
+            <div class="section-header">
+                <div>
+                    <p class="section-kicker">Terrain</p>
+                    <h2>Locations and Loot</h2>
+                </div>
+            </div>
+
+            <div class="split-grid">
+                @if (session.locations.length > 0) {
+                <div class="detail-stack">
+                    @for (location of session.locations; track location.id) {
+                    <article class="detail-card">
+                        <h3>{{ location.name }}</h3>
+                        @if (location.description) {
+                        <p>{{ location.description }}</p>
+                        }
+                        @if (location.secrets) {
+                        <p><strong>Secrets:</strong> {{ location.secrets }}</p>
+                        }
+                        @if (location.encounters) {
+                        <p><strong>Encounters:</strong> {{ location.encounters }}</p>
+                        }
+                    </article>
+                    }
+                </div>
+                }
+
+                @if (session.loot.length > 0) {
+                <div class="detail-stack">
+                    @for (loot of session.loot; track loot.id) {
+                    <article class="detail-card">
+                        <h3>{{ loot.name }}</h3>
+                        <p class="detail-meta">{{ loot.type || 'Reward' }} · Qty {{ loot.quantity }}</p>
+                        @if (loot.notes) {
+                        <p><strong>Notes:</strong> {{ loot.notes }}</p>
+                        }
+                    </article>
+                    }
+                </div>
+                }
+            </div>
+        </section>
+        }
+
+        @if (session.skillChecks.length > 0) {
+        <section class="panel">
+            <div class="section-header">
+                <div>
+                    <p class="section-kicker">Pressure Points</p>
+                    <h2>Skill Checks</h2>
+                </div>
+            </div>
+            <div class="detail-stack">
+                @for (skillCheck of session.skillChecks; track skillCheck.id) {
+                <article class="detail-card">
+                    <h3>{{ skillCheck.skill }} DC {{ skillCheck.dc }}</h3>
+                    <p>{{ skillCheck.situation }}</p>
+                    @if (skillCheck.successOutcome) {
+                    <p><strong>Success:</strong> {{ skillCheck.successOutcome }}</p>
+                    }
+                    @if (skillCheck.failureOutcome) {
+                    <p><strong>Failure:</strong> {{ skillCheck.failureOutcome }}</p>
+                    }
+                </article>
+                }
+            </div>
+        </section>
+        }
+
+        @if (session.secrets.length > 0 || session.branchingPaths.length > 0 || session.nextSessionHooks.length > 0) {
+        <section class="panel">
+            <div class="section-header">
+                <div>
+                    <p class="section-kicker">Loose Ends</p>
+                    <h2>Secrets, Branches, and Hooks</h2>
+                </div>
+            </div>
+
+            <div class="split-grid">
+                @if (session.secrets.length > 0) {
+                <div class="detail-card detail-list-card">
+                    <h3>Secrets</h3>
+                    <ul>
+                        @for (entry of session.secrets; track entry.id) {
+                        <li>{{ entry.text }}</li>
+                        }
+                    </ul>
+                </div>
+                }
+
+                @if (session.branchingPaths.length > 0) {
+                <div class="detail-card detail-list-card">
+                    <h3>Branching Paths</h3>
+                    <ul>
+                        @for (entry of session.branchingPaths; track entry.id) {
+                        <li>{{ entry.text }}</li>
+                        }
+                    </ul>
+                </div>
+                }
+
+                @if (session.nextSessionHooks.length > 0) {
+                <div class="detail-card detail-list-card split-span">
+                    <h3>Next Session Hooks</h3>
+                    <ul>
+                        @for (entry of session.nextSessionHooks; track entry.id) {
+                        <li>{{ entry.text }}</li>
+                        }
+                    </ul>
+                </div>
+                }
+            </div>
+        </section>
+        }
+    </div>
+    }
+</div>
