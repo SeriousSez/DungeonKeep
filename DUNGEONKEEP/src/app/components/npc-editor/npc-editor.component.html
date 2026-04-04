@@ -1,0 +1,340 @@
+@if (npc(); as activeNpc) {
+<section class="npc-editor-shell">
+    <div class="editor-header">
+        <div>
+            <p class="eyebrow">NPC Record</p>
+            <h2>{{ activeNpcName() }}</h2>
+            <p>Autosave keeps local draft changes safe while you flesh out the full cast entry.</p>
+        </div>
+
+        <div class="editor-header-actions">
+            <span class="autosave-pill">{{ autosaveLabel() }}</span>
+            @if (canEdit()) {
+            @if (showSaveToLibraryAction()) {
+            <button type="button" class="ghost-button" (click)="saveToLibrary.emit()">Save to Library</button>
+            }
+            @if (showDuplicateAction()) {
+            <button type="button" class="ghost-button" (click)="duplicateNpc.emit()">Duplicate</button>
+            }
+            @if (showDeleteAction()) {
+            <button type="button" class="ghost-button danger-button" (click)="deleteNpc.emit()">Delete</button>
+            }
+            <button type="button" class="primary-button" (click)="save()">Save NPC</button>
+            }
+        </div>
+    </div>
+
+    @if (generationError()) {
+    <p class="editor-status generation-error">{{ generationError() }}</p>
+    }
+
+    @if (canEdit()) {
+    <section class="creation-mode-panel" aria-label="NPC drafting type">
+        <h3>Choose NPC drafting type</h3>
+        <div class="mode-options">
+            <button type="button" class="mode-card" [class.mode-card-active]="editorMode() === 'standard'" (click)="selectEditorMode('standard')">
+                <strong>Standard editing</strong>
+                <span>Fill out the full NPC record manually.</span>
+            </button>
+            <button type="button" class="mode-card" [class.mode-card-active]="editorMode() === 'ai'" (click)="selectEditorMode('ai')">
+                <strong>AI generation</strong>
+                <span>Give the model direction, then generate a draft into the editor.</span>
+            </button>
+        </div>
+    </section>
+    }
+
+    @if (canEdit() && editorMode() === 'ai') {
+    <section class="generation-prompt-shell">
+        <div class="generation-prompt-header">
+            <div>
+                <p class="eyebrow">Generation Prompt</p>
+                <h3>Guide the NPC draft</h3>
+                <p>Add a few details to steer what kind of NPC gets generated.</p>
+            </div>
+        </div>
+
+        <div class="section-grid two-up">
+            <label class="field">
+                <span>Name Hint</span>
+                <input type="text" [value]="generationPrompt().nameHint" (input)="updateGenerationNameHint($any($event.target).value)" placeholder="Captain Mirelle Voss" />
+            </label>
+            <label class="field">
+                <span>Title Hint</span>
+                <input type="text" [value]="generationPrompt().titleHint" (input)="updateGenerationTitleHint($any($event.target).value)" placeholder="Harbor master, exiled knight" />
+            </label>
+            <label class="field">
+                <span>Race Hint</span>
+                <input type="text" [value]="generationPrompt().raceHint" (input)="updateGenerationRaceHint($any($event.target).value)" placeholder="Tiefling, dwarf, human" />
+            </label>
+            <label class="field">
+                <span>Role Hint</span>
+                <input type="text" [value]="generationPrompt().roleHint" (input)="updateGenerationRoleHint($any($event.target).value)" placeholder="Fence, priest, rival adventurer" />
+            </label>
+            <label class="field">
+                <span>Faction Hint</span>
+                <input type="text" [value]="generationPrompt().factionHint" (input)="updateGenerationFactionHint($any($event.target).value)" placeholder="Ashen Lanterns, city watch" />
+            </label>
+            <label class="field">
+                <span>Location Hint</span>
+                <input type="text" [value]="generationPrompt().locationHint" (input)="updateGenerationLocationHint($any($event.target).value)" placeholder="Flooded catacombs, royal quarter" />
+            </label>
+            <label class="field">
+                <span>Motivation Hint</span>
+                <textarea rows="3" [value]="generationPrompt().motivationHint" (input)="updateGenerationMotivationHint($any($event.target).value)" placeholder="Desperate to protect a sibling, secretly hunting a relic."></textarea>
+            </label>
+            <label class="field">
+                <span>Extra Direction</span>
+                <textarea rows="3" [value]="generationPrompt().notesHint" (input)="updateGenerationNotesHint($any($event.target).value)" placeholder="Make them suspicious but helpful, with a rumor tied to the lighthouse cult."></textarea>
+            </label>
+        </div>
+
+        <div class="generation-actions-row">
+            <button type="button" class="ghost-button" (click)="selectEditorMode('standard')">Back to editor</button>
+            <button type="button" class="primary-button" [class.is-loading]="generationBusy()" [disabled]="generationBusy()" (click)="requestGenerateNpc()">{{ generationBusy() ? 'Generating...' : 'Generate NPC draft' }}</button>
+        </div>
+    </section>
+    }
+
+    @if (editorMode() === 'standard') {
+    <div class="quick-toggles">
+        <button type="button" class="toggle-pill" [class.is-active]="editorForm.controls.isAlive.value" [disabled]="!canEdit()" (click)="editorForm.controls.isAlive.setValue(!editorForm.controls.isAlive.value)">{{ editorForm.controls.isAlive.value ? 'Alive' : 'Dead' }}</button>
+        <button type="button" class="toggle-pill" [class.is-active]="editorForm.controls.isHostile.value" [disabled]="!canEdit()" (click)="editorForm.controls.isHostile.setValue(!editorForm.controls.isHostile.value)">{{ editorForm.controls.isHostile.value ? 'Hostile' : 'Friendly' }}</button>
+        <button type="button" class="toggle-pill" [class.is-active]="editorForm.controls.isImportant.value" [disabled]="!canEdit()" (click)="editorForm.controls.isImportant.setValue(!editorForm.controls.isImportant.value)">{{ editorForm.controls.isImportant.value ? 'Important' : 'Standard'
+            }}</button>
+    </div>
+
+    <form class="editor-sections" [formGroup]="editorForm" (submit)="$event.preventDefault(); save()">
+        <details class="editor-section" open>
+            <summary>
+                <h3>Identity</h3>
+            </summary>
+            <div class="section-grid two-up">
+                <label class="field full-span">
+                    <span>Name</span>
+                    <input type="text" formControlName="name" placeholder="NPC name" [readonly]="!canEdit()" />
+                    @if (nameControl.invalid && (nameControl.touched || submitAttempted())) {
+                    <small class="field-error">Name is required.</small>
+                    }
+                    @if (nameConflict()) {
+                    <small class="field-error">Another NPC already uses this name.</small>
+                    }
+                </label>
+                <label class="field"><span>Title</span><input type="text" formControlName="title" [readonly]="!canEdit()" /></label>
+                <label class="field"><span>Race</span><input type="text" formControlName="race" [readonly]="!canEdit()" /></label>
+                <label class="field"><span>Age</span><input type="text" formControlName="age" [readonly]="!canEdit()" /></label>
+                <label class="field"><span>Gender</span><input type="text" formControlName="gender" [readonly]="!canEdit()" /></label>
+                <label class="field"><span>Alignment</span><input type="text" formControlName="alignment" [readonly]="!canEdit()" /></label>
+            </div>
+        </details>
+
+        <details class="editor-section" open>
+            <summary>
+                <h3>Role and Affiliations</h3>
+            </summary>
+            <div class="section-grid two-up">
+                <label class="field"><span>Class or Role</span><input type="text" formControlName="classOrRole" [readonly]="!canEdit()" /></label>
+                <label class="field"><span>Occupation</span><input type="text" formControlName="occupation" [readonly]="!canEdit()" /></label>
+                <label class="field"><span>Faction</span><input type="text" formControlName="faction" [readonly]="!canEdit()" /></label>
+                <label class="field"><span>Location</span><input type="text" formControlName="location" [readonly]="!canEdit()" /></label>
+                <label class="field full-span"><span>Current Status</span><input type="text" formControlName="currentStatus" [readonly]="!canEdit()" /></label>
+            </div>
+        </details>
+
+        <details class="editor-section" open>
+            <summary>
+                <h3>Appearance</h3>
+            </summary>
+            <div class="section-grid">
+                <label class="field"><span>Short Description</span><textarea formControlName="shortDescription" rows="3" [readonly]="!canEdit()"></textarea></label>
+                <label class="field"><span>Appearance</span><textarea formControlName="appearance" rows="4" [readonly]="!canEdit()"></textarea></label>
+                <label class="field"><span>Image URL</span><input type="url" formControlName="imageUrl" [readonly]="!canEdit()" /></label>
+            </div>
+        </details>
+
+        <details class="editor-section" open>
+            <summary>
+                <h3>Personality</h3>
+            </summary>
+            <div class="section-grid two-up">
+                <section class="array-section">
+                    <div class="array-header">
+                        <h4>Traits</h4><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="addStringItem(editorForm.controls.personalityTraits)">Add</button>
+                    </div>
+                    <div class="array-list">
+                        @for (entry of editorForm.controls.personalityTraits.controls; track $index; let index = $index) {
+                        <div class="inline-array-row"><input type="text" [formControl]="entry" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="removeStringItem(editorForm.controls.personalityTraits, index)">Remove</button></div>
+                        }
+                    </div>
+                </section>
+
+                <section class="array-section">
+                    <div class="array-header">
+                        <h4>Ideals</h4><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="addStringItem(editorForm.controls.ideals)">Add</button>
+                    </div>
+                    <div class="array-list">
+                        @for (entry of editorForm.controls.ideals.controls; track $index; let index = $index) {
+                        <div class="inline-array-row"><input type="text" [formControl]="entry" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="removeStringItem(editorForm.controls.ideals, index)">Remove</button></div>
+                        }
+                    </div>
+                </section>
+
+                <section class="array-section">
+                    <div class="array-header">
+                        <h4>Bonds</h4><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="addStringItem(editorForm.controls.bonds)">Add</button>
+                    </div>
+                    <div class="array-list">
+                        @for (entry of editorForm.controls.bonds.controls; track $index; let index = $index) {
+                        <div class="inline-array-row"><input type="text" [formControl]="entry" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="removeStringItem(editorForm.controls.bonds, index)">Remove</button></div>
+                        }
+                    </div>
+                </section>
+
+                <section class="array-section">
+                    <div class="array-header">
+                        <h4>Flaws</h4><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="addStringItem(editorForm.controls.flaws)">Add</button>
+                    </div>
+                    <div class="array-list">
+                        @for (entry of editorForm.controls.flaws.controls; track $index; let index = $index) {
+                        <div class="inline-array-row"><input type="text" [formControl]="entry" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="removeStringItem(editorForm.controls.flaws, index)">Remove</button></div>
+                        }
+                    </div>
+                </section>
+
+                <label class="field full-span"><span>Mannerisms</span></label>
+                <section class="array-section full-span">
+                    <div class="array-header">
+                        <h4>Mannerisms</h4><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="addStringItem(editorForm.controls.mannerisms)">Add</button>
+                    </div>
+                    <div class="array-list">
+                        @for (entry of editorForm.controls.mannerisms.controls; track $index; let index = $index) {
+                        <div class="inline-array-row"><input type="text" [formControl]="entry" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="removeStringItem(editorForm.controls.mannerisms, index)">Remove</button></div>
+                        }
+                    </div>
+                </section>
+
+                <label class="field full-span"><span>Voice Notes</span><textarea formControlName="voiceNotes" rows="3" [readonly]="!canEdit()"></textarea></label>
+            </div>
+        </details>
+
+        <details class="editor-section" open>
+            <summary>
+                <h3>Motivations and Goals</h3>
+            </summary>
+            <div class="section-grid">
+                <label class="field"><span>Motivations</span><textarea formControlName="motivations" rows="3" [readonly]="!canEdit()"></textarea></label>
+                <label class="field"><span>Goals</span><textarea formControlName="goals" rows="3" [readonly]="!canEdit()"></textarea></label>
+                <label class="field"><span>Fears</span><textarea formControlName="fears" rows="3" [readonly]="!canEdit()"></textarea></label>
+            </div>
+        </details>
+
+        <details class="editor-section" open>
+            <summary>
+                <h3>Secrets</h3>
+            </summary>
+            <section class="array-section">
+                <div class="array-header">
+                    <h4>Secrets</h4><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="addStringItem(editorForm.controls.secrets)">Add</button>
+                </div>
+                <div class="array-list">
+                    @for (entry of editorForm.controls.secrets.controls; track $index; let index = $index) {
+                    <div class="inline-array-row"><input type="text" [formControl]="entry" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="removeStringItem(editorForm.controls.secrets, index)">Remove</button></div>
+                    }
+                </div>
+            </section>
+        </details>
+
+        <details class="editor-section" open>
+            <summary>
+                <h3>Relationships</h3>
+            </summary>
+            <div class="array-section">
+                <div class="array-header">
+                    <h4>Relationship Links</h4><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="addRelationship()">Add Relationship</button>
+                </div>
+                <div class="array-list" formArrayName="relationships">
+                    @for (relationship of editorForm.controls.relationships.controls; track relationship.controls.id.value; let index = $index) {
+                    <div class="relationship-card" [formGroupName]="index">
+                        <label class="field"><span>Target NPC</span><app-dropdown ariaLabel="Relationship target" [value]="relationship.controls.targetNpcId.value" [options]="relationshipTargets()" [searchable]="false" [placeholder]="'Select target'"
+                                (changed)="updateRelationshipTarget(relationship.controls.targetNpcId, $event)"></app-dropdown></label>
+                        <label class="field"><span>Relationship Type</span><app-dropdown ariaLabel="Relationship type" [value]="relationship.controls.relationshipType.value" [options]="relationshipTypeOptions" [searchable]="false" [placeholder]="'Select type'"
+                                (changed)="updateRelationshipType(relationship.controls.relationshipType, $event)"></app-dropdown></label>
+                        <label class="field full-span"><span>Description</span><textarea formControlName="description" rows="2" [readonly]="!canEdit()"></textarea></label>
+                        <button type="button" class="ghost-button relationship-remove" [disabled]="!canEdit()" (click)="removeRelationship(index)">Remove Relationship</button>
+                    </div>
+                    }
+                </div>
+            </div>
+        </details>
+
+        <details class="editor-section" open>
+            <summary>
+                <h3>Session Notes</h3>
+            </summary>
+            <div class="section-grid">
+                <label class="field"><span>Backstory</span><textarea formControlName="backstory" rows="4" [readonly]="!canEdit()"></textarea></label>
+                <label class="field"><span>GM Notes</span><textarea formControlName="notes" rows="4" [readonly]="!canEdit()"></textarea></label>
+
+                <section class="array-section">
+                    <div class="array-header">
+                        <h4>Quest Links</h4><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="addStringItem(editorForm.controls.questLinks)">Add</button>
+                    </div>
+                    <div class="array-list">
+                        @for (entry of editorForm.controls.questLinks.controls; track $index; let index = $index) {
+                        <div class="inline-array-row"><input type="text" [formControl]="entry" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="removeStringItem(editorForm.controls.questLinks, index)">Remove</button></div>
+                        }
+                    </div>
+                </section>
+
+                <section class="array-section">
+                    <div class="array-header">
+                        <h4>Session Appearances</h4><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="addStringItem(editorForm.controls.sessionAppearances)">Add</button>
+                    </div>
+                    <div class="array-list">
+                        @for (entry of editorForm.controls.sessionAppearances.controls; track $index; let index = $index) {
+                        <div class="inline-array-row"><input type="text" [formControl]="entry" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="removeStringItem(editorForm.controls.sessionAppearances, index)">Remove</button></div>
+                        }
+                    </div>
+                </section>
+            </div>
+        </details>
+
+        <details class="editor-section" open>
+            <summary>
+                <h3>Combat / Reference Info</h3>
+            </summary>
+            <div class="section-grid">
+                <label class="field"><span>Combat Notes</span><textarea formControlName="combatNotes" rows="3" [readonly]="!canEdit()"></textarea></label>
+                <label class="field"><span>Stat Block Reference</span><input type="text" formControlName="statBlockReference" [readonly]="!canEdit()" /></label>
+                <section class="array-section">
+                    <div class="array-header">
+                        <h4>Tags</h4><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="addStringItem(editorForm.controls.tags)">Add</button>
+                    </div>
+                    <div class="array-list">
+                        @for (entry of editorForm.controls.tags.controls; track $index; let index = $index) {
+                        <div class="inline-array-row"><input type="text" [formControl]="entry" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="removeStringItem(editorForm.controls.tags, index)">Remove</button></div>
+                        }
+                    </div>
+                </section>
+                <section class="array-section">
+                    <div class="array-header">
+                        <h4>Inventory</h4><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="addStringItem(editorForm.controls.inventory)">Add</button>
+                    </div>
+                    <div class="array-list">
+                        @for (entry of editorForm.controls.inventory.controls; track $index; let index = $index) {
+                        <div class="inline-array-row"><input type="text" [formControl]="entry" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="removeStringItem(editorForm.controls.inventory, index)">Remove</button></div>
+                        }
+                    </div>
+                </section>
+            </div>
+        </details>
+    </form>
+    }
+</section>
+} @else {
+<section class="npc-editor-empty">
+    <p class="eyebrow">NPC Record</p>
+    <h2>Select an NPC</h2>
+    <p>Choose a card from the list or add a new NPC to start building the campaign cast.</p>
+</section>
+}

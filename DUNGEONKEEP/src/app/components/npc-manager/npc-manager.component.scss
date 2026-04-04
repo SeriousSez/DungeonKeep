@@ -1,0 +1,101 @@
+:host {
+    display: block;
+}
+
+.npc-manager-shell,
+.manager-layout,
+.editor-column,
+.library-card-row {
+    display: grid;
+    gap: 18px;
+}
+
+.manager-surface,
+.manager-feedback,
+.manager-tools,
+.library-card {
+    border: 1px solid var(--panel-border);
+    border-radius: 18px;
+    background: var(--surface-raised);
+    padding: 14px 16px;
+}
+
+.manager-layout {
+    grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.05fr);
+    align-items: start;
+}
+
+.manager-layout-list-only {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.manager-column {
+    min-width: 0;
+}
+
+.manager-feedback p {
+    margin: 0;
+}
+
+.manager-page-header h1,
+.library-panel h2,
+.library-card h3,
+.manager-page-header p,
+.library-panel p,
+.library-card p {
+    margin: 0;
+}
+
+.eyebrow {
+    margin: 0 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 0.74rem;
+    color: var(--text-soft);
+}
+
+.library-panel,
+.library-panel-header,
+.library-card,
+.library-card-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.library-card-row {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.library-card {
+    align-items: stretch;
+}
+
+.library-link {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+}
+
+.library-empty {
+    margin: 0;
+    color: var(--text-muted);
+}
+
+.ghost-button {
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 14px;
+    border: 1px solid var(--panel-border);
+    background: transparent;
+    color: var(--text-main);
+    cursor: pointer;
+}
+
+@media (max-width: 860px) {
+    .manager-layout {
+        grid-template-columns: 1fr;
+    }
+}

@@ -127,6 +127,314 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         return Ok(updated);
     }
 
+    [HttpPost("{campaignId:guid}/sessions")]
+    public async Task<ActionResult<CampaignDto>> CreateSession(Guid campaignId, [FromBody] CreateCampaignSessionRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Title))
+        {
+            return BadRequest("Session title is required.");
+        }
+
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var updated = await campaignService.AddSessionAsync(campaignId, request, user.Id, cancellationToken);
+            return updated is null ? NotFound("Campaign was not found.") : Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
+    [HttpPut("{campaignId:guid}/sessions/{sessionId:guid}")]
+    public async Task<ActionResult<CampaignDto>> UpdateSession(Guid campaignId, Guid sessionId, [FromBody] UpdateCampaignSessionRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Title))
+        {
+            return BadRequest("Session title is required.");
+        }
+
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var updated = await campaignService.UpdateSessionAsync(campaignId, sessionId, request, user.Id, cancellationToken);
+            return updated is null ? NotFound("Campaign or session was not found.") : Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
+    [HttpPost("{campaignId:guid}/sessions/{sessionId:guid}/delete")]
+    public async Task<ActionResult<CampaignDto>> DeleteSession(Guid campaignId, Guid sessionId, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var updated = await campaignService.RemoveSessionAsync(campaignId, sessionId, user.Id, cancellationToken);
+            return updated is null ? NotFound("Campaign or session was not found.") : Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
+    [HttpPost("{campaignId:guid}/sessions/generate-draft")]
+    public async Task<ActionResult<GenerateSessionDraftResponse>> GenerateSessionDraft(Guid campaignId, [FromBody] GenerateSessionDraftRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var campaign = await GetCampaignContextAsync(campaignId, user.Id, cancellationToken);
+        if (campaign is null)
+        {
+            return NotFound("Campaign was not found.");
+        }
+
+        if (!string.Equals(campaign.CurrentUserRole, "Owner", StringComparison.OrdinalIgnoreCase))
+        {
+            return StatusCode(403);
+        }
+
+        if (!TryGetOpenAiConfiguration(out var apiKey, out var responsesUrl, out var model))
+        {
+            return Problem(title: "Session generation unavailable.", detail: "OpenAI API key is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
+        try
+        {
+            var text = await SendOpenAiPromptAsync(
+                apiKey,
+                responsesUrl,
+                model,
+                BuildSessionDraftPrompt(campaign, request),
+                temperature: 0.9,
+                maxOutputTokens: 2200,
+                cancellationToken);
+
+            var generated = TryParseGeneratedSessionDraftPayload(text);
+            if (generated is null)
+            {
+                var repairedText = await RepairJsonAsync(
+                    apiKey,
+                    responsesUrl,
+                    model,
+                    BuildSessionDraftRepairPrompt(text),
+                    maxOutputTokens: 2600,
+                    cancellationToken);
+
+                generated = TryParseGeneratedSessionDraftPayload(repairedText);
+            }
+
+            if (generated is null)
+            {
+                return Problem(title: "Session generation failed.", detail: "Model output was not valid JSON.", statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            return Ok(NormalizeSessionDraft(generated, campaign));
+        }
+        catch (HttpRequestException exception)
+        {
+            return Problem(title: "Session generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return Problem(title: "Session generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+    }
+
+    [HttpPost("{campaignId:guid}/npcs")]
+    public async Task<ActionResult<CampaignDto>> AddNpc(Guid campaignId, [FromBody] CreateCampaignNpcRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return BadRequest("NPC name is required.");
+        }
+
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var updated = await campaignService.AddNpcAsync(campaignId, request, user.Id, cancellationToken);
+            return updated is null ? NotFound("Campaign was not found.") : Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
+    [HttpPost("npcs/generate-draft")]
+    public async Task<ActionResult<GenerateNpcDraftResponse>> GenerateNpcDraft([FromBody] GenerateNpcDraftRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        CampaignDto? campaign = null;
+        if (request.CampaignId is Guid campaignId && campaignId != Guid.Empty)
+        {
+            campaign = await GetCampaignContextAsync(campaignId, user.Id, cancellationToken);
+            if (campaign is null)
+            {
+                return NotFound("Campaign was not found.");
+            }
+
+            if (!string.Equals(campaign.CurrentUserRole, "Owner", StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(403);
+            }
+        }
+
+        if (!TryGetOpenAiConfiguration(out var apiKey, out var responsesUrl, out var model))
+        {
+            return Problem(title: "NPC generation unavailable.", detail: "OpenAI API key is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
+        try
+        {
+            var text = await SendOpenAiPromptAsync(
+                apiKey,
+                responsesUrl,
+                model,
+                BuildNpcDraftPrompt(campaign, request),
+                temperature: 0.95,
+                maxOutputTokens: 1800,
+                cancellationToken);
+
+            var generated = TryParseGeneratedNpcDraftPayload(text);
+            if (generated is null)
+            {
+                var repairedText = await RepairJsonAsync(
+                    apiKey,
+                    responsesUrl,
+                    model,
+                    BuildNpcDraftRepairPrompt(text),
+                    maxOutputTokens: 2200,
+                    cancellationToken);
+
+                generated = TryParseGeneratedNpcDraftPayload(repairedText);
+            }
+
+            if (generated is null)
+            {
+                return Problem(title: "NPC generation failed.", detail: "Model output was not valid JSON.", statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            return Ok(NormalizeNpcDraft(generated));
+        }
+        catch (HttpRequestException exception)
+        {
+            return Problem(title: "NPC generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return Problem(title: "NPC generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+    }
+
+    [HttpPost("{campaignId:guid}/npcs/remove")]
+    public async Task<ActionResult<CampaignDto>> RemoveNpc(Guid campaignId, [FromBody] RemoveCampaignNpcRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return BadRequest("NPC name is required.");
+        }
+
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var updated = await campaignService.RemoveNpcAsync(campaignId, request, user.Id, cancellationToken);
+            return updated is null ? NotFound("Campaign or NPC was not found.") : Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
+    [HttpPost("{campaignId:guid}/loot")]
+    public async Task<ActionResult<CampaignDto>> AddLoot(Guid campaignId, [FromBody] CreateCampaignLootRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return BadRequest("Loot name is required.");
+        }
+
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var updated = await campaignService.AddLootAsync(campaignId, request, user.Id, cancellationToken);
+            return updated is null ? NotFound("Campaign was not found.") : Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
+    [HttpPost("{campaignId:guid}/loot/remove")]
+    public async Task<ActionResult<CampaignDto>> RemoveLoot(Guid campaignId, [FromBody] RemoveCampaignLootRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return BadRequest("Loot name is required.");
+        }
+
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var updated = await campaignService.RemoveLootAsync(campaignId, request, user.Id, cancellationToken);
+            return updated is null ? NotFound("Campaign or loot was not found.") : Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
     [HttpPost("generate-draft")]
     public async Task<ActionResult<GenerateCampaignDraftResponse>> GenerateDraft([FromBody] GenerateCampaignDraftRequest request, CancellationToken cancellationToken)
     {
@@ -178,6 +486,18 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         }
 
         var generated = TryParseGeneratedCampaignDraftPayload(text);
+        if (generated is null)
+        {
+            var repairedText = await RepairJsonAsync(
+                apiKey,
+                responsesUrl,
+                model,
+                BuildCampaignDraftRepairPrompt(text),
+                maxOutputTokens: 900,
+                cancellationToken);
+
+            generated = TryParseGeneratedCampaignDraftPayload(repairedText);
+        }
 
         if (generated is null)
         {
@@ -504,6 +824,83 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         return await authService.GetAuthenticatedUserByTokenAsync(token, cancellationToken);
     }
 
+    private async Task<CampaignDto?> GetCampaignContextAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken)
+    {
+        var campaigns = await campaignService.GetAllAsync(userId, cancellationToken);
+        return campaigns.FirstOrDefault(campaign => campaign.Id == campaignId);
+    }
+
+    private bool TryGetOpenAiConfiguration(out string apiKey, out string responsesUrl, out string model)
+    {
+        apiKey = configuration["OpenAI:ApiKey"] ?? configuration["OPENAI_API_KEY"] ?? string.Empty;
+        responsesUrl = configuration["OpenAI:ResponsesUrl"] ?? DefaultResponsesUrl;
+        model = configuration["OpenAI:Model"] ?? DefaultModel;
+
+        return !string.IsNullOrWhiteSpace(apiKey);
+    }
+
+    private async Task<string> SendOpenAiPromptAsync(
+        string apiKey,
+        string responsesUrl,
+        string model,
+        string prompt,
+        double temperature,
+        int maxOutputTokens,
+        CancellationToken cancellationToken)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, responsesUrl)
+        {
+            Headers =
+            {
+                Authorization = new AuthenticationHeaderValue("Bearer", apiKey.Trim())
+            },
+            Content = JsonContent.Create(new
+            {
+                model,
+                temperature,
+                max_output_tokens = maxOutputTokens,
+                input = prompt
+            })
+        };
+
+        var client = httpClientFactory.CreateClient();
+        using var response = await client.SendAsync(message, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var detail = body.Length > 240 ? body[..240] : body;
+            throw new HttpRequestException($"OpenAI request failed ({(int)response.StatusCode}): {detail}", null, response.StatusCode);
+        }
+
+        var payload = JsonSerializer.Deserialize<OpenAiResponsesApiResponse>(body, SerializerOptions);
+        var text = ExtractResponseText(payload);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            throw new InvalidOperationException("The model returned no text.");
+        }
+
+        return text;
+    }
+
+    private async Task<string> RepairJsonAsync(
+        string apiKey,
+        string responsesUrl,
+        string model,
+        string repairPrompt,
+        int maxOutputTokens,
+        CancellationToken cancellationToken)
+    {
+        return await SendOpenAiPromptAsync(
+            apiKey,
+            responsesUrl,
+            model,
+            repairPrompt,
+            temperature: 0.1,
+            maxOutputTokens,
+            cancellationToken);
+    }
+
     private static string BuildCampaignDraftPrompt(GenerateCampaignDraftRequest request)
     {
         var toneHint = string.IsNullOrWhiteSpace(request.Tone) ? "Any" : request.Tone.Trim();
@@ -528,6 +925,148 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             $"Setting hint: {settingHint}",
             $"Requested level range: {requestedLevelStart}-{requestedLevelEnd}",
             $"Additional direction: {direction}"
+        ]);
+    }
+
+    private static string BuildCampaignDraftRepairPrompt(string invalidOutput)
+    {
+        return string.Join('\n',
+        [
+            "Convert the provided campaign draft content into valid JSON only.",
+            "Do not add markdown, explanations, or code fences.",
+            "Use exactly these top-level fields: name, setting, tone, levelStart, levelEnd, hook, nextSession, summary.",
+            "levelStart and levelEnd must be integers.",
+            string.Empty,
+            "Content to repair:",
+            invalidOutput
+        ]);
+    }
+
+    private static string BuildSessionDraftPrompt(CampaignDto campaign, GenerateSessionDraftRequest request)
+    {
+        var titleHint = string.IsNullOrWhiteSpace(request.TitleHint) ? "No title hint provided" : request.TitleHint.Trim();
+        var shortDescriptionHint = string.IsNullOrWhiteSpace(request.ShortDescriptionHint) ? "No objective hint provided" : request.ShortDescriptionHint.Trim();
+        var locationHint = string.IsNullOrWhiteSpace(request.LocationHint) ? "No location hint provided" : request.LocationHint.Trim();
+        var estimatedLengthHint = string.IsNullOrWhiteSpace(request.EstimatedLengthHint) ? "No pacing hint provided" : request.EstimatedLengthHint.Trim();
+        var markdownNotesHint = string.IsNullOrWhiteSpace(request.MarkdownNotesHint) ? "No extra notes provided" : request.MarkdownNotesHint.Trim();
+
+        return string.Join('\n',
+        [
+            "Generate a Dungeons & Dragons session planning draft for DungeonKeep.",
+            "Return only valid JSON.",
+            "Use these exact top-level fields: title, shortDescription, date, inGameLocation, estimatedLength, markdownNotes, scenes, npcs, monsters, locations, loot, skillChecks, secrets, branchingPaths, nextSessionHooks.",
+            "scenes must be an array of objects with: title, description, trigger, keyEvents, possibleOutcomes.",
+            "npcs must be an array of objects with: name, role, personality, motivation, voiceNotes.",
+            "monsters must be an array of objects with: name, type, challengeRating, hp, keyAbilities, notes.",
+            "locations must be an array of objects with: name, description, secrets, encounters.",
+            "loot must be an array of objects with: name, type, quantity, notes.",
+            "skillChecks must be an array of objects with: situation, skill, dc, successOutcome, failureOutcome.",
+            "secrets, branchingPaths, and nextSessionHooks must be arrays of concise strings.",
+            "Keep the session practical for a DM to run at the table.",
+            "Ground the material in the existing campaign context and avoid contradicting it.",
+            string.Empty,
+            $"Campaign name: {campaign.Name}",
+            $"Campaign setting: {campaign.Setting}",
+            $"Campaign tone: {campaign.Tone}",
+            $"Campaign hook: {campaign.Hook}",
+            $"Next session note: {campaign.NextSession}",
+            $"Campaign summary: {campaign.Summary}",
+            $"Known NPC names: {FormatList(campaign.Npcs)}",
+            $"Known loot: {FormatList(campaign.Loot)}",
+            $"Open threads: {FormatList(campaign.OpenThreads.Select(thread => thread.Text))}",
+            $"Recent sessions: {FormatList(campaign.Sessions.TakeLast(3).Select(session => $"{session.Title} ({session.Location})"))}",
+            string.Empty,
+            $"Title hint: {titleHint}",
+            $"Objective hint: {shortDescriptionHint}",
+            $"Location hint: {locationHint}",
+            $"Pacing hint: {estimatedLengthHint}",
+            $"Current notes hint: {markdownNotesHint}"
+        ]);
+    }
+
+    private static string BuildSessionDraftRepairPrompt(string invalidOutput)
+    {
+        return string.Join('\n',
+        [
+            "Convert the provided session draft content into valid JSON only.",
+            "Do not add markdown, explanations, or code fences.",
+            "Use these exact top-level fields: title, shortDescription, date, inGameLocation, estimatedLength, markdownNotes, scenes, npcs, monsters, locations, loot, skillChecks, secrets, branchingPaths, nextSessionHooks.",
+            "scenes must be an array of objects with: title, description, trigger, keyEvents, possibleOutcomes.",
+            "npcs must be an array of objects with: name, role, personality, motivation, voiceNotes.",
+            "monsters must be an array of objects with: name, type, challengeRating, hp, keyAbilities, notes.",
+            "locations must be an array of objects with: name, description, secrets, encounters.",
+            "loot must be an array of objects with: name, type, quantity, notes.",
+            "skillChecks must be an array of objects with: situation, skill, dc, successOutcome, failureOutcome.",
+            "secrets, branchingPaths, and nextSessionHooks must be arrays of strings.",
+            string.Empty,
+            "Content to repair:",
+            invalidOutput
+        ]);
+    }
+
+    private static string BuildNpcDraftPrompt(CampaignDto? campaign, GenerateNpcDraftRequest request)
+    {
+        var nameHint = string.IsNullOrWhiteSpace(request.NameHint) ? "No name hint provided" : request.NameHint.Trim();
+        var titleHint = string.IsNullOrWhiteSpace(request.TitleHint) ? "No title hint provided" : request.TitleHint.Trim();
+        var raceHint = string.IsNullOrWhiteSpace(request.RaceHint) ? "No race hint provided" : request.RaceHint.Trim();
+        var roleHint = string.IsNullOrWhiteSpace(request.RoleHint) ? "No role hint provided" : request.RoleHint.Trim();
+        var factionHint = string.IsNullOrWhiteSpace(request.FactionHint) ? "No faction hint provided" : request.FactionHint.Trim();
+        var locationHint = string.IsNullOrWhiteSpace(request.LocationHint) ? "No location hint provided" : request.LocationHint.Trim();
+        var motivationHint = string.IsNullOrWhiteSpace(request.MotivationHint) ? "No motivation hint provided" : request.MotivationHint.Trim();
+        var notesHint = string.IsNullOrWhiteSpace(request.NotesHint) ? "No extra notes provided" : request.NotesHint.Trim();
+
+        var lines = new List<string>
+        {
+            "Generate a Dungeons & Dragons NPC draft for DungeonKeep.",
+            "Return only valid JSON.",
+            "Use these exact fields: name, title, race, classOrRole, faction, occupation, age, gender, alignment, currentStatus, location, shortDescription, appearance, personalityTraits, ideals, bonds, flaws, motivations, goals, fears, secrets, mannerisms, voiceNotes, backstory, notes, combatNotes, statBlockReference, tags, questLinks, sessionAppearances, inventory, imageUrl, isHostile, isAlive, isImportant.",
+            "personalityTraits, ideals, bonds, flaws, secrets, mannerisms, tags, questLinks, sessionAppearances, and inventory must be arrays of concise strings.",
+            "Keep the NPC useful at the table and grounded in the provided campaign context when one exists.",
+            string.Empty
+        };
+
+        if (campaign is not null)
+        {
+            lines.Add($"Campaign name: {campaign.Name}");
+            lines.Add($"Campaign setting: {campaign.Setting}");
+            lines.Add($"Campaign tone: {campaign.Tone}");
+            lines.Add($"Campaign summary: {campaign.Summary}");
+            lines.Add($"Campaign hook: {campaign.Hook}");
+            lines.Add($"Existing NPC names to avoid duplicating: {FormatList(request.ExistingNpcNames)}");
+            lines.Add($"Open threads: {FormatList(campaign.OpenThreads.Select(thread => thread.Text))}");
+            lines.Add(string.Empty);
+        }
+        else
+        {
+            lines.Add($"Existing NPC names to avoid duplicating: {FormatList(request.ExistingNpcNames)}");
+            lines.Add("No campaign context was provided, so generate a reusable fantasy NPC that can fit into multiple adventures.");
+            lines.Add(string.Empty);
+        }
+
+        lines.Add($"Name hint: {nameHint}");
+        lines.Add($"Title hint: {titleHint}");
+        lines.Add($"Race hint: {raceHint}");
+        lines.Add($"Role hint: {roleHint}");
+        lines.Add($"Faction hint: {factionHint}");
+        lines.Add($"Location hint: {locationHint}");
+        lines.Add($"Motivation hint: {motivationHint}");
+        lines.Add($"Additional notes hint: {notesHint}");
+
+        return string.Join('\n', lines);
+    }
+
+    private static string BuildNpcDraftRepairPrompt(string invalidOutput)
+    {
+        return string.Join('\n',
+        [
+            "Convert the provided NPC draft content into valid JSON only.",
+            "Do not add markdown, explanations, or code fences.",
+            "Use these exact fields: name, title, race, classOrRole, faction, occupation, age, gender, alignment, currentStatus, location, shortDescription, appearance, personalityTraits, ideals, bonds, flaws, motivations, goals, fears, secrets, mannerisms, voiceNotes, backstory, notes, combatNotes, statBlockReference, tags, questLinks, sessionAppearances, inventory, imageUrl, isHostile, isAlive, isImportant.",
+            "personalityTraits, ideals, bonds, flaws, secrets, mannerisms, tags, questLinks, sessionAppearances, and inventory must be arrays of strings.",
+            "isHostile, isAlive, and isImportant must be booleans.",
+            string.Empty,
+            "Content to repair:",
+            invalidOutput
         ]);
     }
 
@@ -573,6 +1112,134 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         return Math.Clamp(generatedLevel ?? requestedLevel ?? fallback, 1, 20);
     }
 
+    private static GenerateSessionDraftResponse NormalizeSessionDraft(GenerateSessionDraftPayload generated, CampaignDto campaign)
+    {
+        var sessionNumber = campaign.Sessions.Count + 1;
+
+        return new GenerateSessionDraftResponse(
+            Title: string.IsNullOrWhiteSpace(generated.Title) ? $"Session {sessionNumber}" : generated.Title.Trim(),
+            ShortDescription: string.IsNullOrWhiteSpace(generated.ShortDescription) ? campaign.NextSession.Trim() : generated.ShortDescription.Trim(),
+            Date: string.IsNullOrWhiteSpace(generated.Date) ? string.Empty : generated.Date.Trim(),
+            InGameLocation: string.IsNullOrWhiteSpace(generated.InGameLocation) ? campaign.Setting.Trim() : generated.InGameLocation.Trim(),
+            EstimatedLength: string.IsNullOrWhiteSpace(generated.EstimatedLength) ? "3-4 hours" : generated.EstimatedLength.Trim(),
+            MarkdownNotes: string.IsNullOrWhiteSpace(generated.MarkdownNotes) ? "## Session Notes\n- Generated draft ready for review." : generated.MarkdownNotes.Trim(),
+            Scenes: (generated.Scenes ?? []).Take(8).Select(scene => new GenerateSessionSceneResponse(
+                Title: CleanText(scene.Title),
+                Description: CleanText(scene.Description),
+                Trigger: CleanText(scene.Trigger),
+                KeyEvents: NormalizeStringList(scene.KeyEvents, 6),
+                PossibleOutcomes: NormalizeStringList(scene.PossibleOutcomes, 6)
+            )).Where(scene => !string.IsNullOrWhiteSpace(scene.Title) || !string.IsNullOrWhiteSpace(scene.Description)).ToArray(),
+            Npcs: (generated.Npcs ?? []).Take(8).Select(npc => new GenerateSessionNpcResponse(
+                Name: CleanText(npc.Name),
+                Role: CleanText(npc.Role),
+                Personality: CleanText(npc.Personality),
+                Motivation: CleanText(npc.Motivation),
+                VoiceNotes: CleanText(npc.VoiceNotes)
+            )).Where(npc => !string.IsNullOrWhiteSpace(npc.Name)).ToArray(),
+            Monsters: (generated.Monsters ?? []).Take(8).Select(monster => new GenerateSessionMonsterResponse(
+                Name: CleanText(monster.Name),
+                Type: CleanText(monster.Type),
+                ChallengeRating: CleanText(monster.ChallengeRating),
+                Hp: Math.Max(0, monster.Hp ?? 0),
+                KeyAbilities: CleanText(monster.KeyAbilities),
+                Notes: CleanText(monster.Notes)
+            )).Where(monster => !string.IsNullOrWhiteSpace(monster.Name)).ToArray(),
+            Locations: (generated.Locations ?? []).Take(8).Select(location => new GenerateSessionLocationResponse(
+                Name: CleanText(location.Name),
+                Description: CleanText(location.Description),
+                Secrets: CleanText(location.Secrets),
+                Encounters: CleanText(location.Encounters)
+            )).Where(location => !string.IsNullOrWhiteSpace(location.Name)).ToArray(),
+            Loot: (generated.Loot ?? []).Take(8).Select(loot => new GenerateSessionLootItemResponse(
+                Name: CleanText(loot.Name),
+                Type: CleanText(loot.Type),
+                Quantity: Math.Max(1, loot.Quantity ?? 1),
+                Notes: CleanText(loot.Notes)
+            )).Where(loot => !string.IsNullOrWhiteSpace(loot.Name)).ToArray(),
+            SkillChecks: (generated.SkillChecks ?? []).Take(8).Select(skillCheck => new GenerateSessionSkillCheckResponse(
+                Situation: CleanText(skillCheck.Situation),
+                Skill: CleanText(skillCheck.Skill),
+                Dc: Math.Clamp(skillCheck.Dc ?? 10, 1, 30),
+                SuccessOutcome: CleanText(skillCheck.SuccessOutcome),
+                FailureOutcome: CleanText(skillCheck.FailureOutcome)
+            )).Where(skillCheck => !string.IsNullOrWhiteSpace(skillCheck.Situation)).ToArray(),
+            Secrets: NormalizeStringList(generated.Secrets, 8),
+            BranchingPaths: NormalizeStringList(generated.BranchingPaths, 8),
+            NextSessionHooks: NormalizeStringList(generated.NextSessionHooks, 8)
+        );
+    }
+
+    private static GenerateNpcDraftResponse NormalizeNpcDraft(GenerateNpcDraftPayload generated)
+    {
+        return new GenerateNpcDraftResponse(
+            Name: string.IsNullOrWhiteSpace(generated.Name) ? "Generated NPC" : generated.Name.Trim(),
+            Title: CleanText(generated.Title),
+            Race: CleanText(generated.Race),
+            ClassOrRole: CleanText(generated.ClassOrRole),
+            Faction: CleanText(generated.Faction),
+            Occupation: CleanText(generated.Occupation),
+            Age: CleanText(generated.Age),
+            Gender: CleanText(generated.Gender),
+            Alignment: CleanText(generated.Alignment),
+            CurrentStatus: CleanText(generated.CurrentStatus),
+            Location: CleanText(generated.Location),
+            ShortDescription: CleanText(generated.ShortDescription),
+            Appearance: CleanText(generated.Appearance),
+            PersonalityTraits: NormalizeStringList(generated.PersonalityTraits, 6),
+            Ideals: NormalizeStringList(generated.Ideals, 4),
+            Bonds: NormalizeStringList(generated.Bonds, 4),
+            Flaws: NormalizeStringList(generated.Flaws, 4),
+            Motivations: CleanText(generated.Motivations),
+            Goals: CleanText(generated.Goals),
+            Fears: CleanText(generated.Fears),
+            Secrets: NormalizeStringList(generated.Secrets, 6),
+            Mannerisms: NormalizeStringList(generated.Mannerisms, 6),
+            VoiceNotes: CleanText(generated.VoiceNotes),
+            Backstory: CleanText(generated.Backstory),
+            Notes: CleanText(generated.Notes),
+            CombatNotes: CleanText(generated.CombatNotes),
+            StatBlockReference: CleanText(generated.StatBlockReference),
+            Tags: NormalizeStringList(generated.Tags, 8),
+            QuestLinks: NormalizeStringList(generated.QuestLinks, 6),
+            SessionAppearances: NormalizeStringList(generated.SessionAppearances, 6),
+            Inventory: NormalizeStringList(generated.Inventory, 8),
+            ImageUrl: CleanText(generated.ImageUrl),
+            IsHostile: generated.IsHostile ?? false,
+            IsAlive: generated.IsAlive ?? true,
+            IsImportant: generated.IsImportant ?? false
+        );
+    }
+
+    private static string CleanText(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+    }
+
+    private static string FormatList(IEnumerable<string>? values)
+    {
+        var entries = values?
+            .Select(value => value?.Trim())
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Cast<string>()
+            .Take(10)
+            .ToArray();
+
+        return entries is { Length: > 0 } ? string.Join(", ", entries) : "None recorded";
+    }
+
+    private static string[] NormalizeStringList(IEnumerable<string?>? values, int maxItems)
+    {
+        return values?
+            .Select(value => value?.Trim())
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(maxItems)
+            .ToArray()
+            ?? [];
+    }
+
     private static string ExtractResponseText(OpenAiResponsesApiResponse? payload)
     {
         if (!string.IsNullOrWhiteSpace(payload?.OutputText))
@@ -615,6 +1282,46 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         return null;
     }
 
+    private static GenerateSessionDraftPayload? TryParseGeneratedSessionDraftPayload(string rawText)
+    {
+        foreach (var candidate in BuildJsonCandidates(rawText))
+        {
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<GenerateSessionDraftPayload>(candidate, SerializerOptions);
+                if (parsed is not null)
+                {
+                    return parsed;
+                }
+            }
+            catch (JsonException)
+            {
+            }
+        }
+
+        return null;
+    }
+
+    private static GenerateNpcDraftPayload? TryParseGeneratedNpcDraftPayload(string rawText)
+    {
+        foreach (var candidate in BuildJsonCandidates(rawText))
+        {
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<GenerateNpcDraftPayload>(candidate, SerializerOptions);
+                if (parsed is not null)
+                {
+                    return parsed;
+                }
+            }
+            catch (JsonException)
+            {
+            }
+        }
+
+        return null;
+    }
+
     private static IEnumerable<string> BuildJsonCandidates(string rawText)
     {
         if (string.IsNullOrWhiteSpace(rawText))
@@ -641,6 +1348,40 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         if (fromFenceObject is not null && !string.Equals(fromFenceObject, fromRawObject, StringComparison.Ordinal))
         {
             yield return fromFenceObject;
+        }
+
+        var decodedString = TryDecodeJsonString(trimmed);
+        if (!string.IsNullOrWhiteSpace(decodedString))
+        {
+            var decodedTrimmed = decodedString.Trim();
+            if (!string.Equals(decodedTrimmed, trimmed, StringComparison.Ordinal))
+            {
+                yield return decodedTrimmed;
+            }
+
+            var decodedWithoutFences = StripMarkdownCodeFences(decodedTrimmed);
+            if (!string.Equals(decodedWithoutFences, decodedTrimmed, StringComparison.Ordinal))
+            {
+                yield return decodedWithoutFences;
+            }
+
+            var fromDecodedObject = ExtractFirstJsonObject(decodedTrimmed);
+            if (fromDecodedObject is not null)
+            {
+                yield return fromDecodedObject;
+            }
+        }
+    }
+
+    private static string? TryDecodeJsonString(string text)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<string>(text, SerializerOptions);
+        }
+        catch (JsonException)
+        {
+            return null;
         }
     }
 
@@ -723,7 +1464,143 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
 
     public sealed record GenerateCampaignDraftResponse(string Name, string Setting, string Tone, int LevelStart, int LevelEnd, string Hook, string NextSession, string Summary);
 
+    public sealed record GenerateSessionDraftRequest(string? TitleHint, string? ShortDescriptionHint, string? LocationHint, string? EstimatedLengthHint, string? MarkdownNotesHint);
+
+    public sealed record GenerateSessionDraftResponse(
+        string Title,
+        string ShortDescription,
+        string Date,
+        string InGameLocation,
+        string EstimatedLength,
+        string MarkdownNotes,
+        IReadOnlyList<GenerateSessionSceneResponse> Scenes,
+        IReadOnlyList<GenerateSessionNpcResponse> Npcs,
+        IReadOnlyList<GenerateSessionMonsterResponse> Monsters,
+        IReadOnlyList<GenerateSessionLocationResponse> Locations,
+        IReadOnlyList<GenerateSessionLootItemResponse> Loot,
+        IReadOnlyList<GenerateSessionSkillCheckResponse> SkillChecks,
+        IReadOnlyList<string> Secrets,
+        IReadOnlyList<string> BranchingPaths,
+        IReadOnlyList<string> NextSessionHooks);
+
+    public sealed record GenerateNpcDraftRequest(
+        Guid? CampaignId,
+        string? NameHint,
+        string? TitleHint,
+        string? RaceHint,
+        string? RoleHint,
+        string? FactionHint,
+        string? LocationHint,
+        string? MotivationHint,
+        string? NotesHint,
+        IReadOnlyList<string>? ExistingNpcNames);
+
+    public sealed record GenerateNpcDraftResponse(
+        string Name,
+        string Title,
+        string Race,
+        string ClassOrRole,
+        string Faction,
+        string Occupation,
+        string Age,
+        string Gender,
+        string Alignment,
+        string CurrentStatus,
+        string Location,
+        string ShortDescription,
+        string Appearance,
+        IReadOnlyList<string> PersonalityTraits,
+        IReadOnlyList<string> Ideals,
+        IReadOnlyList<string> Bonds,
+        IReadOnlyList<string> Flaws,
+        string Motivations,
+        string Goals,
+        string Fears,
+        IReadOnlyList<string> Secrets,
+        IReadOnlyList<string> Mannerisms,
+        string VoiceNotes,
+        string Backstory,
+        string Notes,
+        string CombatNotes,
+        string StatBlockReference,
+        IReadOnlyList<string> Tags,
+        IReadOnlyList<string> QuestLinks,
+        IReadOnlyList<string> SessionAppearances,
+        IReadOnlyList<string> Inventory,
+        string ImageUrl,
+        bool IsHostile,
+        bool IsAlive,
+        bool IsImportant);
+
+    public sealed record GenerateSessionSceneResponse(string Title, string Description, string Trigger, IReadOnlyList<string> KeyEvents, IReadOnlyList<string> PossibleOutcomes);
+    public sealed record GenerateSessionNpcResponse(string Name, string Role, string Personality, string Motivation, string VoiceNotes);
+    public sealed record GenerateSessionMonsterResponse(string Name, string Type, string ChallengeRating, int Hp, string KeyAbilities, string Notes);
+    public sealed record GenerateSessionLocationResponse(string Name, string Description, string Secrets, string Encounters);
+    public sealed record GenerateSessionLootItemResponse(string Name, string Type, int Quantity, string Notes);
+    public sealed record GenerateSessionSkillCheckResponse(string Situation, string Skill, int Dc, string SuccessOutcome, string FailureOutcome);
+
     private sealed record GenerateCampaignDraftPayload(string Name, string Setting, string Tone, int? LevelStart, int? LevelEnd, string Hook, string NextSession, string Summary);
+
+    private sealed record GenerateSessionDraftPayload(
+        string? Title,
+        string? ShortDescription,
+        string? Date,
+        string? InGameLocation,
+        string? EstimatedLength,
+        string? MarkdownNotes,
+        List<GenerateSessionScenePayload>? Scenes,
+        List<GenerateSessionNpcPayload>? Npcs,
+        List<GenerateSessionMonsterPayload>? Monsters,
+        List<GenerateSessionLocationPayload>? Locations,
+        List<GenerateSessionLootItemPayload>? Loot,
+        List<GenerateSessionSkillCheckPayload>? SkillChecks,
+        List<string>? Secrets,
+        List<string>? BranchingPaths,
+        List<string>? NextSessionHooks);
+
+    private sealed record GenerateNpcDraftPayload(
+        string? Name,
+        string? Title,
+        string? Race,
+        string? ClassOrRole,
+        string? Faction,
+        string? Occupation,
+        string? Age,
+        string? Gender,
+        string? Alignment,
+        string? CurrentStatus,
+        string? Location,
+        string? ShortDescription,
+        string? Appearance,
+        List<string>? PersonalityTraits,
+        List<string>? Ideals,
+        List<string>? Bonds,
+        List<string>? Flaws,
+        string? Motivations,
+        string? Goals,
+        string? Fears,
+        List<string>? Secrets,
+        List<string>? Mannerisms,
+        string? VoiceNotes,
+        string? Backstory,
+        string? Notes,
+        string? CombatNotes,
+        string? StatBlockReference,
+        List<string>? Tags,
+        List<string>? QuestLinks,
+        List<string>? SessionAppearances,
+        List<string>? Inventory,
+        string? ImageUrl,
+        bool? IsHostile,
+        bool? IsAlive,
+        bool? IsImportant);
+
+    private sealed record GenerateSessionScenePayload(string? Title, string? Description, string? Trigger, List<string>? KeyEvents, List<string>? PossibleOutcomes);
+    private sealed record GenerateSessionNpcPayload(string? Name, string? Role, string? Personality, string? Motivation, string? VoiceNotes);
+    private sealed record GenerateSessionMonsterPayload(string? Name, string? Type, string? ChallengeRating, int? Hp, string? KeyAbilities, string? Notes);
+    private sealed record GenerateSessionLocationPayload(string? Name, string? Description, string? Secrets, string? Encounters);
+    private sealed record GenerateSessionLootItemPayload(string? Name, string? Type, int? Quantity, string? Notes);
+    private sealed record GenerateSessionSkillCheckPayload(string? Situation, string? Skill, int? Dc, string? SuccessOutcome, string? FailureOutcome);
 
     private sealed class OpenAiResponsesApiResponse
     {

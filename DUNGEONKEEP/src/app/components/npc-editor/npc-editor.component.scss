@@ -1,0 +1,231 @@
+:host {
+    display: block;
+}
+
+.npc-editor-shell,
+.editor-sections,
+.section-grid,
+.array-list {
+    display: grid;
+    gap: 16px;
+}
+
+.editor-header,
+.editor-header-actions,
+.quick-toggles,
+.array-header,
+.inline-array-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.eyebrow {
+    margin: 0 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 0.74rem;
+    color: var(--text-soft);
+}
+
+h2,
+h3,
+h4,
+p {
+    margin: 0;
+}
+
+.editor-header p,
+.field span,
+.npc-editor-empty p {
+    color: var(--text-muted);
+}
+
+.generation-prompt-shell {
+    display: grid;
+    gap: 16px;
+    padding: 18px;
+    border: 1px solid var(--panel-border);
+    border-radius: 20px;
+    background: var(--surface-raised);
+}
+
+.generation-prompt-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.editor-status {
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid var(--panel-border);
+    background: color-mix(in srgb, var(--surface-raised) 88%, #a85c4e 12%);
+}
+
+.generation-error {
+    color: var(--text-main);
+}
+
+.autosave-pill,
+.toggle-pill,
+.ghost-button,
+.primary-button {
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+}
+
+.autosave-pill {
+    display: inline-flex;
+    align-items: center;
+    background: color-mix(in srgb, var(--surface-raised) 85%, var(--accent-primary) 15%);
+}
+
+.creation-mode-panel {
+    display: grid;
+    gap: 12px;
+    padding: 18px;
+    border: 1px solid var(--panel-border);
+    border-radius: 20px;
+    background: var(--surface-raised);
+}
+
+.creation-mode-panel h3 {
+    margin: 0;
+}
+
+.mode-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.mode-card {
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--surface-raised) 88%, var(--accent-primary) 12%);
+    color: var(--text-main);
+    padding: 12px;
+    text-align: left;
+    display: grid;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.mode-card span {
+    color: var(--text-muted);
+    line-height: 1.45;
+}
+
+.mode-card-active {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(211, 155, 87, 0.16);
+}
+
+.ghost-button,
+.primary-button {
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-main);
+}
+
+.generation-actions-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.ghost-button.is-loading,
+.primary-button.is-loading {
+    opacity: 0.75;
+}
+
+.toggle-pill.is-active {
+    background: color-mix(in srgb, var(--surface-raised) 74%, #b95442 26%);
+}
+
+.primary-button {
+    border-color: transparent;
+    background: var(--gradient-primary);
+    color: var(--surface-raised-solid);
+}
+
+.danger-button {
+    border-color: rgba(167, 76, 58, 0.34);
+}
+
+.editor-section,
+.npc-editor-shell,
+.npc-editor-empty,
+.relationship-card {
+    border: 1px solid var(--panel-border);
+    border-radius: 20px;
+    background: var(--surface-raised);
+    padding: 18px;
+}
+
+.editor-section summary {
+    cursor: pointer;
+}
+
+.section-grid.two-up,
+.relationship-card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.field {
+    display: grid;
+    gap: 8px;
+}
+
+.field span {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.full-span {
+    grid-column: 1 / -1;
+}
+
+input,
+textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(118, 86, 63, 0.22);
+    background: rgba(255, 252, 245, 0.78);
+    color: var(--text-main);
+}
+
+textarea {
+    resize: vertical;
+    min-height: 96px;
+}
+
+.field-error {
+    color: #a33a2a;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.relationship-remove {
+    justify-self: flex-start;
+}
+
+@media (max-width: 860px) {
+
+    .mode-options,
+
+    .section-grid.two-up,
+    .relationship-card {
+        grid-template-columns: 1fr;
+    }
+}

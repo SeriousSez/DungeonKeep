@@ -1,6 +1,8 @@
 import { Routes } from '@angular/router';
 import { CampaignDetailPageComponent } from './pages/campaign-detail-page/campaign-detail-page.component';
 import { CampaignEditPageComponent } from './pages/campaign-edit-page/campaign-edit-page.component';
+import { CampaignSectionPageComponent } from './pages/campaign-section-page/campaign-section-page.component';
+import { SessionEditorPageComponent } from './pages/session-editor-page/session-editor-page.component';
 import { CampaignsPageComponent } from './pages/campaigns-page/campaigns-page.component';
 import { CharacterDetailPageComponent } from './pages/character-detail-page/character-detail-page.component';
 import { CharactersPageComponent } from './pages/characters-page/characters-page.component';
@@ -8,6 +10,8 @@ import { DashboardPageComponent } from './pages/dashboard-page/dashboard-page.co
 import { NewCampaignPageComponent } from './pages/new-campaign-page/new-campaign-page.component';
 import { NewCharacterPageComponent } from './pages/new-character-page/new-character-page.component';
 import { NewCharacterStandardPageComponent } from './pages/new-character-standard-page/new-character-standard-page.component';
+import { NpcEditorPageComponent } from './pages/npc-editor-page/npc-editor-page.component';
+import { NpcLibraryPageComponent } from './pages/npc-library-page/npc-library-page.component';
 import { SessionsPageComponent } from './pages/sessions-page/sessions-page.component';
 import { PremadeCharactersPageComponent } from './pages/premade-characters-page.component';
 import { AuthShellComponent } from './components/auth-shell/auth-shell.component';
@@ -44,6 +48,56 @@ export const routes: Routes = [
         path: 'campaigns/:id',
         component: CampaignDetailPageComponent,
         data: { title: 'Campaign', breadcrumb: 'Campaign', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }] }
+    },
+    {
+        path: 'campaigns/:id/party',
+        component: CampaignSectionPageComponent,
+        data: { title: 'Party Roster', breadcrumb: 'Party', section: 'party', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }] }
+    },
+    {
+        path: 'campaigns/:id/sessions',
+        component: CampaignSectionPageComponent,
+        data: { title: 'Campaign Sessions', breadcrumb: 'Sessions', section: 'sessions', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }] }
+    },
+    {
+        path: 'campaigns/:id/sessions/new',
+        component: SessionEditorPageComponent,
+        data: { title: 'New Session', breadcrumb: 'New Session', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }, { label: 'Sessions', url: '/campaigns/:id/sessions' }] }
+    },
+    {
+        path: 'campaigns/:id/sessions/:sessionId/edit',
+        component: SessionEditorPageComponent,
+        data: { title: 'Edit Session', breadcrumb: 'Edit Session', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }, { label: 'Sessions', url: '/campaigns/:id/sessions' }] }
+    },
+    {
+        path: 'campaigns/:id/npcs',
+        component: CampaignSectionPageComponent,
+        data: { title: 'Campaign NPCs', breadcrumb: 'NPCs', section: 'npcs', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }] }
+    },
+    {
+        path: 'campaigns/:id/npcs/new',
+        component: NpcEditorPageComponent,
+        data: { title: 'New NPC', breadcrumb: 'New NPC', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }, { label: 'NPCs', url: '/campaigns/:id/npcs' }] }
+    },
+    {
+        path: 'campaigns/:id/npcs/:npcId/edit',
+        component: NpcEditorPageComponent,
+        data: { title: 'Edit NPC', breadcrumb: 'Edit NPC', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }, { label: 'NPCs', url: '/campaigns/:id/npcs' }] }
+    },
+    {
+        path: 'campaigns/:id/loot',
+        component: CampaignSectionPageComponent,
+        data: { title: 'Campaign Loot', breadcrumb: 'Loot', section: 'loot', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }] }
+    },
+    {
+        path: 'campaigns/:id/threads',
+        component: CampaignSectionPageComponent,
+        data: { title: 'Open Threads', breadcrumb: 'Threads', section: 'threads', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }] }
+    },
+    {
+        path: 'campaigns/:id/members',
+        component: CampaignSectionPageComponent,
+        data: { title: 'Campaign Members', breadcrumb: 'Members', section: 'members', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }] }
     },
     {
         path: 'campaigns/:id/edit',
@@ -108,6 +162,21 @@ export const routes: Routes = [
         path: 'characters/:id/builder/:step/:mode',
         component: NewCharacterStandardPageComponent,
         data: { title: 'Character Builder', breadcrumb: 'Character Builder', parentCrumbs: [{ label: 'Characters', url: '/characters' }] }
+    },
+    {
+        path: 'npcs',
+        component: NpcLibraryPageComponent,
+        data: { title: 'NPC Library', breadcrumb: 'NPC Library' }
+    },
+    {
+        path: 'npcs/new',
+        component: NpcEditorPageComponent,
+        data: { title: 'New Library NPC', breadcrumb: 'New NPC', parentCrumbs: [{ label: 'NPC Library', url: '/npcs' }] }
+    },
+    {
+        path: 'npcs/:npcId/edit',
+        component: NpcEditorPageComponent,
+        data: { title: 'Edit Library NPC', breadcrumb: 'Edit NPC', parentCrumbs: [{ label: 'NPC Library', url: '/npcs' }] }
     },
     {
         path: 'sessions',

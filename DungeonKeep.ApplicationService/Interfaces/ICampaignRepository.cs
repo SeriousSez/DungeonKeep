@@ -9,6 +9,13 @@ public interface ICampaignRepository
     Task<Campaign?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<Campaign> AddAsync(Campaign campaign, CancellationToken cancellationToken = default);
     Task<Campaign?> UpdateAsync(Guid campaignId, string name, string setting, string tone, int levelStart, int levelEnd, string hook, string nextSession, string summary, CancellationToken cancellationToken = default);
+    Task<Campaign?> AddSessionAsync(Guid campaignId, CampaignSessionDto session, CancellationToken cancellationToken = default);
+    Task<Campaign?> UpdateSessionAsync(Guid campaignId, CampaignSessionDto session, CancellationToken cancellationToken = default);
+    Task<Campaign?> RemoveSessionAsync(Guid campaignId, Guid sessionId, CancellationToken cancellationToken = default);
+    Task<Campaign?> AddNpcAsync(Guid campaignId, string name, CancellationToken cancellationToken = default);
+    Task<Campaign?> RemoveNpcAsync(Guid campaignId, string name, CancellationToken cancellationToken = default);
+    Task<Campaign?> AddLootAsync(Guid campaignId, string name, CancellationToken cancellationToken = default);
+    Task<Campaign?> RemoveLootAsync(Guid campaignId, string name, CancellationToken cancellationToken = default);
     Task<Campaign?> AddThreadAsync(Guid campaignId, Guid threadId, string text, string visibility, CancellationToken cancellationToken = default);
     Task<Campaign?> UpdateThreadAsync(Guid campaignId, Guid threadId, string text, string visibility, CancellationToken cancellationToken = default);
     Task<Campaign?> ArchiveThreadAsync(Guid campaignId, Guid threadId, CancellationToken cancellationToken = default);

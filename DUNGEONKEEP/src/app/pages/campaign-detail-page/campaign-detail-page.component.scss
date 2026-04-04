@@ -2,6 +2,10 @@
     display: block;
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 .page-stack {
     display: grid;
     gap: 24px;
@@ -61,6 +65,90 @@
 }
 
 .page-intro p {
+    margin: 0;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+.campaign-nav {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    padding: 18px;
+}
+
+.campaign-nav-link {
+    display: grid;
+    gap: 6px;
+    padding: 14px 16px;
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--surface-raised) 84%, var(--accent-primary) 16%);
+    text-decoration: none;
+    color: var(--text-main);
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.campaign-nav-link:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--panel-border) 55%, var(--accent-primary) 45%);
+    background: color-mix(in srgb, var(--surface-raised) 72%, var(--accent-primary) 28%);
+}
+
+.campaign-nav-link.is-active {
+    border-color: color-mix(in srgb, var(--panel-border) 35%, var(--accent-primary) 65%);
+    background: color-mix(in srgb, var(--surface-raised) 62%, var(--accent-primary) 38%);
+}
+
+.campaign-nav-label {
+    font-size: 0.92rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.campaign-nav-meta {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.section-panel {
+    scroll-margin-top: 88px;
+}
+
+.workspace-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 24px;
+}
+
+.workspace-preview-card {
+    display: grid;
+    gap: 14px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.workspace-preview-card:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--panel-border) 55%, var(--accent-primary) 45%);
+}
+
+.workspace-preview-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.workspace-preview-card h2 {
+    margin: 0;
+    font-family: var(--display-font);
+    font-size: 1.15rem;
+}
+
+.workspace-preview-card p {
     margin: 0;
     color: var(--text-muted);
     line-height: 1.6;
@@ -220,6 +308,92 @@
     gap: 8px;
 }
 
+.session-cards,
+.tag-grid,
+.member-list {
+    display: grid;
+    gap: 14px;
+}
+
+.session-card,
+.tag-card,
+.member-card {
+    padding: 16px;
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    background: var(--surface-raised);
+}
+
+.session-card-header,
+.member-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.session-card h3,
+.tag-card h3,
+.member-card h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text-main);
+}
+
+.session-card-header p,
+.tag-card p,
+.member-card p,
+.session-objective {
+    margin: 6px 0 0;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.session-threat-pill,
+.member-status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+    background: color-mix(in srgb, var(--surface-raised) 80%, var(--accent-primary) 20%);
+    color: var(--text-main);
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.member-pill-group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.subdued-pill {
+    background: color-mix(in srgb, var(--surface-raised) 92%, var(--panel-border) 8%);
+}
+
+.campaign-supplemental-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+}
+
+.compact-panel {
+    min-width: 0;
+}
+
+.compact-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.compact-tag-card p {
+    display: none;
+}
+
 .thread-row {
     display: flex;
     justify-content: space-between;
@@ -316,6 +490,26 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--text-soft);
+}
+
+@media (max-width: 900px) {
+    .campaign-supplemental-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+
+    .page-intro-header,
+    .session-card-header,
+    .member-card,
+    .thread-row {
+        flex-direction: column;
+    }
+
+    .member-pill-group {
+        justify-content: flex-start;
+    }
 }
 
 .add-thread-field textarea {

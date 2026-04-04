@@ -1,22 +1,42 @@
 <main class="page-stack">
     <section class="panel page-intro">
-        <p class="eyebrow">Campaign management</p>
-        <h1>Campaigns</h1>
-        <p>Build campaign arcs, track threads, and archive completed story beats.</p>
+        <div class="page-intro-copy">
+            <p class="eyebrow">Campaign management</p>
+            <h1>Your Campaigns</h1>
+            <p>Only campaigns you belong to are shown here.</p>
+        </div>
+
         <a routerLink="/campaigns/new" class="create-link">+ New Campaign</a>
     </section>
 
-    <section class="page-stats">
-        <div class="stat-card">
-            <p class="stat-label">Total Campaigns</p>
-            <p class="stat-value">{{ store.campaignCount() }}</p>
-        </div>
-        <div class="stat-card">
-            <p class="stat-label">Open Threads</p>
-            <p class="stat-value">{{ store.openThreadCount() }}</p>
-        </div>
+    @if (visibleCampaignCount() === 0) {
+    <section class="panel empty-panel">
+        <p class="eyebrow">No active campaigns</p>
+        <h2>You are not part of any campaigns yet</h2>
+        <p>Create a campaign or wait for an invite to see it here.</p>
+        <a routerLink="/campaigns/new" class="create-link">Create Campaign</a>
     </section>
+    } @else {
+    <section class="campaign-list">
+        @for (campaign of visibleCampaigns(); track campaign.id) {
+        <a class="campaign-card" [routerLink]="['/campaigns', campaign.id]">
+            <div class="campaign-card-top">
+                <div>
+                    <h2>{{ campaign.name }}</h2>
+                    <p>{{ campaign.setting }}</p>
+                </div>
+                <span class="campaign-pill">{{ campaign.currentUserRole }}</span>
+            </div>
 
-    <app-campaign-board [campaigns]="store.campaigns()" [selectedCampaignId]="store.selectedCampaignId()" [selectedCampaign]="store.selectedCampaign()" [openThreadCount]="store.openThreadCount()" (campaignSelected)="store.selectCampaign($event)"
-        (threadAdded)="store.addThread($event.text, $event.visibility)" (threadUpdated)="store.updateThread($event.threadId, $event.text, $event.visibility)" (threadArchived)="store.archiveThread($event)" (memberInvited)="store.inviteMember($event)" />
+            <p class="campaign-summary">{{ campaign.summary }}</p>
+
+            <div class="campaign-meta">
+                <span>{{ campaign.levelRange }}</span>
+                <span>{{ campaign.sessions.length }} sessions</span>
+                <span>{{ campaign.npcs.length }} NPCs</span>
+            </div>
+        </a>
+        }
+    </section>
+    }
 </main>

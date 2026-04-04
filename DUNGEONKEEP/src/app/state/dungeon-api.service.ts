@@ -36,9 +36,21 @@ export interface ApiCampaignDto {
     summary: string;
     createdAtUtc: string;
     characterCount: number;
+    sessions: ApiCampaignSessionDto[];
+    npcs: string[];
+    loot: string[];
     openThreads: ApiCampaignThreadDto[];
     currentUserRole: 'Owner' | 'Member';
     members: ApiCampaignMemberDto[];
+}
+
+export interface ApiCampaignSessionDto {
+    id: string;
+    title: string;
+    date: string;
+    location: string;
+    objective: string;
+    threat: 'Low' | 'Moderate' | 'High' | 'Deadly';
 }
 
 export interface ApiCampaignThreadDto {
@@ -225,6 +237,130 @@ export interface ApiGenerateCampaignDraftResponse {
     summary: string;
 }
 
+export interface ApiGenerateSessionDraftRequest {
+    titleHint: string;
+    shortDescriptionHint: string;
+    locationHint: string;
+    estimatedLengthHint: string;
+    markdownNotesHint: string;
+}
+
+export interface ApiGenerateSessionSceneResponse {
+    title: string;
+    description: string;
+    trigger: string;
+    keyEvents: string[];
+    possibleOutcomes: string[];
+}
+
+export interface ApiGenerateSessionNpcResponse {
+    name: string;
+    role: string;
+    personality: string;
+    motivation: string;
+    voiceNotes: string;
+}
+
+export interface ApiGenerateSessionMonsterResponse {
+    name: string;
+    type: string;
+    challengeRating: string;
+    hp: number;
+    keyAbilities: string;
+    notes: string;
+}
+
+export interface ApiGenerateSessionLocationResponse {
+    name: string;
+    description: string;
+    secrets: string;
+    encounters: string;
+}
+
+export interface ApiGenerateSessionLootItemResponse {
+    name: string;
+    type: string;
+    quantity: number;
+    notes: string;
+}
+
+export interface ApiGenerateSessionSkillCheckResponse {
+    situation: string;
+    skill: string;
+    dc: number;
+    successOutcome: string;
+    failureOutcome: string;
+}
+
+export interface ApiGenerateSessionDraftResponse {
+    title: string;
+    shortDescription: string;
+    date: string;
+    inGameLocation: string;
+    estimatedLength: string;
+    markdownNotes: string;
+    scenes: ApiGenerateSessionSceneResponse[];
+    npcs: ApiGenerateSessionNpcResponse[];
+    monsters: ApiGenerateSessionMonsterResponse[];
+    locations: ApiGenerateSessionLocationResponse[];
+    loot: ApiGenerateSessionLootItemResponse[];
+    skillChecks: ApiGenerateSessionSkillCheckResponse[];
+    secrets: string[];
+    branchingPaths: string[];
+    nextSessionHooks: string[];
+}
+
+export interface ApiGenerateNpcDraftRequest {
+    campaignId?: string;
+    nameHint: string;
+    titleHint: string;
+    raceHint: string;
+    roleHint: string;
+    factionHint: string;
+    locationHint: string;
+    motivationHint: string;
+    notesHint: string;
+    existingNpcNames: string[];
+}
+
+export interface ApiGenerateNpcDraftResponse {
+    name: string;
+    title: string;
+    race: string;
+    classOrRole: string;
+    faction: string;
+    occupation: string;
+    age: string;
+    gender: string;
+    alignment: string;
+    currentStatus: string;
+    location: string;
+    shortDescription: string;
+    appearance: string;
+    personalityTraits: string[];
+    ideals: string[];
+    bonds: string[];
+    flaws: string[];
+    motivations: string;
+    goals: string;
+    fears: string;
+    secrets: string[];
+    mannerisms: string[];
+    voiceNotes: string;
+    backstory: string;
+    notes: string;
+    combatNotes: string;
+    statBlockReference: string;
+    tags: string[];
+    questLinks: string[];
+    sessionAppearances: string[];
+    inventory: string[];
+    imageUrl: string;
+    isHostile: boolean;
+    isAlive: boolean;
+    isImportant: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class DungeonApiService {
 
@@ -271,6 +407,42 @@ export class DungeonApiService {
 
     async updateCampaign(campaignId: string, payload: { name: string; setting: string; tone: ApiCampaignTone; levelStart: number; levelEnd: number; hook: string; nextSession: string; summary: string }): Promise<ApiCampaignDto> {
         return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}`, payload));
+    }
+
+    async createCampaignSession(campaignId: string, payload: { title: string; date: string; location: string; objective: string; threat: 'Low' | 'Moderate' | 'High' | 'Deadly' }): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/sessions`, payload));
+    }
+
+    async updateCampaignSession(campaignId: string, sessionId: string, payload: { title: string; date: string; location: string; objective: string; threat: 'Low' | 'Moderate' | 'High' | 'Deadly' }): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/sessions/${sessionId}`, payload));
+    }
+
+    async generateSessionDraft(campaignId: string, payload: ApiGenerateSessionDraftRequest): Promise<ApiGenerateSessionDraftResponse> {
+        return await firstValueFrom(this.http.post<ApiGenerateSessionDraftResponse>(`${this.baseUrl}/campaigns/${campaignId}/sessions/generate-draft`, payload));
+    }
+
+    async deleteCampaignSession(campaignId: string, sessionId: string): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/sessions/${sessionId}/delete`, {}));
+    }
+
+    async addCampaignNpc(campaignId: string, name: string): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/npcs`, { name }));
+    }
+
+    async removeCampaignNpc(campaignId: string, name: string): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/npcs/remove`, { name }));
+    }
+
+    async generateNpcDraft(payload: ApiGenerateNpcDraftRequest): Promise<ApiGenerateNpcDraftResponse> {
+        return await firstValueFrom(this.http.post<ApiGenerateNpcDraftResponse>(`${this.baseUrl}/campaigns/npcs/generate-draft`, payload));
+    }
+
+    async addCampaignLoot(campaignId: string, name: string): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/loot`, { name }));
+    }
+
+    async removeCampaignLoot(campaignId: string, name: string): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/loot/remove`, { name }));
     }
 
     async leaveCampaign(campaignId: string): Promise<void> {

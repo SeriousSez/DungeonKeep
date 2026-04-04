@@ -1,0 +1,41 @@
+<section class="npc-manager-shell">
+    @if (libraryMode()) {
+    <section class="manager-surface manager-page-header">
+        <div>
+            <p class="eyebrow">Reusable Cast</p>
+            <h1>NPC Library</h1>
+            <p>Build NPCs outside any campaign, keep them in a shared library, and reuse them wherever you need them.</p>
+        </div>
+    </section>
+    }
+
+    @if (feedback()) {
+    <div class="manager-feedback">
+        <p>{{ feedback() }}</p>
+    </div>
+    }
+
+    <div class="manager-layout" [class.manager-layout-list-only]="listOnly()">
+        <app-npc-list class="manager-column" [npcs]="filteredNpcs()" [selectedNpcId]="activeNpcId()" [canEdit]="canEdit()" [searchTerm]="filters().search" [factionOptions]="factionOptions()" [locationOptions]="locationOptions()" [tagGroups]="tagGroups()" [selectedFaction]="filters().faction"
+            [selectedLocation]="filters().location" [selectedTags]="filters().tags" [lifeState]="filters().lifeState" [hostility]="filters().hostility" [importance]="filters().importance" [sortBy]="filters().sortBy" (searchChanged)="updateSearch($event)" (factionChanged)="updateFaction($event)"
+            (locationChanged)="updateLocation($event)" (tagSelectionChanged)="updateTags($event)" (lifeStateChanged)="updateLifeState($event)" (hostilityChanged)="updateHostility($event)" (importanceChanged)="updateImportance($event)" (sortChanged)="updateSort($event)"
+            (selectNpc)="selectNpc($event)" (addNpc)="addNpc()" (loadMockNpcs)="loadMockNpcs()" (clearFilters)="clearFilters()" (duplicateNpc)="duplicateNpc($event)" (deleteNpc)="requestDeleteNpc($event)" (toggleAlive)="toggleFlag($event, 'isAlive')" (toggleHostile)="toggleFlag($event, 'isHostile')"
+            (toggleImportant)="toggleFlag($event, 'isImportant')"></app-npc-list>
+
+        @if (!listOnly()) {
+        <div class="manager-column editor-column">
+            <app-npc-editor [npc]="activeNpc()" [canEdit]="canEdit()" [nameConflict]="nameConflict()" [autosaveLabel]="autosaveLabel()" [relationshipTargets]="relationshipTargetOptions()" (draftChanged)="handleDraftChanged($event)" (saveNpc)="handleSaveNpc($event)"
+                [generationBusy]="npcGenerationInProgress()" [generationError]="npcGenerationError()" (generateNpc)="generateActiveNpc($event)" (saveToLibrary)="saveActiveNpcToLibrary()" (duplicateNpc)="duplicateSelectedNpc()" (deleteNpc)="requestDeleteNpc(activeNpcId() ?? '')"></app-npc-editor>
+
+            <div class="manager-tools">
+                <button type="button" class="ghost-button" (click)="resetLocalDrafts()">{{ libraryMode() ? 'Clear Library' : 'Reset Local Drafts' }}</button>
+            </div>
+        </div>
+        }
+    </div>
+
+    <app-confirm-modal [open]="deleteCandidate() !== null" title="Delete NPC?" [message]="deleteCandidate() ? 'Remove ' + deleteCandidate()!.name + '? This deletes the local draft and removes the NPC name from the campaign list.' : 'Delete NPC?'" confirmText="Delete" cancelText="Cancel"
+        (confirmed)="confirmDeleteNpc()" (cancelled)="cancelDeleteNpc()"></app-confirm-modal>
+    <app-confirm-modal [open]="libraryDeleteCandidate() !== null" title="Delete Library NPC?" [message]="libraryDeleteCandidate() ? 'Remove ' + libraryDeleteCandidate()!.name + ' from the reusable library?' : 'Delete Library NPC?'" confirmText="Delete" cancelText="Cancel"
+        (confirmed)="confirmDeleteLibraryNpc()" (cancelled)="cancelDeleteLibraryNpc()"></app-confirm-modal>
+</section>

@@ -1,7 +1,7 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 
 import { raceMap } from '../data/races';
-import { AbilityScores, Campaign, CampaignDraft, CampaignThreadVisibility, Character, CharacterDraft, CharacterStatus, SkillProficiencies } from '../models/dungeon.models';
+import { AbilityScores, Campaign, CampaignDraft, CampaignThreadVisibility, Character, CharacterDraft, CharacterStatus, SkillProficiencies, ThreatLevel } from '../models/dungeon.models';
 import { ApiCampaignDto, ApiCharacterDto, DungeonApiService } from './dungeon-api.service';
 import { SessionService } from './session.service';
 
@@ -173,6 +173,86 @@ export class DungeonStoreService {
         try {
             await this.api.leaveCampaign(campaignId);
             await this.hydrateFromApi();
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async addCampaignSession(campaignId: string, draft: { title: string; date: string; location: string; objective: string; threat: ThreatLevel }): Promise<boolean> {
+        try {
+            const updated = await this.api.createCampaignSession(campaignId, draft);
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async updateCampaignSession(campaignId: string, sessionId: string, draft: { title: string; date: string; location: string; objective: string; threat: ThreatLevel }): Promise<boolean> {
+        try {
+            const updated = await this.api.updateCampaignSession(campaignId, sessionId, draft);
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async deleteCampaignSession(campaignId: string, sessionId: string): Promise<boolean> {
+        try {
+            const updated = await this.api.deleteCampaignSession(campaignId, sessionId);
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async addCampaignNpc(campaignId: string, name: string): Promise<boolean> {
+        try {
+            const updated = await this.api.addCampaignNpc(campaignId, name);
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async removeCampaignNpc(campaignId: string, name: string): Promise<boolean> {
+        try {
+            const updated = await this.api.removeCampaignNpc(campaignId, name);
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async addCampaignLoot(campaignId: string, name: string): Promise<boolean> {
+        try {
+            const updated = await this.api.addCampaignLoot(campaignId, name);
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async removeCampaignLoot(campaignId: string, name: string): Promise<boolean> {
+        try {
+            const updated = await this.api.removeCampaignLoot(campaignId, name);
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async inviteCampaignMember(campaignId: string, email: string): Promise<boolean> {
+        try {
+            const updated = await this.api.inviteCampaignMember(campaignId, email);
+            this.replaceCampaignFromApi(campaignId, updated);
             return true;
         } catch {
             return false;
@@ -448,14 +528,21 @@ export class DungeonStoreService {
             hook: campaign.hook || 'A new adventure awaits.',
             nextSession: campaign.nextSession || 'TBD',
             partyCharacterIds,
-            sessions: [],
+            sessions: (campaign.sessions ?? []).map((session) => ({
+                id: session.id,
+                title: session.title,
+                date: session.date,
+                location: session.location,
+                objective: session.objective,
+                threat: session.threat
+            })),
             openThreads: (campaign.openThreads ?? []).map((thread) => ({
                 id: thread.id,
                 text: thread.text,
                 visibility: thread.visibility
             })),
-            loot: ['Starter rumor map'],
-            npcs: ['Unrevealed patron'],
+            loot: [...(campaign.loot ?? [])],
+            npcs: [...(campaign.npcs ?? [])],
             currentUserRole: campaign.currentUserRole,
             members: campaign.members.map((member) => ({
                 userId: member.userId,
@@ -465,6 +552,16 @@ export class DungeonStoreService {
                 status: member.status
             }))
         };
+    }
+
+    private replaceCampaignFromApi(campaignId: string, updated: ApiCampaignDto): void {
+        this.campaigns.update((campaigns) =>
+            campaigns.map((campaign) =>
+                campaign.id === campaignId
+                    ? this.mapCampaignFromApi(updated, campaign.partyCharacterIds)
+                    : campaign
+            )
+        );
     }
 
     private mapCharacterFromApi(character: ApiCharacterDto, draft?: CharacterDraft): Character {

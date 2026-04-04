@@ -1,0 +1,133 @@
+<section class="npc-list-shell">
+    <div class="npc-list-header">
+        <div>
+            <p class="eyebrow">Campaign Cast</p>
+            <h2>NPC List</h2>
+            <p>Search the cast, filter by factions and tags, and jump straight into an NPC card during play.</p>
+        </div>
+
+        <div class="npc-list-actions">
+            @if (canEdit()) {
+            <button type="button" class="ghost-button" (click)="loadMockNpcs.emit()">Load Mock NPCs</button>
+            <button type="button" class="primary-button" (click)="addNpc.emit()">Add NPC</button>
+            }
+        </div>
+    </div>
+
+    <div class="filter-grid">
+        <label class="field search-field">
+            <span>Search</span>
+            <input type="search" [value]="searchTerm()" (input)="emitSearch($any($event.target).value)" placeholder="Search name, role, faction, description, or tags" />
+        </label>
+
+        <label class="field">
+            <span>Faction</span>
+            <app-dropdown ariaLabel="Faction filter" [value]="selectedFaction()" [options]="factionOptions()" [searchable]="false" [placeholder]="'All factions'" (changed)="emitFaction($event)"></app-dropdown>
+        </label>
+
+        <label class="field">
+            <span>Location</span>
+            <app-dropdown ariaLabel="Location filter" [value]="selectedLocation()" [options]="locationOptions()" [searchable]="false" [placeholder]="'All locations'" (changed)="emitLocation($event)"></app-dropdown>
+        </label>
+
+        <label class="field">
+            <span>Tags</span>
+            <app-multi-select-dropdown [groups]="tagGroups()" [value]="selectedTags()" placeholder="Filter by tags" (changed)="tagSelectionChanged.emit($event)"></app-multi-select-dropdown>
+        </label>
+
+        <label class="field">
+            <span>Alive / Dead</span>
+            <app-dropdown ariaLabel="Alive filter" [value]="lifeState()" [options]="lifeStateOptions" [searchable]="false" [placeholder]="'All statuses'" (changed)="emitLifeState($event)"></app-dropdown>
+        </label>
+
+        <label class="field">
+            <span>Hostile / Friendly</span>
+            <app-dropdown ariaLabel="Hostility filter" [value]="hostility()" [options]="hostilityOptions" [searchable]="false" [placeholder]="'All temperaments'" (changed)="emitHostility($event)"></app-dropdown>
+        </label>
+
+        <label class="field">
+            <span>Important</span>
+            <app-dropdown ariaLabel="Importance filter" [value]="importance()" [options]="importanceOptions" [searchable]="false" [placeholder]="'All priorities'" (changed)="emitImportance($event)"></app-dropdown>
+        </label>
+
+        <label class="field">
+            <span>Sort</span>
+            <app-dropdown ariaLabel="Sort NPCs" [value]="sortBy()" [options]="sortOptions" [searchable]="false" [placeholder]="'Recently updated'" (changed)="emitSort($event)"></app-dropdown>
+        </label>
+    </div>
+
+    @if (hasActiveFilters()) {
+    <div class="filter-actions">
+        <button type="button" class="ghost-button" (click)="clearFilters.emit()">Clear Filters</button>
+    </div>
+    }
+
+    @if (npcs().length > 0) {
+    <div class="npc-card-grid">
+        @for (npc of npcs(); track trackNpc($index, npc)) {
+        <article class="npc-card" [class.is-selected]="selectedNpcId() === npc.id" (click)="selectNpc.emit(npc.id)">
+            <div class="npc-card-topline">
+                <div>
+                    <h3>{{ npc.name }}</h3>
+                    <p>{{ npcSubtitle(npc) }}</p>
+                </div>
+
+                <div class="npc-badge-row">
+                    @if (npc.isImportant) {
+                    <span class="badge important-badge">Important</span>
+                    }
+                    @if (npc.isHostile) {
+                    <span class="badge hostile-badge">Hostile</span>
+                    } @else {
+                    <span class="badge friendly-badge">Friendly</span>
+                    }
+                    @if (!npc.isAlive) {
+                    <span class="badge dead-badge">Dead</span>
+                    }
+                </div>
+            </div>
+
+            <div class="npc-meta-grid">
+                <p><strong>Location:</strong> {{ npc.location || 'Unknown' }}</p>
+                <p><strong>Faction:</strong> {{ npc.faction || 'Independent' }}</p>
+            </div>
+
+            <p class="npc-description">{{ npc.shortDescription || 'No short description yet.' }}</p>
+
+            @if (npc.tags.length > 0) {
+            <div class="tag-row">
+                @for (tag of npc.tags; track tag) {
+                <span class="tag-chip">{{ tag }}</span>
+                }
+            </div>
+            }
+
+            <div class="quick-toggle-row" (click)="$event.stopPropagation()">
+                <button type="button" class="toggle-pill" [class.is-active]="npc.isAlive" [disabled]="!canEdit()" (click)="toggleAlive.emit(npc.id)">{{ npc.isAlive ? 'Alive' : 'Dead' }}</button>
+                <button type="button" class="toggle-pill" [class.is-active]="npc.isHostile" [disabled]="!canEdit()" (click)="toggleHostile.emit(npc.id)">{{ npc.isHostile ? 'Hostile' : 'Friendly' }}</button>
+                <button type="button" class="toggle-pill" [class.is-active]="npc.isImportant" [disabled]="!canEdit()" (click)="toggleImportant.emit(npc.id)">{{ npc.isImportant ? 'Important' : 'Normal' }}</button>
+            </div>
+
+            @if (canEdit()) {
+            <div class="card-actions" (click)="$event.stopPropagation()">
+                <button type="button" class="ghost-button" (click)="selectNpc.emit(npc.id)">Edit</button>
+                <button type="button" class="ghost-button" (click)="duplicateNpc.emit(npc.id)">Duplicate</button>
+                <button type="button" class="ghost-button" (click)="deleteNpc.emit(npc.id)">Delete</button>
+            </div>
+            }
+        </article>
+        }
+    </div>
+    } @else {
+    <div class="empty-state-panel">
+        <h3>No NPCs match the current view.</h3>
+        <p>Try clearing filters, loading the mock cast, or add a new NPC to start building the campaign roster.</p>
+        @if (canEdit()) {
+        <div class="empty-state-actions">
+            <button type="button" class="ghost-button" (click)="clearFilters.emit()">Clear Filters</button>
+            <button type="button" class="primary-button" (click)="addNpc.emit()">Add NPC</button>
+        </div>
+        }
+    </div>
+    }
+</section>

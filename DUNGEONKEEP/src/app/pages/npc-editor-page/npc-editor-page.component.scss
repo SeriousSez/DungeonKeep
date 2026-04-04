@@ -1,0 +1,36 @@
+:host {
+    display: block;
+}
+
+.page-stack {
+    display: grid;
+    gap: 18px;
+}
+
+.page-intro,
+.status-panel,
+.empty-panel {
+    display: grid;
+    gap: 10px;
+}
+
+.page-intro h1,
+.page-intro p,
+.status-panel p,
+.empty-panel h2,
+.empty-panel p {
+    margin: 0;
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 0.74rem;
+    color: var(--text-soft);
+}
+
+.page-intro p,
+.empty-panel p {
+    color: var(--text-muted);
+}

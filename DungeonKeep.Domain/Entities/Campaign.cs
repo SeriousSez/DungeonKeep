@@ -11,6 +11,9 @@ public sealed class Campaign
     public string Hook { get; set; } = string.Empty;
     public string NextSession { get; set; } = string.Empty;
     public string Summary { get; set; } = string.Empty;
+    public string SessionsJson { get; set; } = "[]";
+    public string NpcsJson { get; set; } = "[]";
+    public string LootJson { get; set; } = "[]";
     public string OpenThreadsJson { get; set; } = "[]";
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 

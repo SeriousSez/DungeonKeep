@@ -12,9 +12,21 @@ public sealed record CampaignDto(
     string Summary,
     DateTime CreatedAtUtc,
     int CharacterCount,
+    IReadOnlyList<CampaignSessionDto> Sessions,
+    IReadOnlyList<string> Npcs,
+    IReadOnlyList<string> Loot,
     IReadOnlyList<CampaignThreadDto> OpenThreads,
     string CurrentUserRole,
     IReadOnlyList<CampaignMemberDto> Members
+);
+
+public sealed record CampaignSessionDto(
+    Guid Id,
+    string Title,
+    string Date,
+    string Location,
+    string Objective,
+    string Threat
 );
 
 public sealed record CampaignThreadDto(
@@ -57,6 +69,12 @@ public sealed record CreateCampaignThreadRequest(string Text, string Visibility)
 public sealed record UpdateCampaignThreadRequest(string Text, string Visibility);
 public sealed record ArchiveCampaignThreadRequest(Guid ThreadId);
 public sealed record InviteCampaignMemberRequest(string Email);
+public sealed record CreateCampaignSessionRequest(string Title, string Date, string Location, string Objective, string Threat);
+public sealed record UpdateCampaignSessionRequest(string Title, string Date, string Location, string Objective, string Threat);
+public sealed record CreateCampaignNpcRequest(string Name);
+public sealed record RemoveCampaignNpcRequest(string Name);
+public sealed record CreateCampaignLootRequest(string Name);
+public sealed record RemoveCampaignLootRequest(string Name);
 
 public sealed record CampaignInvitationEmail(
     Guid CampaignId,

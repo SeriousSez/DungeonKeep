@@ -50,6 +50,9 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
             entity.Property(c => c.Hook).HasMaxLength(500);
             entity.Property(c => c.NextSession).HasMaxLength(120);
             entity.Property(c => c.Summary).HasMaxLength(1000);
+            entity.Property(c => c.SessionsJson).HasMaxLength(12000).IsRequired();
+            entity.Property(c => c.NpcsJson).HasMaxLength(8000).IsRequired();
+            entity.Property(c => c.LootJson).HasMaxLength(8000).IsRequired();
             entity.Property(c => c.OpenThreadsJson).HasMaxLength(8000).IsRequired();
             entity.Property(c => c.CreatedAtUtc).IsRequired();
 

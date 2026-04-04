@@ -1,0 +1,261 @@
+<main class="page-stack">
+    @if (selectedCampaign(); as campaign) {
+    <a routerLink="/campaigns" class="back-link">← Back to Campaigns</a>
+
+    <section class="panel page-intro">
+        <div class="page-intro-header">
+            <div>
+                <p class="eyebrow">Campaign workspace</p>
+                <h1>{{ pageTitle() }}</h1>
+                <p>{{ pageDescription() }}</p>
+            </div>
+            <div class="header-actions">
+                @if (campaign.currentUserRole === 'Owner') {
+                <a [routerLink]="['/campaigns', campaign.id, 'edit']" class="primary-button">Edit Campaign</a>
+                <button type="button" class="ghost-button" (click)="handleRequestDelete()">Delete Campaign</button>
+                } @else if (campaign.currentUserRole === 'Member') {
+                <button type="button" class="ghost-button" (click)="handleRequestLeave()">Leave Campaign</button>
+                }
+            </div>
+        </div>
+    </section>
+
+    <nav class="panel campaign-nav" aria-label="Campaign pages">
+        <a [routerLink]="['/campaigns', campaign.id]" class="campaign-nav-link" [class.is-active]="false">
+            <span class="campaign-nav-label">Overview</span>
+            <span class="campaign-nav-meta">{{ campaign.levelRange }}</span>
+        </a>
+        <a [routerLink]="['/campaigns', campaign.id, 'party']" class="campaign-nav-link" [class.is-active]="isActiveSection('party')">
+            <span class="campaign-nav-label">Party</span>
+            <span class="campaign-nav-meta">{{ partyMembers().length }} members</span>
+        </a>
+        <a [routerLink]="['/campaigns', campaign.id, 'sessions']" class="campaign-nav-link" [class.is-active]="isActiveSection('sessions')">
+            <span class="campaign-nav-label">Sessions</span>
+            <span class="campaign-nav-meta">{{ campaign.sessions.length }} planned</span>
+        </a>
+        <a [routerLink]="['/campaigns', campaign.id, 'npcs']" class="campaign-nav-link" [class.is-active]="isActiveSection('npcs')">
+            <span class="campaign-nav-label">NPCs</span>
+            <span class="campaign-nav-meta">{{ campaign.npcs.length }} tracked</span>
+        </a>
+        <a [routerLink]="['/campaigns', campaign.id, 'loot']" class="campaign-nav-link" [class.is-active]="isActiveSection('loot')">
+            <span class="campaign-nav-label">Loot</span>
+            <span class="campaign-nav-meta">{{ campaign.loot.length }} logged</span>
+        </a>
+        <a [routerLink]="['/campaigns', campaign.id, 'threads']" class="campaign-nav-link" [class.is-active]="isActiveSection('threads')">
+            <span class="campaign-nav-label">Threads</span>
+            <span class="campaign-nav-meta">{{ visibleThreads().length }} open</span>
+        </a>
+        <a [routerLink]="['/campaigns', campaign.id, 'members']" class="campaign-nav-link" [class.is-active]="isActiveSection('members')">
+            <span class="campaign-nav-label">Members</span>
+            <span class="campaign-nav-meta">{{ campaign.members?.length ?? 0 }} total</span>
+        </a>
+    </nav>
+
+    <section class="panel section-panel">
+        @if (sectionFeedback()) {
+        <p class="section-feedback">{{ sectionFeedback() }}</p>
+        }
+
+        @switch (section()) {
+        @case ('party') {
+        <div class="section-heading">
+            <h2>Party Members</h2>
+            <span class="count-badge">{{ partyMembers().length }}</span>
+        </div>
+
+        @if (partyMembers().length > 0) {
+        <div class="party-members-list">
+            @for (character of partyMembers(); track character.id) {
+            <a class="party-member-card" [routerLink]="['/character', character!.id]" [attr.aria-label]="'Open ' + character!.name">
+                <div class="member-info">
+                    <h3>{{ character!.name }}</h3>
+                    <p class="member-meta">{{ character!.className }} • Level {{ character!.level }} • {{ character!.status }}</p>
+                </div>
+                <span class="role-badge">{{ character!.role }}</span>
+            </a>
+            }
+        </div>
+        } @else {
+        <p class="empty-state">No party members assigned to this campaign yet.</p>
+        }
+        }
+
+        @case ('sessions') {
+        <div class="section-heading">
+            <h2>Sessions</h2>
+            <div class="threads-heading-actions">
+                <span class="count-badge">{{ campaign.sessions.length }}</span>
+                @if (campaign.currentUserRole === 'Owner') {
+                <a type="button" class="ghost-button" [routerLink]="['/campaigns', campaign.id, 'sessions', 'new']">Add Session</a>
+                }
+            </div>
+        </div>
+
+        @if (campaign.sessions.length > 0) {
+        <div class="session-cards">
+            @for (session of campaign.sessions; track session.id) {
+            <article class="session-card">
+                <div class="session-card-header">
+                    <div>
+                        <h3>{{ session.title }}</h3>
+                        <p>{{ session.date }} · {{ session.location }}</p>
+                    </div>
+                    <div class="member-pill-group">
+                        <span class="session-threat-pill">{{ session.threat }}</span>
+                        @if (campaign.currentUserRole === 'Owner') {
+                        <a type="button" class="ghost-button" [routerLink]="['/campaigns', campaign.id, 'sessions', session.id, 'edit']">Edit</a>
+                        <button type="button" class="ghost-button" (click)="deleteSession(session.id)">Delete</button>
+                        }
+                    </div>
+                </div>
+                <p class="session-objective">{{ session.objective }}</p>
+            </article>
+            }
+        </div>
+        } @else {
+        <p class="empty-state">No sessions are mapped out yet. Add the next objective and session beats here as the campaign takes shape.</p>
+        }
+        }
+
+        @case ('npcs') {
+        <app-npc-manager [campaignId]="campaign.id" [canEdit]="campaign.currentUserRole === 'Owner'" [npcNames]="campaign.npcs" [listOnly]="true"></app-npc-manager>
+        }
+
+        @case ('loot') {
+        <div class="section-heading">
+            <h2>Loot</h2>
+            <span class="count-badge">{{ campaign.loot.length }}</span>
+        </div>
+
+        @if (campaign.currentUserRole === 'Owner') {
+        <div class="inline-creator-row">
+            <input type="text" [value]="lootDraft()" (input)="updateLootDraft($any($event.target).value)" placeholder="Add a loot item or clue" />
+            <button type="button" class="primary-button" [disabled]="!lootDraft().trim()" (click)="addLoot()">Add Loot</button>
+        </div>
+        }
+
+        @if (campaign.loot.length > 0) {
+        <div class="tag-grid">
+            @for (item of campaign.loot; track item) {
+            <article class="tag-card">
+                <div class="tag-card-header">
+                    <h3>{{ item }}</h3>
+                    @if (campaign.currentUserRole === 'Owner') {
+                    <button type="button" class="ghost-button" (click)="removeLoot(item)">Remove</button>
+                    }
+                </div>
+                <p>Treasure, leverage, clues, and rewards should stay easy to scan between sessions.</p>
+            </article>
+            }
+        </div>
+        } @else {
+        <p class="empty-state">No party loot has been recorded yet.</p>
+        }
+        }
+
+        @case ('threads') {
+        <div class="section-heading">
+            <h2>Open Threads</h2>
+            <div class="threads-heading-actions">
+                <span class="count-badge">{{ visibleThreads().length }}</span>
+                @if (campaign.currentUserRole === 'Owner') {
+                <button type="button" class="ghost-button" (click)="openAddThreadModal()">Add Thread</button>
+                }
+            </div>
+        </div>
+
+        @if (visibleThreads().length > 0) {
+        <div class="threads-list">
+            @for (thread of visibleThreads(); track thread.id) {
+            <div class="thread-row">
+                <div class="thread-body">
+                    <p>{{ thread.text }}</p>
+                    <span class="thread-visibility-pill">{{ thread.visibility === 'GMOnly' ? 'GM Only' : 'Party' }}</span>
+                </div>
+
+                @if (campaign.currentUserRole === 'Owner') {
+                <div class="thread-actions">
+                    <button type="button" class="ghost-button" (click)="openEditThreadModal(thread.id, thread.text, thread.visibility)">Edit</button>
+                    <button type="button" class="ghost-button" (click)="archiveThread(thread.id)">Archive</button>
+                </div>
+                }
+            </div>
+            }
+        </div>
+        } @else {
+        <p class="empty-state">No open threads yet.</p>
+        }
+        }
+
+        @case ('members') {
+        <div class="section-heading">
+            <h2>Campaign Members</h2>
+            <span class="count-badge">{{ campaign.members?.length ?? 0 }}</span>
+        </div>
+
+        @if (campaign.currentUserRole === 'Owner') {
+        <div class="inline-creator-row">
+            <input type="email" [value]="inviteEmail()" (input)="updateInviteEmail($any($event.target).value)" placeholder="Invite player by email" />
+            <button type="button" class="primary-button" [disabled]="!inviteEmail().trim()" (click)="inviteMember()">Send Invite</button>
+        </div>
+        }
+
+        @if ((campaign.members?.length ?? 0) > 0) {
+        <div class="member-list">
+            @for (member of campaign.members ?? []; track member.email) {
+            <article class="member-card">
+                <div>
+                    <h3>{{ member.displayName }}</h3>
+                    <p>{{ member.email }}</p>
+                </div>
+                <div class="member-pill-group">
+                    <span class="member-status-pill">{{ member.role }}</span>
+                    <span class="member-status-pill subdued-pill">{{ member.status }}</span>
+                </div>
+            </article>
+            }
+        </div>
+        } @else {
+        <p class="empty-state">No campaign members are listed yet.</p>
+        }
+        }
+        }
+    </section>
+    } @else {
+    <section class="panel page-intro">
+        <p class="eyebrow">Campaign not found</p>
+        <h1>Campaign Workspace</h1>
+        <p>The campaign you're looking for could not be found.</p>
+        <a routerLink="/campaigns" class="back-link">← Back to Campaigns</a>
+    </section>
+    }
+
+    <app-confirm-modal [open]="confirmModalOpen()" [title]="confirmModalTitle()" [message]="confirmModalMessage()" [confirmText]="confirmModalActionText()" cancelText="Cancel" (confirmed)="handleConfirmAccepted()" (cancelled)="handleConfirmCancelled()"></app-confirm-modal>
+    @if (addThreadModalOpen()) {
+    <div class="add-thread-modal-backdrop" (click)="closeAddThreadModal()">
+        <section class="panel add-thread-modal" role="dialog" aria-modal="true" aria-label="Add thread" (click)="$event.stopPropagation()">
+            <header class="add-thread-modal-header">
+                <h3>{{ threadModalMode() === 'edit' ? 'Edit Thread' : 'Add Thread' }}</h3>
+                <button type="button" class="ghost-button" (click)="closeAddThreadModal()">Cancel</button>
+            </header>
+
+            <div class="add-thread-modal-body">
+                <label class="add-thread-field">
+                    <span>Thread</span>
+                    <textarea [value]="newThreadText()" (input)="updateNewThreadText($any($event.target).value)" rows="4" placeholder="Describe the unresolved thread..."></textarea>
+                </label>
+
+                <label class="add-thread-field">
+                    <span>Visibility</span>
+                    <app-dropdown ariaLabel="Thread visibility" [value]="newThreadVisibility()" [options]="threadVisibilityOptions" [optionDensity]="'dense'" [searchable]="false" [placeholder]="'Select visibility'" (changed)="updateThreadVisibility($event)"></app-dropdown>
+                </label>
+            </div>
+
+            <footer class="add-thread-modal-actions">
+                <button type="button" class="ghost-button" (click)="closeAddThreadModal()">Cancel</button>
+                <button type="button" class="primary-button" [disabled]="!newThreadText().trim()" (click)="submitThread()">{{ threadModalMode() === 'edit' ? 'Save' : 'Add' }}</button>
+            </footer>
+        </section>
+    </div>
+    }
+</main>

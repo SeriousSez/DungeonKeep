@@ -1,0 +1,587 @@
+<main class="page-stack">
+    <a [routerLink]="['/campaigns', campaignId(), 'sessions']" class="back-link">← Back to Campaign Sessions</a>
+
+    <section class="panel editor-header">
+        <div>
+            <p class="eyebrow">Session Planning</p>
+            <h1>{{ pageTitle() }}</h1>
+            <p>Build a full session brief with structured prep, live markdown notes, and local draft autosave.</p>
+        </div>
+
+        <div class="header-actions">
+            <span class="autosave-pill">{{ autosaveLabel() }}</span>
+            <button type="button" class="ghost-button" (click)="loadSampleDraft()">Load Sample</button>
+            <button type="button" class="primary-button" (click)="saveSession()">Save Session</button>
+        </div>
+    </section>
+
+    @if (currentCampaign()?.currentUserRole === 'Owner') {
+    <section class="panel creation-mode-panel" aria-label="Session drafting type">
+        <h2>Choose session drafting type</h2>
+        <div class="mode-options">
+            <button type="button" class="mode-card" [class.mode-card-active]="creationMode() === 'standard'" (click)="selectCreationMode('standard')">
+                <strong>Standard editing</strong>
+                <span>Build or refine the session manually in the full editor.</span>
+            </button>
+            <button type="button" class="mode-card" [class.mode-card-active]="creationMode() === 'ai'" (click)="selectCreationMode('ai')">
+                <strong>AI generation</strong>
+                <span>Set direction first, then generate a full session draft into the editor.</span>
+            </button>
+        </div>
+    </section>
+    }
+
+    @if (saveMessage()) {
+    <section class="panel status-panel success-panel">
+        <p>{{ saveMessage() }}</p>
+    </section>
+    }
+
+    @if (saveError()) {
+    <section class="panel status-panel error-panel">
+        <p>{{ saveError() }}</p>
+    </section>
+    }
+
+    @if (generationError()) {
+    <section class="panel status-panel error-panel">
+        <p>{{ generationError() }}</p>
+    </section>
+    }
+
+    @if (creationMode() === 'ai' && currentCampaign()?.currentUserRole === 'Owner') {
+    <section class="panel generation-panel">
+        <div class="generation-panel-header">
+            <div>
+                <p class="eyebrow">Generation Prompt</p>
+                <h2>Tell the model what kind of session you want</h2>
+                <p>These hints steer the generated draft without changing the saved session until you review it.</p>
+            </div>
+        </div>
+
+        <div class="section-grid two-up">
+            <label class="field">
+                <span>Title Hint</span>
+                <input type="text" [value]="generationHints().titleHint" (input)="updateGenerationTitleHint($any($event.target).value)" placeholder="The Stolen Bell, Dockside Ambush, etc." />
+            </label>
+
+            <label class="field">
+                <span>Location Hint</span>
+                <input type="text" [value]="generationHints().locationHint" (input)="updateGenerationLocationHint($any($event.target).value)" placeholder="Ruined abbey, city sewers, haunted coast" />
+            </label>
+
+            <label class="field">
+                <span>Pacing Hint</span>
+                <input type="text" [value]="generationHints().estimatedLengthHint" (input)="updateGenerationEstimatedLengthHint($any($event.target).value)" placeholder="One social scene and one hard combat" />
+            </label>
+
+            <label class="field">
+                <span>Objective Hint</span>
+                <textarea rows="3" [value]="generationHints().shortDescriptionHint" (input)="updateGenerationShortDescriptionHint($any($event.target).value)" placeholder="Recover the relic before the rival crew escapes."></textarea>
+            </label>
+
+            <label class="field full-span">
+                <span>Extra Direction</span>
+                <textarea rows="4" [value]="generationHints().markdownNotesHint" (input)="updateGenerationNotesHint($any($event.target).value)" placeholder="Include a suspicious ally, a morally bad choice, and clues that point to the lighthouse cult."></textarea>
+            </label>
+        </div>
+
+        <div class="generation-actions-row">
+            <button type="button" class="ghost-button" (click)="selectCreationMode('standard')">Back to editor</button>
+            <button type="button" class="primary-button" [class.is-loading]="generationInProgress()" [disabled]="generationInProgress()" (click)="generateSessionDraft()">{{ generationInProgress() ? 'Generating...' : 'Generate session draft' }}</button>
+        </div>
+    </section>
+    }
+
+    @if (creationMode() === 'standard') {
+    <form class="editor-layout" [formGroup]="editorForm" (submit)="$event.preventDefault(); saveSession()">
+        <section class="editor-column structured-column">
+            <details class="editor-section" open>
+                <summary>
+                    <div>
+                        <p class="eyebrow">Main Fields</p>
+                        <h2>Session Overview</h2>
+                    </div>
+                </summary>
+
+                <div class="section-body section-grid two-up">
+                    <label class="field full-span">
+                        <span>Title</span>
+                        <input type="text" formControlName="title" placeholder="Session title" />
+                        @if (titleControl.invalid && (titleControl.touched || submitAttempted())) {
+                        <small class="field-error">Title is required.</small>
+                        }
+                    </label>
+
+                    <label class="field full-span">
+                        <span>Short Description</span>
+                        <textarea formControlName="shortDescription" rows="3" placeholder="Quick summary of the session arc"></textarea>
+                    </label>
+
+                    <label class="field">
+                        <span>Session Number</span>
+                        <input type="number" min="1" formControlName="sessionNumber" />
+                    </label>
+
+                    <label class="field">
+                        <span>Campaign Id</span>
+                        <input type="text" formControlName="campaignId" readonly />
+                    </label>
+
+                    <label class="field">
+                        <span>Date</span>
+                        <input type="date" formControlName="date" />
+                    </label>
+
+                    <label class="field">
+                        <span>In-Game Location</span>
+                        <input type="text" formControlName="inGameLocation" placeholder="Where the session is centered" />
+                    </label>
+
+                    <label class="field full-span">
+                        <span>Estimated Length</span>
+                        <input type="text" formControlName="estimatedLength" placeholder="3 hours, one long combat, etc." />
+                    </label>
+                </div>
+            </details>
+
+            <details class="editor-section" open>
+                <summary>
+                    <div>
+                        <p class="eyebrow">Scenes</p>
+                        <h2>Scene Outline</h2>
+                    </div>
+                    <button type="button" class="ghost-button summary-action" (click)="$event.preventDefault(); addScene()">Add Scene</button>
+                </summary>
+
+                <div class="section-body">
+                    @if (scenesArray.length === 0) {
+                    <p class="empty-state">No scenes yet. Add a scene to define pacing, triggers, and outcomes.</p>
+                    } @else {
+                    <div class="scene-list" formArrayName="scenes">
+                        @for (scene of scenesArray.controls; track scene.controls.id.value; let sceneIndex = $index) {
+                        <article class="scene-card" [formGroupName]="sceneIndex">
+                            <header class="scene-card-header">
+                                <div>
+                                    <p class="scene-index">Scene {{ sceneIndex + 1 }}</p>
+                                    <h3>{{ scene.controls.title.value || 'Untitled Scene' }}</h3>
+                                </div>
+                                <div class="scene-actions">
+                                    <button type="button" class="ghost-button" [disabled]="sceneIndex === 0" (click)="moveSceneUp(sceneIndex)">Up</button>
+                                    <button type="button" class="ghost-button" [disabled]="sceneIndex === scenesArray.length - 1" (click)="moveSceneDown(sceneIndex)">Down</button>
+                                    <button type="button" class="ghost-button" (click)="requestDelete('scenes', sceneIndex, scene.controls.title.value || 'this scene')">Delete</button>
+                                </div>
+                            </header>
+
+                            <div class="section-grid two-up compact-grid">
+                                <label class="field full-span">
+                                    <span>Title</span>
+                                    <input type="text" formControlName="title" placeholder="Scene title" />
+                                    @if (scene.controls.title.invalid && (scene.controls.title.touched || submitAttempted())) {
+                                    <small class="field-error">Scene title is required.</small>
+                                    }
+                                </label>
+
+                                <label class="field full-span">
+                                    <span>Description</span>
+                                    <textarea formControlName="description" rows="3" placeholder="What is happening in this scene?"></textarea>
+                                </label>
+
+                                <label class="field full-span">
+                                    <span>Trigger</span>
+                                    <input type="text" formControlName="trigger" placeholder="What starts the scene?" />
+                                </label>
+                            </div>
+
+                            <div class="nested-list-row">
+                                <div class="nested-list-block">
+                                    <div class="nested-list-header">
+                                        <h4>Key Events</h4>
+                                        <button type="button" class="ghost-button" (click)="addSceneKeyEvent(sceneIndex)">Add Event</button>
+                                    </div>
+                                    @if (scene.controls.keyEvents.length === 0) {
+                                    <p class="empty-state small-empty">No key events yet.</p>
+                                    } @else {
+                                    <div formArrayName="keyEvents" class="stack-list">
+                                        @for (entry of scene.controls.keyEvents.controls; track $index; let keyEventIndex = $index) {
+                                        <div class="inline-input-row">
+                                            <input type="text" [formControlName]="keyEventIndex" placeholder="Important beat" />
+                                            <button type="button" class="ghost-button" (click)="removeSceneKeyEvent(sceneIndex, keyEventIndex)">Remove</button>
+                                        </div>
+                                        }
+                                    </div>
+                                    }
+                                </div>
+
+                                <div class="nested-list-block">
+                                    <div class="nested-list-header">
+                                        <h4>Possible Outcomes</h4>
+                                        <button type="button" class="ghost-button" (click)="addSceneOutcome(sceneIndex)">Add Outcome</button>
+                                    </div>
+                                    @if (scene.controls.possibleOutcomes.length === 0) {
+                                    <p class="empty-state small-empty">No possible outcomes yet.</p>
+                                    } @else {
+                                    <div formArrayName="possibleOutcomes" class="stack-list">
+                                        @for (entry of scene.controls.possibleOutcomes.controls; track $index; let outcomeIndex = $index) {
+                                        <div class="inline-input-row">
+                                            <input type="text" [formControlName]="outcomeIndex" placeholder="Possible result" />
+                                            <button type="button" class="ghost-button" (click)="removeSceneOutcome(sceneIndex, outcomeIndex)">Remove</button>
+                                        </div>
+                                        }
+                                    </div>
+                                    }
+                                </div>
+                            </div>
+                        </article>
+                        }
+                    </div>
+                    }
+                </div>
+            </details>
+
+            <details class="editor-section" open>
+                <summary>
+                    <div>
+                        <p class="eyebrow">NPCs</p>
+                        <h2>NPC Table</h2>
+                    </div>
+                    <button type="button" class="ghost-button summary-action" (click)="$event.preventDefault(); addNpc()">Add NPC</button>
+                </summary>
+
+                <div class="section-body">
+                    @if (npcsArray.length === 0) {
+                    <p class="empty-state">No NPCs added yet.</p>
+                    } @else {
+                    <div class="table-shell">
+                        <table class="editor-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Role</th>
+                                    <th>Personality</th>
+                                    <th>Motivation</th>
+                                    <th>Voice Notes</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody formArrayName="npcs">
+                                @for (npc of npcsArray.controls; track npc.controls.id.value; let npcIndex = $index) {
+                                <tr [formGroupName]="npcIndex">
+                                    <td>
+                                        <input type="text" formControlName="name" placeholder="Name" />
+                                        @if (npc.controls.name.invalid && (npc.controls.name.touched || submitAttempted())) {
+                                        <small class="field-error">Required</small>
+                                        }
+                                    </td>
+                                    <td><input type="text" formControlName="role" placeholder="Role" /></td>
+                                    <td><input type="text" formControlName="personality" placeholder="Personality" /></td>
+                                    <td><input type="text" formControlName="motivation" placeholder="Motivation" /></td>
+                                    <td><input type="text" formControlName="voiceNotes" placeholder="Voice cues" /></td>
+                                    <td><button type="button" class="ghost-button" (click)="requestDelete('npcs', npcIndex, npc.controls.name.value || 'this NPC')">Remove</button></td>
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    }
+                </div>
+            </details>
+
+            <details class="editor-section" open>
+                <summary>
+                    <div>
+                        <p class="eyebrow">Monsters</p>
+                        <h2>Monster Table</h2>
+                    </div>
+                    <button type="button" class="ghost-button summary-action" (click)="$event.preventDefault(); addMonster()">Add Monster</button>
+                </summary>
+
+                <div class="section-body">
+                    @if (monstersArray.length === 0) {
+                    <p class="empty-state">No monsters added yet.</p>
+                    } @else {
+                    <div class="table-shell">
+                        <table class="editor-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>CR</th>
+                                    <th>HP</th>
+                                    <th>Key Abilities</th>
+                                    <th>Notes</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody formArrayName="monsters">
+                                @for (monster of monstersArray.controls; track monster.controls.id.value; let monsterIndex = $index) {
+                                <tr [formGroupName]="monsterIndex">
+                                    <td>
+                                        <input type="text" formControlName="name" placeholder="Name" />
+                                        @if (monster.controls.name.invalid && (monster.controls.name.touched || submitAttempted())) {
+                                        <small class="field-error">Required</small>
+                                        }
+                                    </td>
+                                    <td><input type="text" formControlName="type" placeholder="Type" /></td>
+                                    <td><input type="text" formControlName="challengeRating" placeholder="CR 3" /></td>
+                                    <td><input type="number" min="0" formControlName="hp" /></td>
+                                    <td><input type="text" formControlName="keyAbilities" placeholder="Special abilities" /></td>
+                                    <td><input type="text" formControlName="notes" placeholder="Notes" /></td>
+                                    <td><button type="button" class="ghost-button" (click)="requestDelete('monsters', monsterIndex, monster.controls.name.value || 'this monster')">Remove</button></td>
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    }
+                </div>
+            </details>
+
+            <details class="editor-section" open>
+                <summary>
+                    <div>
+                        <p class="eyebrow">Locations</p>
+                        <h2>Location Table</h2>
+                    </div>
+                    <button type="button" class="ghost-button summary-action" (click)="$event.preventDefault(); addLocation()">Add Location</button>
+                </summary>
+
+                <div class="section-body">
+                    @if (locationsArray.length === 0) {
+                    <p class="empty-state">No locations added yet.</p>
+                    } @else {
+                    <div class="table-shell">
+                        <table class="editor-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Description</th>
+                                    <th>Secrets</th>
+                                    <th>Encounters</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody formArrayName="locations">
+                                @for (location of locationsArray.controls; track location.controls.id.value; let locationIndex = $index) {
+                                <tr [formGroupName]="locationIndex">
+                                    <td>
+                                        <input type="text" formControlName="name" placeholder="Name" />
+                                        @if (location.controls.name.invalid && (location.controls.name.touched || submitAttempted())) {
+                                        <small class="field-error">Required</small>
+                                        }
+                                    </td>
+                                    <td><input type="text" formControlName="description" placeholder="Description" /></td>
+                                    <td><input type="text" formControlName="secrets" placeholder="Secrets" /></td>
+                                    <td><input type="text" formControlName="encounters" placeholder="Encounters" /></td>
+                                    <td><button type="button" class="ghost-button" (click)="requestDelete('locations', locationIndex, location.controls.name.value || 'this location')">Remove</button></td>
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    }
+                </div>
+            </details>
+
+            <details class="editor-section" open>
+                <summary>
+                    <div>
+                        <p class="eyebrow">Loot</p>
+                        <h2>Loot Table</h2>
+                    </div>
+                    <button type="button" class="ghost-button summary-action" (click)="$event.preventDefault(); addLoot()">Add Loot</button>
+                </summary>
+
+                <div class="section-body">
+                    @if (lootArray.length === 0) {
+                    <p class="empty-state">No loot added yet.</p>
+                    } @else {
+                    <div class="table-shell">
+                        <table class="editor-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Quantity</th>
+                                    <th>Notes</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody formArrayName="loot">
+                                @for (lootItem of lootArray.controls; track lootItem.controls.id.value; let lootIndex = $index) {
+                                <tr [formGroupName]="lootIndex">
+                                    <td>
+                                        <input type="text" formControlName="name" placeholder="Name" />
+                                        @if (lootItem.controls.name.invalid && (lootItem.controls.name.touched || submitAttempted())) {
+                                        <small class="field-error">Required</small>
+                                        }
+                                    </td>
+                                    <td><input type="text" formControlName="type" placeholder="Type" /></td>
+                                    <td><input type="number" min="1" formControlName="quantity" /></td>
+                                    <td><input type="text" formControlName="notes" placeholder="Notes" /></td>
+                                    <td><button type="button" class="ghost-button" (click)="requestDelete('loot', lootIndex, lootItem.controls.name.value || 'this loot item')">Remove</button></td>
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    }
+                </div>
+            </details>
+
+            <details class="editor-section" open>
+                <summary>
+                    <div>
+                        <p class="eyebrow">Skill Checks</p>
+                        <h2>Skill Check Table</h2>
+                    </div>
+                    <button type="button" class="ghost-button summary-action" (click)="$event.preventDefault(); addSkillCheck()">Add Skill Check</button>
+                </summary>
+
+                <div class="section-body">
+                    @if (skillChecksArray.length === 0) {
+                    <p class="empty-state">No skill checks added yet.</p>
+                    } @else {
+                    <div class="table-shell">
+                        <table class="editor-table">
+                            <thead>
+                                <tr>
+                                    <th>Situation</th>
+                                    <th>Skill</th>
+                                    <th>DC</th>
+                                    <th>Success Outcome</th>
+                                    <th>Failure Outcome</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody formArrayName="skillChecks">
+                                @for (skillCheck of skillChecksArray.controls; track skillCheck.controls.id.value; let skillIndex = $index) {
+                                <tr [formGroupName]="skillIndex">
+                                    <td>
+                                        <input type="text" formControlName="situation" placeholder="Situation" />
+                                        @if (skillCheck.controls.situation.invalid && (skillCheck.controls.situation.touched || submitAttempted())) {
+                                        <small class="field-error">Required</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        <app-dropdown ariaLabel="Skill selection" [value]="skillCheck.controls.skill.value" [options]="skillOptions" [searchable]="true" [placeholder]="'Select skill'" (changed)="updateSkillControl(skillCheck.controls.skill, $event)"></app-dropdown>
+                                    </td>
+                                    <td><input type="number" min="1" formControlName="dc" /></td>
+                                    <td><input type="text" formControlName="successOutcome" placeholder="Success result" /></td>
+                                    <td><input type="text" formControlName="failureOutcome" placeholder="Failure result" /></td>
+                                    <td><button type="button" class="ghost-button" (click)="requestDelete('skillChecks', skillIndex, skillCheck.controls.situation.value || 'this skill check')">Remove</button></td>
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    }
+                </div>
+            </details>
+
+            <details class="editor-section" open>
+                <summary>
+                    <div>
+                        <p class="eyebrow">Story Threads</p>
+                        <h2>Secrets, Paths, and Hooks</h2>
+                    </div>
+                </summary>
+
+                <div class="section-body stack-grid">
+                    <section class="mini-section">
+                        <div class="mini-section-header">
+                            <h3>Secrets</h3>
+                            <button type="button" class="ghost-button" (click)="addSecret()">Add Secret</button>
+                        </div>
+                        @if (secretsArray.length === 0) {
+                        <p class="empty-state small-empty">No secrets added yet.</p>
+                        } @else {
+                        <div class="stack-list" formArrayName="secrets">
+                            @for (entry of secretsArray.controls; track entry.controls.id.value; let entryIndex = $index) {
+                            <div class="inline-input-row" [formGroupName]="entryIndex">
+                                <input type="text" formControlName="text" placeholder="Hidden truth or reveal" />
+                                <button type="button" class="ghost-button" (click)="requestDelete('secrets', entryIndex, entry.controls.text.value || 'this secret')">Remove</button>
+                            </div>
+                            }
+                        </div>
+                        }
+                    </section>
+
+                    <section class="mini-section">
+                        <div class="mini-section-header">
+                            <h3>Branching Paths</h3>
+                            <button type="button" class="ghost-button" (click)="addBranchingPath()">Add Path</button>
+                        </div>
+                        @if (branchingPathsArray.length === 0) {
+                        <p class="empty-state small-empty">No branching paths added yet.</p>
+                        } @else {
+                        <div class="stack-list" formArrayName="branchingPaths">
+                            @for (entry of branchingPathsArray.controls; track entry.controls.id.value; let entryIndex = $index) {
+                            <div class="inline-input-row" [formGroupName]="entryIndex">
+                                <input type="text" formControlName="text" placeholder="Decision branch or alternate route" />
+                                <button type="button" class="ghost-button" (click)="requestDelete('branchingPaths', entryIndex, entry.controls.text.value || 'this branching path')">Remove</button>
+                            </div>
+                            }
+                        </div>
+                        }
+                    </section>
+
+                    <section class="mini-section">
+                        <div class="mini-section-header">
+                            <h3>Next Session Hooks</h3>
+                            <button type="button" class="ghost-button" (click)="addNextSessionHook()">Add Hook</button>
+                        </div>
+                        @if (nextSessionHooksArray.length === 0) {
+                        <p class="empty-state small-empty">No next-session hooks added yet.</p>
+                        } @else {
+                        <div class="stack-list" formArrayName="nextSessionHooks">
+                            @for (entry of nextSessionHooksArray.controls; track entry.controls.id.value; let entryIndex = $index) {
+                            <div class="inline-input-row" [formGroupName]="entryIndex">
+                                <input type="text" formControlName="text" placeholder="Hook for the next session" />
+                                <button type="button" class="ghost-button" (click)="requestDelete('nextSessionHooks', entryIndex, entry.controls.text.value || 'this hook')">Remove</button>
+                            </div>
+                            }
+                        </div>
+                        }
+                    </section>
+                </div>
+            </details>
+        </section>
+
+        <aside class="editor-column notes-column">
+            <section class="panel notes-panel">
+                <div class="notes-panel-header">
+                    <div>
+                        <p class="eyebrow">Markdown Notes</p>
+                        <h2>Notes & Live Preview</h2>
+                    </div>
+                </div>
+
+                <div class="markdown-guide">
+                    <span># Headings</span>
+                    <span>- Bullet lists</span>
+                    <span>> Blockquotes</span>
+                    <span>| Tables |</span>
+                    <span>- [ ] Checklists</span>
+                </div>
+
+                <div class="markdown-layout">
+                    <label class="field notes-field">
+                        <span>Markdown Notes</span>
+                        <textarea formControlName="markdownNotes" rows="20" placeholder="# Scene goals&#10;&#10;- Prep beats&#10;- Danger signs&#10;- Reward ideas"></textarea>
+                    </label>
+
+                    <section class="preview-panel">
+                        <div class="preview-panel-header">
+                            <h3>Live Preview</h3>
+                        </div>
+                        <div class="markdown-preview" [innerHTML]="markdownPreview()"></div>
+                    </section>
+                </div>
+            </section>
+        </aside>
+    </form>
+    }
+
+    <app-confirm-modal [open]="deleteModalOpen()" title="Delete Item?" [message]="deleteModalMessage()" confirmText="Delete" cancelText="Cancel" (confirmed)="confirmDelete()" (cancelled)="cancelDelete()"></app-confirm-modal>
+</main>

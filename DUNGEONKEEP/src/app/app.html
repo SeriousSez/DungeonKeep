@@ -35,6 +35,10 @@
                     </a>
                     <div class="nav-dropdown-rule"></div>
                     <p class="nav-dropdown-section">Prepare</p>
+                    <a routerLink="/npcs" routerLinkActive="is-active" (click)="closeDropdown(); closeMobileNav()">
+                        <i class="fa-duotone fa-thin fa-user-helmet-safety"></i>
+                        NPC Library
+                    </a>
                     <a routerLink="/sessions" routerLinkActive="is-active" (click)="closeDropdown(); closeMobileNav()">
                         <i class="fa-duotone fa-thin fa-book-open-cover"></i>
                         Session Prep
@@ -105,6 +109,10 @@
                     </div>
                 </div>
             </div>
+
+            <a class="nav-direct" routerLink="/npcs" routerLinkActive="is-active" (click)="closeMobileNav(); closeDropdown()">
+                NPC Library
+            </a>
 
             <a class="nav-direct" routerLink="/sessions" routerLinkActive="is-active" (click)="closeMobileNav(); closeDropdown()">
                 Session Prep

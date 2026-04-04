@@ -1,0 +1,37 @@
+<main class="page-stack">
+    @if (isLibraryMode()) {
+    <a routerLink="/npcs" class="back-link">← Back to NPC Library</a>
+    } @else {
+    <a [routerLink]="['/campaigns', campaignId(), 'npcs']" class="back-link">← Back to Campaign NPCs</a>
+    }
+
+    <section class="panel page-intro">
+        <div>
+            <p class="eyebrow">{{ pageEyebrow() }}</p>
+            <h1>{{ pageTitle() }}</h1>
+            <p>{{ pageSummary() }}</p>
+        </div>
+    </section>
+
+    @if (saveMessage()) {
+    <section class="panel status-panel success-panel">
+        <p>{{ saveMessage() }}</p>
+    </section>
+    }
+
+    @if (saveError()) {
+    <section class="panel status-panel error-panel">
+        <p>{{ saveError() }}</p>
+    </section>
+    }
+
+    @if (editorNpc(); as npc) {
+    <app-npc-editor [npc]="npc" [canEdit]="canEdit()" [nameConflict]="nameConflict()" [autosaveLabel]="autosaveLabel()" [relationshipTargets]="relationshipTargetOptions()" [generationBusy]="generationBusy()" [generationError]="generationError()" [showDuplicateAction]="false"
+        [showDeleteAction]="false" [showSaveToLibraryAction]="!isLibraryMode()" (draftChanged)="handleDraftChanged($event)" (saveNpc)="saveNpc($event)" (generateNpc)="generateNpc($event)" (saveToLibrary)="saveNpcToLibrary()"></app-npc-editor>
+    } @else {
+    <section class="panel empty-panel">
+        <h2>NPC draft unavailable</h2>
+        <p>{{ isLibraryMode() ? 'Open the NPC library and choose another record, or create a fresh draft.' : 'Open the campaign NPC list and choose another record, or create a fresh draft.' }}</p>
+    </section>
+    }
+</main>

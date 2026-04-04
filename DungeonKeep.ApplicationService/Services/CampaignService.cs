@@ -16,6 +16,9 @@ public sealed class CampaignService(
     [
         new(Guid.NewGuid(), "Define the inciting incident for the first session.", "Party")
     ];
+    private static readonly CampaignSessionDto[] DefaultSessions = [];
+    private static readonly string[] DefaultNpcs = [];
+    private static readonly string[] DefaultLoot = [];
 
     public async Task<IReadOnlyList<CampaignDto>> GetAllAsync(Guid userId, CancellationToken cancellationToken = default)
     {
@@ -41,6 +44,9 @@ public sealed class CampaignService(
             Hook = request.Hook.Trim(),
             NextSession = request.NextSession.Trim(),
             Summary = request.Summary.Trim(),
+            SessionsJson = SerializeSessions(DefaultSessions),
+            NpcsJson = SerializeNamedItems(DefaultNpcs),
+            LootJson = SerializeNamedItems(DefaultLoot),
             OpenThreadsJson = SerializeThreads(DefaultOpenThreads),
             CreatedAtUtc = DateTime.UtcNow,
             Memberships =
@@ -96,6 +102,98 @@ public sealed class CampaignService(
             cancellationToken
         );
 
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
+    public async Task<CampaignDto?> AddSessionAsync(Guid campaignId, CreateCampaignSessionRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
+        if (campaign is null || string.IsNullOrWhiteSpace(request.Title))
+        {
+            return null;
+        }
+
+        var updated = await campaignRepository.AddSessionAsync(
+            campaignId,
+            new CampaignSessionDto(Guid.NewGuid(), request.Title.Trim(), request.Date.Trim(), request.Location.Trim(), request.Objective.Trim(), NormalizeThreat(request.Threat)),
+            cancellationToken);
+
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
+    public async Task<CampaignDto?> UpdateSessionAsync(Guid campaignId, Guid sessionId, UpdateCampaignSessionRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
+        if (campaign is null || sessionId == Guid.Empty || string.IsNullOrWhiteSpace(request.Title))
+        {
+            return null;
+        }
+
+        var updated = await campaignRepository.UpdateSessionAsync(
+            campaignId,
+            new CampaignSessionDto(sessionId, request.Title.Trim(), request.Date.Trim(), request.Location.Trim(), request.Objective.Trim(), NormalizeThreat(request.Threat)),
+            cancellationToken);
+
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
+    public async Task<CampaignDto?> RemoveSessionAsync(Guid campaignId, Guid sessionId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
+        if (campaign is null || sessionId == Guid.Empty)
+        {
+            return null;
+        }
+
+        var updated = await campaignRepository.RemoveSessionAsync(campaignId, sessionId, cancellationToken);
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
+    public async Task<CampaignDto?> AddNpcAsync(Guid campaignId, CreateCampaignNpcRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
+        if (campaign is null || string.IsNullOrWhiteSpace(request.Name))
+        {
+            return null;
+        }
+
+        var updated = await campaignRepository.AddNpcAsync(campaignId, request.Name.Trim(), cancellationToken);
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
+    public async Task<CampaignDto?> RemoveNpcAsync(Guid campaignId, RemoveCampaignNpcRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
+        if (campaign is null || string.IsNullOrWhiteSpace(request.Name))
+        {
+            return null;
+        }
+
+        var updated = await campaignRepository.RemoveNpcAsync(campaignId, request.Name.Trim(), cancellationToken);
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
+    public async Task<CampaignDto?> AddLootAsync(Guid campaignId, CreateCampaignLootRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
+        if (campaign is null || string.IsNullOrWhiteSpace(request.Name))
+        {
+            return null;
+        }
+
+        var updated = await campaignRepository.AddLootAsync(campaignId, request.Name.Trim(), cancellationToken);
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
+    public async Task<CampaignDto?> RemoveLootAsync(Guid campaignId, RemoveCampaignLootRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
+        if (campaign is null || string.IsNullOrWhiteSpace(request.Name))
+        {
+            return null;
+        }
+
+        var updated = await campaignRepository.RemoveLootAsync(campaignId, request.Name.Trim(), cancellationToken);
         return updated is null ? null : MapCampaign(updated, userId);
     }
 
@@ -293,6 +391,23 @@ public sealed class CampaignService(
         await campaignRepository.DeleteAsync(campaignId, cancellationToken);
     }
 
+    private async Task<Campaign?> RequireOwnerCampaignAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken)
+    {
+        var campaign = await campaignRepository.GetByIdAsync(campaignId, cancellationToken);
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var membership = campaign.Memberships.FirstOrDefault(member => member.UserId == userId && member.Status == "Active");
+        if (membership is null || membership.Role != "Owner")
+        {
+            throw new UnauthorizedAccessException("Only campaign owners can manage campaign content.");
+        }
+
+        return campaign;
+    }
+
     private static CampaignDto MapCampaign(Campaign campaign, Guid userId)
     {
         var currentUserRole = campaign.Memberships
@@ -311,6 +426,9 @@ public sealed class CampaignService(
             campaign.Summary,
             campaign.CreatedAtUtc,
             campaign.Characters.Count,
+            ParseSessions(campaign.SessionsJson),
+            ParseNamedItems(campaign.NpcsJson),
+            ParseNamedItems(campaign.LootJson),
             ParseOpenThreads(campaign.OpenThreadsJson),
             currentUserRole,
             campaign.Memberships
@@ -326,6 +444,58 @@ public sealed class CampaignService(
                 ))
                 .ToList()
         );
+    }
+
+    private static IReadOnlyList<CampaignSessionDto> ParseSessions(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return DefaultSessions;
+        }
+
+        try
+        {
+            var sessions = JsonSerializer.Deserialize<List<CampaignSessionDto>>(json);
+            if (sessions is { Count: > 0 })
+            {
+                return sessions
+                    .Where(session => !string.IsNullOrWhiteSpace(session.Title))
+                    .Select(session => new CampaignSessionDto(
+                        session.Id == Guid.Empty ? Guid.NewGuid() : session.Id,
+                        session.Title.Trim(),
+                        session.Date.Trim(),
+                        session.Location.Trim(),
+                        session.Objective.Trim(),
+                        NormalizeThreat(session.Threat)))
+                    .ToList();
+            }
+        }
+        catch
+        {
+        }
+
+        return DefaultSessions;
+    }
+
+    private static IReadOnlyList<string> ParseNamedItems(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return [];
+        }
+
+        try
+        {
+            return (JsonSerializer.Deserialize<List<string>>(json) ?? [])
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Select(item => item.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        catch
+        {
+            return [];
+        }
     }
 
     private static IReadOnlyList<CampaignThreadDto> ParseOpenThreads(string json)
@@ -367,6 +537,37 @@ public sealed class CampaignService(
             thread.Id == Guid.Empty ? Guid.NewGuid() : thread.Id,
             thread.Text.Trim(),
             NormalizeVisibility(thread.Visibility))));
+    }
+
+    private static string SerializeSessions(IEnumerable<CampaignSessionDto> sessions)
+    {
+        return JsonSerializer.Serialize(sessions.Select(session => new CampaignSessionDto(
+            session.Id == Guid.Empty ? Guid.NewGuid() : session.Id,
+            session.Title.Trim(),
+            session.Date.Trim(),
+            session.Location.Trim(),
+            session.Objective.Trim(),
+            NormalizeThreat(session.Threat))));
+    }
+
+    private static string SerializeNamedItems(IEnumerable<string> items)
+    {
+        return JsonSerializer.Serialize(items
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase));
+    }
+
+    private static string NormalizeThreat(string? threat)
+    {
+        return threat?.Trim() switch
+        {
+            "Low" => "Low",
+            "Moderate" => "Moderate",
+            "High" => "High",
+            "Deadly" => "Deadly",
+            _ => "Moderate"
+        };
     }
 
     private static string NormalizeVisibility(string? visibility)
