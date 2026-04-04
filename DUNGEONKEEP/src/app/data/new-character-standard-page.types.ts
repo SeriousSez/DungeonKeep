@@ -69,7 +69,12 @@ export interface EquipmentItem {
     sourceUrl: string;
     weight?: number;
     costGp?: number;
+    sourceLabel?: string;
+    summary?: string;
     notes?: string;
+    detailLines?: string[];
+    rarity?: string;
+    attunement?: string;
 }
 
 export interface InventoryEntry {
@@ -79,7 +84,12 @@ export interface InventoryEntry {
     sourceUrl?: string;
     weight?: number;
     costGp?: number;
+    sourceLabel?: string;
+    summary?: string;
     notes?: string;
+    detailLines?: string[];
+    rarity?: string;
+    attunement?: string;
     isContainer?: boolean;
     containedItems?: InventoryEntry[];
     maxCapacity?: number;

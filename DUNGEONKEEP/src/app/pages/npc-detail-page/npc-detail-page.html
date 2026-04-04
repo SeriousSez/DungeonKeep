@@ -1,0 +1,316 @@
+<main class="page-stack">
+    <a [routerLink]="backLink()" [queryParams]="backQueryParams()" class="back-link">{{ backLabel() }}</a>
+
+    @if (npc(); as npc) {
+    <section class="panel detail-hero">
+        <div class="detail-hero-copy">
+            <p class="eyebrow">{{ pageEyebrow() }}</p>
+            <div class="detail-title-row">
+                <div class="npc-sigil" aria-hidden="true">{{ npc.name.charAt(0) || '?' }}</div>
+                <div>
+                    <h1>{{ npc.name }}</h1>
+                    <p class="detail-summary">{{ pageSummary() }}</p>
+                </div>
+            </div>
+            @if (npc.shortDescription) {
+            <p class="detail-description">{{ npc.shortDescription }}</p>
+            }
+        </div>
+
+        <div class="detail-hero-actions">
+            <div class="status-chip-row">
+                @if (npc.isImportant) {
+                <span class="badge important-badge">Important</span>
+                }
+                @if (npc.isHostile) {
+                <span class="badge hostile-badge">Hostile</span>
+                } @else {
+                <span class="badge friendly-badge">Friendly</span>
+                }
+                @if (!npc.isAlive) {
+                <span class="badge dead-badge">Dead</span>
+                }
+            </div>
+
+            <div class="detail-action-group">
+                @if (canImportToCampaign()) {
+                <button type="button" class="ghost-button" [disabled]="importBusy()" (click)="importNpcToCampaign()">{{ importBusy() ? 'Importing...' : importActionLabel() }}</button>
+                }
+
+                @if (canEdit()) {
+                <a class="primary-button" [routerLink]="editLink()" [queryParams]="editQueryParams()">Edit NPC</a>
+                }
+            </div>
+        </div>
+    </section>
+
+    @if (isLibraryMode() && ownerCampaigns().length > 0) {
+    <section class="panel import-panel">
+        <div class="import-panel-header">
+            <div>
+                <p class="eyebrow">Campaign Import</p>
+                <h2>Add This NPC to Campaigns</h2>
+                <p>Select one or more campaigns you own, then import this library NPC into each of them.</p>
+            </div>
+            <button type="button" class="ghost-button" [disabled]="importBusy() || !canImportToCampaign()" (click)="importNpcToCampaign()">{{ importBusy() ? 'Importing...' : importActionLabel() }}</button>
+        </div>
+
+        <label class="import-field">
+            <span>Campaigns</span>
+            <app-multi-select-dropdown [groups]="importCampaignGroups()" [value]="selectedImportCampaignIds()" placeholder="Select campaigns" (changed)="updateSelectedImportCampaigns($event)"></app-multi-select-dropdown>
+        </label>
+    </section>
+    }
+
+    @if (importMessage()) {
+    <section class="panel status-panel success-panel">
+        <p>{{ importMessage() }}</p>
+    </section>
+    }
+
+    @if (importError()) {
+    <section class="panel status-panel error-panel">
+        <p>{{ importError() }}</p>
+    </section>
+    }
+
+    <div class="detail-grid">
+        <section class="panel">
+            <h2>Overview</h2>
+            <div class="fact-grid">
+                @for (fact of overviewFacts(); track fact.label) {
+                <div class="fact-card">
+                    <span class="fact-label">{{ fact.label }}</span>
+                    <strong class="fact-value">{{ fact.value }}</strong>
+                </div>
+                }
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>Appearance & Voice</h2>
+            <div class="copy-stack">
+                <div>
+                    <h3>Appearance</h3>
+                    <p>{{ npc.appearance || 'No appearance notes recorded yet.' }}</p>
+                </div>
+                <div>
+                    <h3>Voice Notes</h3>
+                    <p>{{ npc.voiceNotes || 'No voice notes recorded yet.' }}</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>Personality</h2>
+            <div class="tag-section">
+                <h3>Traits</h3>
+                @if (npc.personalityTraits.length > 0) {
+                <ul class="detail-list">
+                    @for (item of npc.personalityTraits; track item) {
+                    <li>{{ item }}</li>
+                    }
+                </ul>
+                } @else {
+                <p>No personality traits recorded yet.</p>
+                }
+            </div>
+
+            <div class="tag-section">
+                <h3>Ideals</h3>
+                @if (npc.ideals.length > 0) {
+                <ul class="detail-list">
+                    @for (item of npc.ideals; track item) {
+                    <li>{{ item }}</li>
+                    }
+                </ul>
+                } @else {
+                <p>No ideals recorded yet.</p>
+                }
+            </div>
+
+            <div class="tag-section">
+                <h3>Bonds</h3>
+                @if (npc.bonds.length > 0) {
+                <ul class="detail-list">
+                    @for (item of npc.bonds; track item) {
+                    <li>{{ item }}</li>
+                    }
+                </ul>
+                } @else {
+                <p>No bonds recorded yet.</p>
+                }
+            </div>
+
+            <div class="tag-section">
+                <h3>Flaws</h3>
+                @if (npc.flaws.length > 0) {
+                <ul class="detail-list">
+                    @for (item of npc.flaws; track item) {
+                    <li>{{ item }}</li>
+                    }
+                </ul>
+                } @else {
+                <p>No flaws recorded yet.</p>
+                }
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>Hooks & Tension</h2>
+            <div class="copy-stack">
+                <div>
+                    <h3>Motivations</h3>
+                    <p>{{ npc.motivations || 'No motivations recorded yet.' }}</p>
+                </div>
+                <div>
+                    <h3>Goals</h3>
+                    <p>{{ npc.goals || 'No goals recorded yet.' }}</p>
+                </div>
+                <div>
+                    <h3>Fears</h3>
+                    <p>{{ npc.fears || 'No fears recorded yet.' }}</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>Secrets & Mannerisms</h2>
+            <div class="tag-section">
+                <h3>Secrets</h3>
+                @if (npc.secrets.length > 0) {
+                <ul class="detail-list">
+                    @for (item of npc.secrets; track item) {
+                    <li>{{ item }}</li>
+                    }
+                </ul>
+                } @else {
+                <p>No secrets recorded yet.</p>
+                }
+            </div>
+
+            <div class="tag-section">
+                <h3>Mannerisms</h3>
+                @if (npc.mannerisms.length > 0) {
+                <ul class="detail-list">
+                    @for (item of npc.mannerisms; track item) {
+                    <li>{{ item }}</li>
+                    }
+                </ul>
+                } @else {
+                <p>No mannerisms recorded yet.</p>
+                }
+            </div>
+        </section>
+
+        <section class="panel wide-panel">
+            <h2>Backstory</h2>
+            <p class="rich-copy">{{ npc.backstory || 'No backstory recorded yet.' }}</p>
+        </section>
+
+        <section class="panel">
+            <h2>Relationships</h2>
+            @if (relationshipRows().length > 0) {
+            <div class="relationship-list">
+                @for (relationship of relationshipRows(); track relationship.id) {
+                <article class="relationship-card">
+                    <div class="relationship-header">
+                        <h3>{{ relationship.target }}</h3>
+                        <span class="badge neutral-badge">{{ relationship.type }}</span>
+                    </div>
+                    <p>{{ relationship.description }}</p>
+                </article>
+                }
+            </div>
+            } @else {
+            <p>No relationships recorded yet.</p>
+            }
+        </section>
+
+        <section class="panel">
+            <h2>Tags & Links</h2>
+            <div class="tag-section">
+                <h3>Tags</h3>
+                @if (npc.tags.length > 0) {
+                <div class="tag-row">
+                    @for (tag of npc.tags; track tag) {
+                    <span class="tag-chip">{{ tag }}</span>
+                    }
+                </div>
+                } @else {
+                <p>No tags recorded yet.</p>
+                }
+            </div>
+
+            <div class="tag-section">
+                <h3>Quest Links</h3>
+                @if (npc.questLinks.length > 0) {
+                <ul class="detail-list">
+                    @for (item of npc.questLinks; track item) {
+                    <li>{{ item }}</li>
+                    }
+                </ul>
+                } @else {
+                <p>No quest links recorded yet.</p>
+                }
+            </div>
+
+            <div class="tag-section">
+                <h3>Session Appearances</h3>
+                @if (npc.sessionAppearances.length > 0) {
+                <ul class="detail-list">
+                    @for (item of npc.sessionAppearances; track item) {
+                    <li>{{ item }}</li>
+                    }
+                </ul>
+                } @else {
+                <p>No session appearances recorded yet.</p>
+                }
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>Inventory & Combat</h2>
+            <div class="tag-section">
+                <h3>Inventory</h3>
+                @if (npc.inventory.length > 0) {
+                <ul class="detail-list">
+                    @for (item of npc.inventory; track item) {
+                    <li>{{ item }}</li>
+                    }
+                </ul>
+                } @else {
+                <p>No inventory recorded yet.</p>
+                }
+            </div>
+
+            <div class="copy-stack">
+                <div>
+                    <h3>Combat Notes</h3>
+                    <p>{{ npc.combatNotes || 'No combat notes recorded yet.' }}</p>
+                </div>
+                <div>
+                    <h3>Stat Block Reference</h3>
+                    <p>{{ npc.statBlockReference || 'No stat block reference recorded yet.' }}</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel wide-panel">
+            <h2>GM Notes</h2>
+            <div class="copy-stack">
+                <div>
+                    <h3>Notes</h3>
+                    <p class="rich-copy">{{ npc.notes || 'No GM notes recorded yet.' }}</p>
+                </div>
+            </div>
+        </section>
+    </div>
+    } @else {
+    <section class="panel empty-panel">
+        <p class="eyebrow">NPC unavailable</p>
+        <h1>NPC Details</h1>
+        <p>{{ loadError() || 'This NPC record could not be found.' }}</p>
+    </section>
+    }
+</main>

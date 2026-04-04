@@ -8,7 +8,6 @@
 
         <div class="npc-list-actions">
             @if (canEdit()) {
-            <button type="button" class="ghost-button" (click)="loadMockNpcs.emit()">Load Mock NPCs</button>
             <button type="button" class="primary-button" (click)="addNpc.emit()">Add NPC</button>
             }
         </div>
@@ -55,12 +54,6 @@
             <app-dropdown ariaLabel="Sort NPCs" [value]="sortBy()" [options]="sortOptions" [searchable]="false" [placeholder]="'Recently updated'" (changed)="emitSort($event)"></app-dropdown>
         </label>
     </div>
-
-    @if (hasActiveFilters()) {
-    <div class="filter-actions">
-        <button type="button" class="ghost-button" (click)="clearFilters.emit()">Clear Filters</button>
-    </div>
-    }
 
     @if (npcs().length > 0) {
     <div class="npc-card-grid">
@@ -110,7 +103,7 @@
 
             @if (canEdit()) {
             <div class="card-actions" (click)="$event.stopPropagation()">
-                <button type="button" class="ghost-button" (click)="selectNpc.emit(npc.id)">Edit</button>
+                <button type="button" class="ghost-button" (click)="editNpc.emit(npc.id)">Edit</button>
                 <button type="button" class="ghost-button" (click)="duplicateNpc.emit(npc.id)">Duplicate</button>
                 <button type="button" class="ghost-button" (click)="deleteNpc.emit(npc.id)">Delete</button>
             </div>

@@ -210,7 +210,7 @@ export class NpcEditorPageComponent {
         this.persistDraft(sanitizedNpc);
 
         if (this.isLibraryMode()) {
-            await this.router.navigate(['/npcs']);
+            await this.router.navigate(['/npcs', sanitizedNpc.id]);
             return;
         }
 
@@ -221,7 +221,7 @@ export class NpcEditorPageComponent {
             return;
         }
 
-        await this.router.navigate(['/campaigns', this.campaignId(), 'npcs']);
+        await this.router.navigate(['/campaigns', this.campaignId(), 'npcs', sanitizedNpc.id]);
     }
 
     saveNpcToLibrary(): void {

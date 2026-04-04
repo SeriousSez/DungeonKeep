@@ -1,5 +1,9 @@
 <main class="page-stack">
+    @if (importCampaign(); as campaign) {
+    <a [routerLink]="['/campaigns', campaign.id, 'npcs']" class="back-link">← Back to Campaign NPCs</a>
+    } @else {
     <a routerLink="/dashboard" class="back-link">← Back to Dashboard</a>
+    }
 
-    <app-npc-manager [libraryMode]="true" [canEdit]="true" [listOnly]="true"></app-npc-manager>
+    <app-npc-manager [libraryMode]="true" [canEdit]="true" [listOnly]="true" [importTargetCampaignId]="importCampaignId()"></app-npc-manager>
 </main>

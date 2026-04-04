@@ -1,9 +1,14 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, inject, effect, ElementRef, computed } from '@angular/core';
 import { CommonModule, DOCUMENT } from '@angular/common';
 
+export interface MultiSelectOption {
+    value: string;
+    label: string;
+}
+
 export interface MultiSelectOptionGroup {
     label: string;
-    options: string[];
+    options: Array<string | MultiSelectOption>;
 }
 
 @Component({
@@ -35,13 +40,16 @@ export class MultiSelectDropdownComponent {
     readonly opensUpward = signal(false);
     readonly panelMaxHeight = signal(this.defaultPanelMaxHeight);
     readonly isSingleSelect = computed(() => this.selectionMode() === 'single');
+    readonly flatOptions = computed(() => this.groups().flatMap((group) => group.options));
     readonly triggerLabel = computed(() => {
         const values = this.value();
         if (values.length === 0) {
             return this.placeholder();
         }
 
-        return this.isSingleSelect() ? values[0] : values.join(', ');
+        const labels = values.map((value) => this.resolveOptionLabel(value));
+
+        return this.isSingleSelect() ? labels[0] : labels.join(', ');
     });
     readonly selectedCountLabel = computed(() => {
         if (this.isSingleSelect()) {
@@ -116,12 +124,14 @@ export class MultiSelectDropdownComponent {
         });
     }
 
-    isSelected(option: string): boolean {
-        return this.value().includes(option);
+    isSelected(option: string | MultiSelectOption): boolean {
+        return this.value().includes(this.optionValue(option));
     }
 
-    isOptionDisabled(option: string): boolean {
-        if (this.disabledOptions().includes(option) && !this.isSelected(option)) {
+    isOptionDisabled(option: string | MultiSelectOption): boolean {
+        const optionValue = this.optionValue(option);
+
+        if (this.disabledOptions().includes(optionValue) && !this.isSelected(option)) {
             return true;
         }
 
@@ -165,5 +175,18 @@ export class MultiSelectDropdownComponent {
 
         const next = checked ? [...current, option] : current.filter((value) => value !== option);
         this.changed.emit(next);
+    }
+
+    optionValue(option: string | MultiSelectOption): string {
+        return typeof option === 'string' ? option : option.value;
+    }
+
+    optionLabel(option: string | MultiSelectOption): string {
+        return typeof option === 'string' ? option : option.label;
+    }
+
+    private resolveOptionLabel(value: string): string {
+        const matched = this.flatOptions().find((option) => this.optionValue(option) === value);
+        return matched ? this.optionLabel(matched) : value;
     }
 }

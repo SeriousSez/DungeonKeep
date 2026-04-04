@@ -6,7 +6,6 @@ import { Router } from '@angular/router';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { ApiGenerateNpcDraftResponse, DungeonApiService } from '../../state/dungeon-api.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
-import { MOCK_CAMPAIGN_NPCS } from '../../data/campaign-npc.mock';
 import { cloneNpcForCampaign, createDefaultNpc, duplicateNpc, filterAndSortNpcs, hasNpcNameConflict, mergeStoredNpcDrafts, sanitizeNpc, touchNpc } from '../../data/campaign-npc.helpers';
 import { clearCampaignNpcDrafts, clearNpcLibrary, loadCampaignNpcDrafts, loadNpcLibrary, saveCampaignNpcDrafts, saveNpcLibrary } from '../../data/campaign-npc.storage';
 import { CampaignNpc, NpcFilters, NpcSortField } from '../../models/campaign-npc.models';
@@ -40,6 +39,7 @@ export class NpcManagerComponent {
     readonly npcNames = input<readonly string[]>([]);
     readonly libraryMode = input<boolean>(false);
     readonly listOnly = input<boolean>(false);
+    readonly importTargetCampaignId = input<string>('');
 
     private readonly store = inject(DungeonStoreService);
     private readonly api = inject(DungeonApiService);
@@ -139,9 +139,27 @@ export class NpcManagerComponent {
 
     selectNpc(npcId: string): void {
         this.npcGenerationError.set('');
+        const queryParams = this.importTargetCampaignId() ? { campaignId: this.importTargetCampaignId() } : undefined;
 
         if (this.listOnly() && this.libraryMode()) {
-            void this.router.navigate(['/npcs', npcId, 'edit']);
+            void this.router.navigate(['/npcs', npcId], { queryParams });
+            return;
+        }
+
+        if (this.listOnly() && !this.libraryMode() && this.campaignId()) {
+            void this.router.navigate(['/campaigns', this.campaignId(), 'npcs', npcId]);
+            return;
+        }
+
+        this.selectedNpcId.set(npcId);
+    }
+
+    editNpc(npcId: string): void {
+        this.npcGenerationError.set('');
+        const queryParams = this.importTargetCampaignId() ? { campaignId: this.importTargetCampaignId() } : undefined;
+
+        if (this.listOnly() && this.libraryMode()) {
+            void this.router.navigate(['/npcs', npcId, 'edit'], { queryParams });
             return;
         }
 
@@ -155,9 +173,10 @@ export class NpcManagerComponent {
 
     addNpc(): void {
         this.npcGenerationError.set('');
+        const queryParams = this.importTargetCampaignId() ? { campaignId: this.importTargetCampaignId() } : undefined;
 
         if (this.listOnly() && this.libraryMode()) {
-            void this.router.navigate(['/npcs', 'new']);
+            void this.router.navigate(['/npcs', 'new'], { queryParams });
             return;
         }
 
@@ -372,41 +391,6 @@ export class NpcManagerComponent {
 
         const nextList = this.allNpcs().map((entry) => entry.id === npcId ? updatedNpc : entry);
         this.persistLocalState(nextList, npcId);
-    }
-
-    async loadMockNpcs(): Promise<void> {
-        const existingNames = this.allNpcs().map((npc) => npc.name);
-        const freshMocks = MOCK_CAMPAIGN_NPCS
-            .filter((npc) => !existingNames.includes(npc.name))
-            .map((npc) => sanitizeNpc(touchNpc({ ...npc, id: `npc-${crypto.randomUUID()}` })));
-
-        if (freshMocks.length === 0) {
-            this.feedback.set('Mock NPCs are already loaded.');
-            return;
-        }
-
-        const nextList = [...freshMocks, ...this.allNpcs()];
-        this.persistLocalState(nextList, freshMocks[0].id);
-
-        if (this.libraryMode()) {
-            this.persistLibraryState(nextList);
-            this.feedback.set('Mock NPCs loaded into the reusable library.');
-            this.cdr.detectChanges();
-            return;
-        }
-
-        let syncSucceeded = true;
-        for (const npc of freshMocks) {
-            const added = await this.syncNpcName(null, npc);
-            if (!added) {
-                syncSucceeded = false;
-            }
-        }
-
-        this.feedback.set(syncSucceeded
-            ? 'Mock NPCs loaded.'
-            : 'Mock NPCs loaded locally, but some names could not be synced to the campaign list.');
-        this.cdr.detectChanges();
     }
 
     resetLocalDrafts(): void {

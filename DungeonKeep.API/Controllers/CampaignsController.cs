@@ -325,7 +325,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                 responsesUrl,
                 model,
                 BuildNpcDraftPrompt(campaign, request),
-                temperature: 0.95,
+                temperature: 0.65,
                 maxOutputTokens: 1800,
                 cancellationToken);
 
@@ -348,7 +348,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                 return Problem(title: "NPC generation failed.", detail: "Model output was not valid JSON.", statusCode: StatusCodes.Status502BadGateway);
             }
 
-            return Ok(NormalizeNpcDraft(generated));
+            return Ok(NormalizeNpcDraft(generated, request));
         }
         catch (HttpRequestException exception)
         {
@@ -955,6 +955,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             "Generate a Dungeons & Dragons session planning draft for DungeonKeep.",
             "Return only valid JSON.",
             "Use these exact top-level fields: title, shortDescription, date, inGameLocation, estimatedLength, markdownNotes, scenes, npcs, monsters, locations, loot, skillChecks, secrets, branchingPaths, nextSessionHooks.",
+            "Do not wrap the JSON in a session, draft, data, result, or response object.",
             "scenes must be an array of objects with: title, description, trigger, keyEvents, possibleOutcomes.",
             "npcs must be an array of objects with: name, role, personality, motivation, voiceNotes.",
             "monsters must be an array of objects with: name, type, challengeRating, hp, keyAbilities, notes.",
@@ -991,6 +992,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             "Convert the provided session draft content into valid JSON only.",
             "Do not add markdown, explanations, or code fences.",
             "Use these exact top-level fields: title, shortDescription, date, inGameLocation, estimatedLength, markdownNotes, scenes, npcs, monsters, locations, loot, skillChecks, secrets, branchingPaths, nextSessionHooks.",
+            "Do not wrap the JSON in a session, draft, data, result, or response object.",
             "scenes must be an array of objects with: title, description, trigger, keyEvents, possibleOutcomes.",
             "npcs must be an array of objects with: name, role, personality, motivation, voiceNotes.",
             "monsters must be an array of objects with: name, type, challengeRating, hp, keyAbilities, notes.",
@@ -1021,6 +1023,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             "Return only valid JSON.",
             "Use these exact fields: name, title, race, classOrRole, faction, occupation, age, gender, alignment, currentStatus, location, shortDescription, appearance, personalityTraits, ideals, bonds, flaws, motivations, goals, fears, secrets, mannerisms, voiceNotes, backstory, notes, combatNotes, statBlockReference, tags, questLinks, sessionAppearances, inventory, imageUrl, isHostile, isAlive, isImportant.",
             "personalityTraits, ideals, bonds, flaws, secrets, mannerisms, tags, questLinks, sessionAppearances, and inventory must be arrays of concise strings.",
+            "motivations, goals, and fears must each be a non-empty string with a concrete, table-usable sentence.",
             "Keep the NPC useful at the table and grounded in the provided campaign context when one exists.",
             string.Empty
         };
@@ -1063,6 +1066,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             "Do not add markdown, explanations, or code fences.",
             "Use these exact fields: name, title, race, classOrRole, faction, occupation, age, gender, alignment, currentStatus, location, shortDescription, appearance, personalityTraits, ideals, bonds, flaws, motivations, goals, fears, secrets, mannerisms, voiceNotes, backstory, notes, combatNotes, statBlockReference, tags, questLinks, sessionAppearances, inventory, imageUrl, isHostile, isAlive, isImportant.",
             "personalityTraits, ideals, bonds, flaws, secrets, mannerisms, tags, questLinks, sessionAppearances, and inventory must be arrays of strings.",
+            "motivations, goals, and fears must each be a non-empty string with a concrete sentence.",
             "isHostile, isAlive, and isImportant must be booleans.",
             string.Empty,
             "Content to repair:",
@@ -1170,8 +1174,12 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         );
     }
 
-    private static GenerateNpcDraftResponse NormalizeNpcDraft(GenerateNpcDraftPayload generated)
+    private static GenerateNpcDraftResponse NormalizeNpcDraft(GenerateNpcDraftPayload generated, GenerateNpcDraftRequest request)
     {
+        var motivations = ResolveNpcMotivations(generated, request);
+        var goals = ResolveNpcGoals(generated, request, motivations);
+        var fears = ResolveNpcFears(generated, request);
+
         return new GenerateNpcDraftResponse(
             Name: string.IsNullOrWhiteSpace(generated.Name) ? "Generated NPC" : generated.Name.Trim(),
             Title: CleanText(generated.Title),
@@ -1190,9 +1198,9 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             Ideals: NormalizeStringList(generated.Ideals, 4),
             Bonds: NormalizeStringList(generated.Bonds, 4),
             Flaws: NormalizeStringList(generated.Flaws, 4),
-            Motivations: CleanText(generated.Motivations),
-            Goals: CleanText(generated.Goals),
-            Fears: CleanText(generated.Fears),
+            Motivations: motivations,
+            Goals: goals,
+            Fears: fears,
             Secrets: NormalizeStringList(generated.Secrets, 6),
             Mannerisms: NormalizeStringList(generated.Mannerisms, 6),
             VoiceNotes: CleanText(generated.VoiceNotes),
@@ -1209,6 +1217,69 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             IsAlive: generated.IsAlive ?? true,
             IsImportant: generated.IsImportant ?? false
         );
+    }
+
+    private static string ResolveNpcMotivations(GenerateNpcDraftPayload generated, GenerateNpcDraftRequest request)
+    {
+        return FirstNonEmpty(
+            generated.Motivations,
+            request.MotivationHint,
+            generated.Notes,
+            generated.ShortDescription,
+            "Driven by a personal agenda that can pull the party into their orbit.");
+    }
+
+    private static string ResolveNpcGoals(GenerateNpcDraftPayload generated, GenerateNpcDraftRequest request, string motivations)
+    {
+        var explicitGoal = FirstNonEmpty(generated.Goals, null, null, null, string.Empty);
+        if (!string.IsNullOrWhiteSpace(explicitGoal))
+        {
+            return explicitGoal;
+        }
+
+        var contextualGoal = FirstNonEmpty(generated.Notes, request.NotesHint, generated.CurrentStatus, generated.Location, string.Empty);
+        if (!string.IsNullOrWhiteSpace(contextualGoal))
+        {
+            return $"Trying to make concrete progress on {contextualGoal.Trim().TrimEnd('.')}.";
+        }
+
+        return $"Trying to turn this drive into action: {motivations.Trim().TrimEnd('.')}.";
+    }
+
+    private static string ResolveNpcFears(GenerateNpcDraftPayload generated, GenerateNpcDraftRequest request)
+    {
+        var explicitFear = FirstNonEmpty(generated.Fears, null, null, null, string.Empty);
+        if (!string.IsNullOrWhiteSpace(explicitFear))
+        {
+            return explicitFear;
+        }
+
+        var flaw = NormalizeStringList(generated.Flaws, 1).FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(flaw))
+        {
+            return $"Fears this weakness will be exploited: {flaw.Trim().TrimEnd('.')}.";
+        }
+
+        var secret = NormalizeStringList(generated.Secrets, 1).FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(secret))
+        {
+            return $"Fears this secret being exposed: {secret.Trim().TrimEnd('.')}.";
+        }
+
+        return FirstNonEmpty(
+            request.NotesHint,
+            generated.Notes,
+            generated.Backstory,
+            generated.CurrentStatus,
+            "Afraid of exposure, failure, or losing control when the pressure rises.");
+    }
+
+    private static string FirstNonEmpty(string? first, string? second, string? third, string? fourth, string fallback)
+    {
+        return new[] { first, second, third, fourth }
+            .Select(CleanText)
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))
+            ?? fallback;
     }
 
     private static string CleanText(string? value)
@@ -1297,9 +1368,91 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             catch (JsonException)
             {
             }
+
+            var recovered = TryRecoverSessionDraftPayload(candidate);
+            if (recovered is not null)
+            {
+                return recovered;
+            }
         }
 
         return null;
+    }
+
+    private static GenerateSessionDraftPayload? TryRecoverSessionDraftPayload(string candidate)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(candidate);
+            var root = SelectSessionDraftRoot(document.RootElement);
+
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            return new GenerateSessionDraftPayload(
+                Title: GetOptionalString(root, "title"),
+                ShortDescription: GetOptionalString(root, "shortDescription"),
+                Date: GetOptionalString(root, "date"),
+                InGameLocation: GetOptionalString(root, "inGameLocation"),
+                EstimatedLength: GetOptionalString(root, "estimatedLength"),
+                MarkdownNotes: GetOptionalString(root, "markdownNotes"),
+                Scenes: GetOptionalObjectList(root, "scenes", MapSessionScenePayload),
+                Npcs: GetOptionalObjectList(root, "npcs", MapSessionNpcPayload),
+                Monsters: GetOptionalObjectList(root, "monsters", MapSessionMonsterPayload),
+                Locations: GetOptionalObjectList(root, "locations", MapSessionLocationPayload),
+                Loot: GetOptionalObjectList(root, "loot", MapSessionLootItemPayload),
+                SkillChecks: GetOptionalObjectList(root, "skillChecks", MapSessionSkillCheckPayload),
+                Secrets: GetOptionalStringList(root, "secrets"),
+                BranchingPaths: GetOptionalStringList(root, "branchingPaths"),
+                NextSessionHooks: GetOptionalStringList(root, "nextSessionHooks"));
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static JsonElement SelectSessionDraftRoot(JsonElement root)
+    {
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            return root;
+        }
+
+        if (LooksLikeSessionDraftObject(root))
+        {
+            return root;
+        }
+
+        foreach (var propertyName in new[] { "session", "draft", "data", "result", "response" })
+        {
+            if (TryGetPropertyIgnoreCase(root, propertyName, out var nested) && nested.ValueKind == JsonValueKind.Object && LooksLikeSessionDraftObject(nested))
+            {
+                return nested;
+            }
+        }
+
+        return root;
+    }
+
+    private static bool LooksLikeSessionDraftObject(JsonElement candidate)
+    {
+        if (candidate.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        foreach (var propertyName in new[] { "title", "shortDescription", "markdownNotes", "scenes", "skillChecks", "nextSessionHooks" })
+        {
+            if (TryGetPropertyIgnoreCase(candidate, propertyName, out _))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static GenerateNpcDraftPayload? TryParseGeneratedNpcDraftPayload(string rawText)
@@ -1317,9 +1470,329 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             catch (JsonException)
             {
             }
+
+            var recovered = TryRecoverNpcDraftPayload(candidate);
+            if (recovered is not null)
+            {
+                return recovered;
+            }
         }
 
         return null;
+    }
+
+    private static GenerateNpcDraftPayload? TryRecoverNpcDraftPayload(string candidate)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(candidate);
+            var root = SelectNpcDraftRoot(document.RootElement);
+
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            return new GenerateNpcDraftPayload(
+                Name: GetOptionalString(root, "name"),
+                Title: GetOptionalString(root, "title"),
+                Race: GetOptionalString(root, "race"),
+                ClassOrRole: GetOptionalString(root, "classOrRole"),
+                Faction: GetOptionalString(root, "faction"),
+                Occupation: GetOptionalString(root, "occupation"),
+                Age: GetOptionalString(root, "age"),
+                Gender: GetOptionalString(root, "gender"),
+                Alignment: GetOptionalString(root, "alignment"),
+                CurrentStatus: GetOptionalString(root, "currentStatus"),
+                Location: GetOptionalString(root, "location"),
+                ShortDescription: GetOptionalString(root, "shortDescription"),
+                Appearance: GetOptionalString(root, "appearance"),
+                PersonalityTraits: GetOptionalStringList(root, "personalityTraits"),
+                Ideals: GetOptionalStringList(root, "ideals"),
+                Bonds: GetOptionalStringList(root, "bonds"),
+                Flaws: GetOptionalStringList(root, "flaws"),
+                Motivations: GetOptionalString(root, "motivations"),
+                Goals: GetOptionalString(root, "goals"),
+                Fears: GetOptionalString(root, "fears"),
+                Secrets: GetOptionalStringList(root, "secrets"),
+                Mannerisms: GetOptionalStringList(root, "mannerisms"),
+                VoiceNotes: GetOptionalString(root, "voiceNotes"),
+                Backstory: GetOptionalString(root, "backstory"),
+                Notes: GetOptionalString(root, "notes"),
+                CombatNotes: GetOptionalString(root, "combatNotes"),
+                StatBlockReference: GetOptionalString(root, "statBlockReference"),
+                Tags: GetOptionalStringList(root, "tags"),
+                QuestLinks: GetOptionalStringList(root, "questLinks"),
+                SessionAppearances: GetOptionalStringList(root, "sessionAppearances"),
+                Inventory: GetOptionalStringList(root, "inventory"),
+                ImageUrl: GetOptionalString(root, "imageUrl"),
+                IsHostile: GetOptionalBoolean(root, "isHostile"),
+                IsAlive: GetOptionalBoolean(root, "isAlive"),
+                IsImportant: GetOptionalBoolean(root, "isImportant"));
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static JsonElement SelectNpcDraftRoot(JsonElement root)
+    {
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            return root;
+        }
+
+        if (LooksLikeNpcDraftObject(root))
+        {
+            return root;
+        }
+
+        foreach (var propertyName in new[] { "npc", "draft", "data", "result", "response" })
+        {
+            if (TryGetPropertyIgnoreCase(root, propertyName, out var nested) && nested.ValueKind == JsonValueKind.Object && LooksLikeNpcDraftObject(nested))
+            {
+                return nested;
+            }
+        }
+
+        return root;
+    }
+
+    private static bool LooksLikeNpcDraftObject(JsonElement candidate)
+    {
+        if (candidate.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        foreach (var propertyName in new[] { "name", "title", "race", "classOrRole", "shortDescription", "personalityTraits", "mannerisms" })
+        {
+            if (TryGetPropertyIgnoreCase(candidate, propertyName, out _))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryGetPropertyIgnoreCase(JsonElement element, string propertyName, out JsonElement value)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in element.EnumerateObject())
+            {
+                if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    value = property.Value;
+                    return true;
+                }
+            }
+        }
+
+        value = default;
+        return false;
+    }
+
+    private static string? GetOptionalString(JsonElement element, string propertyName)
+    {
+        if (!TryGetPropertyIgnoreCase(element, propertyName, out var value))
+        {
+            return null;
+        }
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString(),
+            JsonValueKind.Number => value.GetRawText(),
+            JsonValueKind.True => bool.TrueString,
+            JsonValueKind.False => bool.FalseString,
+            _ => null
+        };
+    }
+
+    private static List<string>? GetOptionalStringList(JsonElement element, string propertyName)
+    {
+        if (!TryGetPropertyIgnoreCase(element, propertyName, out var value))
+        {
+            return null;
+        }
+
+        if (value.ValueKind == JsonValueKind.Array)
+        {
+            return value.EnumerateArray()
+                .Select(item => item.ValueKind switch
+                {
+                    JsonValueKind.String => item.GetString(),
+                    JsonValueKind.Number => item.GetRawText(),
+                    JsonValueKind.True => bool.TrueString,
+                    JsonValueKind.False => bool.FalseString,
+                    _ => null
+                })
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Cast<string>()
+                .ToList();
+        }
+
+        if (value.ValueKind == JsonValueKind.String)
+        {
+            var raw = value.GetString();
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return null;
+            }
+
+            return raw
+                .Split(new[] { '\n', '\r', ';', '•' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(entry => entry.TrimStart('-', '*').Trim())
+                .Where(entry => !string.IsNullOrWhiteSpace(entry))
+                .ToList();
+        }
+
+        return null;
+    }
+
+    private static bool? GetOptionalBoolean(JsonElement element, string propertyName)
+    {
+        if (!TryGetPropertyIgnoreCase(element, propertyName, out var value))
+        {
+            return null;
+        }
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.String when bool.TryParse(value.GetString(), out var parsed) => parsed,
+            _ => null
+        };
+    }
+
+    private static int? GetOptionalInt(JsonElement element, string propertyName)
+    {
+        if (!TryGetPropertyIgnoreCase(element, propertyName, out var value))
+        {
+            return null;
+        }
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.Number when value.TryGetInt32(out var number) => number,
+            JsonValueKind.String when int.TryParse(value.GetString(), out var parsed) => parsed,
+            _ => null
+        };
+    }
+
+    private static List<T>? GetOptionalObjectList<T>(JsonElement element, string propertyName, Func<JsonElement, T?> map)
+        where T : class
+    {
+        if (!TryGetPropertyIgnoreCase(element, propertyName, out var value))
+        {
+            return null;
+        }
+
+        if (value.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var items = value.EnumerateArray()
+            .Select(map)
+            .Where(item => item is not null)
+            .Cast<T>()
+            .ToList();
+
+        return items.Count > 0 ? items : null;
+    }
+
+    private static GenerateSessionScenePayload? MapSessionScenePayload(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return new GenerateSessionScenePayload(
+            Title: GetOptionalString(element, "title"),
+            Description: GetOptionalString(element, "description"),
+            Trigger: GetOptionalString(element, "trigger"),
+            KeyEvents: GetOptionalStringList(element, "keyEvents"),
+            PossibleOutcomes: GetOptionalStringList(element, "possibleOutcomes"));
+    }
+
+    private static GenerateSessionNpcPayload? MapSessionNpcPayload(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return new GenerateSessionNpcPayload(
+            Name: GetOptionalString(element, "name"),
+            Role: GetOptionalString(element, "role"),
+            Personality: GetOptionalString(element, "personality"),
+            Motivation: GetOptionalString(element, "motivation"),
+            VoiceNotes: GetOptionalString(element, "voiceNotes"));
+    }
+
+    private static GenerateSessionMonsterPayload? MapSessionMonsterPayload(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return new GenerateSessionMonsterPayload(
+            Name: GetOptionalString(element, "name"),
+            Type: GetOptionalString(element, "type"),
+            ChallengeRating: GetOptionalString(element, "challengeRating"),
+            Hp: GetOptionalInt(element, "hp"),
+            KeyAbilities: GetOptionalString(element, "keyAbilities"),
+            Notes: GetOptionalString(element, "notes"));
+    }
+
+    private static GenerateSessionLocationPayload? MapSessionLocationPayload(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return new GenerateSessionLocationPayload(
+            Name: GetOptionalString(element, "name"),
+            Description: GetOptionalString(element, "description"),
+            Secrets: GetOptionalString(element, "secrets"),
+            Encounters: GetOptionalString(element, "encounters"));
+    }
+
+    private static GenerateSessionLootItemPayload? MapSessionLootItemPayload(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return new GenerateSessionLootItemPayload(
+            Name: GetOptionalString(element, "name"),
+            Type: GetOptionalString(element, "type"),
+            Quantity: GetOptionalInt(element, "quantity"),
+            Notes: GetOptionalString(element, "notes"));
+    }
+
+    private static GenerateSessionSkillCheckPayload? MapSessionSkillCheckPayload(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return new GenerateSessionSkillCheckPayload(
+            Situation: GetOptionalString(element, "situation"),
+            Skill: GetOptionalString(element, "skill"),
+            Dc: GetOptionalInt(element, "dc"),
+            SuccessOutcome: GetOptionalString(element, "successOutcome"),
+            FailureOutcome: GetOptionalString(element, "failureOutcome"));
     }
 
     private static IEnumerable<string> BuildJsonCandidates(string rawText)

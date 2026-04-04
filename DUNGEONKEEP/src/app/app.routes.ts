@@ -11,8 +11,8 @@ import { NewCampaignPageComponent } from './pages/new-campaign-page/new-campaign
 import { NewCharacterPageComponent } from './pages/new-character-page/new-character-page.component';
 import { NewCharacterStandardPageComponent } from './pages/new-character-standard-page/new-character-standard-page.component';
 import { NpcEditorPageComponent } from './pages/npc-editor-page/npc-editor-page.component';
+import { NpcDetailPage } from './pages/npc-detail-page/npc-detail-page';
 import { NpcLibraryPageComponent } from './pages/npc-library-page/npc-library-page.component';
-import { SessionsPageComponent } from './pages/sessions-page/sessions-page.component';
 import { PremadeCharactersPageComponent } from './pages/premade-characters-page.component';
 import { AuthShellComponent } from './components/auth-shell/auth-shell.component';
 import { RulesPage } from './pages/rules-page/rules-page';
@@ -78,6 +78,11 @@ export const routes: Routes = [
         path: 'campaigns/:id/npcs/new',
         component: NpcEditorPageComponent,
         data: { title: 'New NPC', breadcrumb: 'New NPC', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }, { label: 'NPCs', url: '/campaigns/:id/npcs' }] }
+    },
+    {
+        path: 'campaigns/:id/npcs/:npcId',
+        component: NpcDetailPage,
+        data: { title: 'NPC Details', breadcrumb: 'NPC', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }, { label: 'NPCs', url: '/campaigns/:id/npcs' }] }
     },
     {
         path: 'campaigns/:id/npcs/:npcId/edit',
@@ -174,14 +179,14 @@ export const routes: Routes = [
         data: { title: 'New Library NPC', breadcrumb: 'New NPC', parentCrumbs: [{ label: 'NPC Library', url: '/npcs' }] }
     },
     {
+        path: 'npcs/:npcId',
+        component: NpcDetailPage,
+        data: { title: 'NPC Details', breadcrumb: 'NPC', parentCrumbs: [{ label: 'NPC Library', url: '/npcs' }] }
+    },
+    {
         path: 'npcs/:npcId/edit',
         component: NpcEditorPageComponent,
         data: { title: 'Edit Library NPC', breadcrumb: 'Edit NPC', parentCrumbs: [{ label: 'NPC Library', url: '/npcs' }] }
-    },
-    {
-        path: 'sessions',
-        component: SessionsPageComponent,
-        data: { title: 'Session Prep', breadcrumb: 'Sessions' }
     },
     {
         path: 'rules',

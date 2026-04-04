@@ -84,6 +84,40 @@
     color: var(--color-text);
 }
 
+.item-summary {
+    margin: 0;
+    font-size: 1.02rem;
+    line-height: 1.6;
+    color: var(--color-text);
+}
+
+.item-highlights {
+    display: grid;
+    gap: 0.65rem;
+
+    ul {
+        margin: 0;
+        padding-left: 1.1rem;
+        display: grid;
+        gap: 0.45rem;
+    }
+
+    li {
+        color: var(--color-text);
+        line-height: 1.45;
+    }
+}
+
+.item-section-title {
+    margin: 0;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text);
+    opacity: 0.78;
+}
+
 .sheet-divider {
     margin: 1rem 0;
     border: 0;
@@ -159,8 +193,13 @@
 .item-tags-row {
     margin-top: 1rem;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.55rem;
+}
+
+.item-tags-row--top {
+    margin-top: 0.85rem;
 }
 
 .item-tags-label {

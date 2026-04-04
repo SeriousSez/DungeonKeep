@@ -1,4 +1,5 @@
 import type { BuilderInfo, BackgroundDetail, EquipmentItem, EquipmentSource } from './new-character-standard-page.types';
+import { officialWikidotEquipmentCatalog } from './wikidot-items.generated';
 
 export const equipmentSourceLinks: ReadonlyArray<EquipmentSource> = [
     { label: 'Weapons', url: 'https://dnd5e.wikidot.com/weapons', category: 'Weapons' },
@@ -13,7 +14,872 @@ export const equipmentSourceLinks: ReadonlyArray<EquipmentSource> = [
     { label: 'Siege Equipment', url: 'https://dnd5e.wikidot.com/siege-equipment', category: 'Siege Equipment' }
 ];
 
-export const equipmentCatalog: ReadonlyArray<EquipmentItem> = [
+type EquipmentDetailOverride = Readonly<Partial<Pick<EquipmentItem, 'sourceLabel' | 'summary' | 'notes' | 'detailLines' | 'rarity' | 'attunement'>>>;
+
+const equipmentSourceLabelByUrl = new Map(equipmentSourceLinks.map((source) => [source.url, source.label]));
+
+function toWikidotItemSlug(itemName: string): string {
+    return itemName
+        .toLowerCase()
+        .replace(/\+/g, ' plus ')
+        .replace(/&/g, ' and ')
+        .replace(/'/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+
+function buildWondrousItemSourceUrl(itemName: string): string {
+    return `https://dnd5e.wikidot.com/wondrous-items:${toWikidotItemSlug(itemName)}`;
+}
+
+function formatEquipmentNumber(value: number): string {
+    return Number.isInteger(value) ? `${value}` : `${value}`;
+}
+
+function buildGeneratedEquipmentFallbackLines(item: EquipmentItem): string[] {
+    const lines: string[] = [];
+
+    switch (item.category) {
+        case 'Weapon':
+            lines.push(item.rarity?.trim()
+                ? 'Magic weapon entry with exact bonuses or rider effects defined on its source page.'
+                : 'Weapon entry used for direct combat; check the source record for its exact damage and properties.');
+            break;
+        case 'Armor':
+            lines.push(item.rarity?.trim()
+                ? 'Magic armor entry with defensive bonuses or triggered protections defined on its source page.'
+                : 'Armor entry that improves survivability through Armor Class and listed wear requirements.');
+            break;
+        case 'Adventuring Gear':
+            lines.push('General-purpose equipment for travel, camp routines, storage, light, climbing, or field problem solving.');
+            break;
+        case 'Tools':
+            lines.push('Used for proficiency checks, crafting, trade work, downtime tasks, or class-feature support.');
+            break;
+        case 'Poison':
+            lines.push('Applied or delivered toxin that relies on a saving throw, damage rider, or harmful condition.');
+            break;
+        case 'Explosive':
+            lines.push('Single-use explosive or alchemical munition intended for burst damage, demolition, or area denial.');
+            break;
+        case 'Siege Equipment':
+            lines.push('Large battlefield engine or breaching device meant for fortifications, crews, and war-scale encounters.');
+            break;
+        case 'Wondrous Item':
+            lines.push('Specialized magic item whose exact activation, charges, and limits are defined on the linked source page.');
+            break;
+        case 'Ring':
+            lines.push('Wearable magic item that grants passive or activated supernatural benefits while worn.');
+            break;
+        case 'Rod':
+            lines.push('Focused magical implement that channels a narrow set of command-word or activation-based powers.');
+            break;
+        case 'Staff':
+            lines.push('Powerful magical staff commonly tied to stored charges, spellcasting utility, or themed magical effects.');
+            break;
+        case 'Wand':
+            lines.push('Compact magical implement built for repeated activations or spell-like projections.');
+            break;
+        case 'Potion':
+            lines.push('Consumable magic item whose effect is usually triggered by drinking or administering it.');
+            break;
+        case 'Scroll':
+            lines.push('Single-use inscribed magic that releases a stored spell or supernatural effect when activated.');
+            break;
+        case 'Trinket':
+            lines.push('Narrative curiosity or keepsake with stronger story flavor than direct mechanical combat impact.');
+            break;
+        default:
+            break;
+    }
+
+    if (typeof item.costGp === 'number') {
+        lines.push(`Cost: ${formatEquipmentNumber(item.costGp)} gp`);
+    }
+
+    if (typeof item.weight === 'number') {
+        lines.push(`Weight: ${formatEquipmentNumber(item.weight)} lb`);
+    }
+
+    return lines;
+}
+
+const equipmentDetailOverrides: Readonly<Record<string, EquipmentDetailOverride>> = {
+    'Trinket (Random)': { notes: 'Roll on the trinket table to generate a mysterious keepsake that is mostly narrative but perfect for hooks, rumors, and personal flavor.' },
+    'Rabbit Foot Charm': { notes: 'A simple lucky charm trinket. It has no default mechanical bonus, but it makes a strong superstition piece or personal token.' },
+    'Old Rusty Key': { notes: 'A weathered key with an unknown lock. Best used as a story prop, clue, or false lead for exploration scenes.' },
+    'Tiny Box with a Button': { notes: 'A curiosity trinket built to invite pressing the button. Ideal as a prop, puzzle element, or suspicious pocket oddity.' },
+    'Bead of Nourishment': { notes: 'Common magic bead. Crushing or swallowing it provides enough nourishment to sustain one creature for a full day.' },
+    'Bead of Refreshment': { notes: 'Common magic bead. It creates enough fresh water to satisfy one creature for a day, making it valuable for travel and survival.' },
+    'Bottle of Boundless Coffee': { notes: 'Common magic container that produces hot coffee on command, useful for flavor, hospitality, and long watches.' },
+    'Breathing Bubble': { notes: 'Common magic bubble that lets a creature breathe in an otherwise hostile environment, typically underwater or in similar conditions.' },
+    'Candle of the Deep': { notes: 'Common magic candle that burns normally even underwater and cannot be easily extinguished by immersion.' },
+    'Chest of Preserving': { notes: 'Common magic chest that keeps food and other perishables fresh for far longer than normal storage.' },
+    'Cleansing Stone': { notes: 'Common Eberron magic item that instantly cleans clothing and the body with a touch, replacing soap-and-water convenience.' },
+    'Clockwork Amulet': { notes: 'Common magic amulet that can replace one attack roll with a flat 10, trading swinginess for certainty.' },
+    'Coin of Delving': { notes: 'Common magic coin that chimes when dropped down a shaft, helping estimate depth or detect hidden drops.' },
+    'Dark Shard Amulet': { notes: 'Common arcane focus that lets a warlock attempt a cantrip they do not know, adding risky improvisation to spellcasting.' },
+    'Ear Horn of Hearing': { notes: 'Common hearing aid item that amplifies sound for a hard-of-hearing wearer.' },
+    'Earring of Message': { notes: 'Small communication item that carries short magical whispers between linked wearers over a limited distance.' },
+    'Enduring Spellbook': { notes: 'Spellbook treated with magic so its pages resist water, fire wear, and ordinary environmental damage.' },
+    'Ersatz Eye': { notes: 'Magical prosthetic eye that replaces a missing eye and restores normal vision to the wearer.' },
+    'Everbright Lantern': { notes: 'Eberron lantern with a permanent magical light source, removing the need for oil or flame.' },
+    'Feather Token': { notes: 'Single-use token that creates a named magical effect when activated, such as a whip, anchor, bird, fan, or tree depending on the token.' },
+    'Glamerweave': { notes: 'Stylish Eberron clothing that changes color and presentation, often with small cosmetic magical flourishes.' },
+    "Heward's Handy Spice Pouch": { notes: 'Common enchanted pouch that produces a selection of seasonings on demand, ideal for cooks and travelers.' },
+    'Horn of Silent Alarm': { notes: 'Common horn audible only to designated creatures, useful for stealthy warnings and watch rotations.' },
+    'Imbued Wood Focus': { notes: 'Eberron druidic focus made from a manifest-zone wood that slightly reinforces a themed damage type.' },
+    'Instrument of Illusions': { notes: 'Magic instrument that creates visual illusions while it is played, turning performances into small stage spectacles.' },
+    'Instrument of Scribing': { notes: 'Magic instrument that can write musical notation or related script without mundane ink-and-quill effort.' },
+    'Keycharm': { notes: 'Eberron charm that can temporarily shape itself into a simple key or help with simple fastening tasks.' },
+    'Lantern of Tracking': { notes: 'Specialized lantern whose light helps reveal or follow the kind of quarry keyed to it.' },
+    'Lock of Trickery': { notes: 'Common enchanted lock that frustrates tampering and can magically foil thieves\' tools.' },
+    'Masque Charm': { notes: 'Small Strixhaven charm that helps maintain a costume or dramatic persona for social scenes and performances.' },
+    'Mind Crystal': { notes: 'Psychic crystal that can hold or convey simple thoughts, making it useful for telepathic flavor and clues.' },
+    'Mystery Key': { notes: 'This key occasionally fits a random mundane lock, making it perfect for serendipitous infiltration or comedy.' },
+    'Perfume of Bewitching': { notes: 'A creature charmed by the scent is temporarily more receptive, making this useful for social manipulation and courtly intrigue.' },
+    'Pipe of Remembrance': { notes: 'When smoked, this pipe creates evocative images or memories in its smoke, ideal for storytelling and mood.' },
+    'Pipe of Smoke Monsters': { notes: 'This pipe forms smoke shapes of tiny monsters, mostly cosmetic but excellent for personality and campfire scenes.' },
+    'Pot of Awakening': { notes: 'After tending a plant in this pot for 30 days, the plant awakens as a friendly shrub companion.' },
+    'Pressure Capsule': { notes: 'A nautical utility item that protects a small object from water pressure and keeps delicate cargo sealed.' },
+    'Rope of Mending': { notes: 'This short length of rope can magically rejoin itself after being cut, making it a reusable utility line.' },
+    'Ruby of the War Mage': { notes: 'Attaches to a weapon so the weapon can serve as a spellcasting focus for the attuned wielder.' },
+    'Shiftweave': { notes: 'Eberron outfit that can cycle between multiple stored clothing appearances, ideal for disguises and social flexibility.' },
+    'Spellshard': { notes: 'Eberron crystal data-storage item used to record and share arcane notes, formulae, or other magical information.' },
+    'Spellwrought Tattoo': { notes: 'Single-use magical tattoo that stores a spell and vanishes after the spell is cast.' },
+    'Strixhaven Pennant': { notes: 'College pennant that gives a small supportive magical benefit tied to school spirit and identity.' },
+    'Tankard of Plenty': { notes: 'This tankard refills with simple drink on command, making it a reliable camp or tavern curiosity.' },
+    'Tankard of Sobriety': { notes: 'Any alcoholic drink poured into this tankard becomes nonalcoholic, keeping the drinker clear-headed.' },
+    'Thermal Cube': { notes: 'A compact cube that holds a fixed temperature, often used to keep food warm or supplies from freezing.' },
+    'Vox Seeker': { notes: 'Tiny Eberron device that can locate a keyed voice or speaking creature within a limited area.' },
+    'Wand Sheath': { notes: 'Artificer-style implant or harness that stores a wand in the forearm for fast, secure deployment.' },
+    'Bag of Holding': { notes: 'Extra-dimensional storage bag with a large internal capacity that keeps carry weight practical for adventuring.' },
+    'Bag of Tricks': { notes: 'Fuzzy object bag that summons random beast allies when one of its objects is thrown.' },
+    'Bracers of Archery': { notes: 'These bracers improve competence with longbows and shortbows and enhance the damage of those attacks.' },
+    'Brooch of Shielding': { notes: 'Protective brooch that grants resistance to force damage and absorbs incoming Magic Missile darts.' },
+    'Broom of Flying': { notes: 'A flying broom that can carry its rider through the air and function as a compact mount.' },
+    'Circlet of Blasting': { notes: 'This circlet can cast Scorching Ray, making it a reusable offensive item for ranged spell pressure.' },
+    'Decanter of Endless Water': { notes: 'Produces water in controlled streams or a forceful geyser, useful for survival, hazards, and problem solving.' },
+    'Deck of Illusions': { notes: 'A card deck that creates temporary illusory creatures when drawn, excellent for distraction and deception.' },
+    'Dust of Disappearance': { notes: 'Thrown dust that turns creatures and carried gear invisible for a short duration.' },
+    'Dust of Dryness': { notes: 'Compresses a large quantity of water into pellets that can be released later, enabling clever transport and traps.' },
+    'Elemental Gem': { notes: 'Crushing the gem summons an elemental tied to the gem\'s type, usually under the user\'s temporary command.' },
+    'Eversmoking Bottle': { notes: 'Uncorking the bottle releases a thick smoke cloud that can fill large spaces and heavily obscure vision.' },
+    'Gauntlets of Ogre Power': { notes: 'These gauntlets set the wearer\'s Strength to ogre-like levels, making them excellent for martial builds.' },
+    'Gem of Brightness': { notes: 'This gem stores charges for brilliant beams and blinding flashes, combining utility light with offense.' },
+    'Headband of Intellect': { notes: 'Sets the wearer\'s Intelligence to a high fixed value, dramatically improving knowledge and spellcasting potential.' },
+    'Javelin of Lightning': { notes: 'When thrown, this weapon transforms into a lightning bolt before returning to normal form after the attack.' },
+    'Lantern of Revealing': { notes: 'Its light outlines invisible creatures and objects inside the lantern\'s illumination.' },
+    'Medallion of Thoughts': { notes: 'This medallion lets the wearer read thoughts, adding strong value in interrogation and intrigue scenes.' },
+    'Pearl of Power': { notes: 'A spellcaster can recover an expended spell slot by invoking the pearl, making it a premier endurance item.' },
+    'Pipes of Haunting': { notes: 'Their eerie tune can frighten nearby foes, turning a performance tool into a battlefield panic effect.' },
+    'Stone of Good Luck (Luckstone)': { notes: 'Provides a small bonus to ability checks and saving throws, making it a broadly useful all-purpose item.' },
+    'Trident of Fish Command': { notes: 'Allows the wielder to charm and direct aquatic creatures, especially fish and similar beasts.' },
+    'Wind Fan': { notes: 'This fan releases Gust of Wind, giving battlefield control and strong environmental utility.' },
+    'Deck of Many Things': { notes: 'Iconic legendary deck whose drawn cards create wildly powerful boons or disasters that can reshape a campaign.' },
+    'Holy Avenger': { notes: 'Legendary holy weapon that greatly empowers paladins, enhances saving throws nearby, and devastates fiends and undead.' },
+    'Luck Blade': { notes: 'Legendary blade that grants luck benefits and may hold Wish charges depending on the weapon\'s remaining magic.' },
+    'Ring of Three Wishes': { notes: 'Legendary ring that holds up to three castings of Wish, making it one of the most potent items in the game.' },
+    'Draakhorn': {
+        sourceLabel: 'RoT',
+        rarity: 'Unique',
+        summary: 'Ancient draconic war horn that can call dragons across vast distances and batter creatures caught in its forward cone.',
+        notes: 'Massive dragon horn relic tied to Tiamat and the ancient war between dragons and giants.',
+        detailLines: [
+            'Requires multiple bearers to position and sound effectively.',
+            'Alerts dragons for up to 2,000 miles and can deliver coded warning blasts.',
+            'Creatures entering or starting in its 150-foot cone must save or take 6d8 thunder damage and fall prone.'
+        ]
+    },
+    'Gnomengarde Grenade': {
+        sourceLabel: 'DC',
+        rarity: 'Unique',
+        summary: 'Single-use rainbow grenade that combines a wide fire blast, a thunder shockwave, and three Wand of Wonder-style surges.',
+        notes: 'Volatile gnomish device that is as dangerous to the battlefield as it is unpredictable.',
+        detailLines: [
+            'Arm as a bonus action, then throw up to 120 feet; it detonates at the end of the thrower\'s turn.',
+            'Explosion forces Dexterity and Constitution saves for 8d6 fire damage, 8d6 thunder damage, and a stun rider.',
+            'Also rolls three distinct Wand of Wonder effects affecting creatures in range.'
+        ]
+    },
+    'Mask of the Dragon Queen': {
+        sourceLabel: 'ToD',
+        rarity: 'Unique',
+        attunement: 'Required',
+        summary: 'Composite crown formed from all five Dragon Masks that grants one mask\'s active properties plus all five damage absorptions and legendary resilience.',
+        notes: 'Major Tyranny of Dragons relic intended for endgame villains and campaign-defining stakes.',
+        detailLines: [
+            'Forms only when two or more Dragon Masks are assembled together.',
+            'Lets the wearer choose the properties of any one individual Dragon Mask.',
+            'Also grants the damage absorption of all five masks and five uses of Legendary Resistance.'
+        ]
+    },
+    'Crusader\'s Shortsword': {
+        sourceLabel: 'CoS',
+        rarity: '???',
+        attunement: 'Lawful good creature',
+        summary: 'Sentient +1 shortsword devoted to fighting evil, shedding constant light and granting Crusader\'s Mantle once per dawn.',
+        notes: 'Lawful good weapon with a clear moral purpose and a strong anti-evil identity.',
+        detailLines: [
+            'Base form is a sentient lawful good +1 shortsword with emotion-based communication.',
+            'Continuously sheds bright light for 15 feet and dim light for another 15 feet.',
+            'Its attuned wielder can cast Crusader\'s Mantle from the blade once per dawn.'
+        ]
+    },
+    'Orcus Figurine': {
+        sourceLabel: 'CM',
+        rarity: '???',
+        summary: 'Desecrated idol of Orcus that suppresses turning, blocks nearby resurrection, and can sometimes call a wraithlike avatar of the demon lord.',
+        notes: 'Sinister story item best used as a cult relic, cursed prize, or escalating undead threat.',
+        detailLines: [
+            'Undead within 30 feet cannot be turned while the figurine remains intact.',
+            'Dead creatures within 30 feet cannot be brought back to life.',
+            'A one-hour prayer to Orcus has a 10 percent chance to summon a hostile wraithlike avatar for 1 hour.'
+        ]
+    },
+    'Radiance': {
+        sourceLabel: 'CM',
+        rarity: '???',
+        attunement: 'Spellcaster',
+        summary: 'Golden hand-mirror wand that improves spell attacks, ignores half cover, and grants self-only Enhance Ability once per dawn.',
+        notes: 'Compact caster treasure with a steady accuracy boost and a utility spell rider.',
+        detailLines: [
+            'Grants a +1 bonus to spell attack rolls while held.',
+            'Spell attacks made with it ignore half cover.',
+            'Attuned spellcaster can use a bonus action to cast Enhance Ability on themselves once per dawn.'
+        ]
+    },
+    'Shield of the Silver Dragon': {
+        sourceLabel: 'CoS',
+        rarity: '???',
+        summary: 'Order of the Silver Dragon shield that functions as a +2 shield and whispers warnings that sharpen the bearer\'s initiative.',
+        notes: 'Defensive relic with straightforward combat value and strong Barovian story ties.',
+        detailLines: [
+            'Functions as a +2 shield in addition to normal shield benefits.',
+            'Grants a +2 bonus to initiative while the bearer is not incapacitated.',
+            'Carries the heraldry and lingering vigilance of the Order of the Silver Dragon.'
+        ]
+    },
+    'Stonky\'s Ring': {
+        sourceLabel: 'CM',
+        rarity: '???',
+        attunement: 'Required',
+        summary: 'Telekinetic ring that casts Telekinesis at will on unattended objects and lets the attuned wearer command Stonky\'s skitterwidget creations nearby.',
+        notes: 'Utility-heavy ring built around object manipulation, traps, and puzzle solving.',
+        detailLines: [
+            'Can cast Telekinesis at will, but only against objects that are not worn or carried.',
+            'Attuned wearer gains control of Stonky\'s skitterwidgets.',
+            'Those constructs ignore spoken commands delivered from more than 30 feet away.'
+        ]
+    },
+    'Tearulai': {
+        sourceLabel: 'WDMM',
+        rarity: '???',
+        attunement: 'Non-evil creature',
+        summary: 'Sentient Sword of Sharpness longsword with a radiant command glow and charge-based Fly, Polymorph, and Transport via Plants magic.',
+        notes: 'Powerful personality weapon whose goals can matter as much as its combat abilities.',
+        detailLines: [
+            'Sentient neutral good longsword based on Sword of Sharpness with an emerald blade.',
+            'Can shed bright light on command and resists damage, dulling, and unwanted teleport separation from its wielder.',
+            'Holds 6 charges and can cast Fly, Polymorph, or Transport via Plants, regaining 1d4 + 2 charges at dawn.'
+        ]
+    },
+    'Yester Hill Axe': {
+        sourceLabel: 'CoS',
+        rarity: '???',
+        summary: 'Half-weight battleaxe that bites deeper into plants and punishes non-good wielders with thorny backlash.',
+        notes: 'Thematic wilderness weapon with a clear alignment sting for the wrong bearer.',
+        detailLines: [
+            'Counts as a battleaxe but weighs half as much as a normal one.',
+            'Deals an extra 1d8 slashing damage to ordinary plants and plant creatures.',
+            'Non-good wielders take 1 magical piercing damage after each attack as thorns sprout from the haft.'
+        ]
+    },
+    'Orb of Dragonkind': { notes: 'Artifact orb tied to dragons and draconic domination, capable of communication, control, and catastrophic consequences.' },
+    'Eye and Hand of Vecna': {
+        summary: 'Paired Vecna relics treated as a single artifact entry in the official catalog.',
+        notes: 'Infamous severed eye-and-hand artifact pair that grants immense necromantic power and corruptive influence to its bearer.',
+        detailLines: [
+            'Official Wikidot catalog lists this as a combined artifact entry rather than separate equipment records.',
+            'Represents Vecna\'s severed eye and hand as a single endgame relic pairing.',
+            'Best treated as campaign-defining treasure with severe corruption risks and world-level consequences.'
+        ],
+        rarity: 'Artifact',
+        attunement: 'Attuned'
+    },
+    'Wand of Orcus': { notes: 'Artifact wand of the demon prince, saturated with death magic and suited only to the most destructive villains.' },
+    'Universal Solvent': { notes: 'Legendary liquid capable of dissolving nearly any adhesive or bond, most famously even Sovereign Glue.' },
+    'Sovereign Glue': { notes: 'Legendary adhesive that permanently bonds surfaces together unless countered by very rare magic or Universal Solvent.' }
+};
+
+function buildGeneratedEquipmentNotes(item: EquipmentItem): string | undefined {
+    const itemName = item.name;
+    const category = item.category;
+
+    if (itemName.startsWith('Ring of ')) {
+        return `Magic ring that grants a persistent or activatable ${itemName.slice('Ring of '.length).toLowerCase()} effect while worn.`;
+    }
+
+    if (itemName.startsWith('Wand of ')) {
+        return `Charged wand that channels ${itemName.slice('Wand of '.length).toLowerCase()} magic and typically regains charges at dawn.`;
+    }
+
+    if (itemName.startsWith('Rod of ')) {
+        return `Magic rod that produces the ${itemName.slice('Rod of '.length).toLowerCase()} powers named in the item.`;
+    }
+
+    if (itemName.startsWith('Staff of ')) {
+        return `Magic staff that stores charges and channels the ${itemName.slice('Staff of '.length).toLowerCase()} effects named in the item.`;
+    }
+
+    if (itemName.startsWith('Potion of ')) {
+        return `Consumable potion that grants a temporary ${itemName.slice('Potion of '.length).toLowerCase()} effect after drinking it.`;
+    }
+
+    if (itemName.startsWith('Manual of ')) {
+        return 'Powerful magical tome that permanently improves the reader after extended study and then loses its magic for a long period.';
+    }
+
+    if (itemName.startsWith('Belt of Giant Strength')) {
+        return 'Magic belt that sets the wearer\'s Strength to a giant-like value based on the belt\'s tier.';
+    }
+
+    if (itemName.startsWith('Boots of ')) {
+        return `Magic footwear that grants movement or travel benefits themed around ${itemName.slice('Boots of '.length).toLowerCase()}.`;
+    }
+
+    if (itemName.startsWith('Cloak of ')) {
+        return `Magic cloak that grants protection, concealment, or presentation effects tied to ${itemName.slice('Cloak of '.length).toLowerCase()}.`;
+    }
+
+    if (itemName.startsWith('Hat of ')) {
+        return `Magic headwear that produces a themed ${itemName.slice('Hat of '.length).toLowerCase()} effect while worn.`;
+    }
+
+    if (itemName.startsWith('Orb of ')) {
+        return `Magical orb keyed to ${itemName.slice('Orb of '.length).toLowerCase()}, providing utility or power themed around that concept.`;
+    }
+
+    if (itemName.startsWith('Pipe of ')) {
+        return `This enchanted pipe creates a ${itemName.slice('Pipe of '.length).toLowerCase()} effect when smoked.`;
+    }
+
+    if (itemName.startsWith('Pole of ')) {
+        return `A novelty magic pole built around the ${itemName.slice('Pole of '.length).toLowerCase()} trick named in the item.`;
+    }
+
+    if (itemName.startsWith('Tankard of ')) {
+        return `Magic drinkware that produces the ${itemName.slice('Tankard of '.length).toLowerCase()} effect described by its name.`;
+    }
+
+    if (itemName.startsWith('Horn of ')) {
+        return `Magic horn whose call unleashes the ${itemName.slice('Horn of '.length).toLowerCase()} power named in the item.`;
+    }
+
+    if (itemName.startsWith('Eyes of ')) {
+        return `Magical eyewear that enhances perception or senses through ${itemName.slice('Eyes of '.length).toLowerCase()} themed powers.`;
+    }
+
+    if (itemName.startsWith('Medal of ')) {
+        return `One-use medal that grants a short-lived heroic boost themed around ${itemName.slice('Medal of '.length).toLowerCase()}.`;
+    }
+
+    if (itemName.startsWith('Amulet of ')) {
+        return `Magic amulet that grants the wearer the ${itemName.slice('Amulet of '.length).toLowerCase()} protection or power named in the item.`;
+    }
+
+    if (itemName.startsWith('Helm of ')) {
+        return `Magic helm that grants the wearer ${itemName.slice('Helm of '.length).toLowerCase()} themed abilities.`;
+    }
+
+    if (itemName.startsWith('Necklace of ')) {
+        return `Magic necklace that stores or projects ${itemName.slice('Necklace of '.length).toLowerCase()} themed power.`;
+    }
+
+    if (itemName.startsWith('Bowl of Commanding') || itemName.startsWith('Brazier of Commanding') || itemName.startsWith('Censer of Controlling') || itemName.startsWith('Stone of Controlling')) {
+        return 'Elemental command item that summons or controls a matching elemental when its activation requirements are met.';
+    }
+
+    if (itemName === 'Figurine of Wondrous Power') {
+        return 'This figurine turns into a specific creature companion for a limited time before reverting to miniature form.';
+    }
+
+    if (itemName === 'Ioun Stone') {
+        return 'A small orbiting gem that grants a specific passive magical benefit while it circles the bearer\'s head.';
+    }
+
+    if (itemName === 'Absorbing Tattoo') {
+        return 'Tattoo that grants resistance to a chosen damage type and can turn some of that energy into healing.';
+    }
+
+    if (itemName === 'Masquerade Tattoo') {
+        return 'Magical tattoo that supports disguise and performance by altering the bearer\'s appearance in themed ways.';
+    }
+
+    if (itemName === 'Illuminator\'s Tattoo') {
+        return 'Tattoo that turns the body into a writing surface and supports magical inscription and light effects.';
+    }
+
+    if (itemName === 'Animated Shield') {
+        return 'This shield floats beside the wielder after activation, leaving the user\'s hands free while still granting AC.';
+    }
+
+    if (itemName === 'Apparatus of the Crab') {
+        return 'A sealed mechanical vehicle shaped like a crustacean, capable of underwater travel and claw-based operations.';
+    }
+
+    if (itemName === 'Armor of Invulnerability') {
+        return 'Heavy magic armor that can temporarily grant resistance to nonmagical damage and ignore mundane weapon blows.';
+    }
+
+    if (itemName === 'Arrow of Slaying') {
+        return 'Single-use magic ammunition that deals devastating extra damage to a chosen creature type.';
+    }
+
+    if (itemName === 'Bag of Devouring') {
+        return 'A cursed extra-dimensional bag that resembles a Bag of Holding but attempts to consume creatures placed inside.';
+    }
+
+    if (itemName === 'Candle of Invocation') {
+        return 'A powerful aligned candle that enhances spellcasting and can call extraplanar beings when burned.';
+    }
+
+    if (itemName === 'Carpet of Flying') {
+        return 'Flying carpet that serves as an aerial mount and can carry different loads depending on its size.';
+    }
+
+    if (itemName === 'Crystal Ball') {
+        return 'Classic scrying focus used to observe distant creatures or places, with stronger versions granting extra senses.';
+    }
+
+    if (itemName === 'Cubic Gate') {
+        return 'Multi-planar cube that opens portals to preset planes, making it a powerful travel and escape device.';
+    }
+
+    if (itemName === 'Demon Armor') {
+        return 'Cursed fiendish armor that enhances combat potential but binds the wearer into dangerous infernal complications.';
+    }
+
+    if (itemName === 'Frost Brand') {
+        return 'Cold-themed magic blade that deals extra cold damage and can extinguish open flames nearby.';
+    }
+
+    if (itemName === 'Helm of Brilliance') {
+        return 'Gem-studded helm that stores multiple spell effects and can unleash powerful radiant and fire magic.';
+    }
+
+    if (itemName === 'Horseshoes of a Zephyr') {
+        return 'Mount enchantment that lets a horse move without touching the ground, avoiding difficult terrain and traps.';
+    }
+
+    if (itemName === 'Iron Flask') {
+        return 'Legendary container capable of imprisoning a creature and releasing it later under the bearer\'s control.';
+    }
+
+    if (itemName === 'Marvelous Pigments') {
+        return 'Paints that turn flat images into real openings or objects, enabling extreme creativity and abuse.';
+    }
+
+    if (itemName === 'Nine Lives Stealer') {
+        return 'Magic weapon that can instantly slay foes on a failed save until its stored charges are spent.';
+    }
+
+    if (itemName === 'Oathbow') {
+        return 'Legendary bow that marks one sworn enemy, greatly increasing damage and accuracy against that target.';
+    }
+
+    if (itemName === 'Oil of Sharpness') {
+        return 'Weapon or ammunition coating that grants a strong temporary bonus to attack and damage rolls.';
+    }
+
+    if (itemName === 'Plate Armor of Etherealness') {
+        return 'Magic plate that lets the wearer shift onto the Ethereal Plane for brief periods.';
+    }
+
+    if (itemName === 'Robe of Scintillating Colors') {
+        return 'Dazzling robe that can blind and charm onlookers with shifting displays of brilliant light.';
+    }
+
+    if (itemName === 'Robe of Stars') {
+        return 'Starry robe that grants defensive magic and access to the Astral Plane through stitched star motes.';
+    }
+
+    if (itemName === 'Scimitar of Speed') {
+        return 'Swift magic blade that grants an extra attack as a bonus action while wielded.';
+    }
+
+    if (itemName === 'Sphere of Annihilation') {
+        return 'One of the most dangerous items in the game: a floating void that erases matter on contact.';
+    }
+
+    if (itemName === 'Well of Many Worlds') {
+        return 'Portable cloth portal that opens to unpredictable planes, making it powerful and dangerously unstable.';
+    }
+
+    if (itemName === 'Defender (Sword)') {
+        return 'Legendary sword that can shift some of its attack bonus into Armor Class, letting the wielder trade offense for defense.';
+    }
+
+    if (itemName === 'Robe of the Archmagi') {
+        return 'The iconic archmage robe, blending AC, saving throw bonuses, and spellcasting enhancement into one item.';
+    }
+
+    if (itemName === 'Rod of Lordly Might') {
+        return 'Versatile legendary rod that changes shape into multiple weapons and tools while offering several command powers.';
+    }
+
+    if (itemName === 'Scarab of Protection') {
+        return 'Protective talisman that guards against necromancy, curses, and life-draining effects until its charges are spent.';
+    }
+
+    if (itemName === 'Talisman of Pure Good' || itemName === 'Talisman of Ultimate Evil') {
+        return 'Alignment-locked talisman that can unleash overwhelming holy or unholy punishment against opposing creatures.';
+    }
+
+    if (itemName === 'Talisman of the Sphere') {
+        return 'Specialized artifact talisman that helps a bearer control a Sphere of Annihilation.';
+    }
+
+    if (itemName === 'Throne of Bhaal' || itemName === 'Wyvern Throne of Asmodeus') {
+        return 'Artifact throne tied to a specific dark power, intended for major story arcs rather than normal treasure tables.';
+    }
+
+    if (itemName === 'Staff of the Spellsteal') {
+        return 'High-tier artifact staff built around stealing or redirecting magic from enemy casters.';
+    }
+
+    if (category === 'Wondrous Item') {
+        return 'Magic item with a specialized effect tied to its name; use the source link for the exact activation, rarity, and attunement rules.';
+    }
+
+    if (category === 'Ring') {
+        return 'Magic ring worn for a persistent or activatable supernatural benefit tied to its specific enchantment.';
+    }
+
+    if (category === 'Rod') {
+        return 'Magic rod that channels a narrow set of supernatural powers, often through command words or activations.';
+    }
+
+    if (category === 'Staff') {
+        return 'Magic staff that stores significant arcane or divine power, often through charges and spell-like effects.';
+    }
+
+    if (category === 'Wand') {
+        return 'Magic wand designed for repeated activations, usually projecting a focused set of themed magical effects.';
+    }
+
+    if (category === 'Potion') {
+        return 'Consumable magic item that grants a temporary supernatural effect when drunk or otherwise administered.';
+    }
+
+    if (category === 'Scroll') {
+        return 'Single-use magical scroll that releases a stored spell or supernatural effect when activated.';
+    }
+
+    if (category === 'Trinket') {
+        return 'Minor keepsake or curiosity with more story value than combat impact.';
+    }
+
+    if (category === 'Weapon') {
+        return item.rarity?.trim()
+            ? 'Magic weapon entry whose exact enhancement, rider effect, or charge-based powers are defined on the linked source page.'
+            : 'Weapon entry intended for melee or ranged combat, with exact damage and handling rules defined in the source record.';
+    }
+
+    if (category === 'Armor') {
+        return item.rarity?.trim()
+            ? 'Magic armor entry whose exact protective enchantment, resistances, or triggered defenses depend on the named item page.'
+            : 'Armor entry built around Armor Class, wear requirements, and survivability tradeoffs appropriate to its type.';
+    }
+
+    if (category === 'Adventuring Gear') {
+        return 'General-purpose adventuring supply used for travel logistics, camp tasks, storage, light, climbing, navigation, or improvised utility.';
+    }
+
+    if (category === 'Tools') {
+        return 'Specialized tool set or focus used for proficiency checks, crafting, trade work, downtime activity, or class-feature support.';
+    }
+
+    if (category === 'Poison') {
+        return 'Hazardous toxin meant to be applied or delivered to inflict damage, a condition, or a hostile saving throw effect.';
+    }
+
+    if (category === 'Explosive') {
+        return 'Single-use explosive or alchemical charge built for burst damage, demolition, or forcing enemies out of position.';
+    }
+
+    if (category === 'Siege Equipment') {
+        return 'Large-scale battlefield engine or breaching device intended for crews, fortifications, and heavy war-scene utility.';
+    }
+
+    return undefined;
+}
+
+function splitEquipmentClauses(text: string): string[] {
+    const clauses: string[] = [];
+    let current = '';
+    let depth = 0;
+
+    for (const character of text) {
+        if (character === '(') {
+            depth += 1;
+            current += character;
+            continue;
+        }
+
+        if (character === ')') {
+            depth = Math.max(0, depth - 1);
+            current += character;
+            continue;
+        }
+
+        if ((character === ',' || character === ';') && depth === 0) {
+            const nextClause = current.trim();
+            if (nextClause) {
+                clauses.push(nextClause);
+            }
+
+            current = '';
+            continue;
+        }
+
+        current += character;
+    }
+
+    const finalClause = current.trim();
+    if (finalClause) {
+        clauses.push(finalClause);
+    }
+
+    return clauses;
+}
+
+function sourceLabelFromUrl(url: string): string | undefined {
+    return equipmentSourceLabelByUrl.get(url);
+}
+
+function buildEquipmentSummary(item: EquipmentItem): string | undefined {
+    if (item.summary?.trim()) {
+        return item.summary.trim();
+    }
+
+    const notes = item.notes?.trim();
+    const clauses = notes ? splitEquipmentClauses(notes) : [];
+
+    switch (item.category) {
+        case 'Weapon': {
+            const proficiency = clauses.includes('Martial') ? 'Martial' : 'Simple';
+            const ranged = clauses.some((clause) => clause.includes('Range') || clause === 'Thrown' || clause === 'Ammunition');
+            const finesse = clauses.includes('Finesse');
+            const versatile = clauses.some((clause) => clause.startsWith('Versatile'));
+            const parts = [
+                `${proficiency} ${ranged ? 'combat' : 'melee'} weapon`,
+                finesse ? 'that favors precision or Dexterity-based fighting' : null,
+                versatile ? 'and supports multiple handling styles' : null
+            ].filter((part): part is string => Boolean(part));
+
+            return `${parts.join(' ')}.`;
+        }
+        case 'Armor': {
+            const armorType = clauses.find((clause) => clause.includes('Armor'));
+            const armorClass = clauses.find((clause) => clause.startsWith('AC') || clause.endsWith('AC'));
+            if (armorType || armorClass) {
+                return `${armorType ?? 'Protective gear'} ${armorClass ? `built around ${armorClass.toLowerCase()}` : 'designed for defense and survivability'}.`;
+            }
+
+            return 'Protective equipment intended to improve survivability in dangerous encounters.';
+        }
+        case 'Adventuring Gear':
+            return notes ? `Utility gear for travel, survival, or problem solving. ${notes}` : 'Utility gear for travel, survival, or general adventuring support.';
+        case 'Tools':
+            return notes ? `Tool set used for proficiency-based checks and downtime tasks. ${notes}` : 'Tool set used for specialized crafting, utility, or skill support.';
+        case 'Poison':
+            return notes ? `Hazardous toxin with a specific delivery method and saving throw effect. ${notes}` : 'Hazardous toxin used for injury, contact, inhaled, or ingested effects.';
+        case 'Explosive':
+            return notes ? `Single-use explosive or alchemical munition. ${notes}` : 'Single-use explosive device intended for area denial or burst damage.';
+        case 'Siege Equipment':
+            return notes ? `Large-scale battlefield engine or breaching tool. ${notes}` : 'Large-scale battlefield engine or breaching tool for war and fortifications.';
+        case 'Trinket':
+            return notes ? notes : 'Narrative keepsake with flavor, mystery, and roleplay value more than direct combat impact.';
+        case 'Ring':
+            return notes ? `Magic ring worn for a persistent or activatable benefit. ${notes}` : 'Magic ring worn for a persistent or activatable supernatural benefit.';
+        case 'Rod':
+            return notes ? `Magic rod focused on a narrow supernatural function or activatable power. ${notes}` : 'Magic rod focused on a narrow supernatural function or activatable power.';
+        case 'Staff':
+            return notes ? `Magic staff built around charged powers, spellcasting support, or a themed magical discipline. ${notes}` : 'Magic staff built around charged powers, spellcasting support, or a themed magical discipline.';
+        case 'Wand':
+            return notes ? `Magic wand intended for repeated activations or spell-like effects. ${notes}` : 'Magic wand intended for repeated activations or spell-like effects.';
+        case 'Potion':
+            return notes ? `Consumable magic item that grants a temporary effect. ${notes}` : 'Consumable magic item that grants a temporary effect when used.';
+        case 'Scroll':
+            return notes ? `Single-use magical document or inscribed effect. ${notes}` : 'Single-use magical document or inscribed effect released when activated.';
+        case 'Wondrous Item':
+            return notes ? notes : 'Specialized magic item with a named effect; consult the source entry for its exact activation, rarity, and attunement rules.';
+        default:
+            return notes || undefined;
+    }
+}
+
+function buildEquipmentDetailLines(item: EquipmentItem): string[] {
+    if (Array.isArray(item.detailLines) && item.detailLines.length > 0) {
+        return item.detailLines;
+    }
+
+    const detailLines: string[] = [];
+    const clauses = item.notes?.trim() ? splitEquipmentClauses(item.notes.trim()) : [];
+
+    if (item.sourceLabel?.trim()) {
+        detailLines.push(`Source group: ${item.sourceLabel.trim()}`);
+    }
+
+    if (item.rarity?.trim()) {
+        detailLines.push(`Rarity: ${item.rarity.trim()}`);
+    }
+
+    if (item.attunement?.trim()) {
+        detailLines.push(`Attunement: ${item.attunement.trim()}`);
+    }
+
+    const metadataLineCount = detailLines.length;
+
+    if (item.category === 'Weapon') {
+        const proficiency = clauses.find((clause) => clause === 'Simple' || clause === 'Martial');
+        const range = clauses.find((clause) => clause.startsWith('Range'));
+        const properties = clauses.filter((clause) => clause !== proficiency && clause !== range);
+
+        if (proficiency) {
+            detailLines.push(`Training: ${proficiency} weapon`);
+        }
+
+        if (properties.length > 0) {
+            detailLines.push(`Properties: ${properties.join(', ')}`);
+        }
+
+        if (range) {
+            detailLines.push(range);
+        }
+
+        if (detailLines.length === metadataLineCount) {
+            buildGeneratedEquipmentFallbackLines(item).forEach((line) => detailLines.push(line));
+        }
+
+        return detailLines;
+    }
+
+    if (item.category === 'Armor') {
+        const armorType = clauses.find((clause) => clause.includes('Armor'));
+        const armorClass = clauses.find((clause) => clause.startsWith('AC') || clause.endsWith('AC'));
+        const requirements = clauses.filter((clause) => clause !== armorType && clause !== armorClass);
+
+        if (armorType) {
+            detailLines.push(`Type: ${armorType}`);
+        }
+
+        if (armorClass) {
+            detailLines.push(`Defense: ${armorClass}`);
+        }
+
+        requirements.forEach((clause) => detailLines.push(clause));
+
+        if (detailLines.length === metadataLineCount) {
+            buildGeneratedEquipmentFallbackLines(item).forEach((line) => detailLines.push(line));
+        }
+
+        return detailLines;
+    }
+
+    clauses.forEach((clause) => detailLines.push(clause));
+
+    if (detailLines.length === metadataLineCount) {
+        buildGeneratedEquipmentFallbackLines(item).forEach((line) => detailLines.push(line));
+    }
+
+    return detailLines;
+}
+
+function inferEquipmentRarity(item: EquipmentItem, index: number): string | undefined {
+    if (item.rarity?.trim()) {
+        return item.rarity.trim();
+    }
+
+    if (item.category !== 'Wondrous Item') {
+        return undefined;
+    }
+
+    const entryNumber = index + 1;
+
+    if (entryNumber >= 90 && entryNumber <= 162) {
+        return 'Common';
+    }
+
+    if (entryNumber >= 163 && entryNumber <= 220) {
+        return 'Uncommon';
+    }
+
+    if (entryNumber >= 221 && entryNumber <= 285) {
+        return 'Rare';
+    }
+
+    if (entryNumber >= 286 && entryNumber <= 322) {
+        return 'Very Rare';
+    }
+
+    if (entryNumber >= 323 && entryNumber <= 342) {
+        return 'Legendary';
+    }
+
+    if (entryNumber >= 343 && entryNumber <= 350) {
+        return 'Artifact';
+    }
+
+    return undefined;
+}
+
+function enrichEquipmentItem(item: EquipmentItem, index: number): EquipmentItem {
+    const override = equipmentDetailOverrides[item.name];
+    const mergedItem: EquipmentItem = {
+        ...item,
+        sourceUrl: item.category === 'Wondrous Item' && item.sourceUrl === 'https://dnd5e.wikidot.com/wondrous-items'
+            ? buildWondrousItemSourceUrl(item.name)
+            : item.sourceUrl,
+        sourceLabel: override?.sourceLabel ?? item.sourceLabel ?? sourceLabelFromUrl(item.sourceUrl),
+        rarity: override?.rarity ?? inferEquipmentRarity(item, index),
+        attunement: override?.attunement ?? item.attunement
+    };
+
+    if (override?.summary?.trim()) {
+        mergedItem.summary = override.summary.trim();
+    }
+
+    if (override?.detailLines?.length) {
+        mergedItem.detailLines = override.detailLines;
+    }
+
+    if (override?.notes?.trim()) {
+        const hasExistingStructuredContent = Boolean(mergedItem.summary?.trim() || mergedItem.detailLines?.length);
+        const hasRichOverride = Boolean(override.summary?.trim() || override.detailLines?.length);
+
+        if (!mergedItem.notes?.trim() || hasRichOverride || !hasExistingStructuredContent) {
+            mergedItem.notes = override.notes.trim();
+        }
+    }
+
+    if (!mergedItem.notes?.trim()) {
+        mergedItem.notes = buildGeneratedEquipmentNotes(mergedItem);
+    }
+
+    if (!mergedItem.summary?.trim()) {
+        mergedItem.summary = buildEquipmentSummary(mergedItem);
+    }
+
+    if (!mergedItem.detailLines?.length) {
+        mergedItem.detailLines = buildEquipmentDetailLines(mergedItem);
+    }
+
+    return mergedItem;
+}
+
+const baseEquipmentCatalog: ReadonlyArray<EquipmentItem> = [
     // Simple Melee Weapons
     { name: 'Club', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons', weight: 2, costGp: 0.01, notes: 'Simple, Light' },
     { name: 'Dagger', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons', weight: 1, costGp: 2, notes: 'Simple, Finesse, Light, Thrown, Nick, Range (20/60)' },
@@ -377,6 +1243,17 @@ export const equipmentCatalog: ReadonlyArray<EquipmentItem> = [
     { name: 'Wyvern Throne of Asmodeus', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
     { name: 'Throne of Bhaal', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
     { name: 'Staff of the Spellsteal', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items' },
+    // Adventure-Specific Unique and Unknown-Rarity Magic Items
+    { name: 'Draakhorn', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items:draakhorn', sourceLabel: 'RoT', rarity: 'Unique' },
+    { name: 'Gnomengarde Grenade', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items:gnomengarde-grenade', sourceLabel: 'DC', rarity: 'Unique' },
+    { name: 'Mask of the Dragon Queen', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items:mask-of-the-dragon-queen', sourceLabel: 'ToD', rarity: 'Unique', attunement: 'Required' },
+    { name: 'Crusader\'s Shortsword', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items:crusaders-shortsword', sourceLabel: 'CoS', rarity: '???', attunement: 'Lawful good creature' },
+    { name: 'Orcus Figurine', category: 'Wondrous Item', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items:orcus-figurine', sourceLabel: 'CM', rarity: '???' },
+    { name: 'Radiance', category: 'Wand', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items:radiance', sourceLabel: 'CM', rarity: '???', attunement: 'Spellcaster' },
+    { name: 'Shield of the Silver Dragon', category: 'Armor', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items:shield-of-the-silver-dragon', sourceLabel: 'CoS', rarity: '???' },
+    { name: 'Stonky\'s Ring', category: 'Ring', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items:stonkys-ring', sourceLabel: 'CM', rarity: '???', attunement: 'Required' },
+    { name: 'Tearulai', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items:tearulai', sourceLabel: 'WDMM', rarity: '???', attunement: 'Non-evil creature' },
+    { name: 'Yester Hill Axe', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/wondrous-items:yester-hill-axe', sourceLabel: 'CoS', rarity: '???' },
     // Poisons
     { name: 'Basic Poison (Vial)', category: 'Poison', sourceUrl: 'https://dnd5e.wikidot.com/poisons', costGp: 100, notes: 'Contact, DC 13 Con or poisoned for 1 hour' },
     { name: "Assassin's Blood", category: 'Poison', sourceUrl: 'https://dnd5e.wikidot.com/poisons', costGp: 150, notes: 'Ingested, DC 10 Con or 1d12 poison + poisoned 24 hours' },
@@ -403,6 +1280,54 @@ export const equipmentCatalog: ReadonlyArray<EquipmentItem> = [
     { name: 'Battering Ram', category: 'Siege Equipment', sourceUrl: 'https://dnd5e.wikidot.com/siege-equipment', weight: 0, costGp: 0, notes: 'Breaks structures, 3d4+10 bludgeoning vs objects' },
     { name: 'Siege Tower', category: 'Siege Equipment', sourceUrl: 'https://dnd5e.wikidot.com/siege-equipment', weight: 0, costGp: 0, notes: 'Mobile cover, allows troops to scale walls' }
 ];
+
+const obsoleteOfficialEquipmentNames = new Set([
+    'eye of vecna',
+    'hand of vecna'
+]);
+
+function equipmentCatalogKey(item: EquipmentItem): string {
+    return item.name.trim().toLowerCase();
+}
+
+function mergeEquipmentCatalogItem(localItem: EquipmentItem, officialItem: EquipmentItem): EquipmentItem {
+    const shouldPreferOfficialSourceUrl = !localItem.sourceUrl
+        || localItem.sourceUrl === 'https://dnd5e.wikidot.com/wondrous-items';
+
+    return {
+        ...officialItem,
+        ...localItem,
+        category: officialItem.category || localItem.category,
+        sourceUrl: shouldPreferOfficialSourceUrl ? (officialItem.sourceUrl || localItem.sourceUrl) : localItem.sourceUrl,
+        sourceLabel: officialItem.sourceLabel ?? localItem.sourceLabel,
+        rarity: localItem.rarity ?? officialItem.rarity,
+        attunement: localItem.attunement ?? officialItem.attunement,
+        weight: localItem.weight ?? officialItem.weight,
+        costGp: localItem.costGp ?? officialItem.costGp,
+        summary: localItem.summary ?? officialItem.summary,
+        notes: localItem.notes ?? officialItem.notes,
+        detailLines: localItem.detailLines ?? officialItem.detailLines
+    };
+}
+
+function buildEquipmentCatalogBase(): ReadonlyArray<EquipmentItem> {
+    const catalogMap = new Map(officialWikidotEquipmentCatalog
+        .filter((item) => !obsoleteOfficialEquipmentNames.has(equipmentCatalogKey(item)))
+        .map((item) => [equipmentCatalogKey(item), item]));
+
+    baseEquipmentCatalog
+        .filter((item) => !obsoleteOfficialEquipmentNames.has(equipmentCatalogKey(item)))
+        .forEach((item) => {
+            const key = equipmentCatalogKey(item);
+            const officialItem = catalogMap.get(key);
+
+            catalogMap.set(key, officialItem ? mergeEquipmentCatalogItem(item, officialItem) : item);
+        });
+
+    return [...catalogMap.values()];
+}
+
+export const equipmentCatalog: ReadonlyArray<EquipmentItem> = buildEquipmentCatalogBase().map((item, index) => enrichEquipmentItem(item, index));
 
 export const classStartingPackages = {
     A: {

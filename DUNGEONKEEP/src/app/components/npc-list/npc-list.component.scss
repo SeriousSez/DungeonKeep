@@ -18,8 +18,10 @@
 }
 
 .npc-list-header,
+.filter-toolbar,
 .npc-card-topline,
 .npc-list-actions,
+.filter-toolbar-actions,
 .filter-actions,
 .card-actions,
 .quick-toggle-row,
@@ -47,12 +49,28 @@ p {
 
 .npc-list-header p,
 .npc-card p,
-.field span {
+.field span,
+.filter-toolbar-copy {
     color: var(--text-muted);
 }
 
+.filter-toolbar {
+    padding: 14px 16px;
+    border: 1px solid var(--panel-border);
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--surface-raised) 88%, var(--accent-primary) 12%);
+}
+
+.filter-toolbar-copy {
+    max-width: 38rem;
+}
+
+.filter-toggle {
+    min-width: 9rem;
+}
+
 .filter-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
 .search-field {
@@ -81,7 +99,7 @@ input {
 }
 
 .npc-card-grid {
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .npc-card,
@@ -121,6 +139,11 @@ input {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+.quick-toggle-row {
+    gap: 5px;
+    justify-content: flex-start;
 }
 
 .badge,

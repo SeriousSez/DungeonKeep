@@ -4,15 +4,20 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { NpcManagerComponent } from '../../components/npc-manager/npc-manager.component';
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
+import { ItemDetailModalComponent } from '../../components/item-detail-modal/item-detail-modal.component';
+import { equipmentCatalog } from '../../data/new-character-standard-page.data';
+import type { InventoryEntry } from '../../data/new-character-standard-page.types';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
 type CampaignSection = 'party' | 'sessions' | 'npcs' | 'loot' | 'threads' | 'members';
 type ThreatLevel = 'Low' | 'Moderate' | 'High' | 'Deadly';
 
+const lootRarityOrder = ['Common', 'Uncommon', 'Rare', 'Very Rare', 'Legendary', 'Artifact', 'Unique', '???'] as const;
+
 @Component({
     selector: 'app-campaign-section-page',
-    imports: [CommonModule, RouterLink, ConfirmModalComponent, DropdownComponent, NpcManagerComponent],
+    imports: [CommonModule, RouterLink, ConfirmModalComponent, DropdownComponent, NpcManagerComponent, ItemDetailModalComponent],
     templateUrl: './campaign-section-page.component.html',
     styleUrl: './campaign-section-page.component.scss',
     standalone: true,
@@ -55,7 +60,10 @@ export class CampaignSectionPageComponent {
     readonly sessionLocation = signal('');
     readonly sessionObjective = signal('');
     readonly sessionThreat = signal<ThreatLevel>('Moderate');
+    readonly activeLootItemDetailModal = signal<InventoryEntry | null>(null);
     readonly lootDraft = signal('');
+    readonly selectedLootCategory = signal('All');
+    readonly selectedLootRarity = signal('All');
     readonly inviteEmail = signal('');
     readonly sectionFeedback = signal('');
 
@@ -103,6 +111,40 @@ export class CampaignSectionPageComponent {
         }
 
         return campaign.openThreads.filter((thread) => thread.visibility === 'Party');
+    });
+    readonly lootCategories = computed(() => {
+        return ['All', ...new Set(equipmentCatalog.map((item) => item.category).sort((left, right) => left.localeCompare(right)))];
+    });
+    readonly isWondrousLootCategory = computed(() => this.selectedLootCategory() === 'Wondrous Item');
+    readonly lootRarities = computed(() => {
+        const availableRarities = [...new Set(
+            equipmentCatalog
+                .filter((item) => item.category === 'Wondrous Item')
+                .map((item) => item.rarity?.trim())
+                .filter((rarity): rarity is string => Boolean(rarity))
+        )];
+        const rankedRarities = lootRarityOrder.filter((rarity) => availableRarities.includes(rarity));
+        const unrankedRarities = availableRarities
+            .filter((rarity) => !lootRarityOrder.includes(rarity as typeof lootRarityOrder[number]))
+            .sort((left, right) => left.localeCompare(right));
+
+        return ['All', ...rankedRarities, ...unrankedRarities];
+    });
+    readonly filteredLootCatalog = computed(() => {
+        const campaign = this.selectedCampaign();
+        const existingLoot = new Set((campaign?.loot ?? []).map((item) => item.trim().toLowerCase()));
+        const searchTerm = this.lootDraft().trim().toLowerCase();
+        const selectedCategory = this.selectedLootCategory();
+        const selectedRarity = this.selectedLootRarity();
+
+        return [...equipmentCatalog]
+            .sort((left, right) => left.category.localeCompare(right.category) || left.name.localeCompare(right.name))
+            .filter((item) => !existingLoot.has(item.name.trim().toLowerCase()))
+            .filter((item) => selectedCategory === 'All' || item.category === selectedCategory)
+            .filter((item) => selectedCategory !== 'Wondrous Item' || selectedRarity === 'All' || item.rarity === selectedRarity)
+            .filter((item) => !searchTerm
+                || item.name.toLowerCase().includes(searchTerm)
+                || item.category.toLowerCase().includes(searchTerm));
     });
 
     readonly pageTitle = computed(() => {
@@ -334,21 +376,63 @@ export class CampaignSectionPageComponent {
         this.lootDraft.set(value);
     }
 
+    selectLootCategory(category: string): void {
+        this.selectedLootCategory.set(this.lootCategories().includes(category) ? category : 'All');
+        this.selectedLootRarity.set('All');
+    }
+
+    selectLootRarity(rarity: string): void {
+        this.selectedLootRarity.set(this.lootRarities().includes(rarity) ? rarity : 'All');
+    }
+
     async addLoot(): Promise<void> {
-        const campaign = this.selectedCampaign();
         const name = this.lootDraft().trim();
-        if (!campaign || campaign.currentUserRole !== 'Owner' || !name) {
+        if (!name) {
             return;
         }
 
-        const succeeded = await this.store.addCampaignLoot(campaign.id, name);
-        if (succeeded) {
-            this.lootDraft.set('');
-        } else {
-            this.sectionFeedback.set('Could not add that loot item.');
+        await this.addLootByName(name);
+    }
+
+    async addCatalogLoot(name: string): Promise<void> {
+        await this.addLootByName(name);
+    }
+
+    openLootItemModal(item: { name: string; category: string; sourceUrl: string; weight?: number; costGp?: number; sourceLabel?: string; summary?: string; notes?: string; detailLines?: string[]; rarity?: string; attunement?: string }): void {
+        this.activeLootItemDetailModal.set({
+            name: item.name,
+            category: item.category,
+            quantity: 1,
+            sourceUrl: item.sourceUrl,
+            weight: item.weight,
+            costGp: item.costGp,
+            sourceLabel: item.sourceLabel,
+            summary: item.summary,
+            notes: item.notes,
+            detailLines: item.detailLines,
+            rarity: item.rarity,
+            attunement: item.attunement
+        });
+    }
+
+    async addActiveLootFromModal(quantity: number): Promise<void> {
+        const activeItem = this.activeLootItemDetailModal();
+        if (!activeItem) {
+            return;
         }
 
+        const safeQuantity = Math.max(1, Math.floor(quantity));
+
+        for (let count = 0; count < safeQuantity; count++) {
+            await this.addLootByName(activeItem.name, false);
+        }
+
+        this.closeLootItemModal();
         this.cdr.detectChanges();
+    }
+
+    closeLootItemModal(): void {
+        this.activeLootItemDetailModal.set(null);
     }
 
     async removeLoot(name: string): Promise<void> {
@@ -360,6 +444,25 @@ export class CampaignSectionPageComponent {
         const succeeded = await this.store.removeCampaignLoot(campaign.id, name);
         if (!succeeded) {
             this.sectionFeedback.set('Could not remove that loot item.');
+        }
+
+        this.cdr.detectChanges();
+    }
+
+    private async addLootByName(name: string, closeModalOnFailure = true): Promise<void> {
+        const campaign = this.selectedCampaign();
+        if (!campaign || campaign.currentUserRole !== 'Owner') {
+            return;
+        }
+
+        const succeeded = await this.store.addCampaignLoot(campaign.id, name);
+        if (succeeded) {
+            this.lootDraft.set('');
+        } else {
+            this.sectionFeedback.set('Could not add that loot item.');
+            if (closeModalOnFailure) {
+                this.closeLootItemModal();
+            }
         }
 
         this.cdr.detectChanges();

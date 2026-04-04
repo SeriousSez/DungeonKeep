@@ -2257,20 +2257,6 @@ input {
     padding: 8px 10px;
 }
 
-.equipment-pill-action {
-    min-height: 24px;
-    padding: 0 10px;
-    border: 1px solid color-mix(in srgb, var(--accent-primary) 65%, #7eb95d);
-    border-radius: 4px;
-    background: color-mix(in srgb, var(--surface-raised) 75%, var(--panel-bg));
-    color: color-mix(in srgb, var(--accent-primary) 85%, #7eb95d);
-    font: inherit;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    cursor: pointer;
-}
-
 .equipment-filter-label {
     font-size: 0.85rem;
     font-weight: 700;
@@ -2279,6 +2265,8 @@ input {
 .equipment-item-list {
     display: grid;
     gap: 8px;
+    max-height: 1000px;
+    overflow: auto;
 }
 
 .equipment-source-list {
@@ -2287,23 +2275,45 @@ input {
     gap: 8px;
 }
 
-.equipment-source-chip {
-    min-height: 28px;
-    padding: 0 10px;
-    border: 1px solid color-mix(in srgb, var(--accent-primary) 65%, #7eb95d);
-    border-radius: 4px;
-    background: color-mix(in srgb, var(--surface-raised) 75%, var(--panel-bg));
-    color: color-mix(in srgb, var(--accent-primary) 85%, #7eb95d);
-    font: inherit;
-    font-size: 0.74rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    cursor: pointer;
+.equipment-filter-separator {
+    height: 1px;
+    margin: 2px 0 0;
+    background: linear-gradient(90deg,
+            transparent 0%,
+            color-mix(in srgb, var(--panel-border) 82%, var(--accent-primary) 18%) 12%,
+            color-mix(in srgb, var(--panel-border) 82%, var(--accent-primary) 18%) 88%,
+            transparent 100%);
 }
 
-.equipment-source-chip.active {
-    background: color-mix(in srgb, var(--accent-primary) 24%, var(--surface-raised));
+.equipment-source-list--secondary {
+    margin-top: -4px;
+}
+
+.equipment-source-chip,
+.equipment-pill-action {
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+    background: color-mix(in srgb, var(--surface-raised) 90%, var(--panel-bg) 10%);
     color: var(--text-main);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.equipment-source-chip:hover,
+.equipment-pill-action:hover {
+    border-color: color-mix(in srgb, var(--accent-primary) 56%, var(--panel-border) 44%);
+    transform: translateY(-1px);
+}
+
+.equipment-source-chip.active,
+.equipment-pill-action {
+    background: color-mix(in srgb, var(--accent-primary) 18%, var(--surface-raised) 82%);
+    border-color: color-mix(in srgb, var(--accent-primary) 52%, var(--panel-border) 48%);
 }
 
 .equipment-item-row {

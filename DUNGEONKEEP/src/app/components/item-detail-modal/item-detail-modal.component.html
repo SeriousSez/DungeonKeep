@@ -14,9 +14,31 @@
         </header>
 
         <div class="item-sheet-body">
-            <p class="item-meta-line">Legacy • {{ item().category | lowercase }}</p>
+            <p class="item-meta-line">Reference • {{ item().category | lowercase }}</p>
+
+            <div class="item-tags-row item-tags-row--top">
+                <span class="item-tags-label">PROFILE:</span>
+                @for (tag of itemMetaTags(); track tag) {
+                <span class="item-tag">{{ tag }}</span>
+                }
+            </div>
 
             <hr class="sheet-divider" />
+
+            <p class="item-summary">{{ summaryText() }}</p>
+
+            @if (itemHighlights().length > 0) {
+            <div class="item-highlights">
+                <p class="item-section-title">Highlights</p>
+                <ul>
+                    @for (highlight of itemHighlights(); track highlight) {
+                    <li>{{ highlight }}</li>
+                    }
+                </ul>
+            </div>
+
+            <hr class="sheet-divider" />
+            }
 
             <dl class="item-facts">
                 <div>
@@ -41,7 +63,11 @@
 
             <hr class="sheet-divider" />
 
-            <p class="item-description">{{ item().notes || 'No additional notes are available for this item yet.' }}</p>
+            @if (rulesText(); as rulesText) {
+            <p class="item-description">{{ rulesText }}</p>
+
+            <hr class="sheet-divider" />
+            }
 
             @if (item().containedItems && item().containedItems!.length > 0) {
             <div class="contained-items">
@@ -53,13 +79,6 @@
                 </ul>
             </div>
             }
-
-            <div class="item-tags-row">
-                <span class="item-tags-label">TAGS:</span>
-                <span class="item-tag">{{ primaryTag() }}</span>
-            </div>
-
-            <hr class="sheet-divider" />
 
             <div class="item-add-row">
                 <span class="item-add-label">Amount to add</span>

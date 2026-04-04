@@ -14,14 +14,30 @@
 
             <div class="suggestions-section">
                 <h3>Suggestions</h3>
-                <div class="suggestions-list">
-                    @for (suggestion of filteredSuggestions; track suggestion.text) {
-                    <button type="button" class="suggestion-btn" [class.selected]="isSuggestionSelected(suggestion)" (click)="toggleSuggestion(suggestion)">
-                        <span class="selection-indicator">{{ isSuggestionSelected(suggestion) ? 'Selected' : 'Select' }}</span>
-                        {{ suggestion.text }}
+                <div class="category-pill-row">
+                    @for (category of categoryPills; track category.value) {
+                    <button type="button" class="category-pill" [class.is-active]="isCategorySelected(category.value)" (click)="selectCategory(category.value)">
+                        {{ category.label }}
                     </button>
                     }
-                    @if (filteredSuggestions.length === 0) {
+                </div>
+                <div class="suggestions-list">
+                    @for (group of groupedSuggestions; track group.category) {
+                    <section class="suggestion-group">
+                        <h4 class="suggestion-group-title">{{ group.category }}</h4>
+                        <div class="suggestion-group-list">
+                            @for (suggestion of group.suggestions; track suggestion.text) {
+                            <button type="button" class="suggestion-btn" [class.selected]="isSuggestionSelected(suggestion)" (click)="toggleSuggestion(suggestion)">
+                                <div class="suggestion-meta-row">
+                                    <span class="selection-indicator">{{ isSuggestionSelected(suggestion) ? 'Selected' : 'Select' }}</span>
+                                </div>
+                                <span class="suggestion-text">{{ suggestion.text }}</span>
+                            </button>
+                            }
+                        </div>
+                    </section>
+                    }
+                    @if (groupedSuggestions.length === 0) {
                     <p class="no-results">No suggestions found</p>
                     }
                 </div>

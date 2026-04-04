@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
@@ -14,6 +14,7 @@ import { CampaignNpc, NpcHostilityFilter, NpcImportanceFilter, NpcLifeFilter, Np
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NpcListComponent {
+    readonly filtersExpanded = signal(false);
     readonly npcs = input.required<readonly CampaignNpc[]>();
     readonly selectedNpcId = input<string | null>(null);
     readonly canEdit = input<boolean>(false);
@@ -38,6 +39,7 @@ export class NpcListComponent {
     readonly importanceChanged = output<NpcImportanceFilter>();
     readonly sortChanged = output<NpcSortField>();
     readonly selectNpc = output<string>();
+    readonly editNpc = output<string>();
     readonly addNpc = output<void>();
     readonly loadMockNpcs = output<void>();
     readonly clearFilters = output<void>();
@@ -127,5 +129,9 @@ export class NpcListComponent {
             || this.hostility() !== 'All'
             || this.importance() !== 'All'
             || this.sortBy() !== 'RecentlyUpdated';
+    }
+
+    toggleFilters(): void {
+        this.filtersExpanded.update((expanded) => !expanded);
     }
 }

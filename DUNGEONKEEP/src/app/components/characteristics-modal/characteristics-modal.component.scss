@@ -127,14 +127,73 @@
         color: var(--text-muted);
     }
 
+    .category-pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    .category-pill {
+        min-height: 32px;
+        padding: 0 12px;
+        border: 1px solid var(--panel-border);
+        border-radius: 999px;
+        background: var(--surface-raised);
+        color: var(--text-main);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+
+        &:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        &:active {
+            transform: scale(0.98);
+        }
+
+        &.is-active {
+            background: color-mix(in srgb, var(--accent-primary) 14%, var(--surface-raised-solid));
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+    }
+
     .suggestions-list {
         flex: 1;
-        display: flex;
-        flex-direction: column;
+        display: grid;
         gap: 6px;
         overflow-y: auto;
         min-height: 0;
         padding-right: 4px;
+
+        .suggestion-group {
+            display: grid;
+            gap: 8px;
+            padding-bottom: 10px;
+        }
+
+        .suggestion-group+.suggestion-group {
+            border-top: 1px solid var(--panel-border);
+            padding-top: 12px;
+        }
+
+        .suggestion-group-title {
+            margin: 0;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-soft);
+        }
+
+        .suggestion-group-list {
+            display: grid;
+            gap: 6px;
+        }
 
         .suggestion-btn {
             background: none;
@@ -147,15 +206,28 @@
             font-size: 13px;
             line-height: 1.4;
             transition: all 0.2s ease;
+            display: grid;
+            gap: 6px;
+
+            .suggestion-meta-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
 
             .selection-indicator {
                 display: inline-block;
-                margin-right: 8px;
                 font-size: 10px;
                 font-weight: 700;
                 letter-spacing: 0.4px;
                 text-transform: uppercase;
                 color: var(--text-muted);
+            }
+
+            .suggestion-text {
+                display: block;
             }
 
             &:hover {

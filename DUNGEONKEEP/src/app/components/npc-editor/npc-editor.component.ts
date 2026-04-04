@@ -4,15 +4,18 @@ import { FormArray, FormControl, FormGroup, NonNullableFormBuilder, ReactiveForm
 import { debounceTime } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
+import { CharacteristicsModalComponent } from '../../components/characteristics-modal/characteristics-modal.component';
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
 import { CampaignNpc, NpcRelationship } from '../../models/campaign-npc.models';
 import { sanitizeNpc, touchNpc } from '../../data/campaign-npc.helpers';
 
 type StringListControl = FormArray<FormControl<string>>;
+type CharacteristicType = 'traits' | 'ideals' | 'bonds' | 'flaws' | 'mannerisms';
 
 type RelationshipForm = FormGroup<{
     id: FormControl<string>;
     targetNpcId: FormControl<string>;
+    customTarget: FormControl<string>;
     relationshipType: FormControl<string>;
     description: FormControl<string>;
 }>;
@@ -74,7 +77,7 @@ type NpcEditorMode = 'standard' | 'ai';
 @Component({
     selector: 'app-npc-editor',
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule, DropdownComponent],
+    imports: [CommonModule, ReactiveFormsModule, DropdownComponent, CharacteristicsModalComponent],
     templateUrl: './npc-editor.component.html',
     styleUrl: './npc-editor.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -104,6 +107,9 @@ export class NpcEditorComponent {
 
     readonly submitAttempted = signal(false);
     readonly editorMode = signal<NpcEditorMode>('standard');
+    readonly activeCharacteristicModal = signal<CharacteristicType | null>(null);
+    readonly characteristicModalValues = signal<string[]>([]);
+    private readonly lastEmittedDraftJson = signal('');
     readonly generationPrompt = signal<NpcGenerationPrompt>({
         nameHint: '',
         titleHint: '',
@@ -172,22 +178,22 @@ export class NpcEditorComponent {
     constructor() {
         effect(() => {
             const npc = this.npc();
-            this.submitAttempted.set(false);
-            this.editorMode.set('standard');
-            this.generationPrompt.set({
-                nameHint: '',
-                titleHint: '',
-                raceHint: '',
-                roleHint: '',
-                factionHint: '',
-                locationHint: '',
-                motivationHint: '',
-                notesHint: ''
-            });
 
             if (!npc) {
                 return;
             }
+
+            const incomingDraftJson = JSON.stringify(npc);
+            const isLocalAutosaveEcho = incomingDraftJson === this.lastEmittedDraftJson()
+                && npc.id === this.editorForm.controls.id.value;
+
+            if (isLocalAutosaveEcho) {
+                return;
+            }
+
+            this.submitAttempted.set(false);
+            this.editorMode.set('standard');
+            this.generationPrompt.set(this.createGenerationPrompt(npc));
 
             this.patchForm(npc);
         });
@@ -200,7 +206,9 @@ export class NpcEditorComponent {
                     return;
                 }
 
-                this.draftChanged.emit(this.currentDraft());
+                const draft = this.currentDraft();
+                this.lastEmittedDraftJson.set(JSON.stringify(draft));
+                this.draftChanged.emit(draft);
             });
     }
 
@@ -220,8 +228,21 @@ export class NpcEditorComponent {
         this.editorForm.controls.relationships.removeAt(index);
     }
 
-    updateRelationshipTarget(control: FormControl<string>, value: string | number): void {
-        control.setValue(typeof value === 'string' ? value : '');
+    updateRelationshipTarget(relationship: RelationshipForm, value: string | number): void {
+        const nextValue = typeof value === 'string' ? value : '';
+        relationship.controls.targetNpcId.setValue(nextValue);
+
+        if (nextValue) {
+            relationship.controls.customTarget.setValue('');
+        }
+    }
+
+    updateRelationshipCustomTarget(relationship: RelationshipForm, value: string): void {
+        relationship.controls.customTarget.setValue(value);
+
+        if (value.trim()) {
+            relationship.controls.targetNpcId.setValue('');
+        }
     }
 
     updateRelationshipType(control: FormControl<string>, value: string | number): void {
@@ -229,11 +250,43 @@ export class NpcEditorComponent {
     }
 
     selectEditorMode(mode: NpcEditorMode): void {
+        if (mode === 'ai') {
+            this.generationPrompt.set(this.createGenerationPrompt(this.currentDraft()));
+        }
+
         this.editorMode.set(mode);
     }
 
+    openCharacteristicModal(type: CharacteristicType): void {
+        this.characteristicModalValues.set(
+            this.getCharacteristicControl(type).controls
+                .map((control) => control.value.trim())
+                .filter(Boolean)
+        );
+        this.activeCharacteristicModal.set(type);
+    }
+
+    closeCharacteristicModal(): void {
+        this.activeCharacteristicModal.set(null);
+        this.characteristicModalValues.set([]);
+    }
+
+    onCharacteristicSubmit(values: string[]): void {
+        const type = this.activeCharacteristicModal();
+        if (!type) {
+            this.closeCharacteristicModal();
+            return;
+        }
+
+        this.replaceStringArray(this.getCharacteristicControl(type), values);
+        this.closeCharacteristicModal();
+    }
+
+    removeCharacteristic(type: CharacteristicType, index: number): void {
+        this.getCharacteristicControl(type).removeAt(index);
+    }
+
     requestGenerateNpc(): void {
-        this.editorMode.set('standard');
         this.generateNpc.emit(this.generationPrompt());
     }
 
@@ -370,6 +423,19 @@ export class NpcEditorComponent {
         this.replaceRelationshipArray(this.editorForm.controls.relationships, npc.relationships);
     }
 
+    private createGenerationPrompt(npc: CampaignNpc): NpcGenerationPrompt {
+        return {
+            nameHint: npc.name,
+            titleHint: npc.title,
+            raceHint: npc.race,
+            roleHint: npc.classOrRole,
+            factionHint: npc.faction,
+            locationHint: npc.location,
+            motivationHint: npc.motivations,
+            notesHint: npc.notes
+        };
+    }
+
     private replaceStringArray(array: StringListControl, values: readonly string[]): void {
         while (array.length > 0) {
             array.removeAt(0);
@@ -377,6 +443,21 @@ export class NpcEditorComponent {
 
         for (const value of values) {
             array.push(this.fb.control(value));
+        }
+    }
+
+    private getCharacteristicControl(type: CharacteristicType): StringListControl {
+        switch (type) {
+            case 'traits':
+                return this.editorForm.controls.personalityTraits;
+            case 'ideals':
+                return this.editorForm.controls.ideals;
+            case 'bonds':
+                return this.editorForm.controls.bonds;
+            case 'flaws':
+                return this.editorForm.controls.flaws;
+            case 'mannerisms':
+                return this.editorForm.controls.mannerisms;
         }
     }
 
@@ -397,16 +478,20 @@ export class NpcEditorComponent {
     private relationshipValue(array: FormArray<RelationshipForm>): NpcRelationship[] {
         return array.controls.map((relationship) => ({
             id: relationship.controls.id.value,
-            targetNpcId: relationship.controls.targetNpcId.value.trim(),
+            targetNpcId: relationship.controls.customTarget.value.trim() || relationship.controls.targetNpcId.value.trim(),
             relationshipType: relationship.controls.relationshipType.value.trim(),
             description: relationship.controls.description.value.trim()
         })).filter((relationship) => relationship.targetNpcId || relationship.relationshipType || relationship.description);
     }
 
     private createRelationshipForm(relationship?: NpcRelationship): RelationshipForm {
+        const rawTarget = relationship?.targetNpcId ?? '';
+        const knownTarget = this.relationshipTargets().some((option) => String(option.value) === rawTarget);
+
         return this.fb.group({
             id: this.fb.control(relationship?.id ?? `npc-rel-${crypto.randomUUID()}`),
-            targetNpcId: this.fb.control(relationship?.targetNpcId ?? ''),
+            targetNpcId: this.fb.control(knownTarget ? rawTarget : ''),
+            customTarget: this.fb.control(knownTarget ? '' : rawTarget),
             relationshipType: this.fb.control(relationship?.relationshipType ?? ''),
             description: this.fb.control(relationship?.description ?? '')
         });

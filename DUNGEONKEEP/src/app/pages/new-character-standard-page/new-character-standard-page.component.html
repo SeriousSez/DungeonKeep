@@ -1704,17 +1704,29 @@
                 <app-dropdown [id]="'inventory-destination'" [value]="selectedInventoryDestination()" [options]="inventoryDestinationOptions()" [minWidth]="220" size="compact" (changed)="onInventoryDestinationChanged($event)"></app-dropdown>
 
                 <div class="equipment-source-list">
-                    @for (source of equipmentSources; track source.url) {
-                    <button type="button" class="equipment-source-chip" [class.active]="selectedEquipmentSourceUrl() === source.url" (click)="onEquipmentSourceSelected(source.url)">
-                        {{ source.label }}
+                    @for (category of equipmentCategories(); track category) {
+                    <button type="button" class="equipment-source-chip" [class.active]="selectedEquipmentCategory() === category" (click)="onEquipmentCategorySelected(category)">
+                        {{ category }}
                     </button>
                     }
                 </div>
 
+                @if (isWondrousEquipmentCategory()) {
+                <div class="equipment-filter-separator" aria-hidden="true"></div>
+                <div class="equipment-source-list equipment-source-list--secondary">
+                    @for (rarity of equipmentRarities(); track rarity) {
+                    <button type="button" class="equipment-source-chip" [class.active]="selectedEquipmentRarity() === rarity" (click)="onEquipmentRaritySelected(rarity)">
+                        {{ rarity }}
+                    </button>
+                    }
+                </div>
+                }
+
                 <div class="equipment-item-list">
                     @for (item of filteredEquipmentItems(); track item.name) {
                     <div class="equipment-item-row">
-                        <button type="button" class="equipment-item-info-btn" (click)="openItemModal({ name: item.name, category: item.category, quantity: 1, sourceUrl: item.sourceUrl, weight: item.weight, costGp: item.costGp, notes: item.notes })">
+                        <button type="button" class="equipment-item-info-btn"
+                            (click)="openItemModal({ name: item.name, category: item.category, quantity: 1, sourceUrl: item.sourceUrl, weight: item.weight, costGp: item.costGp, sourceLabel: item.sourceLabel, summary: item.summary, notes: item.notes, detailLines: item.detailLines, rarity: item.rarity, attunement: item.attunement })">
                             <strong>{{ item.name }}</strong>
                             <p>{{ item.category }}</p>
                         </button>

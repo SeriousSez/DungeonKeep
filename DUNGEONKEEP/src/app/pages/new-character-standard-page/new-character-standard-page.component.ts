@@ -8,7 +8,7 @@ import { marked } from 'marked';
 
 import { classLevelOneFeatures, classOptions as sharedClassOptions, type ClassFeature, type ClassFeaturesForLevel } from '../../data/class-features.data';
 import type { ActiveInfoModal, BackgroundDetail, BuilderInfo, CurrencyState, EquipmentItem, InventoryEntry } from '../../data/new-character-standard-page.types';
-import { backgroundDescriptionFallbacks, backgroundDetailOverrides, backgroundLanguagesFallbacks, backgroundOptions as sharedBackgroundOptions, backgroundSkillProficienciesFallbacks, backgroundStartingPackages, backgroundToolProficienciesFallbacks, classDetailFallbacks, classInfoMap, classStartingPackages, classSubclassSnapshots, equipmentCatalog, equipmentSourceLinks, magicInitiateSpellsByAbility, speciesInfoMap, validSteps } from '../../data/new-character-standard-page.data';
+import { backgroundDescriptionFallbacks, backgroundDetailOverrides, backgroundLanguagesFallbacks, backgroundOptions as sharedBackgroundOptions, backgroundSkillProficienciesFallbacks, backgroundStartingPackages, backgroundToolProficienciesFallbacks, classDetailFallbacks, classInfoMap, classStartingPackages, classSubclassSnapshots, equipmentCatalog, magicInitiateSpellsByAbility, speciesInfoMap, validSteps } from '../../data/new-character-standard-page.data';
 import type { Character, CharacterDraft } from '../../models/dungeon.models';
 import { OptionMenuFilterComponent } from '../../components/option-menu-filter/option-menu-filter.component';
 import { NewCharacterInfoModalComponent } from '../../components/new-character-info-modal/new-character-info-modal.component';
@@ -38,6 +38,8 @@ type AbilityScoreImprovementMode = '' | 'plus-two' | 'plus-one-plus-one';
 type HitPointMode = 'fixed' | 'rolled';
 type HeightUnit = 'cm' | 'm' | 'ft' | 'in';
 type WeightUnit = 'kg' | 'lb';
+
+const equipmentRarityOrder = ['Common', 'Uncommon', 'Rare', 'Very Rare', 'Legendary', 'Artifact', 'Unique', '???'] as const;
 
 interface AbilityScoreImprovementChoice {
     mode: AbilityScoreImprovementMode;
@@ -1155,14 +1157,33 @@ export class NewCharacterStandardPageComponent {
     readonly standardArrayValues: ReadonlyArray<number> = [15, 14, 13, 12, 10, 8];
     readonly pointBuyValues: ReadonlyArray<number> = [8, 9, 10, 11, 12, 13, 14, 15];
     readonly pointBuyBudget = 27;
-    readonly equipmentSources = equipmentSourceLinks;
     readonly equipmentSearchTerm = signal('');
-    readonly selectedEquipmentSourceUrl = signal('');
+    readonly selectedEquipmentCategory = signal('All');
+    readonly selectedEquipmentRarity = signal('All');
     readonly selectedClassStartingOption = signal<'A' | 'B' | ''>('A');
     readonly selectedBackgroundStartingOption = signal<'A' | 'B' | ''>('A');
     readonly selectedInventoryDestination = signal('inventory');
     readonly inventoryEntries = signal<InventoryEntry[]>([]);
     readonly currency = signal<CurrencyState>({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 });
+
+    readonly equipmentCategories = computed(() => {
+        return ['All', ...new Set(equipmentCatalog.map((item) => item.category).sort((left, right) => left.localeCompare(right)))];
+    });
+    readonly isWondrousEquipmentCategory = computed(() => this.selectedEquipmentCategory() === 'Wondrous Item');
+    readonly equipmentRarities = computed(() => {
+        const availableRarities = [...new Set(
+            equipmentCatalog
+                .filter((item) => item.category === 'Wondrous Item')
+                .map((item) => item.rarity?.trim())
+                .filter((rarity): rarity is string => Boolean(rarity))
+        )];
+        const rankedRarities = equipmentRarityOrder.filter((rarity) => availableRarities.includes(rarity));
+        const unrankedRarities = availableRarities
+            .filter((rarity) => !equipmentRarityOrder.includes(rarity as typeof equipmentRarityOrder[number]))
+            .sort((left, right) => left.localeCompare(right));
+
+        return ['All', ...rankedRarities, ...unrankedRarities];
+    });
 
     readonly inventoryDestinationOptions = computed<DropdownOption[]>(() => {
         const options: DropdownOption[] = [{ value: 'inventory', label: 'Inventory' }];
@@ -1178,14 +1199,16 @@ export class NewCharacterStandardPageComponent {
 
     readonly filteredEquipmentItems = computed(() => {
         const term = this.equipmentSearchTerm().trim().toLowerCase();
-        const selectedSourceUrl = this.selectedEquipmentSourceUrl();
+        const selectedCategory = this.selectedEquipmentCategory();
+        const selectedRarity = this.selectedEquipmentRarity();
 
         return equipmentCatalog.filter((item) => {
-            const sourceMatches = selectedSourceUrl ? item.sourceUrl === selectedSourceUrl : true;
+            const categoryMatches = selectedCategory === 'All' || item.category === selectedCategory;
+            const rarityMatches = selectedCategory !== 'Wondrous Item' || selectedRarity === 'All' || item.rarity === selectedRarity;
             const termMatches = term
                 ? item.name.toLowerCase().includes(term) || item.category.toLowerCase().includes(term)
                 : true;
-            return sourceMatches && termMatches;
+            return categoryMatches && rarityMatches && termMatches;
         });
     });
 
@@ -3099,6 +3122,19 @@ export class NewCharacterStandardPageComponent {
         'Jug': 2,
         'Keg': 75,
         'Quiver': 2
+    };
+
+    private readonly equipmentLookupAliases: Readonly<Record<string, readonly string[]>> = {
+        'hempen rope 50 feet': ['rope hempen 50 feet'],
+        'hooded lantern': ['lantern hooded'],
+        'piton': ['pitons 10'],
+        'ball bearings bag': ['ball bearings bag of 1000'],
+        'parchment 10 sheets': ['parchment sheet'],
+        'book prayers': ['book of lore'],
+        'book holy text': ['book of lore'],
+        'prayer book': ['book of lore'],
+        'holy symbol': ['amulet'],
+        'robe': ['robes']
     };
 
     private isContainerItem(itemName: string): boolean {
@@ -5244,8 +5280,13 @@ export class NewCharacterStandardPageComponent {
         this.equipmentSearchTerm.set(value);
     }
 
-    onEquipmentSourceSelected(url: string): void {
-        this.selectedEquipmentSourceUrl.update((current) => (current === url ? '' : url));
+    onEquipmentCategorySelected(category: string): void {
+        this.selectedEquipmentCategory.set(this.equipmentCategories().includes(category) ? category : 'All');
+        this.selectedEquipmentRarity.set('All');
+    }
+
+    onEquipmentRaritySelected(rarity: string): void {
+        this.selectedEquipmentRarity.set(this.equipmentRarities().includes(rarity) ? rarity : 'All');
     }
 
     onInventoryDestinationChanged(value: string | number): void {
@@ -5345,7 +5386,12 @@ export class NewCharacterStandardPageComponent {
             sourceUrl: item.sourceUrl,
             weight: item.weight,
             costGp: item.costGp,
-            notes: item.notes
+            sourceLabel: item.sourceLabel,
+            summary: item.summary,
+            notes: item.notes,
+            detailLines: item.detailLines,
+            rarity: item.rarity,
+            attunement: item.attunement
         };
 
         const expandedPackItems = this.expandStartingPackItems([inventoryEntry]);
@@ -5383,7 +5429,12 @@ export class NewCharacterStandardPageComponent {
                             quantity: containedItems[nestedIndex].quantity + enrichedItem.quantity,
                             weight: containedItems[nestedIndex].weight ?? enrichedItem.weight,
                             costGp: containedItems[nestedIndex].costGp ?? enrichedItem.costGp,
+                            sourceLabel: containedItems[nestedIndex].sourceLabel ?? enrichedItem.sourceLabel,
+                            summary: containedItems[nestedIndex].summary ?? enrichedItem.summary,
                             notes: containedItems[nestedIndex].notes || enrichedItem.notes,
+                            detailLines: containedItems[nestedIndex].detailLines ?? enrichedItem.detailLines,
+                            rarity: containedItems[nestedIndex].rarity ?? enrichedItem.rarity,
+                            attunement: containedItems[nestedIndex].attunement ?? enrichedItem.attunement,
                             isContainer: enrichedItem.isContainer,
                             maxCapacity: enrichedItem.maxCapacity,
                             containedItems: enrichedItem.containedItems ?? containedItems[nestedIndex].containedItems
@@ -5409,7 +5460,12 @@ export class NewCharacterStandardPageComponent {
                 quantity: next[index].quantity + enrichedItem.quantity,
                 weight: next[index].weight ?? enrichedItem.weight,
                 costGp: next[index].costGp ?? enrichedItem.costGp,
+                sourceLabel: next[index].sourceLabel ?? enrichedItem.sourceLabel,
+                summary: next[index].summary ?? enrichedItem.summary,
                 notes: next[index].notes || enrichedItem.notes,
+                detailLines: next[index].detailLines ?? enrichedItem.detailLines,
+                rarity: next[index].rarity ?? enrichedItem.rarity,
+                attunement: next[index].attunement ?? enrichedItem.attunement,
                 isContainer: enrichedItem.isContainer,
                 maxCapacity: enrichedItem.maxCapacity,
                 containedItems: enrichedItem.containedItems ?? next[index].containedItems
@@ -5420,14 +5476,80 @@ export class NewCharacterStandardPageComponent {
 
     private createEnrichedInventoryItem(item: InventoryEntry): InventoryEntry {
         const isContainer = this.isContainerItem(item.name);
+        const catalogItem = this.findEquipmentCatalogItem(item);
+        const trimmedNotes = item.notes?.trim();
+        const shouldUseCatalogNotes = this.shouldUseCatalogNotes(item, catalogItem, trimmedNotes);
+
         return {
             ...item,
+            sourceUrl: item.sourceUrl ?? catalogItem?.sourceUrl,
+            weight: item.weight ?? catalogItem?.weight,
+            costGp: typeof item.costGp === 'number' ? item.costGp : catalogItem?.costGp,
+            sourceLabel: item.sourceLabel ?? catalogItem?.sourceLabel,
+            summary: item.summary?.trim() || catalogItem?.summary,
+            notes: shouldUseCatalogNotes ? catalogItem?.notes : trimmedNotes,
+            detailLines: item.detailLines?.length ? item.detailLines : catalogItem?.detailLines,
+            rarity: item.rarity ?? catalogItem?.rarity,
+            attunement: item.attunement ?? catalogItem?.attunement,
             isContainer: item.isContainer ?? isContainer,
             maxCapacity: item.maxCapacity ?? (isContainer ? this.getContainerCapacity(item.name) : undefined),
-            costGp: typeof item.costGp === 'number' ? item.costGp : undefined,
-            notes: item.notes?.trim() || undefined,
-            containedItems: item.containedItems ?? []
+            containedItems: (item.containedItems ?? []).map((containedItem) => this.createEnrichedInventoryItem(containedItem))
         };
+    }
+
+    private findEquipmentCatalogItem(item: Pick<InventoryEntry, 'name' | 'category' | 'sourceUrl'>): EquipmentItem | undefined {
+        const candidateNames = this.getEquipmentLookupCandidates(item.name);
+
+        return equipmentCatalog.find((catalogItem) => {
+            if (catalogItem.category !== item.category) {
+                return false;
+            }
+
+            if (item.sourceUrl && catalogItem.sourceUrl !== item.sourceUrl) {
+                return false;
+            }
+
+            return candidateNames.includes(this.normalizeEquipmentLookupName(catalogItem.name));
+        });
+    }
+
+    private shouldUseCatalogNotes(item: InventoryEntry, catalogItem: EquipmentItem | undefined, trimmedNotes: string | undefined): boolean {
+        if (!catalogItem?.notes?.trim()) {
+            return false;
+        }
+
+        if (!trimmedNotes) {
+            return true;
+        }
+
+        const hasStructuredLocalContent = Boolean(item.summary?.trim() || item.detailLines?.length);
+        const hasStructuredCatalogContent = Boolean(catalogItem.summary?.trim() || catalogItem.detailLines?.length);
+
+        return !hasStructuredLocalContent && hasStructuredCatalogContent;
+    }
+
+    private getEquipmentLookupCandidates(name: string): string[] {
+        const normalizedName = this.normalizeEquipmentLookupName(name);
+        const aliases = this.equipmentLookupAliases[normalizedName] ?? [];
+        return [normalizedName, ...aliases];
+    }
+
+    private normalizeEquipmentLookupName(name: string): string {
+        return name
+            .toLowerCase()
+            .replace(/[()]/g, ' ')
+            .replace(/,/g, ' ')
+            .replace(/[-/]/g, ' ')
+            .replace(/'/g, '')
+            .replace(/\bof\b/g, ' ')
+            .replace(/\bthe\b/g, ' ')
+            .replace(/\bfilled\b/g, ' ')
+            .replace(/\blit\b/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .split(' ')
+            .sort()
+            .join(' ');
     }
 
     private addCurrency(key: keyof CurrencyState, amount: number): void {
@@ -7151,7 +7273,12 @@ export class NewCharacterStandardPageComponent {
             sourceUrl: activeItem.sourceUrl ?? '',
             weight: activeItem.weight,
             costGp: activeItem.costGp,
-            notes: activeItem.notes
+            sourceLabel: activeItem.sourceLabel,
+            summary: activeItem.summary,
+            notes: activeItem.notes,
+            detailLines: activeItem.detailLines,
+            rarity: activeItem.rarity,
+            attunement: activeItem.attunement
         };
 
         for (let count = 0; count < safeQuantity; count++) {

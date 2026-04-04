@@ -19,10 +19,10 @@
                 @if (group.label) {
                 <p class="msd-group-label">{{ group.label }}</p>
                 }
-                @for (option of group.options; track option) {
+                @for (option of group.options; track optionValue(option)) {
                 <label class="msd-option" [class.msd-option--checked]="isSelected(option)" [class.msd-option--disabled]="isOptionDisabled(option)" [class.msd-option--single]="isSingleSelect()" role="option" [attr.aria-selected]="isSelected(option)">
-                    <input type="checkbox" [checked]="isSelected(option)" [disabled]="isOptionDisabled(option)" (change)="onToggle(option, $any($event.target).checked)" class="msd-checkbox" [class.msd-checkbox--hidden]="isSingleSelect()">
-                    <span class="msd-option-label">{{ option }}</span>
+                    <input type="checkbox" [checked]="isSelected(option)" [disabled]="isOptionDisabled(option)" (change)="onToggle(optionValue(option), $any($event.target).checked)" class="msd-checkbox" [class.msd-checkbox--hidden]="isSingleSelect()">
+                    <span class="msd-option-label">{{ optionLabel(option) }}</span>
                     @if (isSelected(option)) {
                     <i class="fa-duotone fa-thin fa-check msd-check-icon"></i>
                     }
