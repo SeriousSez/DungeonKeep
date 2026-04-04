@@ -169,6 +169,16 @@ export class DungeonStoreService {
         }
     }
 
+    async leaveCampaign(campaignId: string): Promise<boolean> {
+        try {
+            await this.api.leaveCampaign(campaignId);
+            await this.hydrateFromApi();
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     async updateCampaign(campaignId: string, draft: CampaignDraft): Promise<Campaign | null> {
         const campaignData = {
             name: draft.name.trim(),

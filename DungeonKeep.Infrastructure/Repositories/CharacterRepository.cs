@@ -138,6 +138,25 @@ public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : IChara
         return character;
     }
 
+    public async Task UnassignOwnedByUserInCampaignAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var characters = await dbContext.Characters
+            .Where(character => character.CampaignId == campaignId && character.OwnerUserId == userId)
+            .ToListAsync(cancellationToken);
+
+        if (characters.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var character in characters)
+        {
+            character.CampaignId = null;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<Character?> UpdateBackstoryAsync(Guid characterId, string backstory, CancellationToken cancellationToken = default)
     {
         var character = await dbContext.Characters.FirstOrDefaultAsync(c => c.Id == characterId, cancellationToken);

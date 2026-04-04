@@ -465,6 +465,35 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         }
     }
 
+    [HttpPost("{campaignId:guid}/leave")]
+    public async Task<IActionResult> Leave(Guid campaignId, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            await campaignService.LeaveAsync(campaignId, user.Id, cancellationToken);
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+        catch (InvalidOperationException exception)
+        {
+            if (string.Equals(exception.Message, "Campaign owners cannot leave their own campaign.", StringComparison.Ordinal))
+            {
+                return BadRequest(exception.Message);
+            }
+
+            return NotFound("Campaign was not found.");
+        }
+    }
+
     private async Task<AuthenticatedUser?> GetAuthenticatedUserAsync(CancellationToken cancellationToken)
     {
         var authorization = Request.Headers.Authorization.ToString();

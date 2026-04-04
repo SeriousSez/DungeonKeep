@@ -1,9 +1,10 @@
 <main class="page-stack">
-    @if (editDraft(); as draft) {
+    @if (selectedCampaign(); as campaign) {
+    @if (canEditCampaign() && editDraft(); as draft) {
     <section class="panel page-intro">
         <div>
             <p class="eyebrow">Edit Campaign</p>
-            <h1>{{ selectedCampaign()?.name }}</h1>
+            <h1>{{ campaign.name }}</h1>
         </div>
     </section>
 
@@ -14,6 +15,14 @@
     }
 
     <app-creation-studio [mode]="'campaign'" [campaignAction]="'edit'" [campaignSeedDraft]="draft" (campaignCreated)="handleCampaignUpdate($event)"></app-creation-studio>
+    } @else {
+    <section class="panel page-intro">
+        <p class="eyebrow">Access restricted</p>
+        <h1>{{ campaign.name }}</h1>
+        <p>Only campaign owners can edit this campaign.</p>
+        <a [routerLink]="['/campaigns', campaign.id]" class="back-link">← Back to Campaign</a>
+    </section>
+    }
     } @else {
     <section class="panel page-intro">
         <p class="eyebrow">Campaign not found</p>

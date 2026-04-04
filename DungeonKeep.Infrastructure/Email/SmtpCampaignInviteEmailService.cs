@@ -15,18 +15,61 @@ public sealed class SmtpCampaignInviteEmailService(
 
     public async Task SendInvitationAsync(CampaignInvitationEmail invitation, CancellationToken cancellationToken = default)
     {
+        options.Validate();
+
         var message = BuildMessage(invitation);
+        var secureSocketOptions = options.GetSecureSocketOptions();
 
         using var client = new SmtpClient();
 
-        await client.ConnectAsync(options.Host, options.Port, options.GetSecureSocketOptions(), cancellationToken);
+        try
+        {
+            await client.ConnectAsync(options.Host, options.Port, secureSocketOptions, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+              exception,
+              "Failed to connect to SMTP server {Host}:{Port} using {SecureSocketOption} for campaign invite delivery.",
+              options.Host,
+              options.Port,
+              secureSocketOptions);
+            throw;
+        }
 
         if (!string.IsNullOrWhiteSpace(options.Username))
         {
-            await client.AuthenticateAsync(options.Username, options.Password, cancellationToken);
+            try
+            {
+                await client.AuthenticateAsync(options.Username, options.Password, cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(
+                  exception,
+                  "Failed to authenticate to SMTP server {Host}:{Port} as {Username} for campaign invite delivery.",
+                  options.Host,
+                  options.Port,
+                  options.Username);
+                throw;
+            }
         }
 
-        await client.SendAsync(message, cancellationToken);
+        try
+        {
+            await client.SendAsync(message, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+              exception,
+              "Failed to send campaign invite email through SMTP server {Host}:{Port} to {RecipientEmail}.",
+              options.Host,
+              options.Port,
+              invitation.RecipientEmail);
+            throw;
+        }
+
         await client.DisconnectAsync(true, cancellationToken);
 
         logger.LogInformation(

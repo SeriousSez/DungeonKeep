@@ -41,6 +41,7 @@ public interface ICharacterRepository
         string sessionHistory,
         CancellationToken cancellationToken = default
     );
+    Task UnassignOwnedByUserInCampaignAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default);
     Task<Character?> UpdateCampaignAsync(Guid characterId, Guid? campaignId, CancellationToken cancellationToken = default);
     Task<Character?> UpdateBackstoryAsync(Guid characterId, string backstory, CancellationToken cancellationToken = default);
     Task<Character?> UpdateStatusAsync(Guid characterId, string status, CancellationToken cancellationToken = default);

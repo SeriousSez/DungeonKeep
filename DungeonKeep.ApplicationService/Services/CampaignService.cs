@@ -8,6 +8,7 @@ namespace DungeonKeep.ApplicationService.Services;
 
 public sealed class CampaignService(
     ICampaignRepository campaignRepository,
+    ICharacterRepository characterRepository,
     ICampaignInviteEmailService campaignInviteEmailService,
     ILogger<CampaignService> logger) : ICampaignService
 {
@@ -241,6 +242,29 @@ public sealed class CampaignService(
         }
 
         return MapCampaign(updated, user.Id);
+    }
+
+    public async Task LeaveAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await campaignRepository.GetByIdAsync(campaignId, cancellationToken);
+        if (campaign is null)
+        {
+            throw new InvalidOperationException("Campaign not found.");
+        }
+
+        var membership = campaign.Memberships.FirstOrDefault(member => member.UserId == userId && member.Status == "Active");
+        if (membership is null)
+        {
+            throw new UnauthorizedAccessException("You are not a member of this campaign.");
+        }
+
+        if (membership.Role == "Owner")
+        {
+            throw new InvalidOperationException("Campaign owners cannot leave their own campaign.");
+        }
+
+        await characterRepository.UnassignOwnedByUserInCampaignAsync(campaignId, userId, cancellationToken);
+        await campaignRepository.RemoveMemberAsync(campaignId, userId, cancellationToken);
     }
 
     private static string BuildCampaignUrl(string? clientBaseUrl, Guid campaignId)

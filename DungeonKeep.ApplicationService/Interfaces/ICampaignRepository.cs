@@ -14,5 +14,6 @@ public interface ICampaignRepository
     Task<Campaign?> ArchiveThreadAsync(Guid campaignId, Guid threadId, CancellationToken cancellationToken = default);
     Task<Campaign?> InviteMemberAsync(Guid campaignId, string email, AuthenticatedUser user, CancellationToken cancellationToken = default);
     Task<bool> IsActiveMemberAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default);
+    Task RemoveMemberAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid campaignId, CancellationToken cancellationToken = default);
 }

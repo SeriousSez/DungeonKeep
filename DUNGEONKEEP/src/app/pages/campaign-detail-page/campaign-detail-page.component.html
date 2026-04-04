@@ -8,8 +8,12 @@
                 <h1>{{ campaign.name }}</h1>
             </div>
             <div class="header-actions">
+                @if (campaign.currentUserRole === 'Owner') {
                 <a [routerLink]="['/campaigns', campaign.id, 'edit']" class="primary-button">Edit Campaign</a>
                 <button type="button" class="ghost-button" (click)="handleRequestDelete()">Delete Campaign</button>
+                } @else if (campaign.currentUserRole === 'Member') {
+                <button type="button" class="ghost-button" (click)="handleRequestLeave()">Leave Campaign</button>
+                }
             </div>
         </div>
     </section>
@@ -113,8 +117,7 @@
     </section>
     }
 
-    <app-confirm-modal [open]="confirmDeleteOpen()" title="Delete Campaign?" message="Are you sure you want to delete this campaign? This action cannot be undone." confirmText="Delete" cancelText="Cancel" (confirmed)="handleDeleteConfirmed()"
-        (cancelled)="handleDeleteCancelled()"></app-confirm-modal>
+    <app-confirm-modal [open]="confirmModalOpen()" [title]="confirmModalTitle()" [message]="confirmModalMessage()" [confirmText]="confirmModalActionText()" cancelText="Cancel" (confirmed)="handleConfirmAccepted()" (cancelled)="handleConfirmCancelled()"></app-confirm-modal>
 
     @if (addThreadModalOpen()) {
     <div class="add-thread-modal-backdrop" (click)="closeAddThreadModal()">

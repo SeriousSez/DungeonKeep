@@ -273,6 +273,10 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}`, payload));
     }
 
+    async leaveCampaign(campaignId: string): Promise<void> {
+        await firstValueFrom(this.http.post(`${this.baseUrl}/campaigns/${campaignId}/leave`, {}));
+    }
+
     async createCampaignThread(campaignId: string, payload: { text: string; visibility: 'Party' | 'GMOnly' }): Promise<ApiCampaignDto> {
         return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/threads`, payload));
     }

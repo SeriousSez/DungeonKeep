@@ -195,6 +195,22 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             .AnyAsync(membership => membership.CampaignId == campaignId && membership.UserId == userId && membership.Status == "Active", cancellationToken);
     }
 
+    public async Task RemoveMemberAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var membership = await dbContext.CampaignMemberships
+            .FirstOrDefaultAsync(
+                entry => entry.CampaignId == campaignId && entry.UserId == userId && entry.Status == "Active",
+                cancellationToken);
+
+        if (membership is null)
+        {
+            return;
+        }
+
+        dbContext.CampaignMemberships.Remove(membership);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task DeleteAsync(Guid campaignId, CancellationToken cancellationToken = default)
     {
         var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);

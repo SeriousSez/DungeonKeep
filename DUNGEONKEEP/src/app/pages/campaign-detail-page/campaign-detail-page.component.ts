@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ChangeDetectionStrategy, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
@@ -18,10 +18,11 @@ export class CampaignDetailPageComponent {
     readonly store = inject(DungeonStoreService);
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
+    private readonly cdr = inject(ChangeDetectorRef);
 
     readonly campaignId = computed(() => this.route.snapshot.paramMap.get('id') ?? '');
 
-    readonly confirmDeleteOpen = signal(false);
+    readonly confirmAction = signal<'delete' | 'leave' | null>(null);
     readonly addThreadModalOpen = signal(false);
     readonly threadModalMode = signal<'add' | 'edit'>('add');
     readonly modalThreadId = signal<string | null>(null);
@@ -68,21 +69,56 @@ export class CampaignDetailPageComponent {
         return campaign.openThreads.filter((thread) => thread.visibility === 'Party');
     });
 
+    readonly confirmModalOpen = computed(() => this.confirmAction() !== null);
+    readonly confirmModalTitle = computed(() => this.confirmAction() === 'leave' ? 'Leave Campaign?' : 'Delete Campaign?');
+    readonly confirmModalMessage = computed(() =>
+        this.confirmAction() === 'leave'
+            ? 'Are you sure you want to leave this campaign? Your characters will be removed from the party and returned to your unassigned roster.'
+            : 'Are you sure you want to delete this campaign? This action cannot be undone.');
+    readonly confirmModalActionText = computed(() => this.confirmAction() === 'leave' ? 'Leave' : 'Delete');
+
     handleRequestDelete(): void {
-        this.confirmDeleteOpen.set(true);
+        if (this.selectedCampaign()?.currentUserRole !== 'Owner') {
+            return;
+        }
+
+        this.confirmAction.set('delete');
     }
 
-    async handleDeleteConfirmed(): Promise<void> {
+    handleRequestLeave(): void {
+        if (this.selectedCampaign()?.currentUserRole !== 'Member') {
+            return;
+        }
+
+        this.confirmAction.set('leave');
+    }
+
+    async handleConfirmAccepted(): Promise<void> {
         const id = this.campaignId();
-        if (id) {
+
+        if (!id) {
+            this.confirmAction.set(null);
+            this.cdr.detectChanges();
+            return;
+        }
+
+        if (this.confirmAction() === 'delete') {
             await this.store.deleteCampaign(id);
             await this.router.navigate(['/campaigns']);
+        } else if (this.confirmAction() === 'leave') {
+            const didLeave = await this.store.leaveCampaign(id);
+            if (didLeave) {
+                await this.router.navigate(['/campaigns']);
+            }
         }
-        this.confirmDeleteOpen.set(false);
+
+        this.confirmAction.set(null);
+        this.cdr.detectChanges();
     }
 
-    handleDeleteCancelled(): void {
-        this.confirmDeleteOpen.set(false);
+    handleConfirmCancelled(): void {
+        this.confirmAction.set(null);
+        this.cdr.detectChanges();
     }
 
     openAddThreadModal(): void {
