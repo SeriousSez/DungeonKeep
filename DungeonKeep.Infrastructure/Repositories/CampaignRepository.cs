@@ -620,6 +620,17 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                     ClampMapCoordinate(icon.X),
                     ClampMapCoordinate(icon.Y)))
                 .ToList(),
+            (map.Tokens ?? [])
+                .Where(token => !string.IsNullOrWhiteSpace(token.ImageUrl))
+                .Select(token => new CampaignMapTokenDto(
+                    token.Id == Guid.Empty ? Guid.NewGuid() : token.Id,
+                    string.IsNullOrWhiteSpace(token.Name) ? "Token" : token.Name.Trim(),
+                    token.ImageUrl.Trim(),
+                    ClampMapCoordinate(token.X),
+                    ClampMapCoordinate(token.Y),
+                    ClampMapScale(token.Size),
+                    token.Note?.Trim() ?? string.Empty))
+                .ToList(),
             (map.Decorations ?? [])
                 .Select(decoration => new CampaignMapDecorationDto(
                     decoration.Id == Guid.Empty ? Guid.NewGuid() : decoration.Id,
@@ -654,6 +665,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             map.BackgroundImageUrl,
             map.Strokes,
             map.Icons,
+            map.Tokens,
             map.Decorations,
             map.Labels,
             map.Layers));
@@ -665,6 +677,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             normalized.BackgroundImageUrl,
             normalized.Strokes,
             normalized.Icons,
+            normalized.Tokens,
             normalized.Decorations,
             normalized.Labels,
             normalized.Layers);
@@ -679,7 +692,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
         if (maps.Count == 0)
         {
-            maps.Add(new CampaignMapBoardDto(Guid.NewGuid(), "Main Map", "Parchment", string.Empty, [], [], [], [], new CampaignMapLayersDto([], [], [])));
+            maps.Add(new CampaignMapBoardDto(Guid.NewGuid(), "Main Map", "Parchment", string.Empty, [], [], [], [], [], new CampaignMapLayersDto([], [], [])));
         }
 
         var activeMapId = library.ActiveMapId != Guid.Empty && maps.Any(map => map.Id == library.ActiveMapId)

@@ -37,7 +37,7 @@
                 <div class="map-board-summary-card">
                     <strong>{{ activeMap.name }}</strong>
                     <span>{{ activeMap.background }} board</span>
-                    <span>{{ activeMap.icons.length }} landmarks • {{ activeMap.strokes.length + activeMap.layers.rivers.length }} routes</span>
+                    <span>{{ activeMap.icons.length }} landmarks • {{ activeMap.tokens.length }} tokens • {{ activeMap.strokes.length + activeMap.layers.rivers.length }} routes</span>
                 </div>
                 @if (canEdit()) {
                 <label class="field-label" for="map-board-name">Map name</label>
@@ -116,6 +116,7 @@
                     <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'icon'" (click)="startLandmarkTool()">Place Landmarks</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'terrain'" (click)="selectTerrainTool('Mountain')">Place Terrain</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'label'" (click)="selectLabelTool()">Place Labels</button>
+                    <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'token'" (click)="selectTokenTool()">Place Tokens</button>
                 </div>
 
                 @if (activeTool() === 'draw') {
@@ -192,6 +193,39 @@
                     }
                 </div>
                 }
+
+                @if (activeTool() === 'token') {
+                <div class="mode-detail-block">
+                    <div class="section-heading compact-heading nested-heading">
+                        <h2>Tokens</h2>
+                        @if (hasPendingTokenPlacement()) {
+                        <button type="button" class="ghost-button compact-action" (click)="clearPendingTokenPlacement()">Clear Token</button>
+                        }
+                    </div>
+                    <label class="field-label" for="map-token-upload">Token art</label>
+                    <input id="map-token-upload" class="map-file-input" type="file" accept="image/*" (change)="handleTokenUpload($event)" />
+                    @if (tokenPlacementImageUrl()) {
+                    <div class="token-upload-preview-card">
+                        <img class="token-upload-preview" [src]="tokenPlacementImageUrl()" alt="Token preview" />
+                        <div class="token-upload-copy">
+                            <strong>{{ tokenPlacementNameDraft().trim() || 'Token' }}</strong>
+                            <span>Ready to place on the board</span>
+                        </div>
+                    </div>
+                    }
+                    <label class="field-label" for="map-token-name">Token name</label>
+                    <input id="map-token-name" type="text" [value]="tokenPlacementNameDraft()" (input)="updateTokenPlacementNameDraft($any($event.target).value)" placeholder="Name this token" />
+                    <label class="field-label" for="map-token-size">Token size</label>
+                    <app-dropdown ariaLabel="Token size" [value]="tokenPlacementSize()" [options]="tokenSizeOptions" [minWidth]="220" (changed)="updateTokenPlacementSize($event)"></app-dropdown>
+                    <label class="field-label" for="map-token-note">Token note</label>
+                    <input id="map-token-note" type="text" [value]="tokenPlacementNoteDraft()" (input)="updateTokenPlacementNoteDraft($any($event.target).value)" placeholder="Optional note or condition" />
+                    @if (tokenUploadFeedback()) {
+                    <p class="sidebar-note">{{ tokenUploadFeedback() }}</p>
+                    } @else {
+                    <p class="sidebar-note">Upload token art, then click the board to place it. You can keep placing the same token until you clear it.</p>
+                    }
+                </div>
+                }
             </div>
 
             <div class="sidebar-section">
@@ -215,7 +249,8 @@
                 <div class="tool-actions tool-actions--stacked">
                     <button type="button" class="ghost-button" [disabled]="!canUndo()" (click)="handleUndo()">Undo</button>
                     <button type="button" class="ghost-button" [disabled]="!canRedo()" (click)="handleRedo()">Redo</button>
-                    <button type="button" class="ghost-button danger-button" [disabled]="workingMap().strokes.length === 0 && workingMap().icons.length === 0 && workingMap().layers.rivers.length === 0 && workingMap().layers.mountainChains.length === 0 && workingMap().layers.forestBelts.length === 0"
+                    <button type="button" class="ghost-button danger-button"
+                        [disabled]="workingMap().strokes.length === 0 && workingMap().icons.length === 0 && workingMap().tokens.length === 0 && workingMap().layers.rivers.length === 0 && workingMap().layers.mountainChains.length === 0 && workingMap().layers.forestBelts.length === 0"
                         (click)="requestClearMap()">Clear Entire Map</button>
                 </div>
             </div>
@@ -228,6 +263,41 @@
                 <p class="sidebar-note">You can inspect the current routes and landmarks here, but only campaign owners can redraw or place new markers.</p>
             </div>
             }
+
+            <div class="sidebar-section">
+                <div class="section-heading compact-heading">
+                    <h2>Selected Token</h2>
+                </div>
+
+                @if (selectedToken(); as token) {
+                <div class="selected-icon-card selected-token-card">
+                    <div class="selected-icon-header">
+                        <div class="selected-token-mark">
+                            <img [src]="token.imageUrl" [alt]="token.name" />
+                        </div>
+                        <div>
+                            <strong>{{ token.name }}</strong>
+                            <p>{{ token.note || 'Interactive tabletop token' }}</p>
+                        </div>
+                    </div>
+
+                    @if (canEdit()) {
+                    <label class="field-label" for="map-selected-token-name">Token name</label>
+                    <input id="map-selected-token-name" type="text" [value]="tokenNameDraft()" (input)="updateTokenNameDraft($any($event.target).value)" placeholder="Rename this token" />
+                    <label class="field-label" for="map-selected-token-size">Token size</label>
+                    <app-dropdown ariaLabel="Selected token size" [value]="token.size" [options]="tokenSizeOptions" [minWidth]="220" (changed)="updateSelectedTokenSize($event)"></app-dropdown>
+                    <label class="field-label" for="map-selected-token-note">Token note</label>
+                    <input id="map-selected-token-note" type="text" [value]="tokenNoteDraft()" (input)="updateTokenNoteDraft($any($event.target).value)" placeholder="Condition, HP, or reminder" />
+                    <button type="button" class="primary-button full-width-button" (click)="applySelectedTokenDetails()">Apply Token Details</button>
+                    <button type="button" class="ghost-button danger-button full-width-button" (click)="requestDeleteSelectedToken()">Delete Token</button>
+                    } @else {
+                    <p class="sidebar-note">Tokens can be inspected here, but only campaign owners can move or edit them.</p>
+                    }
+                </div>
+                } @else {
+                <p class="sidebar-note">Select a token on the map to inspect or edit it.</p>
+                }
+            </div>
 
             <div class="sidebar-section">
                 <div class="section-heading compact-heading">
@@ -273,6 +343,8 @@
                     <span class="meta-copy">routes</span>
                     <span class="count-badge">{{ workingMap().icons.length }}</span>
                     <span class="meta-copy">landmarks</span>
+                    <span class="count-badge">{{ workingMap().tokens.length }}</span>
+                    <span class="meta-copy">tokens</span>
                 </div>
             </div>
 
@@ -329,6 +401,17 @@
                         }
                     </div>
 
+                    <div class="map-token-layer">
+                        @for (token of workingMap().tokens; track token.id) {
+                        <button type="button" class="map-token" [class.is-selected]="selectedTokenId() === token.id" [style.left.%]="token.x * 100" [style.top.%]="token.y * 100" [style.width.%]="token.size * 100" [style.height.%]="token.size * 100"
+                            (click)="$event.stopPropagation(); selectToken(token.id)" (pointerdown)="handleTokenPointerDown($event, token.id)" (pointermove)="handleTokenPointerMove($event, token.id)" (pointerup)="handleTokenPointerUp($event, token.id)"
+                            (pointercancel)="handleTokenPointerUp($event, token.id)">
+                            <img [src]="token.imageUrl" [alt]="token.name" draggable="false" />
+                            <span>{{ token.name }}</span>
+                        </button>
+                        }
+                    </div>
+
                     <div class="map-decoration-layer" aria-hidden="true">
                         @for (decoration of workingMap().decorations; track decoration.id) {
                         <span class="map-decoration-token" [style.left.%]="decoration.x * 100" [style.top.%]="decoration.y * 100" [style.opacity]="decoration.opacity" [style.color]="decorationColor(decoration)"
@@ -346,7 +429,8 @@
                     </div>
                     }
 
-                    @if (!workingMap().backgroundImageUrl && workingMap().strokes.length === 0 && workingMap().icons.length === 0 && workingMap().decorations.length === 0 && workingMap().labels.length === 0 && workingMap().layers.rivers.length === 0 && workingMap().layers.mountainChains.length === 0
+                    @if (!workingMap().backgroundImageUrl && workingMap().strokes.length === 0 && workingMap().icons.length === 0 && workingMap().tokens.length === 0 && workingMap().decorations.length === 0 && workingMap().labels.length === 0 && workingMap().layers.rivers.length === 0 &&
+                    workingMap().layers.mountainChains.length === 0
                     &&
                     workingMap().layers.forestBelts.length === 0) {
                     <div class="map-empty-state">
@@ -376,6 +460,8 @@
                 <span class="meta-copy">routes</span>
                 <span class="count-badge">{{ workingMap().icons.length }}</span>
                 <span class="meta-copy">landmarks</span>
+                <span class="count-badge">{{ workingMap().tokens.length }}</span>
+                <span class="meta-copy">tokens</span>
                 <span class="count-badge">{{ workingMap().labels.length }}</span>
                 <span class="meta-copy">labels</span>
             </div>
@@ -432,6 +518,16 @@
                     }
                 </div>
 
+                <div class="map-token-layer">
+                    @for (token of workingMap().tokens; track token.id) {
+                    <button type="button" class="map-token map-token--viewer" [class.is-selected]="selectedTokenId() === token.id" [style.left.%]="token.x * 100" [style.top.%]="token.y * 100" [style.width.%]="token.size * 100" [style.height.%]="token.size * 100"
+                        (click)="$event.stopPropagation(); selectToken(token.id)">
+                        <img [src]="token.imageUrl" [alt]="token.name" draggable="false" />
+                        <span>{{ token.name }}</span>
+                    </button>
+                    }
+                </div>
+
                 <div class="map-decoration-layer" aria-hidden="true">
                     @for (decoration of workingMap().decorations; track decoration.id) {
                     <span class="map-decoration-token" [style.left.%]="decoration.x * 100" [style.top.%]="decoration.y * 100" [style.opacity]="decoration.opacity" [style.color]="decorationColor(decoration)"
@@ -449,7 +545,8 @@
                 </div>
                 }
 
-                @if (!workingMap().backgroundImageUrl && workingMap().strokes.length === 0 && workingMap().icons.length === 0 && workingMap().decorations.length === 0 && workingMap().labels.length === 0 && workingMap().layers.rivers.length === 0 && workingMap().layers.mountainChains.length === 0 &&
+                @if (!workingMap().backgroundImageUrl && workingMap().strokes.length === 0 && workingMap().icons.length === 0 && workingMap().tokens.length === 0 && workingMap().decorations.length === 0 && workingMap().labels.length === 0 && workingMap().layers.rivers.length === 0 &&
+                workingMap().layers.mountainChains.length === 0 &&
                 workingMap().layers.forestBelts.length === 0) {
                 <div class="map-empty-state">
                     <i class="fa-duotone fa-thin fa-map"></i>

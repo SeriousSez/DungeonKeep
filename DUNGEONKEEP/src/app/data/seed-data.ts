@@ -79,6 +79,7 @@ export const seedCampaigns: Campaign[] = [
                 { id: 'map-embers-icon-2', type: 'Town', label: 'Soot Market', x: 0.34, y: 0.58 },
                 { id: 'map-embers-icon-3', type: 'Dungeon', label: 'Cinder Vault', x: 0.8, y: 0.22 }
             ],
+            tokens: [],
             decorations: [],
             labels: [],
             layers: {
@@ -112,6 +113,7 @@ export const seedCampaigns: Campaign[] = [
                     { id: 'map-embers-icon-2', type: 'Town', label: 'Soot Market', x: 0.34, y: 0.58 },
                     { id: 'map-embers-icon-3', type: 'Dungeon', label: 'Cinder Vault', x: 0.8, y: 0.22 }
                 ],
+                tokens: [],
                 decorations: [],
                 labels: [],
                 layers: {
@@ -189,6 +191,7 @@ export const seedCampaigns: Campaign[] = [
                 { id: 'map-moonwake-icon-2', type: 'Portal', label: 'Storm Break', x: 0.76, y: 0.43 },
                 { id: 'map-moonwake-icon-3', type: 'Treasure', label: 'Ledger Cache', x: 0.23, y: 0.37 }
             ],
+            tokens: [],
             decorations: [],
             labels: [],
             layers: {
@@ -222,6 +225,7 @@ export const seedCampaigns: Campaign[] = [
                     { id: 'map-moonwake-icon-2', type: 'Portal', label: 'Storm Break', x: 0.76, y: 0.43 },
                     { id: 'map-moonwake-icon-3', type: 'Treasure', label: 'Ledger Cache', x: 0.23, y: 0.37 }
                 ],
+                tokens: [],
                 decorations: [],
                 labels: [],
                 layers: {
@@ -294,6 +298,7 @@ export const seedCampaigns: Campaign[] = [
                 { id: 'map-wild-icon-2', type: 'Danger', label: 'Bargain Ring', x: 0.56, y: 0.48 },
                 { id: 'map-wild-icon-3', type: 'Portal', label: 'Mayor\'s Cellar', x: 0.74, y: 0.7 }
             ],
+            tokens: [],
             decorations: [],
             labels: [],
             layers: {
@@ -327,6 +332,7 @@ export const seedCampaigns: Campaign[] = [
                     { id: 'map-wild-icon-2', type: 'Danger', label: 'Bargain Ring', x: 0.56, y: 0.48 },
                     { id: 'map-wild-icon-3', type: 'Portal', label: 'Mayor\'s Cellar', x: 0.74, y: 0.7 }
                 ],
+                tokens: [],
                 decorations: [],
                 labels: [],
                 layers: {

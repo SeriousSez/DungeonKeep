@@ -668,6 +668,15 @@ export class DungeonStoreService {
                 x: this.normalizeMapCoordinate(icon.x),
                 y: this.normalizeMapCoordinate(icon.y)
             })),
+            tokens: (map?.tokens ?? []).map((token) => ({
+                id: token.id,
+                name: token.name?.trim() || 'Token',
+                imageUrl: this.normalizeMapBackgroundImageUrl(token.imageUrl),
+                x: this.normalizeMapCoordinate(token.x),
+                y: this.normalizeMapCoordinate(token.y),
+                size: this.normalizeMapScale(token.size),
+                note: token.note?.trim() || ''
+            })).filter((token) => !!token.imageUrl),
             decorations: (map?.decorations ?? []).map((decoration) => ({
                 id: decoration.id,
                 type: this.normalizeMapDecorationType(decoration.type),
@@ -748,6 +757,15 @@ export class DungeonStoreService {
                 x: this.normalizeMapCoordinate(icon.x),
                 y: this.normalizeMapCoordinate(icon.y)
             })),
+            tokens: map.tokens.map((token) => ({
+                id: token.id,
+                name: token.name?.trim() || 'Token',
+                imageUrl: this.normalizeMapBackgroundImageUrl(token.imageUrl),
+                x: this.normalizeMapCoordinate(token.x),
+                y: this.normalizeMapCoordinate(token.y),
+                size: this.normalizeMapScale(token.size),
+                note: token.note?.trim() || ''
+            })).filter((token) => !!token.imageUrl),
             decorations: map.decorations.map((decoration) => ({
                 id: decoration.id,
                 type: this.normalizeMapDecorationType(decoration.type),

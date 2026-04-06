@@ -75,6 +75,7 @@ export interface ApiCampaignMapDto {
     backgroundImageUrl: string;
     strokes: ApiCampaignMapStrokeDto[];
     icons: ApiCampaignMapIconDto[];
+    tokens: ApiCampaignMapTokenDto[];
     decorations: ApiCampaignMapDecorationDto[];
     labels: ApiCampaignMapLabelDto[];
     layers: ApiCampaignMapLayersDto;
@@ -126,6 +127,16 @@ export interface ApiCampaignMapIconDto {
     label: string;
     x: number;
     y: number;
+}
+
+export interface ApiCampaignMapTokenDto {
+    id: string;
+    name: string;
+    imageUrl: string;
+    x: number;
+    y: number;
+    size: number;
+    note: string;
 }
 
 export interface ApiCampaignMapDecorationDto {

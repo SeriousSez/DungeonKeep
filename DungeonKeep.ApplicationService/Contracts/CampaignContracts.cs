@@ -51,6 +51,7 @@ public sealed record CampaignMapDto(
     string BackgroundImageUrl,
     IReadOnlyList<CampaignMapStrokeDto> Strokes,
     IReadOnlyList<CampaignMapIconDto> Icons,
+    IReadOnlyList<CampaignMapTokenDto> Tokens,
     IReadOnlyList<CampaignMapDecorationDto> Decorations,
     IReadOnlyList<CampaignMapLabelDto> Labels,
     CampaignMapLayersDto Layers
@@ -63,6 +64,7 @@ public sealed record CampaignMapBoardDto(
     string BackgroundImageUrl,
     IReadOnlyList<CampaignMapStrokeDto> Strokes,
     IReadOnlyList<CampaignMapIconDto> Icons,
+    IReadOnlyList<CampaignMapTokenDto> Tokens,
     IReadOnlyList<CampaignMapDecorationDto> Decorations,
     IReadOnlyList<CampaignMapLabelDto> Labels,
     CampaignMapLayersDto Layers
@@ -91,6 +93,16 @@ public sealed record CampaignMapIconDto(
     string Label,
     double X,
     double Y
+);
+
+public sealed record CampaignMapTokenDto(
+    Guid Id,
+    string Name,
+    string ImageUrl,
+    double X,
+    double Y,
+    double Size,
+    string Note
 );
 
 public sealed record CampaignMapDecorationDto(

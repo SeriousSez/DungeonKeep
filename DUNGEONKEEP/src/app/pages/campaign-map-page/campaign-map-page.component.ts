@@ -5,12 +5,12 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { MapArtGenerationModalComponent, MapArtGenerationOptions } from '../../components/map-art-generation-modal/map-art-generation-modal.component';
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
-import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelTone, CampaignMapPoint, CampaignTone } from '../../models/dungeon.models';
+import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelTone, CampaignMapPoint, CampaignMapToken, CampaignTone } from '../../models/dungeon.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
-type MapTool = 'draw' | 'icon' | 'terrain' | 'label';
-type MapConfirmAction = 'clear-map' | 'delete-icon' | 'delete-map' | null;
+type MapTool = 'draw' | 'icon' | 'terrain' | 'label' | 'token';
+type MapConfirmAction = 'clear-map' | 'delete-icon' | 'delete-token' | 'delete-map' | null;
 type MapAnchorProminence = 'major' | 'minor';
 type SettlementScale = 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis';
 type ParchmentLayout = 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular';
@@ -69,6 +69,13 @@ interface MapEditorHistoryEntry {
 }
 
 type MapLabelCatalog = Record<CampaignMapIconType, readonly string[]>;
+
+const TOKEN_SIZE_OPTIONS: DropdownOption[] = [
+    { value: 0.08, label: 'Small', description: 'Tight footprint for minions, familiars, and markers.' },
+    { value: 0.12, label: 'Medium', description: 'Default tabletop size for characters and creatures.' },
+    { value: 0.16, label: 'Large', description: 'More presence for mounts, ogres, and bosses.' },
+    { value: 0.22, label: 'Huge', description: 'Big centerpiece token for dragons and siege monsters.' }
+];
 
 const MAP_BACKGROUND_OPTIONS: DropdownOption[] = [
     { value: 'Parchment', label: 'Parchment', description: 'Warm paper tones for hand-drawn routes and lore maps.' },
@@ -215,7 +222,15 @@ export class CampaignMapPageComponent {
     readonly pendingIconType = signal<CampaignMapIconType | null>(null);
     readonly pendingTerrainType = signal<CampaignMapDecorationType | null>(null);
     readonly selectedIconId = signal<string | null>(null);
+    readonly selectedTokenId = signal<string | null>(null);
     readonly iconLabelDraft = signal('');
+    readonly tokenNameDraft = signal('');
+    readonly tokenNoteDraft = signal('');
+    readonly tokenPlacementNameDraft = signal('Token');
+    readonly tokenPlacementNoteDraft = signal('');
+    readonly tokenPlacementImageUrl = signal('');
+    readonly tokenPlacementSize = signal(0.12);
+    readonly tokenUploadFeedback = signal('');
     readonly labelTextDraft = signal('New Region');
     readonly labelToneDraft = signal<CampaignMapLabelTone>('Region');
     readonly mapArtModalOpen = signal(false);
@@ -243,6 +258,7 @@ export class CampaignMapPageComponent {
     readonly brushColorOptions = BRUSH_COLOR_OPTIONS;
     readonly terrainColorOptions = BRUSH_COLOR_OPTIONS;
     readonly brushSizeOptions = BRUSH_SIZE_OPTIONS;
+    readonly tokenSizeOptions = TOKEN_SIZE_OPTIONS;
     readonly settlementScaleOptions = SETTLEMENT_SCALE_OPTIONS;
     readonly parchmentLayoutOptions = PARCHMENT_LAYOUT_OPTIONS;
     readonly cavernLayoutOptions = CAVERN_LAYOUT_OPTIONS;
@@ -305,9 +321,22 @@ export class CampaignMapPageComponent {
 
         return this.workingMap().icons.find((icon) => icon.id === iconId) ?? null;
     });
+    readonly selectedToken = computed(() => {
+        const tokenId = this.selectedTokenId();
+        if (!tokenId) {
+            return null;
+        }
+
+        return this.workingMap().tokens.find((token) => token.id === tokenId) ?? null;
+    });
     readonly activeIconOption = computed(() => this.iconOptions.find((option) => option.type === this.pendingIconType()) ?? null);
     readonly activeTerrainOption = computed(() => this.terrainOptions.find((option) => option.type === this.pendingTerrainType()) ?? null);
+    readonly hasPendingTokenPlacement = computed(() => this.activeTool() === 'token' && !!this.tokenPlacementImageUrl());
     readonly placementHint = computed(() => {
+        if (this.hasPendingTokenPlacement()) {
+            return `Click anywhere on the board to place ${this.tokenPlacementNameDraft().trim() || 'this token'}.`;
+        }
+
         if (this.pendingIconType()) {
             return `Click anywhere on the board to place a ${this.activeIconOption()?.label?.toLowerCase() ?? 'landmark'} marker.`;
         }
@@ -353,6 +382,8 @@ export class CampaignMapPageComponent {
         switch (this.confirmAction()) {
             case 'clear-map':
                 return 'Clear Map?';
+            case 'delete-token':
+                return 'Delete Token?';
             case 'delete-map':
                 return 'Delete Map?';
             default:
@@ -371,6 +402,11 @@ export class CampaignMapPageComponent {
                 : 'Delete this map from the campaign library?';
         }
 
+        if (this.confirmAction() === 'delete-token') {
+            const token = this.selectedToken();
+            return token ? `Remove ${token.name}? This token will disappear for everyone viewing the map.` : 'Remove this token from the campaign map?';
+        }
+
         const icon = this.selectedIcon();
         return icon ? `Remove ${icon.label}? This landmark marker will disappear for everyone in the campaign.` : 'Remove this landmark from the campaign map?';
     });
@@ -378,6 +414,8 @@ export class CampaignMapPageComponent {
         switch (this.confirmAction()) {
             case 'clear-map':
                 return 'Clear Map';
+            case 'delete-token':
+                return 'Delete Token';
             case 'delete-map':
                 return 'Delete Map';
             default:
@@ -400,6 +438,8 @@ export class CampaignMapPageComponent {
     private activeStrokePointerId: number | null = null;
     private draggingIconId: string | null = null;
     private draggingPointerId: number | null = null;
+    private draggingTokenId: string | null = null;
+    private draggingTokenPointerId: number | null = null;
     private pendingDragHistory: MapEditorHistoryEntry | null = null;
     private persistInFlight = false;
     private creatingRouteMap = false;
@@ -482,6 +522,12 @@ export class CampaignMapPageComponent {
             const selectedIcon = this.selectedIcon();
             this.iconLabelDraft.set(selectedIcon?.label ?? '');
         });
+
+        effect(() => {
+            const selectedToken = this.selectedToken();
+            this.tokenNameDraft.set(selectedToken?.name ?? '');
+            this.tokenNoteDraft.set(selectedToken?.note ?? '');
+        });
     }
 
     @HostListener('document:keydown', ['$event'])
@@ -532,6 +578,12 @@ export class CampaignMapPageComponent {
         this.pendingTerrainType.set(null);
     }
 
+    selectTokenTool(): void {
+        this.activeTool.set('token');
+        this.pendingIconType.set(null);
+        this.pendingTerrainType.set(null);
+    }
+
     startLandmarkTool(): void {
         if (this.pendingIconType()) {
             this.activeTool.set('icon');
@@ -545,6 +597,135 @@ export class CampaignMapPageComponent {
         this.pendingIconType.set(null);
         this.pendingTerrainType.set(null);
         this.activeTool.set('draw');
+    }
+
+    updateTokenPlacementNameDraft(value: string): void {
+        this.tokenPlacementNameDraft.set(value);
+    }
+
+    updateTokenPlacementNoteDraft(value: string): void {
+        this.tokenPlacementNoteDraft.set(value);
+    }
+
+    updateTokenPlacementSize(value: string | number): void {
+        const numericValue = typeof value === 'number' ? value : Number(value);
+        this.tokenPlacementSize.set(Number.isFinite(numericValue) ? Math.max(0.06, Math.min(0.28, numericValue)) : 0.12);
+    }
+
+    updateTokenNameDraft(value: string): void {
+        this.tokenNameDraft.set(value);
+    }
+
+    updateTokenNoteDraft(value: string): void {
+        this.tokenNoteDraft.set(value);
+    }
+
+    applySelectedTokenDetails(): void {
+        const selectedToken = this.selectedToken();
+        if (!selectedToken || !this.canModify()) {
+            return;
+        }
+
+        const nextName = this.tokenNameDraft().trim() || 'Token';
+        const nextNote = this.tokenNoteDraft().trim();
+
+        if (nextName === selectedToken.name && nextNote === selectedToken.note) {
+            return;
+        }
+
+        this.captureHistorySnapshot();
+        this.mutateMap((map) => {
+            map.tokens = map.tokens.map((token) => token.id === selectedToken.id ? { ...token, name: nextName, note: nextNote } : token);
+        });
+        this.markDirty('Token updated.');
+    }
+
+    updateSelectedTokenSize(value: string | number): void {
+        const selectedToken = this.selectedToken();
+        if (!selectedToken || !this.canModify()) {
+            return;
+        }
+
+        const numericValue = typeof value === 'number' ? value : Number(value);
+        const nextSize = Number.isFinite(numericValue) ? Math.max(0.06, Math.min(0.28, numericValue)) : selectedToken.size;
+        if (nextSize === selectedToken.size) {
+            return;
+        }
+
+        this.captureHistorySnapshot();
+        this.mutateMap((map) => {
+            map.tokens = map.tokens.map((token) => token.id === selectedToken.id ? { ...token, size: nextSize } : token);
+        });
+        this.markDirty('Token size updated.');
+    }
+
+    requestDeleteSelectedToken(): void {
+        if (!this.selectedToken() || !this.canModify()) {
+            return;
+        }
+
+        this.confirmAction.set('delete-token');
+    }
+
+    handleTokenUpload(event: Event): void {
+        if (!this.canModify()) {
+            return;
+        }
+
+        const input = event.target as HTMLInputElement | null;
+        const file = input?.files?.[0];
+
+        if (!file) {
+            return;
+        }
+
+        if (!file.type.startsWith('image/')) {
+            this.tokenUploadFeedback.set('Choose an image file for the token.');
+            if (input) {
+                input.value = '';
+            }
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const imageUrl = typeof reader.result === 'string' ? reader.result : '';
+            if (!imageUrl) {
+                this.tokenUploadFeedback.set('That token image could not be loaded.');
+                return;
+            }
+
+            this.tokenPlacementImageUrl.set(imageUrl);
+            this.tokenPlacementNameDraft.set(this.sanitizeTokenName(file.name));
+            this.tokenPlacementNoteDraft.set('');
+            this.tokenPlacementSize.set(0.12);
+            this.tokenUploadFeedback.set(`Token art loaded: ${this.sanitizeTokenName(file.name)}.`);
+            this.selectTokenTool();
+            this.selectedIconId.set(null);
+            this.selectedTokenId.set(null);
+            this.cdr.detectChanges();
+        };
+        reader.onerror = () => {
+            this.tokenUploadFeedback.set('That token image could not be read.');
+            this.cdr.detectChanges();
+        };
+        reader.readAsDataURL(file);
+
+        if (input) {
+            input.value = '';
+        }
+    }
+
+    clearPendingTokenPlacement(): void {
+        this.tokenPlacementImageUrl.set('');
+        this.tokenPlacementNameDraft.set('Token');
+        this.tokenPlacementNoteDraft.set('');
+        this.tokenPlacementSize.set(0.12);
+        this.tokenUploadFeedback.set('');
+
+        if (this.activeTool() === 'token') {
+            this.clearPlacementMode();
+        }
     }
 
     updateBackground(value: string | number): void {
@@ -700,7 +881,7 @@ export class CampaignMapPageComponent {
     }
 
     requestClearMap(): void {
-        if (!this.canModify() || (!this.workingMap().strokes.length && !this.workingMap().icons.length && !this.workingMap().decorations.length && !this.workingMap().labels.length && !this.workingMap().layers.rivers.length && !this.workingMap().layers.mountainChains.length && !this.workingMap().layers.forestBelts.length)) {
+        if (!this.canModify() || (!this.workingMap().strokes.length && !this.workingMap().icons.length && !this.workingMap().tokens.length && !this.workingMap().decorations.length && !this.workingMap().labels.length && !this.workingMap().layers.rivers.length && !this.workingMap().layers.mountainChains.length && !this.workingMap().layers.forestBelts.length)) {
             return;
         }
 
@@ -726,11 +907,27 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        if (action === 'delete-token') {
+            const tokenId = this.selectedTokenId();
+            if (!tokenId) {
+                return;
+            }
+
+            this.captureHistorySnapshot();
+            this.mutateMap((map) => {
+                map.tokens = map.tokens.filter((token) => token.id !== tokenId);
+            });
+            this.selectedTokenId.set(null);
+            this.markDirty('Token removed.');
+            return;
+        }
+
         if (action === 'clear-map') {
             const background = this.workingMap().background;
             this.captureHistorySnapshot();
             this.setWorkingMap(this.createEmptyMap(background));
             this.selectedIconId.set(null);
+            this.selectedTokenId.set(null);
             this.markDirty('Map cleared.');
             return;
         }
@@ -958,6 +1155,27 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        if (this.hasPendingTokenPlacement()) {
+            const token: CampaignMapToken = {
+                id: this.createId(),
+                name: this.tokenPlacementNameDraft().trim() || 'Token',
+                imageUrl: this.tokenPlacementImageUrl(),
+                x: point.x,
+                y: point.y,
+                size: this.tokenPlacementSize(),
+                note: this.tokenPlacementNoteDraft().trim()
+            };
+
+            this.captureHistorySnapshot();
+            this.mutateMap((map) => {
+                map.tokens = [...map.tokens, token];
+            });
+            this.selectedIconId.set(null);
+            this.selectedTokenId.set(token.id);
+            this.markDirty('Token placed.');
+            return;
+        }
+
         const pendingIconType = this.pendingIconType();
         if (pendingIconType) {
             const icon: CampaignMapIcon = {
@@ -973,6 +1191,7 @@ export class CampaignMapPageComponent {
                 map.icons = [...map.icons, icon];
             });
             this.selectedIconId.set(icon.id);
+            this.selectedTokenId.set(null);
             this.markDirty('Landmark added.');
             return;
         }
@@ -985,6 +1204,7 @@ export class CampaignMapPageComponent {
                 this.appendTerrainDecoration(map, decoration);
             });
             this.selectedIconId.set(null);
+            this.selectedTokenId.set(null);
             this.markDirty(`${this.terrainLabel(pendingTerrainType)} added.`);
             return;
         }
@@ -1004,11 +1224,13 @@ export class CampaignMapPageComponent {
                 map.labels = [...map.labels, label];
             });
             this.selectedIconId.set(null);
+            this.selectedTokenId.set(null);
             this.markDirty('Map label added.');
             return;
         }
 
         this.selectedIconId.set(null);
+        this.selectedTokenId.set(null);
     }
 
     handleBoardPointerDown(event: PointerEvent): void {
@@ -1092,6 +1314,7 @@ export class CampaignMapPageComponent {
 
     handleIconPointerDown(event: PointerEvent, iconId: string): void {
         this.selectedIconId.set(iconId);
+        this.selectedTokenId.set(null);
 
         if (!this.canModify() || event.button !== 0) {
             event.stopPropagation();
@@ -1144,6 +1367,67 @@ export class CampaignMapPageComponent {
 
         this.pendingDragHistory = null;
         this.markDirty('Landmark moved.');
+    }
+
+    selectToken(tokenId: string): void {
+        this.selectedTokenId.set(tokenId);
+        this.selectedIconId.set(null);
+    }
+
+    handleTokenPointerDown(event: PointerEvent, tokenId: string): void {
+        this.selectToken(tokenId);
+
+        if (!this.canModify() || event.button !== 0) {
+            event.stopPropagation();
+            return;
+        }
+
+        this.draggingTokenId = tokenId;
+        this.draggingTokenPointerId = event.pointerId;
+        this.pendingDragHistory = this.createHistoryEntry();
+        (event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId);
+        event.stopPropagation();
+    }
+
+    handleTokenPointerMove(event: PointerEvent, tokenId: string): void {
+        if (this.draggingTokenId !== tokenId || this.draggingTokenPointerId !== event.pointerId) {
+            return;
+        }
+
+        const point = this.getRelativePoint(event.clientX, event.clientY);
+        if (!point) {
+            return;
+        }
+
+        this.mutateMap((map) => {
+            map.tokens = map.tokens.map((token) => token.id === tokenId ? { ...token, x: point.x, y: point.y } : token);
+        });
+
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    handleTokenPointerUp(event: PointerEvent, tokenId: string): void {
+        if (this.draggingTokenId !== tokenId || this.draggingTokenPointerId !== event.pointerId) {
+            return;
+        }
+
+        this.draggingTokenId = null;
+        this.draggingTokenPointerId = null;
+        (event.currentTarget as HTMLElement | null)?.releasePointerCapture(event.pointerId);
+        event.stopPropagation();
+
+        if (this.pendingDragHistory) {
+            const beforeDrag = this.historyEntrySignature(this.pendingDragHistory);
+            const afterDrag = this.historyEntrySignature(this.createHistoryEntry());
+            if (beforeDrag !== afterDrag) {
+                this.pushHistoryEntry(this.pendingDragHistory, 'undo');
+                this.redoStack.set([]);
+            }
+        }
+
+        this.pendingDragHistory = null;
+        this.markDirty('Token moved.');
     }
 
     async saveMap(): Promise<void> {
@@ -1246,6 +1530,7 @@ export class CampaignMapPageComponent {
             this.mapBoards.set(maps.length > 0 ? maps : [this.cloneMapBoard(activeMap)]);
             this.loadMapBoard(activeMap);
             this.selectedIconId.set(null);
+            this.selectedTokenId.set(null);
             this.pendingIconType.set(null);
             this.activeTool.set('draw');
         } finally {
@@ -1273,7 +1558,7 @@ export class CampaignMapPageComponent {
             const saved = await this.store.updateCampaignMap(campaign.id, { activeMapId, maps });
             this.saveState.set(saved ? 'saved' : 'error');
             this.saveMessage.set(saved
-                ? `Saved ${maps.length} maps with ${snapshot.strokes.length} routes and ${snapshot.icons.length} landmarks on ${this.mapNameDraft().trim() || currentMap.name}.`
+                ? `Saved ${maps.length} maps with ${snapshot.strokes.length} routes, ${snapshot.icons.length} landmarks, and ${snapshot.tokens.length} tokens on ${this.mapNameDraft().trim() || currentMap.name}.`
                 : 'Could not save your latest map change.');
 
             if (saved) {
@@ -1326,6 +1611,7 @@ export class CampaignMapPageComponent {
                 points: stroke.points.map((point) => ({ ...point }))
             })),
             icons: map.icons.map((icon) => ({ ...icon })),
+            tokens: map.tokens.map((token) => ({ ...token })),
             decorations: map.decorations.map((decoration) => ({ ...decoration })),
             labels: map.labels.map((label) => ({ ...label })),
             layers: {
@@ -1347,6 +1633,7 @@ export class CampaignMapPageComponent {
             backgroundImageUrl: '',
             strokes: [],
             icons: [],
+            tokens: [],
             decorations: [],
             labels: [],
             layers: {
@@ -1377,7 +1664,10 @@ export class CampaignMapPageComponent {
         this.currentMapId.set(map.id);
         this.workingMap.set(this.cloneMap(map));
         this.selectedIconId.set(null);
+        this.selectedTokenId.set(null);
         this.iconLabelDraft.set('');
+        this.tokenNameDraft.set('');
+        this.tokenNoteDraft.set('');
         this.mapNameDraft.set(map.name);
     }
 
@@ -1498,6 +1788,10 @@ export class CampaignMapPageComponent {
         return tone === 'Feature' ? 'New Feature' : 'New Region';
     }
 
+    private sanitizeTokenName(fileName: string): string {
+        return fileName.replace(/\.[^.]+$/, '').trim() || 'Token';
+    }
+
     private terrainLabel(type: CampaignMapDecorationType): string {
         return this.terrainOptions.find((option) => option.type === type)?.label ?? 'Terrain';
     }
@@ -1593,6 +1887,7 @@ export class CampaignMapPageComponent {
                     x: anchor.x,
                     y: anchor.y
                 })),
+                tokens: [],
                 decorations: this.createDecorations(background, anchors, seed),
                 labels: this.createLabels(background, anchors, seed),
                 layers: this.createTerrainLayers(background, anchors, seed)

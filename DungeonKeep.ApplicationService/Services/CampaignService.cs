@@ -20,8 +20,8 @@ public sealed class CampaignService(
     private static readonly string[] DefaultNpcs = [];
     private static readonly string[] DefaultLoot = [];
     private static readonly CampaignWorldNoteDto[] DefaultWorldNotes = [];
-    private static readonly CampaignMapDto DefaultCampaignMap = new("Parchment", string.Empty, [], [], [], [], new CampaignMapLayersDto([], [], []));
-    private static readonly CampaignMapBoardDto DefaultCampaignMapBoard = new(Guid.Parse("11111111-1111-1111-1111-111111111111"), "Main Map", "Parchment", string.Empty, [], [], [], [], new CampaignMapLayersDto([], [], []));
+    private static readonly CampaignMapDto DefaultCampaignMap = new("Parchment", string.Empty, [], [], [], [], [], new CampaignMapLayersDto([], [], []));
+    private static readonly CampaignMapBoardDto DefaultCampaignMapBoard = new(Guid.Parse("11111111-1111-1111-1111-111111111111"), "Main Map", "Parchment", string.Empty, [], [], [], [], [], new CampaignMapLayersDto([], [], []));
 
     public async Task<IReadOnlyList<CampaignDto>> GetAllAsync(Guid userId, CancellationToken cancellationToken = default)
     {
@@ -347,6 +347,7 @@ public sealed class CampaignService(
                     request.Map.BackgroundImageUrl,
                     request.Map.Strokes,
                     request.Map.Icons,
+                    request.Map.Tokens,
                     request.Map.Decorations,
                     request.Map.Labels,
                     request.Map.Layers)]))
@@ -515,7 +516,7 @@ public sealed class CampaignService(
             ParseNamedItems(campaign.LootJson),
             ParseOpenThreads(campaign.OpenThreadsJson),
             ParseWorldNotes(campaign.WorldNotesJson),
-            new CampaignMapDto(activeMap.Background, activeMap.BackgroundImageUrl, activeMap.Strokes, activeMap.Icons, activeMap.Decorations, activeMap.Labels, activeMap.Layers),
+            new CampaignMapDto(activeMap.Background, activeMap.BackgroundImageUrl, activeMap.Strokes, activeMap.Icons, activeMap.Tokens, activeMap.Decorations, activeMap.Labels, activeMap.Layers),
             library.Maps,
             activeMap.Id,
             currentUserRole,
@@ -679,6 +680,7 @@ public sealed class CampaignService(
                     legacyMap.BackgroundImageUrl,
                     legacyMap.Strokes,
                     legacyMap.Icons,
+                    legacyMap.Tokens,
                     legacyMap.Decorations,
                     legacyMap.Labels,
                     legacyMap.Layers)]));
@@ -770,6 +772,18 @@ public sealed class CampaignService(
                 ClampMapCoordinate(icon.Y)))
             .ToList();
 
+        var normalizedTokens = (map.Tokens ?? [])
+            .Where(token => !string.IsNullOrWhiteSpace(token.ImageUrl))
+            .Select(token => new CampaignMapTokenDto(
+                token.Id == Guid.Empty ? Guid.NewGuid() : token.Id,
+                string.IsNullOrWhiteSpace(token.Name) ? "Token" : token.Name.Trim(),
+                NormalizeMapBackgroundImageUrl(token.ImageUrl),
+                ClampMapCoordinate(token.X),
+                ClampMapCoordinate(token.Y),
+                ClampMapScale(token.Size),
+                token.Note?.Trim() ?? string.Empty))
+            .ToList();
+
         var normalizedDecorations = (map.Decorations ?? [])
             .Select(decoration => new CampaignMapDecorationDto(
                 decoration.Id == Guid.Empty ? Guid.NewGuid() : decoration.Id,
@@ -803,6 +817,7 @@ public sealed class CampaignService(
             NormalizeMapBackgroundImageUrl(map.BackgroundImageUrl),
             normalizedStrokes,
             normalizedIcons,
+            normalizedTokens,
             normalizedDecorations,
             normalizedLabels,
             normalizedLayers);
@@ -815,6 +830,7 @@ public sealed class CampaignService(
             map.BackgroundImageUrl,
             map.Strokes,
             map.Icons,
+            map.Tokens,
             map.Decorations,
             map.Labels,
             map.Layers));
@@ -826,6 +842,7 @@ public sealed class CampaignService(
             normalized.BackgroundImageUrl,
             normalized.Strokes,
             normalized.Icons,
+            normalized.Tokens,
             normalized.Decorations,
             normalized.Labels,
             normalized.Layers);
@@ -847,6 +864,7 @@ public sealed class CampaignService(
                 DefaultCampaignMapBoard.BackgroundImageUrl,
                 DefaultCampaignMapBoard.Strokes,
                 DefaultCampaignMapBoard.Icons,
+                DefaultCampaignMapBoard.Tokens,
                 DefaultCampaignMapBoard.Decorations,
                 DefaultCampaignMapBoard.Labels,
                 DefaultCampaignMapBoard.Layers));

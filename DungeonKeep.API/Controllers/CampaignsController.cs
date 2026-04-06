@@ -2535,6 +2535,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             BackgroundImageUrl: string.Empty,
             Strokes: (generated.Strokes ?? []).Select(stroke => NormalizeGeneratedCampaignMapStroke(stroke, fallbackStrokeColor)).Where(stroke => stroke is not null).Cast<CampaignMapStrokeDto>().Take(16).ToList(),
             Icons: (generated.Icons ?? []).Select(NormalizeGeneratedCampaignMapIcon).Where(icon => icon is not null).Cast<CampaignMapIconDto>().Take(16).ToList(),
+            Tokens: [],
             Decorations: (generated.Decorations ?? []).Select(NormalizeGeneratedCampaignMapDecoration).Where(decoration => decoration is not null).Cast<CampaignMapDecorationDto>().Take(18).ToList(),
             Labels: labels.Count > 0
                 ? labels

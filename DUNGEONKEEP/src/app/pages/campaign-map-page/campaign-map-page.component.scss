@@ -456,6 +456,22 @@ app-dropdown {
     background: color-mix(in srgb, var(--accent-primary) 12%, var(--surface-raised) 88%);
 }
 
+.selected-token-mark {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 60%, var(--accent-primary) 40%);
+    background: color-mix(in srgb, var(--surface-raised) 84%, var(--accent-primary) 16%);
+}
+
+.selected-token-mark img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
 .field-label {
     font-size: 0.74rem;
     font-weight: 700;
@@ -490,6 +506,45 @@ app-dropdown {
     color: var(--text-main);
     padding: 0 14px;
     font: inherit;
+}
+
+.map-file-input {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid var(--panel-border);
+    background: var(--surface-raised);
+    color: var(--text-main);
+    font: inherit;
+}
+
+.token-upload-preview-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 1px solid var(--panel-border);
+    background: color-mix(in srgb, var(--surface-raised) 88%, transparent);
+}
+
+.token-upload-preview {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    object-fit: cover;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 62%, var(--accent-primary) 38%);
+}
+
+.token-upload-copy {
+    display: grid;
+    gap: 4px;
+}
+
+.token-upload-copy span {
+    font-size: 0.82rem;
+    color: var(--text-muted);
 }
 
 .full-width-button {
@@ -584,6 +639,7 @@ app-dropdown {
 .map-stroke-layer,
 .map-decoration-layer,
 .map-icon-layer,
+.map-token-layer,
 .map-label-layer,
 .map-empty-state,
 .map-overlay-hint {
@@ -626,6 +682,10 @@ app-dropdown {
 .map-stroke-layer,
 .map-icon-layer {
     z-index: 1;
+}
+
+.map-token-layer {
+    z-index: 3;
 }
 
 .map-decoration-layer {
@@ -706,6 +766,64 @@ app-dropdown {
     white-space: nowrap;
     font-size: 0.85rem;
     font-weight: 700;
+}
+
+.map-token {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border-radius: 18px;
+    overflow: visible;
+    background: transparent;
+    border: 2px solid transparent;
+    transform: translate(-50%, -50%);
+    cursor: grab;
+    z-index: 4;
+}
+
+.map-token img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 18px;
+    border: 2px solid color-mix(in srgb, var(--surface-raised-solid) 64%, var(--accent-primary) 36%);
+    box-shadow: 0 14px 32px rgba(39, 25, 16, 0.28);
+    user-select: none;
+    pointer-events: none;
+}
+
+.map-token span {
+    position: absolute;
+    left: 50%;
+    bottom: -22px;
+    transform: translateX(-50%);
+    max-width: 180px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 90%, var(--accent-primary) 10%);
+    border: 1px solid var(--panel-border);
+    color: var(--text-main);
+    font-size: 0.74rem;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+}
+
+.map-token.is-selected img {
+    border-color: color-mix(in srgb, var(--accent-primary) 72%, var(--panel-border) 28%);
+    box-shadow: 0 16px 36px rgba(39, 25, 16, 0.36);
+}
+
+.map-token.is-selected span {
+    border-color: color-mix(in srgb, var(--accent-primary) 62%, var(--panel-border) 38%);
+}
+
+.map-token--viewer {
+    cursor: pointer;
 }
 
 .map-empty-state,
@@ -817,6 +935,11 @@ app-dropdown {
 
     .map-icon-token span {
         max-width: 110px;
+    }
+
+    .map-token span {
+        max-width: 110px;
+        bottom: -20px;
     }
 }
 

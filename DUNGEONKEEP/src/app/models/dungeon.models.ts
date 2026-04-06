@@ -80,6 +80,16 @@ export interface CampaignMapIcon {
     y: number;
 }
 
+export interface CampaignMapToken {
+    id: string;
+    name: string;
+    imageUrl: string;
+    x: number;
+    y: number;
+    size: number;
+    note: string;
+}
+
 export interface CampaignMapDecoration {
     id: string;
     type: CampaignMapDecorationType;
@@ -111,6 +121,7 @@ export interface CampaignMap {
     backgroundImageUrl: string;
     strokes: CampaignMapStroke[];
     icons: CampaignMapIcon[];
+    tokens: CampaignMapToken[];
     decorations: CampaignMapDecoration[];
     labels: CampaignMapLabel[];
     layers: CampaignMapLayers;
