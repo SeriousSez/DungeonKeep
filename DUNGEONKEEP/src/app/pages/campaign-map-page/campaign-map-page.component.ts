@@ -3,12 +3,13 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, Elem
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
+import { MapArtGenerationModalComponent, MapArtGenerationOptions } from '../../components/map-art-generation-modal/map-art-generation-modal.component';
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
-import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapPoint, CampaignTone } from '../../models/dungeon.models';
+import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelTone, CampaignMapPoint, CampaignTone } from '../../models/dungeon.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
-type MapTool = 'draw' | 'icon';
+type MapTool = 'draw' | 'icon' | 'terrain' | 'label';
 type MapConfirmAction = 'clear-map' | 'delete-icon' | 'delete-map' | null;
 type MapAnchorProminence = 'major' | 'minor';
 type SettlementScale = 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis';
@@ -17,6 +18,13 @@ type CavernLayout = 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'Crystal
 
 interface MapIconOption {
     type: CampaignMapIconType;
+    label: string;
+    description: string;
+    iconClass: string;
+}
+
+interface MapTerrainOption {
+    type: CampaignMapDecorationType;
     label: string;
     description: string;
     iconClass: string;
@@ -64,7 +72,7 @@ type MapLabelCatalog = Record<CampaignMapIconType, readonly string[]>;
 
 const MAP_BACKGROUND_OPTIONS: DropdownOption[] = [
     { value: 'Parchment', label: 'Parchment', description: 'Warm paper tones for hand-drawn routes and lore maps.' },
-    { value: 'City', label: 'City', description: 'Sharper stonework and district lines for urban planning.' },
+    { value: 'City', label: 'Settlement', description: 'Sharper streets, walls, and district lines for towns and cities.' },
     { value: 'Coast', label: 'Coast', description: 'Sea-washed tones for harbors, islands, and shore routes.' },
     { value: 'Cavern', label: 'Cavern', description: 'Deep mineral tones for tunnels, roots, and underworld spaces.' }
 ];
@@ -116,9 +124,23 @@ const MAP_ICON_OPTIONS: MapIconOption[] = [
     { type: 'Camp', label: 'Camp', description: 'Temporary camps, caravans, and staging grounds.', iconClass: 'fa-duotone fa-thin fa-campground' },
     { type: 'Dungeon', label: 'Dungeon', description: 'Ruins, vaults, and underground sites.', iconClass: 'fa-duotone fa-thin fa-dungeon' },
     { type: 'Danger', label: 'Danger', description: 'Hazards, threats, and conflict zones.', iconClass: 'fa-duotone fa-thin fa-triangle-exclamation' },
-    { type: 'Treasure', label: 'Treasure', description: 'Caches, vaults, and hidden rewards.', iconClass: 'fa-duotone fa-thin fa-chest-open' },
+    { type: 'Treasure', label: 'Treasure', description: 'Caches, vaults, and hidden rewards.', iconClass: 'fa-duotone fa-thin fa-gem' },
     { type: 'Portal', label: 'Portal', description: 'Gates, crossings, and strange thresholds.', iconClass: 'fa-duotone fa-thin fa-sparkles' },
     { type: 'Tower', label: 'Tower', description: 'Watchtowers, beacons, and mage spires.', iconClass: 'fa-duotone fa-thin fa-tower-observation' }
+];
+
+const MAP_TERRAIN_OPTIONS: MapTerrainOption[] = [
+    { type: 'Mountain', label: 'Mountains', description: 'Ranges, ridges, and hard borders.', iconClass: 'fa-duotone fa-thin fa-mountains' },
+    { type: 'Forest', label: 'Forests', description: 'Woods, groves, and dense cover.', iconClass: 'fa-duotone fa-thin fa-trees' },
+    { type: 'Hill', label: 'Hills', description: 'Rolling uplands and softer terrain.', iconClass: 'fa-duotone fa-thin fa-mound' },
+    { type: 'Reef', label: 'Reefs', description: 'Shoals, reefs, and coastal hazards.', iconClass: 'fa-duotone fa-thin fa-water' },
+    { type: 'Cave', label: 'Caves', description: 'Entrances, sinkholes, and hollow depths.', iconClass: 'fa-duotone fa-thin fa-dungeon' },
+    { type: 'Ward', label: 'Wards', description: 'Mystic sites, anomalies, and marked zones.', iconClass: 'fa-duotone fa-thin fa-stars' }
+];
+
+const LABEL_TONE_OPTIONS: DropdownOption[] = [
+    { value: 'Region', label: 'Region', description: 'Large names for realms, forests, coasts, or seas.' },
+    { value: 'Feature', label: 'Feature', description: 'Smaller names for roads, ruins, rivers, or landmarks.' }
 ];
 
 const MAP_LABELS_BY_BACKGROUND: Record<CampaignMapBackground, MapLabelCatalog> = {
@@ -167,7 +189,7 @@ const MAP_LABELS_BY_BACKGROUND: Record<CampaignMapBackground, MapLabelCatalog> =
 @Component({
     selector: 'app-campaign-map-page',
     standalone: true,
-    imports: [CommonModule, RouterLink, DropdownComponent, ConfirmModalComponent],
+    imports: [CommonModule, RouterLink, DropdownComponent, ConfirmModalComponent, MapArtGenerationModalComponent],
     templateUrl: './campaign-map-page.component.html',
     styleUrl: './campaign-map-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -191,8 +213,17 @@ export class CampaignMapPageComponent {
     readonly mapNameDraft = signal('');
     readonly activeTool = signal<MapTool>('draw');
     readonly pendingIconType = signal<CampaignMapIconType | null>(null);
+    readonly pendingTerrainType = signal<CampaignMapDecorationType | null>(null);
     readonly selectedIconId = signal<string | null>(null);
     readonly iconLabelDraft = signal('');
+    readonly labelTextDraft = signal('New Region');
+    readonly labelToneDraft = signal<CampaignMapLabelTone>('Region');
+    readonly mapArtModalOpen = signal(false);
+    readonly settlementNamesDraft = signal('');
+    readonly regionNamesDraft = signal('');
+    readonly ruinNamesDraft = signal('');
+    readonly cavernNamesDraft = signal('');
+    readonly additionalArtDirectionDraft = signal('');
     readonly settlementScale = signal<SettlementScale>('City');
     readonly parchmentLayout = signal<ParchmentLayout>('Continent');
     readonly cavernLayout = signal<CavernLayout>('TunnelNetwork');
@@ -214,6 +245,8 @@ export class CampaignMapPageComponent {
     readonly parchmentLayoutOptions = PARCHMENT_LAYOUT_OPTIONS;
     readonly cavernLayoutOptions = CAVERN_LAYOUT_OPTIONS;
     readonly iconOptions = MAP_ICON_OPTIONS;
+    readonly terrainOptions = MAP_TERRAIN_OPTIONS;
+    readonly labelToneOptions = LABEL_TONE_OPTIONS;
 
     readonly selectedCampaign = computed(() => {
         const campaignId = this.campaignId();
@@ -231,6 +264,12 @@ export class CampaignMapPageComponent {
     readonly showParchmentLayout = computed(() => this.workingMap().background === 'Parchment');
     readonly showCavernLayout = computed(() => this.workingMap().background === 'Cavern');
     readonly cavernLayoutLabel = computed(() => this.cavernLayoutOptions.find((option) => option.value === this.cavernLayout())?.label ?? 'Tunnel Network');
+    readonly hasPreferredNamesQueued = computed(() => [
+        this.settlementNamesDraft(),
+        this.regionNamesDraft(),
+        this.ruinNamesDraft(),
+        this.cavernNamesDraft()
+    ].some((value) => value.trim().length > 0));
     readonly canUndo = computed(() => this.undoStack().length > 0);
     readonly canRedo = computed(() => this.redoStack().length > 0);
     readonly currentMapBoard = computed(() => this.mapBoards().find((map) => map.id === this.currentMapId()) ?? this.mapBoards()[0] ?? null);
@@ -265,6 +304,23 @@ export class CampaignMapPageComponent {
         return this.workingMap().icons.find((icon) => icon.id === iconId) ?? null;
     });
     readonly activeIconOption = computed(() => this.iconOptions.find((option) => option.type === this.pendingIconType()) ?? null);
+    readonly activeTerrainOption = computed(() => this.terrainOptions.find((option) => option.type === this.pendingTerrainType()) ?? null);
+    readonly placementHint = computed(() => {
+        if (this.pendingIconType()) {
+            return `Click anywhere on the board to place a ${this.activeIconOption()?.label?.toLowerCase() ?? 'landmark'} marker.`;
+        }
+
+        if (this.pendingTerrainType()) {
+            return `Click anywhere on the board to place ${this.activeTerrainOption()?.label?.toLowerCase() ?? 'terrain'}.`;
+        }
+
+        if (this.activeTool() === 'label') {
+            const labelText = this.labelTextDraft().trim() || this.defaultLabelText(this.labelToneDraft());
+            return `Click anywhere on the board to place the label "${labelText}".`;
+        }
+
+        return '';
+    });
     readonly saveStatusText = computed(() => {
         switch (this.saveState()) {
             case 'saving':
@@ -311,6 +367,10 @@ export class CampaignMapPageComponent {
                 return 'Delete Landmark';
         }
     });
+
+    backgroundDisplayLabel(background: CampaignMapBackground): string {
+        return background === 'City' ? 'Settlement' : background;
+    }
     readonly campaignSeed = computed(() => this.createCampaignSeedProfile(this.selectedCampaign()));
     readonly showRivers = signal(true);
     readonly showMountainChains = signal(true);
@@ -434,11 +494,25 @@ export class CampaignMapPageComponent {
     selectDrawTool(): void {
         this.activeTool.set('draw');
         this.pendingIconType.set(null);
+        this.pendingTerrainType.set(null);
     }
 
     selectIconTool(iconType: CampaignMapIconType): void {
         this.activeTool.set('icon');
         this.pendingIconType.set(iconType);
+        this.pendingTerrainType.set(null);
+    }
+
+    selectTerrainTool(terrainType: CampaignMapDecorationType): void {
+        this.activeTool.set('terrain');
+        this.pendingTerrainType.set(terrainType);
+        this.pendingIconType.set(null);
+    }
+
+    selectLabelTool(): void {
+        this.activeTool.set('label');
+        this.pendingIconType.set(null);
+        this.pendingTerrainType.set(null);
     }
 
     startLandmarkTool(): void {
@@ -452,6 +526,7 @@ export class CampaignMapPageComponent {
 
     clearPlacementMode(): void {
         this.pendingIconType.set(null);
+        this.pendingTerrainType.set(null);
         this.activeTool.set('draw');
     }
 
@@ -561,6 +636,20 @@ export class CampaignMapPageComponent {
 
     updateIconLabelDraft(value: string): void {
         this.iconLabelDraft.set(value);
+    }
+
+    updateLabelTextDraft(value: string): void {
+        this.labelTextDraft.set(value);
+    }
+
+    updateLabelToneDraft(value: string | number): void {
+        const tone: CampaignMapLabelTone = value === 'Feature' ? 'Feature' : 'Region';
+        const currentText = this.labelTextDraft().trim();
+        this.labelToneDraft.set(tone);
+
+        if (!currentText || currentText === 'New Region' || currentText === 'New Feature') {
+            this.labelTextDraft.set(this.defaultLabelText(tone));
+        }
     }
 
     applySelectedIconLabel(): void {
@@ -710,11 +799,58 @@ export class CampaignMapPageComponent {
     }
 
     async generateAiMapArt(): Promise<void> {
+        await this.generateAiMapArtWithOptions({
+            background: this.workingMap().background,
+            mapName: this.mapNameDraft().trim(),
+            settlementScale: this.settlementScale(),
+            parchmentLayout: this.parchmentLayout(),
+            cavernLayout: this.cavernLayout(),
+            settlementNamesText: this.settlementNamesDraft(),
+            regionNamesText: this.regionNamesDraft(),
+            ruinNamesText: this.ruinNamesDraft(),
+            cavernNamesText: this.cavernNamesDraft(),
+            additionalDirection: this.additionalArtDirectionDraft()
+        });
+    }
+
+    openMapArtModal(): void {
+        if (!this.canModify() || this.isAiArtGenerating()) {
+            return;
+        }
+
+        this.mapArtModalOpen.set(true);
+    }
+
+    closeMapArtModal(): void {
+        this.mapArtModalOpen.set(false);
+    }
+
+    async submitMapArtModal(options: MapArtGenerationOptions): Promise<void> {
+        this.mapArtModalOpen.set(false);
+        this.settlementScale.set(options.settlementScale);
+        this.parchmentLayout.set(options.parchmentLayout);
+        this.cavernLayout.set(options.cavernLayout);
+        this.settlementNamesDraft.set(options.settlementNamesText);
+        this.regionNamesDraft.set(options.regionNamesText);
+        this.ruinNamesDraft.set(options.ruinNamesText);
+        this.cavernNamesDraft.set(options.cavernNamesText);
+        this.additionalArtDirectionDraft.set(options.additionalDirection);
+        await this.generateAiMapArtWithOptions(options);
+    }
+
+    private async generateAiMapArtWithOptions(options: MapArtGenerationOptions): Promise<void> {
         const campaign = this.selectedCampaign();
         const currentMap = this.currentMapBoard();
         if (!campaign || !currentMap || !this.canModify() || this.isAiArtGenerating()) {
             return;
         }
+
+        const background = options.background;
+        const mapName = options.mapName.trim();
+        const settlementNames = this.parseNameList(options.settlementNamesText);
+        const regionNames = this.parseNameList(options.regionNamesText);
+        const ruinNames = this.parseNameList(options.ruinNamesText);
+        const cavernNames = this.parseNameList(options.cavernNamesText);
 
         this.isAiArtGenerating.set(true);
         this.saveState.set('saving');
@@ -723,11 +859,16 @@ export class CampaignMapPageComponent {
 
         try {
             const backgroundImageUrl = await this.store.generateCampaignMapArtAi(campaign.id, {
-                background: this.workingMap().background,
-                mapName: this.mapNameDraft().trim() || currentMap.name,
-                settlementScale: this.workingMap().background === 'City' ? this.settlementScale() : undefined,
-                parchmentLayout: this.workingMap().background === 'Parchment' ? this.parchmentLayout() : undefined,
-                cavernLayout: this.workingMap().background === 'Cavern' ? this.cavernLayout() : undefined
+                background,
+                mapName,
+                settlementScale: background === 'City' ? options.settlementScale : undefined,
+                parchmentLayout: background === 'Parchment' ? options.parchmentLayout : undefined,
+                cavernLayout: background === 'Cavern' ? options.cavernLayout : undefined,
+                settlementNames,
+                regionNames,
+                ruinNames,
+                cavernNames,
+                additionalDirection: options.additionalDirection.trim() || undefined
             });
 
             if (!backgroundImageUrl) {
@@ -738,6 +879,7 @@ export class CampaignMapPageComponent {
 
             this.captureHistorySnapshot();
             this.mutateMap((map) => {
+                map.background = background;
                 map.backgroundImageUrl = backgroundImageUrl;
                 map.strokes = [];
                 map.decorations = [];
@@ -791,35 +933,66 @@ export class CampaignMapPageComponent {
             return;
         }
 
-        const pendingIconType = this.pendingIconType();
-        if (!pendingIconType) {
-            this.selectedIconId.set(null);
-            return;
-        }
-
         const point = this.getRelativePoint(event.clientX, event.clientY);
         if (!point) {
             return;
         }
 
-        const icon: CampaignMapIcon = {
-            id: this.createId(),
-            type: pendingIconType,
-            label: this.defaultIconLabel(pendingIconType),
-            x: point.x,
-            y: point.y
-        };
+        const pendingIconType = this.pendingIconType();
+        if (pendingIconType) {
+            const icon: CampaignMapIcon = {
+                id: this.createId(),
+                type: pendingIconType,
+                label: this.defaultIconLabel(pendingIconType),
+                x: point.x,
+                y: point.y
+            };
 
-        this.captureHistorySnapshot();
-        this.mutateMap((map) => {
-            map.icons = [...map.icons, icon];
-        });
-        this.selectedIconId.set(icon.id);
-        this.markDirty('Landmark added.');
+            this.captureHistorySnapshot();
+            this.mutateMap((map) => {
+                map.icons = [...map.icons, icon];
+            });
+            this.selectedIconId.set(icon.id);
+            this.markDirty('Landmark added.');
+            return;
+        }
+
+        const pendingTerrainType = this.pendingTerrainType();
+        if (pendingTerrainType) {
+            const decoration = this.createPlacedDecoration(pendingTerrainType, point);
+            this.captureHistorySnapshot();
+            this.mutateMap((map) => {
+                this.appendTerrainDecoration(map, decoration);
+            });
+            this.selectedIconId.set(null);
+            this.markDirty(`${this.terrainLabel(pendingTerrainType)} added.`);
+            return;
+        }
+
+        if (this.activeTool() === 'label') {
+            const label: CampaignMapLabel = {
+                id: this.createId(),
+                text: this.labelTextDraft().trim() || this.defaultLabelText(this.labelToneDraft()),
+                tone: this.labelToneDraft(),
+                x: point.x,
+                y: point.y,
+                rotation: this.labelToneDraft() === 'Feature' ? this.randomFloat(-10, 10) : this.randomFloat(-4, 4)
+            };
+
+            this.captureHistorySnapshot();
+            this.mutateMap((map) => {
+                map.labels = [...map.labels, label];
+            });
+            this.selectedIconId.set(null);
+            this.markDirty('Map label added.');
+            return;
+        }
+
+        this.selectedIconId.set(null);
     }
 
     handleBoardPointerDown(event: PointerEvent): void {
-        if (!this.canModify() || this.pendingIconType() || event.button !== 0) {
+        if (!this.canModify() || this.activeTool() !== 'draw' || event.button !== 0) {
             return;
         }
 
@@ -976,7 +1149,7 @@ export class CampaignMapPageComponent {
             case 'Reef':
                 return 'fa-duotone fa-thin fa-water';
             case 'Cave':
-                return 'fa-duotone fa-thin fa-hole';
+                return 'fa-duotone fa-thin fa-dungeon';
             case 'Ward':
                 return 'fa-duotone fa-thin fa-stars';
             default:
@@ -1294,6 +1467,60 @@ export class CampaignMapPageComponent {
                 return 'LavaTubes';
             default:
                 return 'TunnelNetwork';
+        }
+    }
+
+    private defaultLabelText(tone: CampaignMapLabelTone): string {
+        return tone === 'Feature' ? 'New Feature' : 'New Region';
+    }
+
+    private terrainLabel(type: CampaignMapDecorationType): string {
+        return this.terrainOptions.find((option) => option.type === type)?.label ?? 'Terrain';
+    }
+
+    private parseNameList(value: string): string[] {
+        return value
+            .split(/\r?\n|,/)
+            .map((entry) => entry.trim())
+            .filter((entry, index, entries) => entry.length > 0 && entries.indexOf(entry) === index)
+            .slice(0, 20);
+    }
+
+    private createPlacedDecoration(type: CampaignMapDecorationType, point: CampaignMapPoint): CampaignMapDecoration {
+        const scaleRange = type === 'Mountain'
+            ? [1.1, 1.8]
+            : type === 'Forest'
+                ? [0.9, 1.45]
+                : [0.85, 1.25];
+
+        return {
+            id: this.createId(),
+            type,
+            x: point.x,
+            y: point.y,
+            scale: this.randomFloat(scaleRange[0], scaleRange[1]),
+            rotation: this.randomFloat(-16, 16),
+            opacity: this.randomFloat(0.5, 0.86)
+        };
+    }
+
+    private appendTerrainDecoration(map: CampaignMap, decoration: CampaignMapDecoration): void {
+        switch (decoration.type) {
+            case 'Mountain':
+                map.layers = {
+                    ...map.layers,
+                    mountainChains: [...map.layers.mountainChains, decoration]
+                };
+                break;
+            case 'Forest':
+                map.layers = {
+                    ...map.layers,
+                    forestBelts: [...map.layers.forestBelts, decoration]
+                };
+                break;
+            default:
+                map.decorations = [...map.decorations, decoration];
+                break;
         }
     }
 

@@ -61,23 +61,9 @@
                 <div class="section-heading compact-heading">
                     <h2>Generation</h2>
                 </div>
-                <label class="field-label">Map type</label>
-                <app-dropdown ariaLabel="Map background" [value]="workingMap().background" [options]="backgroundOptions" [minWidth]="220" (changed)="updateBackground($event)"></app-dropdown>
-                @if (showParchmentLayout()) {
-                <label class="field-label">Parchment layout</label>
-                <app-dropdown ariaLabel="Parchment layout" [value]="parchmentLayout()" [options]="parchmentLayoutOptions" [minWidth]="220" [panelMinWidth]="360" [showOptionDescriptions]="false" (changed)="updateParchmentLayout($event)"></app-dropdown>
-                }
-                @if (showCavernLayout()) {
-                <label class="field-label">Cavern layout</label>
-                <app-dropdown ariaLabel="Cavern layout" [value]="cavernLayout()" [options]="cavernLayoutOptions" [minWidth]="220" [panelMinWidth]="360" [showOptionDescriptions]="false" (changed)="updateCavernLayout($event)"></app-dropdown>
-                }
-                @if (showSettlementScale()) {
-                <label class="field-label">Settlement size</label>
-                <app-dropdown ariaLabel="Settlement size" [value]="settlementScale()" [options]="settlementScaleOptions" [minWidth]="220" (changed)="updateSettlementScale($event)"></app-dropdown>
-                }
                 <div class="control-callout">
-                    <strong>Using {{ workingMap().background }} generation</strong>
-                    <span>The selected map type drives full generation and terrain refresh.</span>
+                    <strong>Using {{ backgroundDisplayLabel(workingMap().background) }} generation</strong>
+                    <span>Open the generation modal to choose map type, structure, names, and extra AI direction before rendering art.</span>
                     @if (showParchmentLayout()) {
                     <span>Parchment layout should read as {{ parchmentLayout().toLowerCase() }}.</span>
                     }
@@ -87,7 +73,10 @@
                     @if (showSettlementScale()) {
                     <span>Primary settlement should read as a {{ settlementScale().toLowerCase() }}.</span>
                     }
-                    <span>Campaign seed suggests {{ campaignSeed().suggestedBackground }}.</span>
+                    @if (hasPreferredNamesQueued()) {
+                    <span>Categorized names are queued for the next AI generation pass.</span>
+                    }
+                    <span>Campaign seed suggests {{ backgroundDisplayLabel(campaignSeed().suggestedBackground) }}.</span>
                 </div>
                 <p class="sidebar-note">{{ campaignSeed().summary }}</p>
                 <div class="seed-metrics-grid">
@@ -101,7 +90,7 @@
                     </div>
                 </div>
                 <div class="tool-actions">
-                    <button type="button" class="primary-button" [disabled]="isAiArtGenerating()" (click)="generateAiMapArt()">{{ isAiArtGenerating() ? 'Generating Map Art...' : 'Generate Map Art' }}</button>
+                    <button type="button" class="primary-button" [disabled]="isAiArtGenerating()" (click)="openMapArtModal()">{{ isAiArtGenerating() ? 'Generating Map Art...' : 'Generate Map Art' }}</button>
                     <button type="button" class="ghost-button danger-button" [disabled]="!workingMap().backgroundImageUrl" (click)="clearBackgroundImage()">Clear Map Art</button>
                 </div>
             </div>
@@ -114,11 +103,52 @@
                 <div class="tool-toggle-row">
                     <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'draw'" (click)="selectDrawTool()">Draw Routes</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'icon'" (click)="startLandmarkTool()">Place Landmarks</button>
+                    <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'terrain'" (click)="selectTerrainTool('Mountain')">Place Terrain</button>
+                    <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'label'" (click)="selectLabelTool()">Place Labels</button>
                 </div>
 
                 <app-dropdown ariaLabel="Brush color" [value]="brushColor()" [options]="brushColorOptions" [minWidth]="220" (changed)="updateBrushColor($event)"></app-dropdown>
                 <app-dropdown ariaLabel="Brush size" [value]="brushWidth()" [options]="brushSizeOptions" [minWidth]="220" (changed)="updateBrushWidth($event)"></app-dropdown>
-                <p class="sidebar-note generator-note">Draw mode paints route strokes. Landmark mode places draggable icons on the board.</p>
+                <p class="sidebar-note generator-note">Draw mode paints route strokes. Terrain, landmark, and label modes let you build a hand-authored map board yourself.</p>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="section-heading compact-heading">
+                    <h2>Terrain Palette</h2>
+                    @if (activeTerrainOption()) {
+                    <button type="button" class="ghost-button compact-action" (click)="clearPlacementMode()">Stop Placing</button>
+                    }
+                </div>
+                <div class="icon-palette-grid terrain-palette-grid">
+                    @for (option of terrainOptions; track option.type) {
+                    <button type="button" class="icon-palette-button terrain-palette-button" [class.is-active]="pendingTerrainType() === option.type" (click)="selectTerrainTool(option.type)">
+                        <i [class]="option.iconClass"></i>
+                        <span>{{ option.label }}</span>
+                    </button>
+                    }
+                </div>
+                @if (activeTerrainOption(); as option) {
+                <p class="sidebar-note">Click the board to place {{ option.label.toLowerCase() }} and build out the terrain by hand.</p>
+                } @else {
+                <p class="sidebar-note">Use terrain tokens to sketch forests, mountains, reefs, caves, hills, and magical sites.</p>
+                }
+            </div>
+
+            <div class="sidebar-section">
+                <div class="section-heading compact-heading">
+                    <h2>Map Labels</h2>
+                    @if (activeTool() === 'label') {
+                    <button type="button" class="ghost-button compact-action" (click)="clearPlacementMode()">Stop Placing</button>
+                    }
+                </div>
+                <label class="field-label">Label type</label>
+                <app-dropdown ariaLabel="Label type" [value]="labelToneDraft()" [options]="labelToneOptions" [minWidth]="220" (changed)="updateLabelToneDraft($event)"></app-dropdown>
+                <label class="field-label" for="map-label-text">Label text</label>
+                <div class="inline-creator-row">
+                    <input id="map-label-text" type="text" [value]="labelTextDraft()" (input)="updateLabelTextDraft($any($event.target).value)" placeholder="Name this place" />
+                    <button type="button" class="primary-button" (click)="selectLabelTool()">Place</button>
+                </div>
+                <p class="sidebar-note">Region labels are good for countries, seas, and forests. Feature labels work well for roads, ruins, rivers, and passes.</p>
             </div>
 
             <div class="sidebar-section">
@@ -225,8 +255,8 @@
             </div>
 
             <div class="map-board-shell">
-                <div #mapBoard class="map-board" [class.can-edit]="canEdit()" [class.is-placement-mode]="pendingIconType() !== null" [class.has-map-art]="!!workingMap().backgroundImageUrl" [ngClass]="backgroundTextureClass()" (click)="handleBoardClick($event)"
-                    (pointerdown)="handleBoardPointerDown($event)" (pointermove)="handleBoardPointerMove($event)" (pointerup)="handleBoardPointerUp($event)" (pointercancel)="handleBoardPointerUp($event)">
+                <div #mapBoard class="map-board" [class.can-edit]="canEdit()" [class.is-placement-mode]="pendingIconType() !== null || pendingTerrainType() !== null || activeTool() === 'label'" [class.has-map-art]="!!workingMap().backgroundImageUrl" [ngClass]="backgroundTextureClass()"
+                    (click)="handleBoardClick($event)" (pointerdown)="handleBoardPointerDown($event)" (pointermove)="handleBoardPointerMove($event)" (pointerup)="handleBoardPointerUp($event)" (pointercancel)="handleBoardPointerUp($event)">
                     @if (workingMap().backgroundImageUrl) {
                     <div class="map-board-art-layer" aria-hidden="true">
                         <img class="map-board-art" [src]="workingMap().backgroundImageUrl" alt="" />
@@ -301,8 +331,8 @@
                     </div>
                     }
 
-                    @if (pendingIconType() && canEdit()) {
-                    <div class="map-overlay-hint">Click anywhere on the board to place a {{ activeIconOption()?.label?.toLowerCase() }} marker.</div>
+                    @if (placementHint() && canEdit()) {
+                    <div class="map-overlay-hint">{{ placementHint() }}</div>
                     }
                 </div>
             </div>
@@ -405,6 +435,9 @@
     }
 
     <app-confirm-modal [open]="confirmOpen()" [title]="confirmTitle()" [message]="confirmMessage()" [confirmText]="confirmActionText()" cancelText="Cancel" (confirmed)="handleConfirmAccepted()" (cancelled)="handleConfirmCancelled()"></app-confirm-modal>
+    <app-map-art-generation-modal [open]="mapArtModalOpen()" [isSubmitting]="isAiArtGenerating()" [background]="workingMap().background" [mapName]="mapNameDraft().trim()" [settlementScale]="settlementScale()" [parchmentLayout]="parchmentLayout()" [cavernLayout]="cavernLayout()"
+        [settlementNamesText]="settlementNamesDraft()" [regionNamesText]="regionNamesDraft()" [ruinNamesText]="ruinNamesDraft()" [cavernNamesText]="cavernNamesDraft()" [additionalDirection]="additionalArtDirectionDraft()" (closed)="closeMapArtModal()"
+        (confirmed)="submitMapArtModal($event)"></app-map-art-generation-modal>
 </main>
 } @else {
 <main class="page-stack">

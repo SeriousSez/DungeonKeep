@@ -1,0 +1,187 @@
+:host {
+    display: block;
+}
+
+.map-art-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 30000;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(25, 18, 10, 0.48);
+    backdrop-filter: blur(6px);
+}
+
+.map-art-modal {
+    width: min(860px, calc(100vw - 32px));
+    max-height: min(88vh, 920px);
+    display: grid;
+    gap: 24px;
+    padding: 28px;
+    overflow: auto;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 70%, var(--accent-primary) 30%);
+    border-radius: 28px;
+    background: var(--panel-bg-solid);
+    box-shadow:
+        0 26px 60px rgba(20, 12, 6, 0.28),
+        inset 0 1px 0 rgba(255, 248, 236, 0.65);
+}
+
+.map-art-modal-header,
+.map-art-modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.map-art-modal-header {
+    align-items: flex-start;
+    padding-bottom: 18px;
+    border-bottom: 1px solid color-mix(in srgb, var(--panel-border) 78%, transparent);
+}
+
+.map-art-modal-header h2,
+.map-art-modal-header p {
+    margin: 0;
+}
+
+.map-art-modal-header h2 {
+    font-family: var(--display-font);
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--text-main);
+    letter-spacing: 0.02em;
+}
+
+.map-art-modal-header p {
+    max-width: 38rem;
+    margin-top: 8px;
+    color: var(--text-muted);
+    line-height: 1.45;
+}
+
+.map-art-modal-eyebrow,
+.map-art-field-label {
+    margin: 0 0 8px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+}
+
+.map-art-modal-body,
+.map-art-field-grid,
+.map-art-notes-grid {
+    display: grid;
+    gap: 18px;
+}
+
+.map-art-field-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.map-art-notes-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.map-art-field-block {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 82%, transparent);
+    border-radius: 18px;
+    background: var(--surface-raised);
+    box-shadow: inset 0 1px 0 rgba(255, 248, 236, 0.55);
+}
+
+.map-art-field-block--wide {
+    align-content: start;
+}
+
+.map-art-field-block--full {
+    grid-column: 1 / -1;
+}
+
+.map-art-field-block input,
+.map-art-field-block textarea {
+    width: 100%;
+    min-width: 0;
+    border-radius: 14px;
+    border: 1px solid var(--panel-border);
+    background: var(--color-surface-solid);
+    color: var(--text-main);
+    padding: 12px 14px;
+    font: inherit;
+    resize: vertical;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.map-art-field-block input:focus,
+.map-art-field-block textarea:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--accent-primary) 68%, var(--panel-border) 32%);
+    box-shadow:
+        0 0 0 3px color-mix(in srgb, var(--accent-primary) 18%, transparent),
+        inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.map-art-field-block input {
+    min-height: 44px;
+}
+
+.map-art-field-block textarea {
+    min-height: 144px;
+}
+
+.map-art-help-text {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+}
+
+.map-art-modal-actions {
+    justify-content: flex-end;
+    padding-top: 18px;
+    border-top: 1px solid color-mix(in srgb, var(--panel-border) 78%, transparent);
+    position: sticky;
+    bottom: 0;
+    background: var(--panel-bg-solid);
+    margin: 0 -28px -28px;
+    padding-left: 28px;
+    padding-right: 28px;
+    padding-bottom: 20px;
+}
+
+@media (max-width: 820px) {
+    .map-art-modal {
+        padding: 20px;
+    }
+
+    .map-art-field-grid,
+    .map-art-notes-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .map-art-modal-actions {
+        margin: 0 -20px -20px;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+}
+
+@media (max-width: 640px) {
+    .map-art-modal-backdrop {
+        padding: 12px;
+    }
+
+    .map-art-modal-header,
+    .map-art-modal-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

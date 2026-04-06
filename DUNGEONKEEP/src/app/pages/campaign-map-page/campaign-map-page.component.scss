@@ -343,6 +343,10 @@ app-dropdown {
     gap: 10px;
 }
 
+.terrain-palette-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .icon-palette-button {
     display: grid;
     gap: 8px;
@@ -352,6 +356,14 @@ app-dropdown {
     background: var(--surface-raised);
     color: var(--text-main);
     cursor: pointer;
+}
+
+.terrain-palette-button {
+    min-height: 92px;
+}
+
+.terrain-palette-button span {
+    font-size: 0.82rem;
 }
 
 .icon-palette-button i,
@@ -716,6 +728,10 @@ app-dropdown {
     .layer-grid,
     .seed-metrics-grid {
         grid-template-columns: 1fr;
+    }
+
+    .terrain-palette-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .map-board-shell {

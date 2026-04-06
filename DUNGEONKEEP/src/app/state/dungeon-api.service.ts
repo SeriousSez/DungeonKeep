@@ -96,6 +96,12 @@ export interface ApiGenerateCampaignMapArtRequest {
     settlementScale?: 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis';
     parchmentLayout?: 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular';
     cavernLayout?: 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes';
+    preferredPlaceNames?: string[];
+    settlementNames?: string[];
+    regionNames?: string[];
+    ruinNames?: string[];
+    cavernNames?: string[];
+    additionalDirection?: string;
 }
 
 export interface ApiGenerateCampaignMapArtResponse {

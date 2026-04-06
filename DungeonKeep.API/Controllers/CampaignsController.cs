@@ -1643,10 +1643,16 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
     private static string BuildCampaignMapArtPrompt(CampaignDto campaign, GenerateCampaignMapArtRequest request)
     {
         var background = NormalizeRequestedMapBackground(request.Background);
-        var mapName = string.IsNullOrWhiteSpace(request.MapName) ? campaign.Name : request.MapName.Trim();
+        var mapName = string.IsNullOrWhiteSpace(request.MapName) ? null : request.MapName.Trim();
         var settlementScale = NormalizeRequestedSettlementScale(request.SettlementScale);
         var parchmentLayout = NormalizeRequestedParchmentLayout(request.ParchmentLayout);
         var cavernLayout = NormalizeRequestedCavernLayout(request.CavernLayout);
+        var preferredPlaceNames = request.PreferredPlaceNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToArray() ?? [];
+        var settlementNames = request.SettlementNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToArray() ?? [];
+        var regionNames = request.RegionNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToArray() ?? [];
+        var ruinNames = request.RuinNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToArray() ?? [];
+        var cavernNames = request.CavernNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToArray() ?? [];
+        var additionalDirection = string.IsNullOrWhiteSpace(request.AdditionalDirection) ? null : request.AdditionalDirection.Trim();
 
         var promptLines = new List<string>
         {
@@ -1675,7 +1681,6 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
 
         promptLines.AddRange(
         [
-            $"Map title: {mapName}.",
             $"Campaign name: {campaign.Name}.",
             $"Setting: {campaign.Setting}.",
             $"Tone: {campaign.Tone}.",
@@ -1688,8 +1693,48 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             "- Readable geography and terrain masses.",
             "- Elegant but not oversized labels.",
             "- Leave clear shapes and negative space so UI overlays remain readable.",
-            "- Avoid giant decorative borders, giant legends, character figures, or scene illustration framing."
+            "- Avoid giant decorative borders, giant legends, character figures, or scene illustration framing.",
+            $"Preferred settlement names: {(settlementNames.Length == 0 ? "None provided." : string.Join(", ", settlementNames))}",
+            $"Preferred region names: {(regionNames.Length == 0 ? "None provided." : string.Join(", ", regionNames))}",
+            $"Preferred ruin names: {(ruinNames.Length == 0 ? "None provided." : string.Join(", ", ruinNames))}",
+            $"Preferred cavern names: {(cavernNames.Length == 0 ? "None provided." : string.Join(", ", cavernNames))}",
+            $"Uncategorized preferred place names: {(preferredPlaceNames.Length == 0 ? "None provided." : string.Join(", ", preferredPlaceNames))}"
         ]);
+
+        if (mapName is not null)
+        {
+            promptLines.Add($"Map title: {mapName}.");
+        }
+        else
+        {
+            promptLines.Add("- No map title was provided. Invent a fitting fantasy map title if visible title lettering appears in the artwork.");
+        }
+
+        if (background == "City" && (settlementNames.Length > 0 || regionNames.Length > 0 || ruinNames.Length > 0 || cavernNames.Length > 0))
+        {
+            promptLines.Add("- For settlement maps, interpret the provided categories as follows: settlement names are names for the city, town, borough, or harbor itself; region names are district, ward, dock, or neighborhood names; ruin names are landmark, plaza, temple, keep, bridge, or guildhall names; cavern names are street, lane, avenue, gate, or canal names.");
+            promptLines.Add("- Prefer these urban naming categories over inventing generic district or street labels.");
+        }
+        else if (background == "Cavern" && (settlementNames.Length > 0 || regionNames.Length > 0 || ruinNames.Length > 0 || cavernNames.Length > 0))
+        {
+            promptLines.Add("- For cavern maps, interpret the provided categories as follows: settlement names are enclave, camp, outpost, buried district, or undercity names; region names are names for major chambers, fungal groves, lava fields, sink basins, or broad underground zones; ruin names are names for vaults, shrines, crystal halls, dens, and other named subterranean landmarks; cavern names are names for tunnels, chasms, fissures, bridge runs, and connective passages.");
+            promptLines.Add("- Prefer these subterranean naming categories over inventing generic chamber or tunnel labels.");
+        }
+        else if (settlementNames.Length > 0 || regionNames.Length > 0 || ruinNames.Length > 0 || cavernNames.Length > 0)
+        {
+            promptLines.Add("- When visible labels are included, use settlement names for towns and cities, region names for territories and major natural areas, ruin names for ruins and landmark sites, and cavern names for subterranean locations.");
+            promptLines.Add("- Prefer the provided categorized names over inventing replacements for those label types.");
+        }
+
+        if (preferredPlaceNames.Length > 0)
+        {
+            promptLines.Add("- When visible map labels are included, strongly prefer the provided place names over inventing new settlement or region names.");
+        }
+
+        if (additionalDirection is not null)
+        {
+            promptLines.Add($"- Additional direction: {additionalDirection}");
+        }
 
         if (background == "City")
         {
@@ -3148,7 +3193,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
 
     public sealed record GenerateCampaignMapRequest(string? Background, string? MapName, IReadOnlyList<string>? ExistingLandmarkLabels, string? ReferenceImageUrl);
 
-    public sealed record GenerateCampaignMapArtRequest(string? Background, string? MapName, string? SettlementScale, string? ParchmentLayout, string? CavernLayout);
+    public sealed record GenerateCampaignMapArtRequest(string? Background, string? MapName, string? SettlementScale, string? ParchmentLayout, string? CavernLayout, IReadOnlyList<string>? PreferredPlaceNames, IReadOnlyList<string>? SettlementNames, IReadOnlyList<string>? RegionNames, IReadOnlyList<string>? RuinNames, IReadOnlyList<string>? CavernNames, string? AdditionalDirection);
 
     public sealed record GenerateCampaignMapArtResponse(string BackgroundImageUrl);
 

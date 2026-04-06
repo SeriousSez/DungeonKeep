@@ -1,0 +1,103 @@
+@if (open()) {
+<div class="map-art-modal-backdrop" (click)="close()">
+    <section class="map-art-modal panel" role="dialog" aria-modal="true" aria-label="Map art generation options" (click)="$event.stopPropagation()">
+        <header class="map-art-modal-header">
+            <div>
+                <p class="map-art-modal-eyebrow">Map Art Generation</p>
+                <h2>Generation Options</h2>
+                <p>{{ namesIntro() }}</p>
+            </div>
+            <button type="button" class="ghost-button" (click)="close()">Cancel</button>
+        </header>
+
+        <div class="map-art-modal-body">
+            <div class="map-art-field-grid">
+                <div class="map-art-field-block">
+                    <label class="map-art-field-label">Map type</label>
+                    <app-dropdown ariaLabel="Map type" [value]="backgroundDraft()" [options]="backgroundOptions" [minWidth]="220" (changed)="updateBackground($event)"></app-dropdown>
+                </div>
+
+                <div class="map-art-field-block">
+                    <label class="map-art-field-label" for="map-art-name">Map title</label>
+                    <input id="map-art-name" type="text" [value]="mapNameDraft()" (input)="updateMapName($any($event.target).value)" placeholder="Leave blank to let the AI invent one" />
+                    <p class="map-art-help-text">Leave this empty if you want the AI to generate a fitting map title as part of the artwork.</p>
+                </div>
+
+                @if (showSettlementScale()) {
+                <div class="map-art-field-block">
+                    <label class="map-art-field-label">Settlement size</label>
+                    <app-dropdown ariaLabel="Settlement size" [value]="settlementScaleDraft()" [options]="settlementScaleOptions" [minWidth]="220" (changed)="updateSettlementScale($event)"></app-dropdown>
+                </div>
+                }
+
+                @if (showParchmentLayout()) {
+                <div class="map-art-field-block">
+                    <label class="map-art-field-label">Parchment layout</label>
+                    <app-dropdown ariaLabel="Parchment layout" [value]="parchmentLayoutDraft()" [options]="parchmentLayoutOptions" [minWidth]="220" [panelMinWidth]="360" [showOptionDescriptions]="false" (changed)="updateParchmentLayout($event)"></app-dropdown>
+                </div>
+                }
+
+                @if (showCavernLayout()) {
+                <div class="map-art-field-block">
+                    <label class="map-art-field-label">Cavern layout</label>
+                    <app-dropdown ariaLabel="Cavern layout" [value]="cavernLayoutDraft()" [options]="cavernLayoutOptions" [minWidth]="220" [panelMinWidth]="360" [showOptionDescriptions]="false" (changed)="updateCavernLayout($event)"></app-dropdown>
+                </div>
+                }
+            </div>
+
+            <div class="map-art-notes-grid">
+                <div class="map-art-field-block map-art-field-block--wide">
+                    <label class="map-art-field-label" for="map-art-settlement-names">{{ settlementFieldLabel() }}</label>
+                    <textarea id="map-art-settlement-names" rows="4" [value]="settlementNamesDraft()" (input)="updateSettlementNames($any($event.target).value)" [placeholder]="settlementFieldPlaceholder()"></textarea>
+                    <p class="map-art-help-text">{{ settlementFieldHelpText() }}</p>
+                    @if (settlementNameCount() > 0) {
+                    <p class="map-art-help-text">{{ settlementNameCount() }} {{ settlementCountLabel() }}</p>
+                    }
+                </div>
+
+                <div class="map-art-field-block map-art-field-block--wide">
+                    <label class="map-art-field-label" for="map-art-region-names">{{ regionFieldLabel() }}</label>
+                    <textarea id="map-art-region-names" rows="4" [value]="regionNamesDraft()" (input)="updateRegionNames($any($event.target).value)" [placeholder]="regionFieldPlaceholder()"></textarea>
+                    <p class="map-art-help-text">{{ regionFieldHelpText() }}</p>
+                    @if (regionNameCount() > 0) {
+                    <p class="map-art-help-text">{{ regionNameCount() }} {{ regionCountLabel() }}</p>
+                    }
+                </div>
+
+                <div class="map-art-field-block map-art-field-block--wide">
+                    <label class="map-art-field-label" for="map-art-ruin-names">{{ ruinFieldLabel() }}</label>
+                    <textarea id="map-art-ruin-names" rows="4" [value]="ruinNamesDraft()" (input)="updateRuinNames($any($event.target).value)" [placeholder]="ruinFieldPlaceholder()"></textarea>
+                    <p class="map-art-help-text">{{ ruinFieldHelpText() }}</p>
+                    @if (ruinNameCount() > 0) {
+                    <p class="map-art-help-text">{{ ruinNameCount() }} {{ ruinCountLabel() }}</p>
+                    }
+                </div>
+
+                <div class="map-art-field-block map-art-field-block--wide">
+                    <label class="map-art-field-label" for="map-art-cavern-names">{{ cavernFieldLabel() }}</label>
+                    <textarea id="map-art-cavern-names" rows="4" [value]="cavernNamesDraft()" (input)="updateCavernNames($any($event.target).value)" [placeholder]="cavernFieldPlaceholder()"></textarea>
+                    <p class="map-art-help-text">{{ cavernFieldHelpText() }}</p>
+                    @if (cavernNameCount() > 0) {
+                    <p class="map-art-help-text">{{ cavernNameCount() }} {{ cavernCountLabel() }}</p>
+                    }
+                </div>
+
+                <div class="map-art-field-block map-art-field-block--wide map-art-field-block--full">
+                    <label class="map-art-field-label" for="map-art-direction">Additional direction</label>
+                    <textarea id="map-art-direction" rows="5" [value]="additionalDirectionDraft()" (input)="updateAdditionalDirection($any($event.target).value)"
+                        placeholder="Optional art direction, such as foggy coastlines, ruined border keeps, sparse villages, or a dominant mountain spine."></textarea>
+                    <p class="map-art-help-text">Use this for anything not covered by the structured options.</p>
+                    @if (totalPreferredNameCount() > 0) {
+                    <p class="map-art-help-text">{{ totalPreferredNameCount() }} categorized names queued for the next generation.</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <footer class="map-art-modal-actions">
+            <button type="button" class="ghost-button" [disabled]="isSubmitting()" (click)="close()">Cancel</button>
+            <button type="button" class="primary-button" [disabled]="isSubmitting()" (click)="submit()">{{ isSubmitting() ? 'Generating...' : 'Generate Map Art' }}</button>
+        </footer>
+    </section>
+</div>
+}

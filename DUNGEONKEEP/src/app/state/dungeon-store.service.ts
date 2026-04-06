@@ -299,14 +299,19 @@ export class DungeonStoreService {
         }
     }
 
-    async generateCampaignMapArtAi(campaignId: string, payload: { background: CampaignMapBackground; mapName: string; settlementScale?: 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis'; parchmentLayout?: 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular'; cavernLayout?: 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes' }): Promise<string | null> {
+    async generateCampaignMapArtAi(campaignId: string, payload: { background: CampaignMapBackground; mapName: string; settlementScale?: 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis'; parchmentLayout?: 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular'; cavernLayout?: 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes'; settlementNames?: string[]; regionNames?: string[]; ruinNames?: string[]; cavernNames?: string[]; additionalDirection?: string }): Promise<string | null> {
         try {
             const generated = await this.api.generateCampaignMapArtAi(campaignId, {
                 background: this.normalizeMapBackground(payload.background),
                 mapName: payload.mapName.trim(),
                 settlementScale: payload.settlementScale,
                 parchmentLayout: payload.parchmentLayout,
-                cavernLayout: payload.cavernLayout
+                cavernLayout: payload.cavernLayout,
+                settlementNames: payload.settlementNames,
+                regionNames: payload.regionNames,
+                ruinNames: payload.ruinNames,
+                cavernNames: payload.cavernNames,
+                additionalDirection: payload.additionalDirection?.trim() || undefined
             });
 
             return this.normalizeMapBackgroundImageUrl(generated.backgroundImageUrl);
