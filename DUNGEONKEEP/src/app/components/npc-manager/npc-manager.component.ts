@@ -378,16 +378,17 @@ export class NpcManagerComponent {
         this.cdr.detectChanges();
     }
 
-    async toggleFlag(npcId: string, flag: 'isAlive' | 'isHostile' | 'isImportant'): Promise<void> {
+    async toggleFlag(npcId: string, flag: 'isAlive' | 'hostility' | 'isImportant'): Promise<void> {
         const npc = this.allNpcs().find((entry) => entry.id === npcId);
         if (!npc) {
             return;
         }
 
-        const updatedNpc = sanitizeNpc(touchNpc({
-            ...npc,
-            [flag]: !npc[flag]
-        }));
+        const updatedNpc = sanitizeNpc(touchNpc(
+            flag === 'hostility'
+                ? { ...npc, hostility: this.nextHostility(npc.hostility) }
+                : { ...npc, [flag]: !npc[flag] }
+        ));
 
         const nextList = this.allNpcs().map((entry) => entry.id === npcId ? updatedNpc : entry);
         this.persistLocalState(nextList, npcId);
@@ -509,7 +510,7 @@ export class NpcManagerComponent {
             sessionAppearances: generated.sessionAppearances,
             inventory: generated.inventory,
             imageUrl: generated.imageUrl,
-            isHostile: generated.isHostile,
+            hostility: generated.isHostile ? 'Hostile' : 'Friendly',
             isAlive: generated.isAlive,
             isImportant: generated.isImportant
         }));
@@ -550,6 +551,17 @@ export class NpcManagerComponent {
 
     private uniqueValues(values: readonly string[]): string[] {
         return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean))).sort((left, right) => left.localeCompare(right));
+    }
+
+    private nextHostility(current: CampaignNpc['hostility']): CampaignNpc['hostility'] {
+        switch (current) {
+            case 'Friendly':
+                return 'Indifferent';
+            case 'Indifferent':
+                return 'Hostile';
+            default:
+                return 'Friendly';
+        }
     }
 
     private nextNpcName(): string {

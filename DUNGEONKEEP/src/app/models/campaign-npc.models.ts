@@ -40,14 +40,15 @@ export interface CampaignNpc {
     sessionAppearances: string[];
     inventory: string[];
     imageUrl: string;
-    isHostile: boolean;
+    hostility: NpcDisposition;
     isAlive: boolean;
     isImportant: boolean;
     updatedAt: string;
 }
 
+export type NpcDisposition = 'Friendly' | 'Indifferent' | 'Hostile';
 export type NpcLifeFilter = 'All' | 'Alive' | 'Dead';
-export type NpcHostilityFilter = 'All' | 'Friendly' | 'Hostile';
+export type NpcHostilityFilter = 'All' | NpcDisposition;
 export type NpcImportanceFilter = 'All' | 'Important' | 'NotImportant';
 export type NpcSortField = 'RecentlyUpdated' | 'Name' | 'Location' | 'Faction';
 

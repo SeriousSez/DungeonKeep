@@ -1655,6 +1655,7 @@
                             <th>QTY</th>
                             <th>Cost (GP)</th>
                             <th>Notes</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1670,6 +1671,9 @@
                             <td>{{ entry.quantity }}</td>
                             <td>{{ entry.costGp != null ? entry.costGp : '—' }}</td>
                             <td>{{ entry.notes || (entry.isContainer ? 'Container' : '—') }}</td>
+                            <td>
+                                <button type="button" class="inventory-row-action" (click)="removeInventoryEntry(entry.name)">Remove</button>
+                            </td>
                         </tr>
                         }
                     </tbody>

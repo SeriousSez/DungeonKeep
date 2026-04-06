@@ -40,7 +40,7 @@
         </label>
 
         <label class="field">
-            <span>Hostile / Friendly</span>
+            <span>Disposition</span>
             <app-dropdown ariaLabel="Hostility filter" [value]="hostility()" [options]="hostilityOptions" [searchable]="false" [placeholder]="'All temperaments'" (changed)="emitHostility($event)"></app-dropdown>
         </label>
 
@@ -69,11 +69,7 @@
                     @if (npc.isImportant) {
                     <span class="badge important-badge">Important</span>
                     }
-                    @if (npc.isHostile) {
-                    <span class="badge hostile-badge">Hostile</span>
-                    } @else {
-                    <span class="badge friendly-badge">Friendly</span>
-                    }
+                    <span class="badge" [class]="hostilityBadgeClass(npc)">{{ npc.hostility }}</span>
                     @if (!npc.isAlive) {
                     <span class="badge dead-badge">Dead</span>
                     }
@@ -97,7 +93,7 @@
 
             <div class="quick-toggle-row" (click)="$event.stopPropagation()">
                 <button type="button" class="toggle-pill" [class.is-active]="npc.isAlive" [disabled]="!canEdit()" (click)="toggleAlive.emit(npc.id)">{{ npc.isAlive ? 'Alive' : 'Dead' }}</button>
-                <button type="button" class="toggle-pill" [class.is-active]="npc.isHostile" [disabled]="!canEdit()" (click)="toggleHostile.emit(npc.id)">{{ npc.isHostile ? 'Hostile' : 'Friendly' }}</button>
+                <button type="button" class="toggle-pill" [class]="hostilityToggleClass(npc)" [disabled]="!canEdit()" (click)="toggleHostile.emit(npc.id)">{{ npc.hostility }}</button>
                 <button type="button" class="toggle-pill" [class.is-active]="npc.isImportant" [disabled]="!canEdit()" (click)="toggleImportant.emit(npc.id)">{{ npc.isImportant ? 'Important' : 'Normal' }}</button>
             </div>
 

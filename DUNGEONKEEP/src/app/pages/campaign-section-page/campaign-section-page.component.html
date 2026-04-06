@@ -146,68 +146,120 @@
             <span class="count-badge">{{ campaign.loot.length }}</span>
         </div>
 
-        @if (campaign.currentUserRole === 'Owner') {
-        <div class="loot-creator-stack">
-            <label class="equipment-filter-label" for="loot-draft">Add custom loot</label>
-            <div class="inline-creator-row">
-                <input id="loot-draft" type="text" [value]="lootDraft()" (input)="updateLootDraft($any($event.target).value)" placeholder="Type custom loot, clue, or treasure" />
-                <button type="button" class="primary-button" [disabled]="!lootDraft().trim()" (click)="addLoot()">Add Loot</button>
-            </div>
+        <div class="loot-panels" [class.loot-panels--single]="campaign.currentUserRole !== 'Owner'">
+            @if (campaign.currentUserRole === 'Owner') {
+            <section class="loot-panel loot-panel--catalog">
+                <div class="loot-panel-heading">
+                    <h3>Item Catalog</h3>
+                    <p>Browse the standard list and add anything the party picks up.</p>
+                </div>
 
-            <p class="loot-catalog-note">Or add from the item catalog.</p>
-
-            <div class="equipment-source-list">
-                @for (category of lootCategories(); track category) {
-                <button type="button" class="equipment-source-chip" [class.active]="selectedLootCategory() === category" (click)="selectLootCategory(category)">
-                    {{ category }}
-                </button>
-                }
-            </div>
-
-            @if (isWondrousLootCategory()) {
-            <div class="equipment-source-list equipment-source-list--secondary">
-                @for (rarity of lootRarities(); track rarity) {
-                <button type="button" class="equipment-source-chip" [class.active]="selectedLootRarity() === rarity" (click)="selectLootRarity(rarity)">
-                    {{ rarity }}
-                </button>
-                }
-            </div>
-            }
-
-            <div class="equipment-item-list">
-                @for (item of filteredLootCatalog(); track item.name) {
-                <div class="equipment-item-row" role="button" tabindex="0" (click)="openLootItemModal(item)" (keydown.enter)="openLootItemModal(item)" (keydown.space)="openLootItemModal(item)">
-                    <div class="equipment-item-info-btn">
-                        <strong>{{ item.name }}</strong>
-                        <p>{{ item.category }}</p>
+                <div class="loot-creator-stack">
+                    <label class="equipment-filter-label" for="loot-draft">Add custom loot</label>
+                    <div class="inline-creator-row">
+                        <input id="loot-draft" type="text" [value]="lootDraft()" (input)="updateLootDraft($any($event.target).value)" placeholder="Search or type custom loot, clue, or treasure" />
+                        <button type="button" class="primary-button" [disabled]="!lootDraft().trim()" (click)="addLoot()">Add Loot</button>
                     </div>
-                    <button type="button" class="equipment-pill-action" (click)="$event.stopPropagation(); addCatalogLoot(item.name)" (keydown.enter)="$event.stopPropagation()" (keydown.space)="$event.stopPropagation()">Add</button>
-                </div>
-                }
-                @if (filteredLootCatalog().length === 0) {
-                <p class="empty-state compact-empty-state">No catalog items match the current filter.</p>
-                }
-            </div>
-        </div>
-        }
 
-        @if (campaign.loot.length > 0) {
-        <div class="tag-grid">
-            @for (item of campaign.loot; track item) {
-            <article class="tag-card">
-                <div class="tag-card-header">
-                    <h3>{{ item }}</h3>
-                    @if (campaign.currentUserRole === 'Owner') {
-                    <button type="button" class="ghost-button" (click)="removeLoot(item)">Remove</button>
+                    <p class="loot-catalog-note">Or add from the item catalog.</p>
+
+                    <div class="equipment-source-list">
+                        @for (category of lootCategories(); track category) {
+                        <button type="button" class="equipment-source-chip" [class.active]="selectedLootCategory() === category" (click)="selectLootCategory(category)">
+                            {{ category }}
+                        </button>
+                        }
+                    </div>
+
+                    @if (isWondrousLootCategory()) {
+                    <div class="equipment-source-list equipment-source-list--secondary">
+                        @for (rarity of lootRarities(); track rarity) {
+                        <button type="button" class="equipment-source-chip" [class.active]="selectedLootRarity() === rarity" (click)="selectLootRarity(rarity)">
+                            {{ rarity }}
+                        </button>
+                        }
+                    </div>
                     }
+
+                    <div class="equipment-item-list">
+                        @for (item of filteredLootCatalog(); track item.name) {
+                        <div class="equipment-item-row" role="button" tabindex="0" (click)="openLootItemModal(item)" (keydown.enter)="openLootItemModal(item)" (keydown.space)="openLootItemModal(item)">
+                            <div class="equipment-item-info-btn">
+                                <strong>{{ item.name }}</strong>
+                                <p>{{ item.category }}</p>
+                            </div>
+                            <button type="button" class="equipment-pill-action" (click)="$event.stopPropagation(); addCatalogLoot(item.name)" (keydown.enter)="$event.stopPropagation()" (keydown.space)="$event.stopPropagation()">Add</button>
+                        </div>
+                        }
+                        @if (filteredLootCatalog().length === 0) {
+                        <p class="empty-state compact-empty-state">No catalog items match the current filter.</p>
+                        }
+                    </div>
                 </div>
-                <p>Treasure, leverage, clues, and rewards should stay easy to scan between sessions.</p>
-            </article>
+            </section>
             }
+
+            <section class="loot-panel loot-panel--added">
+                <div class="loot-panel-heading">
+                    <h3>Added Loot</h3>
+                    <p>Review what is already logged for this campaign.</p>
+                </div>
+
+                @if (lootSummaries().length > 0) {
+                <div class="loot-panel-summary">
+                    <span>Current Inventory ({{ campaign.loot.length }})</span>
+                    <span class="loot-panel-summary-meta">Total Weight: {{ formatWeight(totalLootWeight()) }} lb</span>
+                </div>
+
+                <div class="loot-grid-table-wrap">
+                    <table class="loot-grid-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Weight</th>
+                                <th>QTY</th>
+                                <th>Cost (GP)</th>
+                                <th>Notes</th>
+                                @if (campaign.currentUserRole === 'Owner') {
+                                <th>Action</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (item of lootSummaries(); track item.name) {
+                            <tr>
+                                <td>
+                                    @if (item.sourceUrl || item.summary || item.detailLines?.length || item.weight != null || item.costGp != null || item.rarity || item.attunement) {
+                                    <button type="button" class="loot-name-btn" (click)="openLootSummaryDetails(item)" [attr.aria-label]="'View details for ' + item.name">
+                                        <strong>{{ item.name }}</strong>
+                                        <p>{{ item.category }}</p>
+                                    </button>
+                                    } @else {
+                                    <div class="loot-name-cell">
+                                        <strong>{{ item.name }}</strong>
+                                        <p>{{ item.category }}</p>
+                                    </div>
+                                    }
+                                </td>
+                                <td>{{ item.weight != null ? (formatWeight(item.weight) + ' lb') : '—' }}</td>
+                                <td>{{ item.count }}</td>
+                                <td>{{ item.costGp != null ? item.costGp : '—' }}</td>
+                                <td>{{ lootNotes(item) }}</td>
+                                @if (campaign.currentUserRole === 'Owner') {
+                                <td>
+                                    <button type="button" class="ghost-button loot-row-action" (click)="removeLoot(item.name)">Remove</button>
+                                </td>
+                                }
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                } @else {
+                <p class="empty-state">No party loot has been recorded yet.</p>
+                }
+            </section>
         </div>
-        } @else {
-        <p class="empty-state">No party loot has been recorded yet.</p>
-        }
         }
 
         @case ('threads') {

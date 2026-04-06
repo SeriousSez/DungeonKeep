@@ -22,10 +22,12 @@
                 @if (npc.isImportant) {
                 <span class="badge important-badge">Important</span>
                 }
-                @if (npc.isHostile) {
+                @if (npc.hostility === 'Hostile') {
                 <span class="badge hostile-badge">Hostile</span>
-                } @else {
+                } @else if (npc.hostility === 'Friendly') {
                 <span class="badge friendly-badge">Friendly</span>
+                } @else {
+                <span class="badge neutral-badge">Indifferent</span>
                 }
                 @if (!npc.isAlive) {
                 <span class="badge dead-badge">Dead</span>

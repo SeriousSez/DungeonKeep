@@ -49,8 +49,6 @@ export class NpcEditorPageComponent {
     readonly saveError = signal('');
     readonly generationBusy = signal(false);
     readonly generationError = signal('');
-    readonly autosaveLabel = signal('Autosave is ready');
-
     readonly currentCampaign = computed(() =>
         this.store.campaigns().find((campaign) => campaign.id === this.campaignId()) ?? null
     );
@@ -94,7 +92,6 @@ export class NpcEditorPageComponent {
                 this.saveMessage.set('');
                 this.saveError.set('');
                 this.generationError.set('');
-                this.autosaveLabel.set('Autosave is ready');
             });
 
         effect(() => {
@@ -117,7 +114,7 @@ export class NpcEditorPageComponent {
 
                     this.editorNpc.set(existingNpc);
                 } else {
-                    this.editorNpc.set(sanitizeNpc(touchNpc(createDefaultNpc(this.nextNpcName(library)))));
+                    this.editorNpc.set(sanitizeNpc(touchNpc(createDefaultNpc())));
                 }
 
                 this.initialized.set(true);
@@ -143,7 +140,7 @@ export class NpcEditorPageComponent {
 
                 this.editorNpc.set(existingNpc);
             } else {
-                this.editorNpc.set(sanitizeNpc(touchNpc(createDefaultNpc(this.nextNpcName(merged)))));
+                this.editorNpc.set(sanitizeNpc(touchNpc(createDefaultNpc())));
             }
 
             this.initialized.set(true);
@@ -154,7 +151,7 @@ export class NpcEditorPageComponent {
     handleDraftChanged(npc: CampaignNpc): void {
         this.saveMessage.set('');
         this.generationError.set('');
-        this.persistDraft(npc);
+        this.editorNpc.set(npc);
     }
 
     async generateNpc(prompt: NpcGenerationPrompt): Promise<void> {
@@ -184,7 +181,7 @@ export class NpcEditorPageComponent {
             });
 
             const nextNpc = this.mergeGeneratedNpc(activeNpc, generated);
-            this.persistDraft(nextNpc);
+            this.editorNpc.set(nextNpc);
             this.saveMessage.set('NPC draft generated. Review it and save when ready.');
         } catch (error) {
             this.generationError.set(this.readApiError(error, 'Could not generate an NPC draft right now.'));
@@ -256,20 +253,6 @@ export class NpcEditorPageComponent {
         } else {
             saveCampaignNpcDrafts(this.campaignId(), nextList);
         }
-        this.autosaveLabel.set(`Autosaved ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
-    }
-
-    private nextNpcName(npcs: readonly CampaignNpc[]): string {
-        const namesInUse = new Set(npcs.map((npc) => npc.name.trim().toLowerCase()));
-        let counter = 1;
-        let nextName = 'New NPC';
-
-        while (namesInUse.has(nextName.toLowerCase())) {
-            counter += 1;
-            nextName = `New NPC ${counter}`;
-        }
-
-        return nextName;
     }
 
     private mergeGeneratedNpc(currentNpc: CampaignNpc, generated: ApiGenerateNpcDraftResponse): CampaignNpc {
@@ -307,7 +290,7 @@ export class NpcEditorPageComponent {
             sessionAppearances: generated.sessionAppearances,
             inventory: generated.inventory,
             imageUrl: generated.imageUrl,
-            isHostile: generated.isHostile,
+            hostility: generated.isHostile ? 'Hostile' : 'Friendly',
             isAlive: generated.isAlive,
             isImportant: generated.isImportant
         }));

@@ -5403,6 +5403,14 @@ export class NewCharacterStandardPageComponent {
         this.addInventoryItem(inventoryEntry, destination);
     }
 
+    removeInventoryEntry(name: string): void {
+        this.inventoryEntries.update((entries) => entries.filter((entry) => entry.name !== name));
+
+        if (this.selectedInventoryDestination() === name) {
+            this.selectedInventoryDestination.set('inventory');
+        }
+    }
+
     onCurrencyInputChanged(key: keyof CurrencyState, value: string): void {
         const parsed = Number.parseInt(value, 10);
         const safeValue = Number.isNaN(parsed) ? 0 : Math.max(0, parsed);

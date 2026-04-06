@@ -58,6 +58,7 @@ export class NpcListComponent {
     readonly hostilityOptions: DropdownOption[] = [
         { value: 'All', label: 'All temperaments' },
         { value: 'Friendly', label: 'Friendly' },
+        { value: 'Indifferent', label: 'Indifferent' },
         { value: 'Hostile', label: 'Hostile' }
     ];
 
@@ -91,7 +92,29 @@ export class NpcListComponent {
     }
 
     emitHostility(value: string | number): void {
-        this.hostilityChanged.emit(value === 'Friendly' || value === 'Hostile' ? value : 'All');
+        this.hostilityChanged.emit(value === 'Friendly' || value === 'Indifferent' || value === 'Hostile' ? value : 'All');
+    }
+
+    hostilityBadgeClass(npc: CampaignNpc): string {
+        switch (npc.hostility) {
+            case 'Hostile':
+                return 'hostile-badge';
+            case 'Friendly':
+                return 'friendly-badge';
+            default:
+                return 'neutral-badge';
+        }
+    }
+
+    hostilityToggleClass(npc: CampaignNpc): string {
+        switch (npc.hostility) {
+            case 'Hostile':
+                return 'toggle-pill--hostile';
+            case 'Friendly':
+                return 'toggle-pill--friendly';
+            default:
+                return 'toggle-pill--neutral';
+        }
     }
 
     emitImportance(value: string | number): void {

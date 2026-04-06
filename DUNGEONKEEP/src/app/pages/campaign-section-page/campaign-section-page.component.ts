@@ -13,8 +13,23 @@ import { DungeonStoreService } from '../../state/dungeon-store.service';
 
 type CampaignSection = 'party' | 'sessions' | 'npcs' | 'loot' | 'threads' | 'notes' | 'members';
 type ThreatLevel = 'Low' | 'Moderate' | 'High' | 'Deadly';
+type CampaignLootSummary = {
+    name: string;
+    count: number;
+    category: string;
+    weight?: number;
+    costGp?: number;
+    notes?: string;
+    sourceUrl?: string;
+    sourceLabel?: string;
+    summary?: string;
+    detailLines?: string[];
+    rarity?: string;
+    attunement?: string;
+};
 
 const lootRarityOrder = ['Common', 'Uncommon', 'Rare', 'Very Rare', 'Legendary', 'Artifact', 'Unique', '???'] as const;
+const equipmentCatalogByName = new Map(equipmentCatalog.map((item) => [item.name.trim().toLowerCase(), item]));
 
 @Component({
     selector: 'app-campaign-section-page',
@@ -149,21 +164,53 @@ export class CampaignSectionPageComponent {
         return ['All', ...rankedRarities, ...unrankedRarities];
     });
     readonly filteredLootCatalog = computed(() => {
-        const campaign = this.selectedCampaign();
-        const existingLoot = new Set((campaign?.loot ?? []).map((item) => item.trim().toLowerCase()));
         const searchTerm = this.lootDraft().trim().toLowerCase();
         const selectedCategory = this.selectedLootCategory();
         const selectedRarity = this.selectedLootRarity();
 
         return [...equipmentCatalog]
             .sort((left, right) => left.category.localeCompare(right.category) || left.name.localeCompare(right.name))
-            .filter((item) => !existingLoot.has(item.name.trim().toLowerCase()))
             .filter((item) => selectedCategory === 'All' || item.category === selectedCategory)
             .filter((item) => selectedCategory !== 'Wondrous Item' || selectedRarity === 'All' || item.rarity === selectedRarity)
             .filter((item) => !searchTerm
                 || item.name.toLowerCase().includes(searchTerm)
                 || item.category.toLowerCase().includes(searchTerm));
     });
+    readonly lootSummaries = computed<CampaignLootSummary[]>(() => {
+        const loot = this.selectedCampaign()?.loot ?? [];
+        const summaries = new Map<string, CampaignLootSummary>();
+
+        for (const name of loot) {
+            const normalizedName = name.trim().toLowerCase();
+            const existingSummary = summaries.get(normalizedName);
+
+            if (existingSummary) {
+                existingSummary.count += 1;
+                continue;
+            }
+
+            const matchedItem = equipmentCatalogByName.get(normalizedName);
+            const category = matchedItem?.category ?? 'Custom';
+
+            summaries.set(normalizedName, {
+                name,
+                count: 1,
+                category,
+                weight: matchedItem?.weight,
+                costGp: matchedItem?.costGp,
+                notes: matchedItem?.notes,
+                sourceUrl: matchedItem?.sourceUrl,
+                sourceLabel: matchedItem?.sourceLabel,
+                summary: matchedItem?.summary,
+                detailLines: matchedItem?.detailLines,
+                rarity: matchedItem?.rarity,
+                attunement: matchedItem?.attunement
+            });
+        }
+
+        return [...summaries.values()];
+    });
+    readonly totalLootWeight = computed(() => this.lootSummaries().reduce((total, item) => total + ((item.weight ?? 0) * item.count), 0));
 
     readonly pageTitle = computed(() => {
         switch (this.section()) {
@@ -427,6 +474,35 @@ export class CampaignSectionPageComponent {
 
     async addCatalogLoot(name: string): Promise<void> {
         await this.addLootByName(name);
+    }
+
+    openLootSummaryDetails(item: CampaignLootSummary): void {
+        if (!item.sourceUrl && !item.summary && !item.detailLines?.length && item.weight == null && item.costGp == null && !item.rarity && !item.attunement) {
+            return;
+        }
+
+        this.activeLootItemDetailModal.set({
+            name: item.name,
+            category: item.category,
+            quantity: item.count,
+            sourceUrl: item.sourceUrl,
+            weight: item.weight,
+            costGp: item.costGp,
+            sourceLabel: item.sourceLabel,
+            summary: item.summary,
+            notes: item.notes,
+            detailLines: item.detailLines,
+            rarity: item.rarity,
+            attunement: item.attunement
+        });
+    }
+
+    lootNotes(item: CampaignLootSummary): string {
+        return item.notes || '—';
+    }
+
+    formatWeight(weight: number): string {
+        return Number.isInteger(weight) ? `${weight}` : weight.toFixed(1);
     }
 
     openLootItemModal(item: { name: string; category: string; sourceUrl: string; weight?: number; costGp?: number; sourceLabel?: string; summary?: string; notes?: string; detailLines?: string[]; rarity?: string; attunement?: string }): void {

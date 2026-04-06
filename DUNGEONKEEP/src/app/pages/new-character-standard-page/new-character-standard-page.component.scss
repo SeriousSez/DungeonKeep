@@ -2398,6 +2398,12 @@ input {
         white-space: nowrap;
     }
 
+    td:last-child,
+    th:last-child {
+        white-space: nowrap;
+        width: 1%;
+    }
+
     p {
         margin: 2px 0 0;
         color: var(--text-muted);
@@ -2437,6 +2443,26 @@ input {
         outline-offset: -2px;
         border-radius: 4px;
     }
+}
+
+.inventory-row-action {
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+    background: color-mix(in srgb, var(--surface-raised) 90%, var(--panel-bg) 10%);
+    color: var(--text-main);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.inventory-row-action:hover {
+    border-color: color-mix(in srgb, var(--accent-primary) 56%, var(--panel-border) 44%);
+    background: color-mix(in srgb, var(--accent-primary) 14%, var(--surface-raised) 86%);
+    transform: translateY(-1px);
 }
 
 .currency-list {

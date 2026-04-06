@@ -26,8 +26,8 @@
     }
 
     @if (editorNpc(); as npc) {
-    <app-npc-editor [npc]="npc" [canEdit]="canEdit()" [nameConflict]="nameConflict()" [autosaveLabel]="autosaveLabel()" [relationshipTargets]="relationshipTargetOptions()" [generationBusy]="generationBusy()" [generationError]="generationError()" [showDuplicateAction]="false"
-        [showDeleteAction]="false" [showSaveToLibraryAction]="!isLibraryMode()" (draftChanged)="handleDraftChanged($event)" (saveNpc)="saveNpc($event)" (generateNpc)="generateNpc($event)" (saveToLibrary)="saveNpcToLibrary()"></app-npc-editor>
+    <app-npc-editor [npc]="npc" [canEdit]="canEdit()" [nameConflict]="nameConflict()" [showAutosave]="false" [relationshipTargets]="relationshipTargetOptions()" [generationBusy]="generationBusy()" [generationError]="generationError()" [showDuplicateAction]="false" [showDeleteAction]="false"
+        [showSaveToLibraryAction]="!isLibraryMode()" (draftChanged)="handleDraftChanged($event)" (saveNpc)="saveNpc($event)" (generateNpc)="generateNpc($event)" (saveToLibrary)="saveNpcToLibrary()"></app-npc-editor>
     } @else {
     <section class="panel empty-panel">
         <h2>NPC draft unavailable</h2>

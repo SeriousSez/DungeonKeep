@@ -188,8 +188,17 @@ p {
     opacity: 0.75;
 }
 
-.toggle-pill.is-active {
+.toggle-pill.is-active,
+.toggle-pill--hostile {
     background: color-mix(in srgb, var(--surface-raised) 74%, #b95442 26%);
+}
+
+.toggle-pill--friendly {
+    background: color-mix(in srgb, var(--surface-raised) 80%, #6d9662 20%);
+}
+
+.toggle-pill--neutral {
+    background: color-mix(in srgb, var(--surface-raised) 82%, #7b8c9f 18%);
 }
 
 .primary-button {

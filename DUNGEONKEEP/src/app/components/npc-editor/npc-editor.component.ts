@@ -6,7 +6,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { CharacteristicsModalComponent } from '../../components/characteristics-modal/characteristics-modal.component';
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
-import { CampaignNpc, NpcRelationship } from '../../models/campaign-npc.models';
+import { CampaignNpc, NpcDisposition, NpcRelationship } from '../../models/campaign-npc.models';
 import { sanitizeNpc, touchNpc } from '../../data/campaign-npc.helpers';
 
 type StringListControl = FormArray<FormControl<string>>;
@@ -55,7 +55,7 @@ type NpcEditorForm = FormGroup<{
     sessionAppearances: StringListControl;
     inventory: StringListControl;
     imageUrl: FormControl<string>;
-    isHostile: FormControl<boolean>;
+    hostility: FormControl<NpcDisposition>;
     isAlive: FormControl<boolean>;
     isImportant: FormControl<boolean>;
     updatedAt: FormControl<string>;
@@ -91,6 +91,7 @@ export class NpcEditorComponent {
     readonly canEdit = input<boolean>(false);
     readonly nameConflict = input<boolean>(false);
     readonly autosaveLabel = input<string>('Autosave is ready');
+    readonly showAutosave = input<boolean>(true);
     readonly generationBusy = input<boolean>(false);
     readonly generationError = input<string>('');
     readonly relationshipTargets = input.required<ReadonlyArray<DropdownOption>>();
@@ -166,14 +167,14 @@ export class NpcEditorComponent {
         sessionAppearances: this.fb.array<FormControl<string>>([]),
         inventory: this.fb.array<FormControl<string>>([]),
         imageUrl: this.fb.control(''),
-        isHostile: this.fb.control(false),
+        hostility: this.fb.control('Indifferent' as NpcDisposition),
         isAlive: this.fb.control(true),
         isImportant: this.fb.control(false),
         updatedAt: this.fb.control('')
     });
 
     readonly nameControl = this.editorForm.controls.name;
-    readonly activeNpcName = computed(() => this.editorForm.controls.name.value || 'New NPC');
+    readonly activeNpcName = computed(() => this.editorForm.controls.name.value.trim() || 'NPC Record');
 
     constructor() {
         effect(() => {
@@ -322,6 +323,28 @@ export class NpcEditorComponent {
         this.generationPrompt.update((prompt) => ({ ...prompt, notesHint: value }));
     }
 
+    cycleHostility(): void {
+        const currentValue = this.editorForm.controls.hostility.value;
+        const nextValue: NpcDisposition = currentValue === 'Friendly'
+            ? 'Indifferent'
+            : currentValue === 'Indifferent'
+                ? 'Hostile'
+                : 'Friendly';
+
+        this.editorForm.controls.hostility.setValue(nextValue);
+    }
+
+    hostilityToggleClass(): string {
+        switch (this.editorForm.controls.hostility.value) {
+            case 'Hostile':
+                return 'toggle-pill--hostile';
+            case 'Friendly':
+                return 'toggle-pill--friendly';
+            default:
+                return 'toggle-pill--neutral';
+        }
+    }
+
     save(): void {
         this.submitAttempted.set(true);
         if (this.editorForm.invalid || this.nameConflict()) {
@@ -370,7 +393,7 @@ export class NpcEditorComponent {
             sessionAppearances: this.stringArrayValue(this.editorForm.controls.sessionAppearances),
             inventory: this.stringArrayValue(this.editorForm.controls.inventory),
             imageUrl: this.editorForm.controls.imageUrl.value,
-            isHostile: this.editorForm.controls.isHostile.value,
+            hostility: this.editorForm.controls.hostility.value,
             isAlive: this.editorForm.controls.isAlive.value,
             isImportant: this.editorForm.controls.isImportant.value,
             updatedAt: this.editorForm.controls.updatedAt.value || current?.updatedAt || new Date().toISOString()
@@ -404,7 +427,7 @@ export class NpcEditorComponent {
             combatNotes: npc.combatNotes,
             statBlockReference: npc.statBlockReference,
             imageUrl: npc.imageUrl,
-            isHostile: npc.isHostile,
+            hostility: npc.hostility,
             isAlive: npc.isAlive,
             isImportant: npc.isImportant,
             updatedAt: npc.updatedAt

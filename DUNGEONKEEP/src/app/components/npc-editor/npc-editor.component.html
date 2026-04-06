@@ -4,11 +4,15 @@
         <div>
             <p class="eyebrow">NPC Record</p>
             <h2>{{ activeNpcName() }}</h2>
+            @if (showAutosave()) {
             <p>Autosave keeps local draft changes safe while you flesh out the full cast entry.</p>
+            }
         </div>
 
         <div class="editor-header-actions">
+            @if (showAutosave()) {
             <span class="autosave-pill">{{ autosaveLabel() }}</span>
+            }
             @if (canEdit()) {
             @if (showSaveToLibraryAction()) {
             <button type="button" class="ghost-button" (click)="saveToLibrary.emit()">Save to Library</button>
@@ -99,7 +103,7 @@
     @if (editorMode() === 'standard') {
     <div class="quick-toggles">
         <button type="button" class="toggle-pill" [class.is-active]="editorForm.controls.isAlive.value" [disabled]="!canEdit()" (click)="editorForm.controls.isAlive.setValue(!editorForm.controls.isAlive.value)">{{ editorForm.controls.isAlive.value ? 'Alive' : 'Dead' }}</button>
-        <button type="button" class="toggle-pill" [class.is-active]="editorForm.controls.isHostile.value" [disabled]="!canEdit()" (click)="editorForm.controls.isHostile.setValue(!editorForm.controls.isHostile.value)">{{ editorForm.controls.isHostile.value ? 'Hostile' : 'Friendly' }}</button>
+        <button type="button" class="toggle-pill" [class]="hostilityToggleClass()" [disabled]="!canEdit()" (click)="cycleHostility()">{{ editorForm.controls.hostility.value }}</button>
         <button type="button" class="toggle-pill" [class.is-active]="editorForm.controls.isImportant.value" [disabled]="!canEdit()" (click)="editorForm.controls.isImportant.setValue(!editorForm.controls.isImportant.value)">{{ editorForm.controls.isImportant.value ? 'Important' : 'Standard'
             }}</button>
     </div>
@@ -120,11 +124,11 @@
                     <small class="field-error">Another NPC already uses this name.</small>
                     }
                 </label>
-                <label class="field"><span>Title</span><input type="text" formControlName="title" [readonly]="!canEdit()" /></label>
-                <label class="field"><span>Race</span><input type="text" formControlName="race" [readonly]="!canEdit()" /></label>
-                <label class="field"><span>Age</span><input type="text" formControlName="age" [readonly]="!canEdit()" /></label>
-                <label class="field"><span>Gender</span><input type="text" formControlName="gender" [readonly]="!canEdit()" /></label>
-                <label class="field"><span>Alignment</span><input type="text" formControlName="alignment" [readonly]="!canEdit()" /></label>
+                <label class="field"><span>Title</span><input type="text" formControlName="title" placeholder="Captain, broker, oracle" [readonly]="!canEdit()" /></label>
+                <label class="field"><span>Race</span><input type="text" formControlName="race" placeholder="Human, elf, tiefling" [readonly]="!canEdit()" /></label>
+                <label class="field"><span>Age</span><input type="text" formControlName="age" placeholder="Middle-aged, 43, ancient" [readonly]="!canEdit()" /></label>
+                <label class="field"><span>Gender</span><input type="text" formControlName="gender" placeholder="Woman, man, nonbinary" [readonly]="!canEdit()" /></label>
+                <label class="field"><span>Alignment</span><input type="text" formControlName="alignment" placeholder="Lawful neutral, chaotic good" [readonly]="!canEdit()" /></label>
             </div>
         </details>
 
@@ -133,11 +137,11 @@
                 <h3>Role and Affiliations</h3>
             </summary>
             <div class="section-grid two-up">
-                <label class="field"><span>Class or Role</span><input type="text" formControlName="classOrRole" [readonly]="!canEdit()" /></label>
-                <label class="field"><span>Occupation</span><input type="text" formControlName="occupation" [readonly]="!canEdit()" /></label>
-                <label class="field"><span>Faction</span><input type="text" formControlName="faction" [readonly]="!canEdit()" /></label>
-                <label class="field"><span>Location</span><input type="text" formControlName="location" [readonly]="!canEdit()" /></label>
-                <label class="field full-span"><span>Current Status</span><input type="text" formControlName="currentStatus" [readonly]="!canEdit()" /></label>
+                <label class="field"><span>Class or Role</span><input type="text" formControlName="classOrRole" placeholder="Smuggler, priest, rival mage" [readonly]="!canEdit()" /></label>
+                <label class="field"><span>Occupation</span><input type="text" formControlName="occupation" placeholder="Harbor master, innkeeper, scout" [readonly]="!canEdit()" /></label>
+                <label class="field"><span>Faction</span><input type="text" formControlName="faction" placeholder="City Watch, Ashen Lanterns" [readonly]="!canEdit()" /></label>
+                <label class="field"><span>Location</span><input type="text" formControlName="location" placeholder="Old quarter, moonlit ruins" [readonly]="!canEdit()" /></label>
+                <label class="field full-span"><span>Current Status</span><input type="text" formControlName="currentStatus" placeholder="Missing, negotiating, under guard" [readonly]="!canEdit()" /></label>
             </div>
         </details>
 
@@ -146,9 +150,9 @@
                 <h3>Appearance</h3>
             </summary>
             <div class="section-grid">
-                <label class="field"><span>Short Description</span><textarea formControlName="shortDescription" rows="3" [readonly]="!canEdit()"></textarea></label>
-                <label class="field"><span>Appearance</span><textarea formControlName="appearance" rows="4" [readonly]="!canEdit()"></textarea></label>
-                <label class="field"><span>Image URL</span><input type="url" formControlName="imageUrl" [readonly]="!canEdit()" /></label>
+                <label class="field"><span>Short Description</span><textarea formControlName="shortDescription" rows="3" placeholder="A sharp-eyed fixer with an expensive coat and a permanent smirk." [readonly]="!canEdit()"></textarea></label>
+                <label class="field"><span>Appearance</span><textarea formControlName="appearance" rows="4" placeholder="Describe posture, clothing, scars, jewelry, and any memorable tells." [readonly]="!canEdit()"></textarea></label>
+                <label class="field"><span>Image URL</span><input type="url" formControlName="imageUrl" placeholder="https://example.com/npc-portrait.jpg" [readonly]="!canEdit()" /></label>
             </div>
         </details>
 
@@ -238,7 +242,7 @@
                     </div>
                 </section>
 
-                <label class="field full-span"><span>Voice Notes</span><textarea formControlName="voiceNotes" rows="3" [readonly]="!canEdit()"></textarea></label>
+                <label class="field full-span"><span>Voice Notes</span><textarea formControlName="voiceNotes" rows="3" placeholder="Low gravelly voice, clipped sentences, laughs at the wrong moments." [readonly]="!canEdit()"></textarea></label>
             </div>
         </details>
 
@@ -247,9 +251,9 @@
                 <h3>Motivations and Goals</h3>
             </summary>
             <div class="section-grid">
-                <label class="field"><span>Motivations</span><textarea formControlName="motivations" rows="3" [readonly]="!canEdit()"></textarea></label>
-                <label class="field"><span>Goals</span><textarea formControlName="goals" rows="3" [readonly]="!canEdit()"></textarea></label>
-                <label class="field"><span>Fears</span><textarea formControlName="fears" rows="3" [readonly]="!canEdit()"></textarea></label>
+                <label class="field"><span>Motivations</span><textarea formControlName="motivations" rows="3" placeholder="Protect a sibling, pay off a debt, earn a title." [readonly]="!canEdit()"></textarea></label>
+                <label class="field"><span>Goals</span><textarea formControlName="goals" rows="3" placeholder="Win a council seat, recover a relic, sabotage a rival." [readonly]="!canEdit()"></textarea></label>
+                <label class="field"><span>Fears</span><textarea formControlName="fears" rows="3" placeholder="Exposure, failure, ghosts, losing control." [readonly]="!canEdit()"></textarea></label>
             </div>
         </details>
 
@@ -263,7 +267,8 @@
                 </div>
                 <div class="array-list">
                     @for (entry of editorForm.controls.secrets.controls; track $index; let index = $index) {
-                    <div class="inline-array-row"><input type="text" [formControl]="entry" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="removeStringItem(editorForm.controls.secrets, index)">Remove</button></div>
+                    <div class="inline-array-row"><input type="text" [formControl]="entry" placeholder="Hidden oath, blackmail material, secret patron" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()"
+                            (click)="removeStringItem(editorForm.controls.secrets, index)">Remove</button></div>
                     }
                 </div>
             </section>
@@ -286,7 +291,7 @@
                                 (input)="updateRelationshipCustomTarget(relationship, $any($event.target).value)" /></label>
                         <label class="field"><span>Relationship Type</span><app-dropdown ariaLabel="Relationship type" [value]="relationship.controls.relationshipType.value" [options]="relationshipTypeOptions" [searchable]="false" [placeholder]="'Select type'" [disabled]="!canEdit()"
                                 (changed)="updateRelationshipType(relationship.controls.relationshipType, $event)"></app-dropdown></label>
-                        <label class="field full-span"><span>Description</span><textarea formControlName="description" rows="2" [readonly]="!canEdit()"></textarea></label>
+                        <label class="field full-span"><span>Description</span><textarea formControlName="description" rows="2" placeholder="Owes them a favor after the bridge fire." [readonly]="!canEdit()"></textarea></label>
                         <button type="button" class="ghost-button relationship-remove full-span" [disabled]="!canEdit()" (click)="removeRelationship(index)">Remove Relationship</button>
                     </div>
                     }
@@ -299,8 +304,8 @@
                 <h3>Session Notes</h3>
             </summary>
             <div class="section-grid">
-                <label class="field"><span>Backstory</span><textarea formControlName="backstory" rows="4" [readonly]="!canEdit()"></textarea></label>
-                <label class="field"><span>GM Notes</span><textarea formControlName="notes" rows="4" [readonly]="!canEdit()"></textarea></label>
+                <label class="field"><span>Backstory</span><textarea formControlName="backstory" rows="4" placeholder="Where they came from, what changed them, and why they matter now." [readonly]="!canEdit()"></textarea></label>
+                <label class="field"><span>GM Notes</span><textarea formControlName="notes" rows="4" placeholder="Hidden hooks, improvisation notes, reveals, and scene ideas." [readonly]="!canEdit()"></textarea></label>
 
                 <section class="array-section">
                     <div class="array-header">
@@ -308,7 +313,8 @@
                     </div>
                     <div class="array-list">
                         @for (entry of editorForm.controls.questLinks.controls; track $index; let index = $index) {
-                        <div class="inline-array-row"><input type="text" [formControl]="entry" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="removeStringItem(editorForm.controls.questLinks, index)">Remove</button></div>
+                        <div class="inline-array-row"><input type="text" [formControl]="entry" placeholder="Missing heirloom, dockside murders, cult ledger" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()"
+                                (click)="removeStringItem(editorForm.controls.questLinks, index)">Remove</button></div>
                         }
                     </div>
                 </section>
@@ -319,7 +325,8 @@
                     </div>
                     <div class="array-list">
                         @for (entry of editorForm.controls.sessionAppearances.controls; track $index; let index = $index) {
-                        <div class="inline-array-row"><input type="text" [formControl]="entry" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="removeStringItem(editorForm.controls.sessionAppearances, index)">Remove</button></div>
+                        <div class="inline-array-row"><input type="text" [formControl]="entry" placeholder="Session 4: Smugglers at Blackwater" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()"
+                                (click)="removeStringItem(editorForm.controls.sessionAppearances, index)">Remove</button></div>
                         }
                     </div>
                 </section>
@@ -331,15 +338,16 @@
                 <h3>Combat / Reference Info</h3>
             </summary>
             <div class="section-grid">
-                <label class="field"><span>Combat Notes</span><textarea formControlName="combatNotes" rows="3" [readonly]="!canEdit()"></textarea></label>
-                <label class="field"><span>Stat Block Reference</span><input type="text" formControlName="statBlockReference" [readonly]="!canEdit()" /></label>
+                <label class="field"><span>Combat Notes</span><textarea formControlName="combatNotes" rows="3" placeholder="Prefers ambushes, flees below half health, carries smoke bombs." [readonly]="!canEdit()"></textarea></label>
+                <label class="field"><span>Stat Block Reference</span><input type="text" formControlName="statBlockReference" placeholder="Bandit Captain, Mage, Spy" [readonly]="!canEdit()" /></label>
                 <section class="array-section">
                     <div class="array-header">
                         <h4>Tags</h4><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="addStringItem(editorForm.controls.tags)">Add</button>
                     </div>
                     <div class="array-list">
                         @for (entry of editorForm.controls.tags.controls; track $index; let index = $index) {
-                        <div class="inline-array-row"><input type="text" [formControl]="entry" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="removeStringItem(editorForm.controls.tags, index)">Remove</button></div>
+                        <div class="inline-array-row"><input type="text" [formControl]="entry" placeholder="merchant, suspect, noble, arcane" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()"
+                                (click)="removeStringItem(editorForm.controls.tags, index)">Remove</button></div>
                         }
                     </div>
                 </section>
@@ -349,7 +357,8 @@
                     </div>
                     <div class="array-list">
                         @for (entry of editorForm.controls.inventory.controls; track $index; let index = $index) {
-                        <div class="inline-array-row"><input type="text" [formControl]="entry" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="removeStringItem(editorForm.controls.inventory, index)">Remove</button></div>
+                        <div class="inline-array-row"><input type="text" [formControl]="entry" placeholder="Signet ring, coded journal, silver dagger" [readonly]="!canEdit()" /><button type="button" class="ghost-button" [disabled]="!canEdit()"
+                                (click)="removeStringItem(editorForm.controls.inventory, index)">Remove</button></div>
                         }
                     </div>
                 </section>

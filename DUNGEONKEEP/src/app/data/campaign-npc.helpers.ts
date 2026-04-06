@@ -1,4 +1,9 @@
-import { CampaignNpc, NpcFilters, NpcRelationship } from '../models/campaign-npc.models';
+import { CampaignNpc, NpcDisposition, NpcFilters, NpcRelationship } from '../models/campaign-npc.models';
+
+type StoredCampaignNpc = Omit<CampaignNpc, 'hostility'> & {
+    hostility?: NpcDisposition | string;
+    isHostile?: boolean;
+};
 
 function createId(prefix: string): string {
     return `${prefix}-${crypto.randomUUID()}`;
@@ -21,7 +26,7 @@ function normalizeRelationshipArray(relationships: NpcRelationship[]): NpcRelati
     }));
 }
 
-export function createDefaultNpc(name = 'New NPC'): CampaignNpc {
+export function createDefaultNpc(name = ''): CampaignNpc {
     return {
         id: createId('npc'),
         name,
@@ -57,7 +62,7 @@ export function createDefaultNpc(name = 'New NPC'): CampaignNpc {
         sessionAppearances: [],
         inventory: [],
         imageUrl: '',
-        isHostile: false,
+        hostility: 'Indifferent',
         isAlive: true,
         isImportant: false,
         updatedAt: nowIso()
@@ -75,7 +80,7 @@ export function touchNpc(npc: CampaignNpc): CampaignNpc {
     };
 }
 
-export function sanitizeNpc(npc: CampaignNpc): CampaignNpc {
+export function sanitizeNpc(npc: StoredCampaignNpc): CampaignNpc {
     return {
         ...npc,
         name: npc.name.trim(),
@@ -111,8 +116,25 @@ export function sanitizeNpc(npc: CampaignNpc): CampaignNpc {
         sessionAppearances: normalizeStringArray(npc.sessionAppearances),
         inventory: normalizeStringArray(npc.inventory),
         imageUrl: npc.imageUrl.trim(),
+        hostility: normalizeNpcHostility(npc),
         updatedAt: npc.updatedAt || nowIso()
     };
+}
+
+function normalizeNpcHostility(npc: Pick<StoredCampaignNpc, 'hostility' | 'isHostile'>): NpcDisposition {
+    if (npc.hostility === 'Friendly' || npc.hostility === 'Indifferent' || npc.hostility === 'Hostile') {
+        return npc.hostility;
+    }
+
+    if (npc.isHostile === true) {
+        return 'Hostile';
+    }
+
+    if (npc.isHostile === false) {
+        return 'Friendly';
+    }
+
+    return 'Indifferent';
 }
 
 export function duplicateNpc(source: CampaignNpc, namesInUse: string[]): CampaignNpc {
@@ -215,11 +237,7 @@ export function filterAndSortNpcs(npcs: readonly CampaignNpc[], filters: NpcFilt
             return false;
         }
 
-        if (filters.hostility === 'Hostile' && !npc.isHostile) {
-            return false;
-        }
-
-        if (filters.hostility === 'Friendly' && npc.isHostile) {
+        if (filters.hostility !== 'All' && npc.hostility !== filters.hostility) {
             return false;
         }
 
