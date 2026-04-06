@@ -18,6 +18,9 @@ export class NpcListComponent {
     readonly npcs = input.required<readonly CampaignNpc[]>();
     readonly selectedNpcId = input<string | null>(null);
     readonly canEdit = input<boolean>(false);
+    readonly showCampaignFilter = input<boolean>(false);
+    readonly campaignGroups = input<ReadonlyArray<MultiSelectOptionGroup>>([]);
+    readonly selectedCampaignIds = input<string[]>([]);
     readonly searchTerm = input<string>('');
     readonly factionOptions = input.required<ReadonlyArray<DropdownOption>>();
     readonly locationOptions = input.required<ReadonlyArray<DropdownOption>>();
@@ -31,6 +34,7 @@ export class NpcListComponent {
     readonly sortBy = input<NpcSortField>('RecentlyUpdated');
 
     readonly searchChanged = output<string>();
+    readonly campaignSelectionChanged = output<string[]>();
     readonly factionChanged = output<string>();
     readonly locationChanged = output<string>();
     readonly tagSelectionChanged = output<string[]>();
@@ -145,6 +149,7 @@ export class NpcListComponent {
 
     hasActiveFilters(): boolean {
         return !!this.searchTerm().trim()
+            || this.selectedCampaignIds().length > 0
             || !!this.selectedFaction()
             || !!this.selectedLocation()
             || this.selectedTags().length > 0

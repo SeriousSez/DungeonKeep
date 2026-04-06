@@ -54,6 +54,7 @@ export type NpcSortField = 'RecentlyUpdated' | 'Name' | 'Location' | 'Faction';
 
 export interface NpcFilters {
     search: string;
+    campaignIds: string[];
     faction: string;
     location: string;
     tags: string[];

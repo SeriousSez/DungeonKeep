@@ -16,11 +16,11 @@
     }
 
     <div class="manager-layout" [class.manager-layout-list-only]="listOnly()">
-        <app-npc-list class="manager-column" [npcs]="filteredNpcs()" [selectedNpcId]="activeNpcId()" [canEdit]="canEdit()" [searchTerm]="filters().search" [factionOptions]="factionOptions()" [locationOptions]="locationOptions()" [tagGroups]="tagGroups()" [selectedFaction]="filters().faction"
-            [selectedLocation]="filters().location" [selectedTags]="filters().tags" [lifeState]="filters().lifeState" [hostility]="filters().hostility" [importance]="filters().importance" [sortBy]="filters().sortBy" (searchChanged)="updateSearch($event)" (factionChanged)="updateFaction($event)"
-            (locationChanged)="updateLocation($event)" (tagSelectionChanged)="updateTags($event)" (lifeStateChanged)="updateLifeState($event)" (hostilityChanged)="updateHostility($event)" (importanceChanged)="updateImportance($event)" (sortChanged)="updateSort($event)"
-            (selectNpc)="selectNpc($event)" (editNpc)="editNpc($event)" (addNpc)="addNpc()" (clearFilters)="clearFilters()" (duplicateNpc)="duplicateNpc($event)" (deleteNpc)="requestDeleteNpc($event)" (toggleAlive)="toggleFlag($event, 'isAlive')" (toggleHostile)="toggleFlag($event, 'hostility')"
-            (toggleImportant)="toggleFlag($event, 'isImportant')"></app-npc-list>
+        <app-npc-list class="manager-column" [npcs]="filteredNpcs()" [selectedNpcId]="activeNpcId()" [canEdit]="canEdit()" [showCampaignFilter]="libraryMode()" [campaignGroups]="campaignFilterGroups()" [selectedCampaignIds]="filters().campaignIds" [searchTerm]="filters().search"
+            [factionOptions]="factionOptions()" [locationOptions]="locationOptions()" [tagGroups]="tagGroups()" [selectedFaction]="filters().faction" [selectedLocation]="filters().location" [selectedTags]="filters().tags" [lifeState]="filters().lifeState" [hostility]="filters().hostility"
+            [importance]="filters().importance" [sortBy]="filters().sortBy" (searchChanged)="updateSearch($event)" (campaignSelectionChanged)="updateCampaignIds($event)" (factionChanged)="updateFaction($event)" (locationChanged)="updateLocation($event)" (tagSelectionChanged)="updateTags($event)"
+            (lifeStateChanged)="updateLifeState($event)" (hostilityChanged)="updateHostility($event)" (importanceChanged)="updateImportance($event)" (sortChanged)="updateSort($event)" (selectNpc)="selectNpc($event)" (editNpc)="editNpc($event)" (addNpc)="addNpc()" (clearFilters)="clearFilters()"
+            (duplicateNpc)="duplicateNpc($event)" (deleteNpc)="requestDeleteNpc($event)" (toggleAlive)="toggleFlag($event, 'isAlive')" (toggleHostile)="toggleFlag($event, 'hostility')" (toggleImportant)="toggleFlag($event, 'isImportant')"></app-npc-list>
 
         @if (!listOnly()) {
         <div class="manager-column editor-column">

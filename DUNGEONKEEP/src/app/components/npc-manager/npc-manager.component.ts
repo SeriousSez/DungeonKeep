@@ -50,6 +50,7 @@ export class NpcManagerComponent {
     readonly selectedNpcId = signal<string | null>(null);
     readonly filters = signal<NpcFilters>({
         search: '',
+        campaignIds: [],
         faction: '',
         location: '',
         tags: [],
@@ -66,7 +67,45 @@ export class NpcManagerComponent {
     readonly npcGenerationInProgress = signal(false);
     readonly npcGenerationError = signal('');
 
-    readonly filteredNpcs = computed(() => filterAndSortNpcs(this.allNpcs(), this.filters()));
+    readonly campaignFilterGroups = computed<MultiSelectOptionGroup[]>(() => [{
+        label: 'Campaigns',
+        options: [...this.store.campaigns()]
+            .sort((left, right) => left.name.localeCompare(right.name))
+            .map((campaign) => ({ value: campaign.id, label: campaign.name }))
+    }]);
+    readonly libraryNpcCampaignUsage = computed(() => {
+        const usage = new Map<string, Set<string>>();
+
+        for (const campaign of this.store.campaigns()) {
+            const mergedDrafts = mergeStoredNpcDrafts(campaign.npcs, loadCampaignNpcDrafts(campaign.id) ?? []);
+
+            for (const npc of mergedDrafts) {
+                const normalizedName = this.normalizeNpcName(npc.name);
+                if (!normalizedName) {
+                    continue;
+                }
+
+                const campaigns = usage.get(normalizedName) ?? new Set<string>();
+                campaigns.add(campaign.id);
+                usage.set(normalizedName, campaigns);
+            }
+        }
+
+        return usage;
+    });
+    readonly filteredNpcs = computed(() => {
+        const filters = this.filters();
+        const selectedCampaignIds = filters.campaignIds;
+
+        const campaignFiltered = this.libraryMode() && selectedCampaignIds.length > 0
+            ? this.allNpcs().filter((npc) => {
+                const campaignIds = this.libraryNpcCampaignUsage().get(this.normalizeNpcName(npc.name));
+                return selectedCampaignIds.some((campaignId) => campaignIds?.has(campaignId));
+            })
+            : this.allNpcs();
+
+        return filterAndSortNpcs(campaignFiltered, filters);
+    });
     readonly activeNpc = computed<CampaignNpc | null>(() => this.allNpcs().find((npc) => npc.id === this.selectedNpcId()) ?? this.allNpcs()[0] ?? null);
     readonly activeNpcId = computed<string | null>(() => this.activeNpc()?.id ?? null);
     readonly hasCampaignContext = computed(() => !!this.campaignId() && !this.libraryMode() && this.canEdit());
@@ -196,6 +235,21 @@ export class NpcManagerComponent {
         this.filters.update((filters) => ({ ...filters, search: value }));
     }
 
+    updateCampaignIds(value: string[]): void {
+        const validCampaignIds = new Set(
+            this.campaignFilterGroups()
+                .flatMap((group) => group.options)
+                .map((option) => typeof option === 'string' ? option : option.value)
+        );
+        const nextSelection = [...new Set(value.filter((campaignId) => validCampaignIds.has(campaignId)))];
+        const totalCampaignCount = validCampaignIds.size;
+
+        this.filters.update((filters) => ({
+            ...filters,
+            campaignIds: nextSelection.length === totalCampaignCount ? [] : nextSelection
+        }));
+    }
+
     updateFaction(value: string): void {
         this.filters.update((filters) => ({ ...filters, faction: value }));
     }
@@ -227,6 +281,7 @@ export class NpcManagerComponent {
     clearFilters(): void {
         this.filters.set({
             search: '',
+            campaignIds: [],
             faction: '',
             location: '',
             tags: [],
@@ -551,6 +606,10 @@ export class NpcManagerComponent {
 
     private uniqueValues(values: readonly string[]): string[] {
         return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean))).sort((left, right) => left.localeCompare(right));
+    }
+
+    private normalizeNpcName(name: string): string {
+        return name.trim().toLowerCase();
     }
 
     private nextHostility(current: CampaignNpc['hostility']): CampaignNpc['hostility'] {

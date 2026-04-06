@@ -19,6 +19,16 @@
             <input type="search" [value]="searchTerm()" (input)="emitSearch($any($event.target).value)" placeholder="Search name, role, faction, description, or tags" />
         </label>
 
+        @if (showCampaignFilter()) {
+        <label class="field">
+            <span>Campaigns</span>
+            <div class="campaign-filter-control">
+                <app-multi-select-dropdown [groups]="campaignGroups()" [value]="selectedCampaignIds()" placeholder="All campaigns" (changed)="campaignSelectionChanged.emit($event)"></app-multi-select-dropdown>
+                <button type="button" class="ghost-button filter-reset-button" [disabled]="selectedCampaignIds().length === 0" (click)="campaignSelectionChanged.emit([])">All Campaigns</button>
+            </div>
+        </label>
+        }
+
         <label class="field">
             <span>Faction</span>
             <app-dropdown ariaLabel="Faction filter" [value]="selectedFaction()" [options]="factionOptions()" [searchable]="false" [placeholder]="'All factions'" (changed)="emitFaction($event)"></app-dropdown>
