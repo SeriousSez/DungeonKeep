@@ -45,6 +45,14 @@
             <span class="campaign-nav-label">Threads</span>
             <span class="campaign-nav-meta">{{ visibleThreads().length }} open</span>
         </a>
+        <a [routerLink]="['/campaigns', campaign.id, 'notes']" class="campaign-nav-link" [class.is-active]="isActiveSection('notes')">
+            <span class="campaign-nav-label">World Notes</span>
+            <span class="campaign-nav-meta">{{ campaign.worldNotes.length }} entries</span>
+        </a>
+        <a [routerLink]="['/campaigns', campaign.id, 'maps']" class="campaign-nav-link">
+            <span class="campaign-nav-label">Map</span>
+            <span class="campaign-nav-meta">{{ campaign.maps.length }} boards</span>
+        </a>
         <a [routerLink]="['/campaigns', campaign.id, 'members']" class="campaign-nav-link" [class.is-active]="isActiveSection('members')">
             <span class="campaign-nav-label">Members</span>
             <span class="campaign-nav-meta">{{ campaign.members?.length ?? 0 }} total</span>
@@ -233,6 +241,77 @@
         </div>
         } @else {
         <p class="empty-state">No open threads yet.</p>
+        }
+        }
+
+        @case ('notes') {
+        <div class="section-heading">
+            <h2>World Notes</h2>
+            <div class="threads-heading-actions">
+                <span class="count-badge">{{ worldNotes().length }}</span>
+                @if (campaign.currentUserRole === 'Owner') {
+                <button type="button" class="ghost-button" (click)="openAddWorldNoteForm()">Add Note</button>
+                }
+            </div>
+        </div>
+
+        @if (campaign.currentUserRole === 'Owner' && noteEditorOpen()) {
+        <div class="world-note-editor">
+            <div class="world-note-editor-header">
+                <div>
+                    <p class="eyebrow">{{ noteEditorMode() === 'edit' ? 'Editing entry' : 'New entry' }}</p>
+                    <h3>{{ noteEditorMode() === 'edit' ? 'Update world note' : 'Add world note' }}</h3>
+                </div>
+                <button type="button" class="ghost-button" (click)="closeWorldNoteForm()">Cancel</button>
+            </div>
+
+            <div class="world-note-form-grid">
+                <div class="inline-creator-stack">
+                    <label class="equipment-filter-label" for="world-note-title">Title</label>
+                    <input id="world-note-title" type="text" [value]="noteTitle()" (input)="updateWorldNoteTitle($any($event.target).value)" placeholder="Ex: Ash Oath of House Veyr" />
+                </div>
+
+                <div class="inline-creator-stack world-note-category-field">
+                    <label class="equipment-filter-label" for="world-note-category">Category</label>
+                    <app-dropdown id="world-note-category" [value]="noteCategory()" [options]="worldNoteCategoryOptions" [minWidth]="220" (changed)="updateWorldNoteCategory($event)"></app-dropdown>
+                </div>
+            </div>
+
+            <div class="inline-creator-stack">
+                <label class="equipment-filter-label" for="world-note-content">Details</label>
+                <textarea id="world-note-content" [value]="noteContent()" (input)="updateWorldNoteContent($any($event.target).value)" placeholder="Capture the faction history, rumor, relationship, threat, or landmark details you want to preserve."></textarea>
+            </div>
+
+            <div class="world-note-editor-actions">
+                <button type="button" class="primary-button" [disabled]="!noteTitle().trim() || !noteContent().trim()" (click)="submitWorldNote()">{{ noteEditorMode() === 'edit' ? 'Save Changes' : 'Add Note' }}</button>
+            </div>
+        </div>
+        }
+
+        @if (worldNotes().length > 0) {
+        <div class="world-note-list">
+            @for (note of worldNotes(); track note.id) {
+            <article class="world-note-card">
+                <div class="world-note-card-header">
+                    <div class="world-note-heading">
+                        <span class="thread-visibility-pill">{{ note.category }}</span>
+                        <h3>{{ note.title }}</h3>
+                    </div>
+
+                    @if (campaign.currentUserRole === 'Owner') {
+                    <div class="thread-actions">
+                        <button type="button" class="ghost-button" (click)="openEditWorldNoteForm(note)">Edit</button>
+                        <button type="button" class="ghost-button" (click)="deleteWorldNote(note.id)">Delete</button>
+                    </div>
+                    }
+                </div>
+
+                <p>{{ note.content }}</p>
+            </article>
+            }
+        </div>
+        } @else {
+        <p class="empty-state">No world notes have been recorded yet.</p>
         }
         }
 

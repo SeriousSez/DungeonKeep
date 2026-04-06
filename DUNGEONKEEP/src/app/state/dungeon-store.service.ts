@@ -1,8 +1,8 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 
 import { raceMap } from '../data/races';
-import { AbilityScores, Campaign, CampaignDraft, CampaignThreadVisibility, Character, CharacterDraft, CharacterStatus, SkillProficiencies, ThreatLevel } from '../models/dungeon.models';
-import { ApiCampaignDto, ApiCharacterDto, DungeonApiService } from './dungeon-api.service';
+import { AbilityScores, Campaign, CampaignDraft, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecorationType, CampaignMapIconType, CampaignMapLabelTone, CampaignThreadVisibility, CampaignWorldNoteCategory, Character, CharacterDraft, CharacterStatus, SkillProficiencies, ThreatLevel } from '../models/dungeon.models';
+import { ApiCampaignDto, ApiCampaignMapBoardDto, ApiCampaignMapDecorationDto, ApiCampaignMapDto, ApiCampaignMapLabelDto, ApiCampaignMapLibraryDto, ApiCampaignWorldNoteDto, ApiCharacterDto, DungeonApiService } from './dungeon-api.service';
 import { SessionService } from './session.service';
 
 @Injectable({ providedIn: 'root' })
@@ -256,6 +256,62 @@ export class DungeonStoreService {
             return true;
         } catch {
             return false;
+        }
+    }
+
+    async addCampaignWorldNote(campaignId: string, payload: { title: string; category: CampaignWorldNoteCategory; content: string }): Promise<boolean> {
+        try {
+            const updated = await this.api.createCampaignWorldNote(campaignId, payload);
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async updateCampaignWorldNote(campaignId: string, noteId: string, payload: { title: string; category: CampaignWorldNoteCategory; content: string }): Promise<boolean> {
+        try {
+            const updated = await this.api.updateCampaignWorldNote(campaignId, noteId, payload);
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async removeCampaignWorldNote(campaignId: string, noteId: string): Promise<boolean> {
+        try {
+            const updated = await this.api.deleteCampaignWorldNote(campaignId, noteId);
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async updateCampaignMap(campaignId: string, payload: { activeMapId: string; maps: CampaignMapBoard[] }): Promise<boolean> {
+        try {
+            const updated = await this.api.updateCampaignMap(campaignId, this.mapCampaignMapLibraryToApi(payload));
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async generateCampaignMapArtAi(campaignId: string, payload: { background: CampaignMapBackground; mapName: string; settlementScale?: 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis'; parchmentLayout?: 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular'; cavernLayout?: 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes' }): Promise<string | null> {
+        try {
+            const generated = await this.api.generateCampaignMapArtAi(campaignId, {
+                background: this.normalizeMapBackground(payload.background),
+                mapName: payload.mapName.trim(),
+                settlementScale: payload.settlementScale,
+                parchmentLayout: payload.parchmentLayout,
+                cavernLayout: payload.cavernLayout
+            });
+
+            return this.normalizeMapBackgroundImageUrl(generated.backgroundImageUrl);
+        } catch {
+            return null;
         }
     }
 
@@ -516,6 +572,16 @@ export class DungeonStoreService {
         const levelStart = Math.min(Math.max(Math.trunc(campaign.levelStart ?? 1), 1), 20);
         const levelEnd = Math.min(Math.max(Math.trunc(campaign.levelEnd ?? 4), levelStart), 20);
 
+        const maps = (campaign.maps?.length
+            ? campaign.maps.map((map) => this.mapCampaignMapBoardFromApi(map))
+            : [{
+                id: campaign.activeMapId?.trim() || crypto.randomUUID(),
+                name: 'Main Map',
+                ...this.mapCampaignMapFromApi(campaign.map)
+            }]);
+        const activeMapId = campaign.activeMapId?.trim() || maps[0]?.id || '';
+        const activeMap = maps.find((map) => map.id === activeMapId) ?? maps[0] ?? this.createEmptyCampaignMapBoard();
+
         return {
             id: campaign.id,
             name: campaign.name,
@@ -541,6 +607,15 @@ export class DungeonStoreService {
                 text: thread.text,
                 visibility: thread.visibility
             })),
+            worldNotes: (campaign.worldNotes ?? []).map((note) => ({
+                id: note.id,
+                title: note.title,
+                category: this.normalizeWorldNoteCategory(note.category),
+                content: note.content
+            })),
+            map: this.mapCampaignMapFromApi(activeMap),
+            maps,
+            activeMapId: activeMap.id,
             loot: [...(campaign.loot ?? [])],
             npcs: [...(campaign.npcs ?? [])],
             currentUserRole: campaign.currentUserRole,
@@ -562,6 +637,178 @@ export class DungeonStoreService {
                     : campaign
             )
         );
+    }
+
+    private createEmptyCampaignMapBoard(): CampaignMapBoard {
+        return {
+            id: crypto.randomUUID(),
+            name: 'Untitled Map',
+            ...this.mapCampaignMapFromApi()
+        };
+    }
+
+    private mapCampaignMapFromApi(map?: ApiCampaignMapDto): CampaignMap {
+        return {
+            background: this.normalizeMapBackground(map?.background),
+            backgroundImageUrl: this.normalizeMapBackgroundImageUrl(map?.backgroundImageUrl),
+            strokes: (map?.strokes ?? []).map((stroke) => ({
+                id: stroke.id,
+                color: this.normalizeMapColor(stroke.color),
+                width: Math.max(2, Math.min(18, Math.trunc(stroke.width || 4))),
+                points: (stroke.points ?? []).map((point) => ({
+                    x: this.normalizeMapCoordinate(point.x),
+                    y: this.normalizeMapCoordinate(point.y)
+                }))
+            })).filter((stroke) => stroke.points.length > 0),
+            icons: (map?.icons ?? []).map((icon) => ({
+                id: icon.id,
+                type: this.normalizeMapIconType(icon.type),
+                label: icon.label?.trim() || this.defaultMapIconLabel(icon.type),
+                x: this.normalizeMapCoordinate(icon.x),
+                y: this.normalizeMapCoordinate(icon.y)
+            })),
+            decorations: (map?.decorations ?? []).map((decoration) => ({
+                id: decoration.id,
+                type: this.normalizeMapDecorationType(decoration.type),
+                x: this.normalizeMapCoordinate(decoration.x),
+                y: this.normalizeMapCoordinate(decoration.y),
+                scale: this.normalizeMapScale(decoration.scale),
+                rotation: this.normalizeMapRotation(decoration.rotation),
+                opacity: this.normalizeMapOpacity(decoration.opacity)
+            })),
+            labels: (map?.labels ?? []).map((label) => ({
+                id: label.id,
+                text: label.text?.trim() || 'Unnamed Reach',
+                tone: this.normalizeMapLabelTone(label.tone),
+                x: this.normalizeMapCoordinate(label.x),
+                y: this.normalizeMapCoordinate(label.y),
+                rotation: this.normalizeMapRotation(label.rotation)
+            })),
+            layers: {
+                rivers: (map?.layers?.rivers ?? []).map((stroke) => ({
+                    id: stroke.id,
+                    color: this.normalizeMapColor(stroke.color),
+                    width: Math.max(2, Math.min(18, Math.trunc(stroke.width || 4))),
+                    points: (stroke.points ?? []).map((point) => ({
+                        x: this.normalizeMapCoordinate(point.x),
+                        y: this.normalizeMapCoordinate(point.y)
+                    }))
+                })).filter((stroke) => stroke.points.length > 0),
+                mountainChains: (map?.layers?.mountainChains ?? []).map((decoration) => ({
+                    id: decoration.id,
+                    type: this.normalizeMapDecorationType(decoration.type),
+                    x: this.normalizeMapCoordinate(decoration.x),
+                    y: this.normalizeMapCoordinate(decoration.y),
+                    scale: this.normalizeMapScale(decoration.scale),
+                    rotation: this.normalizeMapRotation(decoration.rotation),
+                    opacity: this.normalizeMapOpacity(decoration.opacity)
+                })),
+                forestBelts: (map?.layers?.forestBelts ?? []).map((decoration) => ({
+                    id: decoration.id,
+                    type: this.normalizeMapDecorationType(decoration.type),
+                    x: this.normalizeMapCoordinate(decoration.x),
+                    y: this.normalizeMapCoordinate(decoration.y),
+                    scale: this.normalizeMapScale(decoration.scale),
+                    rotation: this.normalizeMapRotation(decoration.rotation),
+                    opacity: this.normalizeMapOpacity(decoration.opacity)
+                }))
+            }
+        };
+    }
+
+    private mapCampaignMapBoardFromApi(map?: ApiCampaignMapBoardDto): CampaignMapBoard {
+        return {
+            id: map?.id?.trim() || crypto.randomUUID(),
+            name: map?.name?.trim() || 'Untitled Map',
+            ...this.mapCampaignMapFromApi(map)
+        };
+    }
+
+    private mapCampaignMapToApi(map: CampaignMap): ApiCampaignMapDto {
+        return {
+            background: this.normalizeMapBackground(map.background),
+            backgroundImageUrl: this.normalizeMapBackgroundImageUrl(map.backgroundImageUrl),
+            strokes: map.strokes.map((stroke) => ({
+                id: stroke.id,
+                color: this.normalizeMapColor(stroke.color),
+                width: Math.max(2, Math.min(18, Math.trunc(stroke.width || 4))),
+                points: stroke.points.map((point) => ({
+                    x: this.normalizeMapCoordinate(point.x),
+                    y: this.normalizeMapCoordinate(point.y)
+                }))
+            })),
+            icons: map.icons.map((icon) => ({
+                id: icon.id,
+                type: this.normalizeMapIconType(icon.type),
+                label: icon.label?.trim() || this.defaultMapIconLabel(icon.type),
+                x: this.normalizeMapCoordinate(icon.x),
+                y: this.normalizeMapCoordinate(icon.y)
+            })),
+            decorations: map.decorations.map((decoration) => ({
+                id: decoration.id,
+                type: this.normalizeMapDecorationType(decoration.type),
+                x: this.normalizeMapCoordinate(decoration.x),
+                y: this.normalizeMapCoordinate(decoration.y),
+                scale: this.normalizeMapScale(decoration.scale),
+                rotation: this.normalizeMapRotation(decoration.rotation),
+                opacity: this.normalizeMapOpacity(decoration.opacity)
+            })),
+            labels: map.labels.map((label) => ({
+                id: label.id,
+                text: label.text?.trim() || 'Unnamed Reach',
+                tone: this.normalizeMapLabelTone(label.tone),
+                x: this.normalizeMapCoordinate(label.x),
+                y: this.normalizeMapCoordinate(label.y),
+                rotation: this.normalizeMapRotation(label.rotation)
+            })),
+            layers: {
+                rivers: map.layers.rivers.map((stroke) => ({
+                    id: stroke.id,
+                    color: this.normalizeMapColor(stroke.color),
+                    width: Math.max(2, Math.min(18, Math.trunc(stroke.width || 4))),
+                    points: stroke.points.map((point) => ({
+                        x: this.normalizeMapCoordinate(point.x),
+                        y: this.normalizeMapCoordinate(point.y)
+                    }))
+                })),
+                mountainChains: map.layers.mountainChains.map((decoration) => ({
+                    id: decoration.id,
+                    type: this.normalizeMapDecorationType(decoration.type),
+                    x: this.normalizeMapCoordinate(decoration.x),
+                    y: this.normalizeMapCoordinate(decoration.y),
+                    scale: this.normalizeMapScale(decoration.scale),
+                    rotation: this.normalizeMapRotation(decoration.rotation),
+                    opacity: this.normalizeMapOpacity(decoration.opacity)
+                })),
+                forestBelts: map.layers.forestBelts.map((decoration) => ({
+                    id: decoration.id,
+                    type: this.normalizeMapDecorationType(decoration.type),
+                    x: this.normalizeMapCoordinate(decoration.x),
+                    y: this.normalizeMapCoordinate(decoration.y),
+                    scale: this.normalizeMapScale(decoration.scale),
+                    rotation: this.normalizeMapRotation(decoration.rotation),
+                    opacity: this.normalizeMapOpacity(decoration.opacity)
+                }))
+            }
+        };
+    }
+
+    private mapCampaignMapBoardToApi(map: CampaignMapBoard): ApiCampaignMapBoardDto {
+        return {
+            id: map.id,
+            name: map.name.trim() || 'Untitled Map',
+            ...this.mapCampaignMapToApi(map)
+        };
+    }
+
+    private mapCampaignMapLibraryToApi(payload: { activeMapId: string; maps: CampaignMapBoard[] }): ApiCampaignMapLibraryDto {
+        const maps = payload.maps.length > 0 ? payload.maps : [this.createEmptyCampaignMapBoard()];
+        const activeMapId = maps.some((map) => map.id === payload.activeMapId) ? payload.activeMapId : maps[0].id;
+
+        return {
+            activeMapId,
+            maps: maps.map((map) => this.mapCampaignMapBoardToApi(map))
+        };
     }
 
     private mapCharacterFromApi(character: ApiCharacterDto, draft?: CharacterDraft): Character {
@@ -745,6 +992,139 @@ export class DungeonStoreService {
         }
 
         return null;
+    }
+
+    private normalizeWorldNoteCategory(category: ApiCampaignWorldNoteDto['category'] | string | null | undefined): CampaignWorldNoteCategory {
+        switch (category) {
+            case 'Backstory':
+            case 'Organization':
+            case 'Ally':
+            case 'Enemy':
+            case 'Location':
+            case 'Lore':
+            case 'Custom':
+                return category;
+            default:
+                return 'Lore';
+        }
+    }
+
+    private normalizeMapBackground(background: string | undefined): CampaignMapBackground {
+        switch (background) {
+            case 'Cavern':
+            case 'Coast':
+            case 'City':
+                return background;
+            default:
+                return 'Parchment';
+        }
+    }
+
+    private normalizeMapBackgroundImageUrl(value: string | undefined): string {
+        return typeof value === 'string' ? value.trim() : '';
+    }
+
+    private normalizeMapIconType(iconType: string | undefined): CampaignMapIconType {
+        switch (iconType) {
+            case 'Town':
+            case 'Camp':
+            case 'Dungeon':
+            case 'Danger':
+            case 'Treasure':
+            case 'Portal':
+            case 'Tower':
+                return iconType;
+            default:
+                return 'Keep';
+        }
+    }
+
+    private defaultMapIconLabel(iconType: string | undefined): string {
+        switch (this.normalizeMapIconType(iconType)) {
+            case 'Town':
+                return 'Town';
+            case 'Camp':
+                return 'Camp';
+            case 'Dungeon':
+                return 'Dungeon';
+            case 'Danger':
+                return 'Hazard';
+            case 'Treasure':
+                return 'Cache';
+            case 'Portal':
+                return 'Gate';
+            case 'Tower':
+                return 'Tower';
+            default:
+                return 'Keep';
+        }
+    }
+
+    private normalizeMapDecorationType(type: ApiCampaignMapDecorationDto['type'] | string | undefined): CampaignMapDecorationType {
+        switch (type) {
+            case 'Mountain':
+            case 'Hill':
+            case 'Reef':
+            case 'Cave':
+            case 'Ward':
+                return type;
+            default:
+                return 'Forest';
+        }
+    }
+
+    private normalizeMapLabelTone(tone: ApiCampaignMapLabelDto['tone'] | string | undefined): CampaignMapLabelTone {
+        switch (tone) {
+            case 'Feature':
+                return 'Feature';
+            default:
+                return 'Region';
+        }
+    }
+
+    private normalizeMapColor(color: string | undefined): string {
+        switch (color) {
+            case '#4b3a2a':
+            case '#8a5a2b':
+            case '#507255':
+            case '#385f7a':
+            case '#a03d2f':
+                return color;
+            default:
+                return '#8a5a2b';
+        }
+    }
+
+    private normalizeMapCoordinate(value: number | undefined): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return 0.5;
+        }
+
+        return Math.max(0, Math.min(1, value));
+    }
+
+    private normalizeMapScale(value: number | undefined): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return 1;
+        }
+
+        return Math.max(0.55, Math.min(1.8, value));
+    }
+
+    private normalizeMapRotation(value: number | undefined): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return 0;
+        }
+
+        return Math.max(-180, Math.min(180, value));
+    }
+
+    private normalizeMapOpacity(value: number | undefined): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return 0.75;
+        }
+
+        return Math.max(0.24, Math.min(1, value));
     }
 
     private parseDelimitedValues(value: unknown): string[] {

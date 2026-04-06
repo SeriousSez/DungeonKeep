@@ -18,6 +18,8 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
 {
     private const string DefaultModel = "gpt-4.1-mini";
     private const string DefaultResponsesUrl = "https://api.openai.com/v1/responses";
+    private const string DefaultImageModel = "gpt-image-1";
+    private const string DefaultImagesUrl = "https://api.openai.com/v1/images/generations";
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
     [HttpGet]
@@ -229,6 +231,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                 responsesUrl,
                 model,
                 BuildSessionDraftPrompt(campaign, request),
+                referenceImageUrl: null,
                 temperature: 0.9,
                 maxOutputTokens: 4200,
                 textFormat: BuildSessionDraftJsonSchemaFormat(),
@@ -327,6 +330,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                 responsesUrl,
                 model,
                 BuildNpcDraftPrompt(campaign, request),
+                referenceImageUrl: null,
                 temperature: 0.65,
                 maxOutputTokens: 1800,
                 textFormat: null,
@@ -692,6 +696,232 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         return Ok(updated);
     }
 
+    [HttpPost("{campaignId:guid}/world-notes")]
+    public async Task<ActionResult<CampaignDto>> CreateWorldNote(Guid campaignId, [FromBody] CreateCampaignWorldNoteRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Title))
+        {
+            return BadRequest("World note title is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Content))
+        {
+            return BadRequest("World note content is required.");
+        }
+
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var updated = await campaignService.AddWorldNoteAsync(campaignId, request, user.Id, cancellationToken);
+            return updated is null ? NotFound("Campaign was not found.") : Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
+    [HttpPut("{campaignId:guid}/world-notes/{noteId:guid}")]
+    public async Task<ActionResult<CampaignDto>> UpdateWorldNote(Guid campaignId, Guid noteId, [FromBody] UpdateCampaignWorldNoteRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Title))
+        {
+            return BadRequest("World note title is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Content))
+        {
+            return BadRequest("World note content is required.");
+        }
+
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var updated = await campaignService.UpdateWorldNoteAsync(campaignId, noteId, request, user.Id, cancellationToken);
+            return updated is null ? NotFound("Campaign or world note was not found.") : Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
+    [HttpPost("{campaignId:guid}/world-notes/{noteId:guid}/delete")]
+    public async Task<ActionResult<CampaignDto>> DeleteWorldNote(Guid campaignId, Guid noteId, CancellationToken cancellationToken)
+    {
+        if (noteId == Guid.Empty)
+        {
+            return BadRequest("World note id is required.");
+        }
+
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var updated = await campaignService.DeleteWorldNoteAsync(campaignId, new DeleteCampaignWorldNoteRequest(noteId), user.Id, cancellationToken);
+            return updated is null ? NotFound("Campaign or world note was not found.") : Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
+    [HttpPut("{campaignId:guid}/map")]
+    public async Task<ActionResult<CampaignDto>> UpdateMap(Guid campaignId, [FromBody] UpdateCampaignMapRequest request, CancellationToken cancellationToken)
+    {
+        if (request.Map is null && request.Library is null)
+        {
+            return BadRequest("Campaign map is required.");
+        }
+
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var updated = await campaignService.UpdateMapAsync(campaignId, request, user.Id, cancellationToken);
+            return updated is null ? NotFound("Campaign was not found.") : Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
+    [HttpPost("{campaignId:guid}/map/generate-ai")]
+    public async Task<ActionResult<CampaignMapDto>> GenerateMap(Guid campaignId, [FromBody] GenerateCampaignMapRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var campaign = await GetCampaignContextAsync(campaignId, user.Id, cancellationToken);
+        if (campaign is null)
+        {
+            return NotFound("Campaign was not found.");
+        }
+
+        if (!string.Equals(campaign.CurrentUserRole, "Owner", StringComparison.OrdinalIgnoreCase))
+        {
+            return StatusCode(403);
+        }
+
+        if (!TryGetOpenAiConfiguration(out var apiKey, out var responsesUrl, out var model))
+        {
+            return Problem(title: "Map generation unavailable.", detail: "OpenAI API key is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
+        try
+        {
+            var text = await SendOpenAiPromptAsync(
+                apiKey,
+                responsesUrl,
+                model,
+                BuildCampaignMapPrompt(campaign, request),
+                request.ReferenceImageUrl,
+                temperature: 0.85,
+                maxOutputTokens: 5200,
+                textFormat: BuildCampaignMapJsonSchemaFormat(),
+                fallbackToPlainTextOnBadRequest: true,
+                cancellationToken: cancellationToken);
+
+            var generated = TryParseGeneratedCampaignMapPayload(text);
+            if (generated is null)
+            {
+                var repairedText = await RepairJsonAsync(
+                    apiKey,
+                    responsesUrl,
+                    model,
+                    BuildCampaignMapRepairPrompt(text),
+                    maxOutputTokens: 5400,
+                    cancellationToken);
+
+                generated = TryParseGeneratedCampaignMapPayload(repairedText);
+            }
+
+            if (generated is null)
+            {
+                return Problem(title: "Map generation failed.", detail: "Model output was not valid JSON.", statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            return Ok(NormalizeGeneratedCampaignMap(generated, request));
+        }
+        catch (HttpRequestException exception)
+        {
+            return Problem(title: "Map generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return Problem(title: "Map generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+    }
+
+    [HttpPost("{campaignId:guid}/map/generate-ai-art")]
+    public async Task<ActionResult<GenerateCampaignMapArtResponse>> GenerateMapArt(Guid campaignId, [FromBody] GenerateCampaignMapArtRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var campaign = await GetCampaignContextAsync(campaignId, user.Id, cancellationToken);
+        if (campaign is null)
+        {
+            return NotFound("Campaign was not found.");
+        }
+
+        if (!string.Equals(campaign.CurrentUserRole, "Owner", StringComparison.OrdinalIgnoreCase))
+        {
+            return StatusCode(403);
+        }
+
+        if (!TryGetOpenAiImageConfiguration(out var apiKey, out var imagesUrl, out var model))
+        {
+            return Problem(title: "Map art generation unavailable.", detail: "OpenAI API key is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
+        try
+        {
+            var backgroundImageUrl = await SendOpenAiImagePromptAsync(
+                apiKey,
+                imagesUrl,
+                model,
+                BuildCampaignMapArtPrompt(campaign, request),
+                cancellationToken);
+
+            return Ok(new GenerateCampaignMapArtResponse(backgroundImageUrl));
+        }
+        catch (HttpRequestException exception)
+        {
+            return Problem(title: "Map art generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return Problem(title: "Map art generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+    }
+
     private static bool IsValidThreadVisibility(string? visibility)
     {
         return string.Equals(visibility, "Party", StringComparison.OrdinalIgnoreCase)
@@ -843,11 +1073,21 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         return !string.IsNullOrWhiteSpace(apiKey);
     }
 
+    private bool TryGetOpenAiImageConfiguration(out string apiKey, out string imagesUrl, out string model)
+    {
+        apiKey = configuration["OpenAI:ApiKey"] ?? configuration["OPENAI_API_KEY"] ?? string.Empty;
+        imagesUrl = configuration["OpenAI:ImagesUrl"] ?? DefaultImagesUrl;
+        model = configuration["OpenAI:ImageModel"] ?? DefaultImageModel;
+
+        return !string.IsNullOrWhiteSpace(apiKey);
+    }
+
     private async Task<string> SendOpenAiPromptAsync(
         string apiKey,
         string responsesUrl,
         string model,
         string prompt,
+        string? referenceImageUrl,
         double temperature,
         int maxOutputTokens,
         object? textFormat,
@@ -862,6 +1102,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             responsesUrl,
             model,
             prompt,
+            referenceImageUrl,
             temperature,
             maxOutputTokens,
             textFormat,
@@ -877,6 +1118,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                 responsesUrl,
                 model,
                 prompt,
+                referenceImageUrl: null,
                 temperature,
                 maxOutputTokens,
                 textFormat: null,
@@ -921,6 +1163,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         string responsesUrl,
         string model,
         string prompt,
+        string? referenceImageUrl,
         double temperature,
         int maxOutputTokens,
         object? textFormat)
@@ -930,7 +1173,28 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             ["model"] = model,
             ["temperature"] = temperature,
             ["max_output_tokens"] = maxOutputTokens,
-            ["input"] = prompt
+            ["input"] = string.IsNullOrWhiteSpace(referenceImageUrl)
+                ? prompt
+                : new object[]
+                {
+                    new Dictionary<string, object?>
+                    {
+                        ["role"] = "user",
+                        ["content"] = new object[]
+                        {
+                            new Dictionary<string, object?>
+                            {
+                                ["type"] = "input_text",
+                                ["text"] = prompt
+                            },
+                            new Dictionary<string, object?>
+                            {
+                                ["type"] = "input_image",
+                                ["image_url"] = referenceImageUrl
+                            }
+                        }
+                    }
+                }
         };
 
         if (textFormat is not null)
@@ -957,12 +1221,13 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         string responsesUrl,
         string model,
         string prompt,
+        string? referenceImageUrl,
         double temperature,
         int maxOutputTokens,
         object? textFormat,
         CancellationToken cancellationToken)
     {
-        using var message = BuildResponsesApiRequest(apiKey, responsesUrl, model, prompt, temperature, maxOutputTokens, textFormat);
+        using var message = BuildResponsesApiRequest(apiKey, responsesUrl, model, prompt, referenceImageUrl, temperature, maxOutputTokens, textFormat);
         return await client.SendAsync(message, cancellationToken);
     }
 
@@ -979,11 +1244,54 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             responsesUrl,
             model,
             repairPrompt,
+            referenceImageUrl: null,
             temperature: 0.1,
             maxOutputTokens: maxOutputTokens,
             textFormat: null,
             fallbackToPlainTextOnBadRequest: false,
             cancellationToken: cancellationToken);
+    }
+
+    private async Task<string> SendOpenAiImagePromptAsync(
+        string apiKey,
+        string imagesUrl,
+        string model,
+        string prompt,
+        CancellationToken cancellationToken)
+    {
+        var client = httpClientFactory.CreateClient();
+        using var message = new HttpRequestMessage(HttpMethod.Post, imagesUrl)
+        {
+            Headers =
+            {
+                Authorization = new AuthenticationHeaderValue("Bearer", apiKey.Trim())
+            },
+            Content = JsonContent.Create(new Dictionary<string, object?>
+            {
+                ["model"] = model,
+                ["prompt"] = prompt,
+                ["size"] = "1536x1024",
+                ["quality"] = "high"
+            })
+        };
+
+        using var response = await client.SendAsync(message, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var detail = body.Length > 240 ? body[..240] : body;
+            throw new HttpRequestException($"OpenAI image request failed ({(int)response.StatusCode}): {detail}", null, response.StatusCode);
+        }
+
+        var payload = JsonSerializer.Deserialize<OpenAiImageApiResponse>(body, SerializerOptions);
+        var image = ExtractGeneratedImageDataUrl(payload);
+        if (string.IsNullOrWhiteSpace(image))
+        {
+            throw new InvalidOperationException("The image model returned no image.");
+        }
+
+        return image;
     }
 
     private static object BuildSessionDraftJsonSchemaFormat()
@@ -1130,6 +1438,112 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         };
     }
 
+    private static object BuildCampaignMapJsonSchemaFormat()
+    {
+        var pointSchema = new Dictionary<string, object?>
+        {
+            ["type"] = "object",
+            ["additionalProperties"] = false,
+            ["required"] = new[] { "x", "y" },
+            ["properties"] = new Dictionary<string, object?>
+            {
+                ["x"] = new Dictionary<string, object?> { ["type"] = "number" },
+                ["y"] = new Dictionary<string, object?> { ["type"] = "number" }
+            }
+        };
+
+        var strokeSchema = new Dictionary<string, object?>
+        {
+            ["type"] = "object",
+            ["additionalProperties"] = false,
+            ["required"] = new[] { "color", "width", "points" },
+            ["properties"] = new Dictionary<string, object?>
+            {
+                ["color"] = BuildJsonSchemaStringProperty("Hex or CSS-compatible stroke color appropriate for a fantasy map."),
+                ["width"] = new Dictionary<string, object?> { ["type"] = "integer" },
+                ["points"] = BuildJsonSchemaArrayProperty(pointSchema)
+            }
+        };
+
+        var iconSchema = new Dictionary<string, object?>
+        {
+            ["type"] = "object",
+            ["additionalProperties"] = false,
+            ["required"] = new[] { "type", "label", "x", "y" },
+            ["properties"] = new Dictionary<string, object?>
+            {
+                ["type"] = BuildJsonSchemaStringProperty("One of: Keep, Town, Camp, Dungeon, Danger, Treasure, Portal, Tower."),
+                ["label"] = BuildJsonSchemaStringProperty("Short evocative landmark label."),
+                ["x"] = new Dictionary<string, object?> { ["type"] = "number" },
+                ["y"] = new Dictionary<string, object?> { ["type"] = "number" }
+            }
+        };
+
+        var decorationSchema = new Dictionary<string, object?>
+        {
+            ["type"] = "object",
+            ["additionalProperties"] = false,
+            ["required"] = new[] { "type", "x", "y", "scale", "rotation", "opacity" },
+            ["properties"] = new Dictionary<string, object?>
+            {
+                ["type"] = BuildJsonSchemaStringProperty("One of: Forest, Mountain, Hill, Reef, Cave, Ward."),
+                ["x"] = new Dictionary<string, object?> { ["type"] = "number" },
+                ["y"] = new Dictionary<string, object?> { ["type"] = "number" },
+                ["scale"] = new Dictionary<string, object?> { ["type"] = "number" },
+                ["rotation"] = new Dictionary<string, object?> { ["type"] = "number" },
+                ["opacity"] = new Dictionary<string, object?> { ["type"] = "number" }
+            }
+        };
+
+        var labelSchema = new Dictionary<string, object?>
+        {
+            ["type"] = "object",
+            ["additionalProperties"] = false,
+            ["required"] = new[] { "text", "tone", "x", "y", "rotation" },
+            ["properties"] = new Dictionary<string, object?>
+            {
+                ["text"] = BuildJsonSchemaStringProperty(),
+                ["tone"] = BuildJsonSchemaStringProperty("One of: Region, Feature."),
+                ["x"] = new Dictionary<string, object?> { ["type"] = "number" },
+                ["y"] = new Dictionary<string, object?> { ["type"] = "number" },
+                ["rotation"] = new Dictionary<string, object?> { ["type"] = "number" }
+            }
+        };
+
+        return new Dictionary<string, object?>
+        {
+            ["type"] = "json_schema",
+            ["name"] = "campaign_map",
+            ["strict"] = true,
+            ["schema"] = new Dictionary<string, object?>
+            {
+                ["type"] = "object",
+                ["additionalProperties"] = false,
+                ["required"] = new[] { "background", "strokes", "icons", "decorations", "labels", "layers" },
+                ["properties"] = new Dictionary<string, object?>
+                {
+                    ["background"] = BuildJsonSchemaStringProperty("One of: Parchment, City, Coast, Cavern."),
+                    ["strokes"] = BuildJsonSchemaArrayProperty(strokeSchema),
+                    ["icons"] = BuildJsonSchemaArrayProperty(iconSchema),
+                    ["decorations"] = BuildJsonSchemaArrayProperty(decorationSchema),
+                    ["labels"] = BuildJsonSchemaArrayProperty(labelSchema),
+                    ["layers"] = new Dictionary<string, object?>
+                    {
+                        ["type"] = "object",
+                        ["additionalProperties"] = false,
+                        ["required"] = new[] { "rivers", "mountainChains", "forestBelts" },
+                        ["properties"] = new Dictionary<string, object?>
+                        {
+                            ["rivers"] = BuildJsonSchemaArrayProperty(strokeSchema),
+                            ["mountainChains"] = BuildJsonSchemaArrayProperty(decorationSchema),
+                            ["forestBelts"] = BuildJsonSchemaArrayProperty(decorationSchema)
+                        }
+                    }
+                }
+            }
+        };
+    }
+
     private static string BuildCampaignDraftPrompt(GenerateCampaignDraftRequest request)
     {
         var toneHint = string.IsNullOrWhiteSpace(request.Tone) ? "Any" : request.Tone.Trim();
@@ -1169,6 +1583,164 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             "Content to repair:",
             invalidOutput
         ]);
+    }
+
+    private static string BuildCampaignMapPrompt(CampaignDto campaign, GenerateCampaignMapRequest request)
+    {
+        var background = NormalizeRequestedMapBackground(request.Background);
+        var mapName = string.IsNullOrWhiteSpace(request.MapName) ? "Untitled Map" : request.MapName.Trim();
+        var landmarkHints = request.ExistingLandmarkLabels?.Where(label => !string.IsNullOrWhiteSpace(label)).Select(label => label.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(10).ToArray() ?? [];
+        var hasReferenceImage = !string.IsNullOrWhiteSpace(request.ReferenceImageUrl);
+
+        return string.Join('\n',
+        [
+            "Generate a Dungeons & Dragons campaign map payload for DungeonKeep.",
+            "Return only valid JSON.",
+            "Use exactly these top-level fields: background, strokes, icons, decorations, labels, layers.",
+            "Do not wrap the JSON in a map, draft, data, result, or response object.",
+            "layers must contain rivers, mountainChains, and forestBelts.",
+            "Use coordinates normalized between 0.04 and 0.96.",
+            "Generate 5 to 10 landmark icons with useful tabletop labels.",
+            "Generate 2 region or feature labels.",
+            "Generate 4 to 10 route strokes that fit the requested map type.",
+            "Use only supported icon types: Keep, Town, Camp, Dungeon, Danger, Treasure, Portal, Tower.",
+            "Use only supported decoration types: Forest, Mountain, Hill, Reef, Cave, Ward.",
+            "Use only supported label tones: Region, Feature.",
+            hasReferenceImage ? "Use the attached reference image as the primary geography reference for coastlines, terrain masses, and spatial layout." : "No reference image is attached; infer the geography from the campaign details.",
+            "For City maps, emphasize districts, walls, wards, plazas, canals, and strongholds.",
+            "For Coast maps, emphasize shorelines, ports, islands, reefs, beacons, and sea routes.",
+            "For Cavern maps, emphasize tunnels, chambers, chasms, fungal groves, crystals, and buried ruins.",
+            "For Parchment maps, emphasize broad overland routes, frontiers, keeps, roads, and regions.",
+            string.Empty,
+            $"Map name: {mapName}",
+            $"Required background type: {background}",
+            $"Campaign name: {campaign.Name}",
+            $"Setting: {campaign.Setting}",
+            $"Tone: {campaign.Tone}",
+            $"Summary: {campaign.Summary}",
+            $"Hook: {campaign.Hook}",
+            $"Next session: {campaign.NextSession}",
+            $"World notes: {(campaign.WorldNotes.Count == 0 ? "None provided." : string.Join(" | ", campaign.WorldNotes.Take(8).Select(note => $"{note.Category}: {note.Title} - {note.Content}")))}",
+            $"Known NPCs: {FormatList(campaign.Npcs)}",
+            $"Existing landmark labels to reuse when appropriate: {(landmarkHints.Length == 0 ? "None." : string.Join(", ", landmarkHints))}"
+        ]);
+    }
+
+    private static string BuildCampaignMapRepairPrompt(string invalidOutput)
+    {
+        return string.Join('\n',
+        [
+            "Convert the provided campaign map content into valid JSON only.",
+            "Do not add markdown, explanations, or code fences.",
+            "Use exactly these top-level fields: background, strokes, icons, decorations, labels, layers.",
+            "layers must contain rivers, mountainChains, and forestBelts.",
+            string.Empty,
+            "Content to repair:",
+            invalidOutput
+        ]);
+    }
+
+    private static string BuildCampaignMapArtPrompt(CampaignDto campaign, GenerateCampaignMapArtRequest request)
+    {
+        var background = NormalizeRequestedMapBackground(request.Background);
+        var mapName = string.IsNullOrWhiteSpace(request.MapName) ? campaign.Name : request.MapName.Trim();
+        var settlementScale = NormalizeRequestedSettlementScale(request.SettlementScale);
+        var parchmentLayout = NormalizeRequestedParchmentLayout(request.ParchmentLayout);
+        var cavernLayout = NormalizeRequestedCavernLayout(request.CavernLayout);
+
+        var promptLines = new List<string>
+        {
+            "Create a detailed fantasy cartography illustration for a tabletop campaign manager.",
+            "The result should look like a professionally drawn regional map with hand-inked terrain, watercolor shading, roads, settlements, forests, mountains, coastlines, and fantasy labels.",
+            "Do not create a battlemap, token layout, grid, character portrait, or UI screenshot.",
+            "Compose the image as a wide map background suitable for overlaying interactive routes and landmarks.",
+            $"Requested map type: {background}.",
+            "Treat the requested map type and any provided settlement-size or layout option as a hard composition requirement."
+        };
+
+        if (background == "City")
+        {
+            promptLines.Add($"Primary settlement scale: {settlementScale}.");
+        }
+
+        if (background == "Parchment")
+        {
+            promptLines.Add($"Parchment layout: {parchmentLayout}.");
+        }
+
+        if (background == "Cavern")
+        {
+            promptLines.Add($"Cavern layout: {cavernLayout}.");
+        }
+
+        promptLines.AddRange(
+        [
+            $"Map title: {mapName}.",
+            $"Campaign name: {campaign.Name}.",
+            $"Setting: {campaign.Setting}.",
+            $"Tone: {campaign.Tone}.",
+            $"Summary: {campaign.Summary}.",
+            $"Hook: {campaign.Hook}.",
+            $"Next session: {campaign.NextSession}.",
+            $"World notes: {(campaign.WorldNotes.Count == 0 ? "None provided." : string.Join(" | ", campaign.WorldNotes.Take(8).Select(note => $"{note.Category}: {note.Title} - {note.Content}")))}",
+            "Art direction:",
+            "- High-detail atlas quality.",
+            "- Readable geography and terrain masses.",
+            "- Elegant but not oversized labels.",
+            "- Leave clear shapes and negative space so UI overlays remain readable.",
+            "- Avoid giant decorative borders, giant legends, character figures, or scene illustration framing."
+        ]);
+
+        if (background == "City")
+        {
+            promptLines.Add(settlementScale switch
+            {
+                "Hamlet" => "- The settlement should read as a hamlet: very small, sparse, and modest rather than urban.",
+                "Village" => "- The settlement should read clearly as a village: small, compact, and rural, not a major city.",
+                "Town" => "- The settlement should read as a town: a moderate urban hub, larger than a village but not a city sprawl.",
+                "Metropolis" => "- The settlement should read as a metropolis with dominant urban scale, major districts, and large civic structures.",
+                _ => "- The settlement should read clearly as a city with substantial urban massing and civic landmarks."
+            });
+            promptLines.Add("- Match the visible footprint, street density, district count, and monument scale to the requested settlement size. Do not render a larger settlement than requested.");
+        }
+
+        if (background == "Parchment")
+        {
+            promptLines.Add(parchmentLayout switch
+            {
+                "Uniform" => "- Distribute geography fairly evenly across the map instead of centering everything on one dominant landmass.",
+                "Archipelago" => "- Favor island chains, scattered coasts, and broken maritime landmasses.",
+                "Atoll" => "- Favor ring-shaped islands, lagoons, and coral-style ocean geography.",
+                "World" => "- Give the composition a broad world-map feeling with large-scale global geography.",
+                "Equirectangular" => "- Use a projection-style world layout suitable for a full globe map in an equirectangular presentation.",
+                _ => "- Favor one dominant continental landmass with surrounding seas and secondary coasts."
+            });
+            promptLines.Add("- The parchment layout must drive the overall landmass and ocean composition. Do not mix in a conflicting continent arrangement.");
+        }
+
+        if (background == "Cavern")
+        {
+            promptLines.Add(cavernLayout switch
+            {
+                "GrandCavern" => "- Favor one immense central cavern with secondary chambers and branching access tunnels.",
+                "VerticalChasm" => "- Favor steep drops, layered ledges, suspended bridges, shafts, and vertical depth.",
+                "CrystalGrotto" => "- Favor luminous crystal chambers, reflective mineral growths, and radiant grotto spaces.",
+                "RuinedUndercity" => "- Favor buried architecture, collapsed streets, broken halls, and the remains of a lost undercity.",
+                "LavaTubes" => "- Favor volcanic tunnels, magma-cut passages, heat-scarred rock, and molten fissures.",
+                _ => "- Favor a dense network of connected tunnels and chambers rather than one open cave hall."
+            });
+            promptLines.Add("- The cavern layout must control the primary underground structure and traversal pattern. Do not mix in a conflicting cave arrangement.");
+        }
+
+        promptLines.Add(background switch
+        {
+            "City" => "- Emphasize districts, walls, canals, plazas, bridges, towers, and strongholds.",
+            "Coast" => "- Emphasize shoreline drama, harbors, islands, reefs, headlands, sea lanes, and coves.",
+            "Cavern" => "- Emphasize subterranean chambers, tunnels, chasms, fungal groves, crystals, and buried ruins.",
+            _ => "- Emphasize broad overland geography, roads, rivers, forests, mountains, borders, and settlements."
+        });
+
+        return string.Join('\n', promptLines);
     }
 
     private static string BuildSessionDraftPrompt(CampaignDto campaign, GenerateSessionDraftRequest request)
@@ -1689,6 +2261,392 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         return false;
     }
 
+    private static GenerateCampaignMapPayload? TryParseGeneratedCampaignMapPayload(string rawText)
+    {
+        foreach (var candidate in BuildJsonCandidates(rawText))
+        {
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<GenerateCampaignMapPayload>(candidate, SerializerOptions);
+                if (parsed is not null)
+                {
+                    return parsed;
+                }
+            }
+            catch (JsonException)
+            {
+            }
+
+            var recovered = TryRecoverCampaignMapPayload(candidate);
+            if (recovered is not null)
+            {
+                return recovered;
+            }
+        }
+
+        return null;
+    }
+
+    private static GenerateCampaignMapPayload? TryRecoverCampaignMapPayload(string candidate)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(candidate);
+            var root = SelectCampaignMapRoot(document.RootElement);
+
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            return new GenerateCampaignMapPayload(
+                Background: GetOptionalString(root, "background"),
+                Strokes: GetOptionalObjectList(root, "strokes", MapGeneratedCampaignMapStrokePayload),
+                Icons: GetOptionalObjectList(root, "icons", MapGeneratedCampaignMapIconPayload),
+                Decorations: GetOptionalObjectList(root, "decorations", MapGeneratedCampaignMapDecorationPayload),
+                Labels: GetOptionalObjectList(root, "labels", MapGeneratedCampaignMapLabelPayload),
+                Layers: TryGetPropertyIgnoreCase(root, "layers", out var layersElement) ? MapGeneratedCampaignMapLayersPayload(layersElement) : null);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static JsonElement SelectCampaignMapRoot(JsonElement root)
+    {
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            return root;
+        }
+
+        if (LooksLikeCampaignMapObject(root))
+        {
+            return root;
+        }
+
+        foreach (var propertyName in new[] { "map", "draft", "data", "result", "response" })
+        {
+            if (TryGetPropertyIgnoreCase(root, propertyName, out var nested) && nested.ValueKind == JsonValueKind.Object && LooksLikeCampaignMapObject(nested))
+            {
+                return nested;
+            }
+        }
+
+        return root;
+    }
+
+    private static bool LooksLikeCampaignMapObject(JsonElement candidate)
+    {
+        if (candidate.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        foreach (var propertyName in new[] { "background", "strokes", "icons", "decorations", "labels", "layers" })
+        {
+            if (TryGetPropertyIgnoreCase(candidate, propertyName, out _))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static GenerateCampaignMapStrokePayload? MapGeneratedCampaignMapStrokePayload(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return new GenerateCampaignMapStrokePayload(
+            Color: GetOptionalString(element, "color"),
+            Width: GetOptionalInt(element, "width"),
+            Points: GetOptionalObjectList(element, "points", MapGeneratedCampaignMapPointPayload));
+    }
+
+    private static GenerateCampaignMapPointPayload? MapGeneratedCampaignMapPointPayload(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return new GenerateCampaignMapPointPayload(
+            X: GetOptionalDouble(element, "x"),
+            Y: GetOptionalDouble(element, "y"));
+    }
+
+    private static GenerateCampaignMapIconPayload? MapGeneratedCampaignMapIconPayload(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return new GenerateCampaignMapIconPayload(
+            Type: GetOptionalString(element, "type"),
+            Label: GetOptionalString(element, "label"),
+            X: GetOptionalDouble(element, "x"),
+            Y: GetOptionalDouble(element, "y"));
+    }
+
+    private static GenerateCampaignMapDecorationPayload? MapGeneratedCampaignMapDecorationPayload(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return new GenerateCampaignMapDecorationPayload(
+            Type: GetOptionalString(element, "type"),
+            X: GetOptionalDouble(element, "x"),
+            Y: GetOptionalDouble(element, "y"),
+            Scale: GetOptionalDouble(element, "scale"),
+            Rotation: GetOptionalDouble(element, "rotation"),
+            Opacity: GetOptionalDouble(element, "opacity"));
+    }
+
+    private static GenerateCampaignMapLabelPayload? MapGeneratedCampaignMapLabelPayload(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return new GenerateCampaignMapLabelPayload(
+            Text: GetOptionalString(element, "text"),
+            Tone: GetOptionalString(element, "tone"),
+            X: GetOptionalDouble(element, "x"),
+            Y: GetOptionalDouble(element, "y"),
+            Rotation: GetOptionalDouble(element, "rotation"));
+    }
+
+    private static GenerateCampaignMapLayersPayload? MapGeneratedCampaignMapLayersPayload(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return new GenerateCampaignMapLayersPayload(
+            Rivers: GetOptionalObjectList(element, "rivers", MapGeneratedCampaignMapStrokePayload),
+            MountainChains: GetOptionalObjectList(element, "mountainChains", MapGeneratedCampaignMapDecorationPayload),
+            ForestBelts: GetOptionalObjectList(element, "forestBelts", MapGeneratedCampaignMapDecorationPayload));
+    }
+
+    private static CampaignMapDto NormalizeGeneratedCampaignMap(GenerateCampaignMapPayload generated, GenerateCampaignMapRequest request)
+    {
+        var background = NormalizeRequestedMapBackground(generated.Background ?? request.Background);
+        var fallbackStrokeColor = background switch
+        {
+            "Coast" => "#385f7a",
+            "Cavern" => "#507255",
+            "City" => "#4b3a2a",
+            _ => "#8a5a2b"
+        };
+
+        var labels = (generated.Labels ?? [])
+            .Select(NormalizeGeneratedCampaignMapLabel)
+            .Where(label => label is not null)
+            .Cast<CampaignMapLabelDto>()
+            .Take(6)
+            .ToList();
+
+        return new CampaignMapDto(
+            Background: background,
+            BackgroundImageUrl: string.Empty,
+            Strokes: (generated.Strokes ?? []).Select(stroke => NormalizeGeneratedCampaignMapStroke(stroke, fallbackStrokeColor)).Where(stroke => stroke is not null).Cast<CampaignMapStrokeDto>().Take(16).ToList(),
+            Icons: (generated.Icons ?? []).Select(NormalizeGeneratedCampaignMapIcon).Where(icon => icon is not null).Cast<CampaignMapIconDto>().Take(16).ToList(),
+            Decorations: (generated.Decorations ?? []).Select(NormalizeGeneratedCampaignMapDecoration).Where(decoration => decoration is not null).Cast<CampaignMapDecorationDto>().Take(18).ToList(),
+            Labels: labels.Count > 0
+                ? labels
+                : new List<CampaignMapLabelDto>
+                {
+                    new(Guid.NewGuid(), string.IsNullOrWhiteSpace(request.MapName) ? "Unnamed Reach" : request.MapName.Trim(), "Region", 0.5, 0.24, 0),
+                    new(Guid.NewGuid(), background == "City" ? "Market Ward" : background == "Coast" ? "Beacon Route" : background == "Cavern" ? "Crystal Span" : "Pilgrim Road", "Feature", 0.66, 0.64, -7)
+                },
+            Layers: NormalizeGeneratedCampaignMapLayers(generated.Layers, background));
+    }
+
+    private static CampaignMapLayersDto NormalizeGeneratedCampaignMapLayers(GenerateCampaignMapLayersPayload? layers, string background)
+    {
+        var fallbackRiverColor = background == "Coast" ? "#385f7a" : "#4a708f";
+        return new CampaignMapLayersDto(
+            Rivers: (layers?.Rivers ?? []).Select(stroke => NormalizeGeneratedCampaignMapStroke(stroke, fallbackRiverColor)).Where(stroke => stroke is not null).Cast<CampaignMapStrokeDto>().Take(8).ToList(),
+            MountainChains: (layers?.MountainChains ?? []).Select(NormalizeGeneratedCampaignMapDecoration).Where(decoration => decoration is not null).Cast<CampaignMapDecorationDto>().Take(16).ToList(),
+            ForestBelts: (layers?.ForestBelts ?? []).Select(NormalizeGeneratedCampaignMapDecoration).Where(decoration => decoration is not null).Cast<CampaignMapDecorationDto>().Take(16).ToList());
+    }
+
+    private static CampaignMapStrokeDto? NormalizeGeneratedCampaignMapStroke(GenerateCampaignMapStrokePayload? payload, string fallbackColor)
+    {
+        if (payload is null)
+        {
+            return null;
+        }
+
+        var points = (payload.Points ?? []).Select(NormalizeGeneratedCampaignMapPoint).Where(point => point is not null).Cast<CampaignMapPointDto>().ToList();
+        if (points.Count < 2)
+        {
+            return null;
+        }
+
+        return new CampaignMapStrokeDto(Guid.NewGuid(), NormalizeGeneratedColor(payload.Color, fallbackColor), Math.Clamp(payload.Width ?? 4, 2, 18), points);
+    }
+
+    private static CampaignMapPointDto? NormalizeGeneratedCampaignMapPoint(GenerateCampaignMapPointPayload? payload)
+    {
+        if (payload?.X is null || payload.Y is null)
+        {
+            return null;
+        }
+
+        return new CampaignMapPointDto(ClampGeneratedCoordinate(payload.X.Value), ClampGeneratedCoordinate(payload.Y.Value));
+    }
+
+    private static CampaignMapIconDto? NormalizeGeneratedCampaignMapIcon(GenerateCampaignMapIconPayload? payload)
+    {
+        if (payload?.X is null || payload.Y is null)
+        {
+            return null;
+        }
+
+        return new CampaignMapIconDto(Guid.NewGuid(), NormalizeGeneratedIconType(payload.Type), string.IsNullOrWhiteSpace(payload.Label) ? "Unknown Marker" : payload.Label.Trim(), ClampGeneratedCoordinate(payload.X.Value), ClampGeneratedCoordinate(payload.Y.Value));
+    }
+
+    private static CampaignMapDecorationDto? NormalizeGeneratedCampaignMapDecoration(GenerateCampaignMapDecorationPayload? payload)
+    {
+        if (payload?.X is null || payload.Y is null)
+        {
+            return null;
+        }
+
+        return new CampaignMapDecorationDto(Guid.NewGuid(), NormalizeGeneratedDecorationType(payload.Type), ClampGeneratedCoordinate(payload.X.Value), ClampGeneratedCoordinate(payload.Y.Value), Math.Clamp(payload.Scale ?? 1, 0.45, 1.8), Math.Clamp(payload.Rotation ?? 0, -180d, 180d), Math.Clamp(payload.Opacity ?? 0.65, 0.18, 1));
+    }
+
+    private static CampaignMapLabelDto? NormalizeGeneratedCampaignMapLabel(GenerateCampaignMapLabelPayload? payload)
+    {
+        if (payload?.X is null || payload.Y is null || string.IsNullOrWhiteSpace(payload.Text))
+        {
+            return null;
+        }
+
+        return new CampaignMapLabelDto(Guid.NewGuid(), payload.Text.Trim(), NormalizeGeneratedLabelTone(payload.Tone), ClampGeneratedCoordinate(payload.X.Value), ClampGeneratedCoordinate(payload.Y.Value), Math.Clamp(payload.Rotation ?? 0, -180d, 180d));
+    }
+
+    private static string NormalizeRequestedMapBackground(string? background)
+    {
+        return background?.Trim().ToLowerInvariant() switch
+        {
+            "city" => "City",
+            "coast" => "Coast",
+            "cavern" => "Cavern",
+            _ => "Parchment"
+        };
+    }
+
+    private static string NormalizeRequestedSettlementScale(string? settlementScale)
+    {
+        return settlementScale?.Trim().ToLowerInvariant() switch
+        {
+            "hamlet" => "Hamlet",
+            "village" => "Village",
+            "town" => "Town",
+            "metropolis" => "Metropolis",
+            _ => "City"
+        };
+    }
+
+    private static string NormalizeRequestedParchmentLayout(string? parchmentLayout)
+    {
+        return parchmentLayout?.Trim().ToLowerInvariant() switch
+        {
+            "uniform" => "Uniform",
+            "archipelago" => "Archipelago",
+            "atoll" => "Atoll",
+            "world" => "World",
+            "equirectangular" => "Equirectangular",
+            _ => "Continent"
+        };
+    }
+
+    private static string NormalizeRequestedCavernLayout(string? cavernLayout)
+    {
+        return cavernLayout?.Trim().ToLowerInvariant() switch
+        {
+            "grandcavern" or "grand cavern" => "GrandCavern",
+            "verticalchasm" or "vertical chasm" => "VerticalChasm",
+            "crystalgrotto" or "crystal grotto" => "CrystalGrotto",
+            "ruinedundercity" or "ruined undercity" => "RuinedUndercity",
+            "lavatubes" or "lava tubes" => "LavaTubes",
+            _ => "TunnelNetwork"
+        };
+    }
+
+    private static string NormalizeGeneratedIconType(string? iconType)
+    {
+        return iconType?.Trim().ToLowerInvariant() switch
+        {
+            "keep" => "Keep",
+            "town" => "Town",
+            "camp" => "Camp",
+            "dungeon" => "Dungeon",
+            "danger" => "Danger",
+            "treasure" => "Treasure",
+            "portal" => "Portal",
+            "tower" => "Tower",
+            _ => "Keep"
+        };
+    }
+
+    private static string NormalizeGeneratedDecorationType(string? decorationType)
+    {
+        return decorationType?.Trim().ToLowerInvariant() switch
+        {
+            "forest" => "Forest",
+            "mountain" => "Mountain",
+            "hill" => "Hill",
+            "reef" => "Reef",
+            "cave" => "Cave",
+            "ward" => "Ward",
+            _ => "Forest"
+        };
+    }
+
+    private static string NormalizeGeneratedLabelTone(string? tone)
+    {
+        return tone?.Trim().ToLowerInvariant() == "feature" ? "Feature" : "Region";
+    }
+
+    private static string NormalizeGeneratedColor(string? color, string fallbackColor)
+    {
+        var trimmed = color?.Trim();
+        return string.IsNullOrWhiteSpace(trimmed) ? fallbackColor : trimmed;
+    }
+
+    private static double ClampGeneratedCoordinate(double value)
+    {
+        return Math.Clamp(value, 0.04d, 0.96d);
+    }
+
+    private static string? ExtractGeneratedImageDataUrl(OpenAiImageApiResponse? payload)
+    {
+        var image = payload?.Data?.FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(image?.B64Json))
+        {
+            return $"data:image/png;base64,{image.B64Json.Trim()}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(image?.Url))
+        {
+            return image.Url.Trim();
+        }
+
+        return null;
+    }
+
     private static GenerateNpcDraftPayload? TryParseGeneratedNpcDraftPayload(string rawText)
     {
         foreach (var candidate in BuildJsonCandidates(rawText))
@@ -1914,6 +2872,21 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         {
             JsonValueKind.Number when value.TryGetInt32(out var number) => number,
             JsonValueKind.String when int.TryParse(value.GetString(), out var parsed) => parsed,
+            _ => null
+        };
+    }
+
+    private static double? GetOptionalDouble(JsonElement element, string propertyName)
+    {
+        if (!TryGetPropertyIgnoreCase(element, propertyName, out var value))
+        {
+            return null;
+        }
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.Number when value.TryGetDouble(out var number) => number,
+            JsonValueKind.String when double.TryParse(value.GetString(), out var parsed) => parsed,
             _ => null
         };
     }
@@ -2173,6 +3146,12 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
 
     public sealed record GenerateSessionDraftRequest(string? TitleHint, string? ShortDescriptionHint, string? LocationHint, string? EstimatedLengthHint, string? MarkdownNotesHint);
 
+    public sealed record GenerateCampaignMapRequest(string? Background, string? MapName, IReadOnlyList<string>? ExistingLandmarkLabels, string? ReferenceImageUrl);
+
+    public sealed record GenerateCampaignMapArtRequest(string? Background, string? MapName, string? SettlementScale, string? ParchmentLayout, string? CavernLayout);
+
+    public sealed record GenerateCampaignMapArtResponse(string BackgroundImageUrl);
+
     public sealed record GenerateSessionDraftResponse(
         string Title,
         string ShortDescription,
@@ -2265,6 +3244,21 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         List<string>? BranchingPaths,
         List<string>? NextSessionHooks);
 
+    private sealed record GenerateCampaignMapPayload(
+        string? Background,
+        List<GenerateCampaignMapStrokePayload>? Strokes,
+        List<GenerateCampaignMapIconPayload>? Icons,
+        List<GenerateCampaignMapDecorationPayload>? Decorations,
+        List<GenerateCampaignMapLabelPayload>? Labels,
+        GenerateCampaignMapLayersPayload? Layers);
+
+    private sealed record GenerateCampaignMapStrokePayload(string? Color, int? Width, List<GenerateCampaignMapPointPayload>? Points);
+    private sealed record GenerateCampaignMapPointPayload(double? X, double? Y);
+    private sealed record GenerateCampaignMapIconPayload(string? Type, string? Label, double? X, double? Y);
+    private sealed record GenerateCampaignMapDecorationPayload(string? Type, double? X, double? Y, double? Scale, double? Rotation, double? Opacity);
+    private sealed record GenerateCampaignMapLabelPayload(string? Text, string? Tone, double? X, double? Y, double? Rotation);
+    private sealed record GenerateCampaignMapLayersPayload(List<GenerateCampaignMapStrokePayload>? Rivers, List<GenerateCampaignMapDecorationPayload>? MountainChains, List<GenerateCampaignMapDecorationPayload>? ForestBelts);
+
     private sealed record GenerateNpcDraftPayload(
         string? Name,
         string? Title,
@@ -2331,5 +3325,20 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
 
         [JsonPropertyName("text")]
         public string? Text { get; init; }
+    }
+
+    private sealed class OpenAiImageApiResponse
+    {
+        [JsonPropertyName("data")]
+        public List<OpenAiImageDataItem>? Data { get; init; }
+    }
+
+    private sealed class OpenAiImageDataItem
+    {
+        [JsonPropertyName("b64_json")]
+        public string? B64Json { get; init; }
+
+        [JsonPropertyName("url")]
+        public string? Url { get; init; }
     }
 }

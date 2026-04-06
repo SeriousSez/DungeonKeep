@@ -1,6 +1,8 @@
 import { Routes } from '@angular/router';
 import { CampaignDetailPageComponent } from './pages/campaign-detail-page/campaign-detail-page.component';
 import { CampaignEditPageComponent } from './pages/campaign-edit-page/campaign-edit-page.component';
+import { CampaignMapPageComponent } from './pages/campaign-map-page/campaign-map-page.component';
+import { CampaignMapsPageComponent } from './pages/campaign-maps-page/campaign-maps-page.component';
 import { CampaignSectionPageComponent } from './pages/campaign-section-page/campaign-section-page.component';
 import { SessionDetailPageComponent } from './pages/session-detail-page/session-detail-page.component';
 import { SessionEditorPageComponent } from './pages/session-editor-page/session-editor-page.component';
@@ -105,6 +107,31 @@ export const routes: Routes = [
         path: 'campaigns/:id/threads',
         component: CampaignSectionPageComponent,
         data: { title: 'Open Threads', breadcrumb: 'Threads', section: 'threads', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }] }
+    },
+    {
+        path: 'campaigns/:id/notes',
+        component: CampaignSectionPageComponent,
+        data: { title: 'World Notes', breadcrumb: 'World Notes', section: 'notes', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }] }
+    },
+    {
+        path: 'campaigns/:id/maps',
+        component: CampaignMapsPageComponent,
+        data: { title: 'Campaign Maps', breadcrumb: 'Maps', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }] }
+    },
+    {
+        path: 'campaigns/:id/maps/new',
+        component: CampaignMapPageComponent,
+        data: { title: 'Create Campaign Map', breadcrumb: 'New Map', mapMode: 'edit', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }, { label: 'Maps', url: '/campaigns/:id/maps' }] }
+    },
+    {
+        path: 'campaigns/:id/maps/:mapId',
+        component: CampaignMapPageComponent,
+        data: { title: 'Campaign Map', breadcrumb: 'Map', mapMode: 'view', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }, { label: 'Maps', url: '/campaigns/:id/maps' }] }
+    },
+    {
+        path: 'campaigns/:id/maps/:mapId/edit',
+        component: CampaignMapPageComponent,
+        data: { title: 'Map Editor', breadcrumb: 'Edit Map', mapMode: 'edit', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }, { label: 'Maps', url: '/campaigns/:id/maps' }] }
     },
     {
         path: 'campaigns/:id/members',

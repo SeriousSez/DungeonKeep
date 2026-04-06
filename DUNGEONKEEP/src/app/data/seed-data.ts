@@ -43,6 +43,85 @@ export const seedCampaigns: Campaign[] = [
                 visibility: 'Party'
             }
         ],
+        worldNotes: [
+            {
+                id: 'note-embers-1',
+                title: 'Ash Oath of House Veyr',
+                category: 'Backstory',
+                content: 'The royal house survived the dragon siege by swearing a hidden ash oath to the furnace spirit below Redglass Keep. Only the regent, the ember cathedral, and a vanished court historian know the exact terms.'
+            },
+            {
+                id: 'note-embers-2',
+                title: 'Soot Market Brokers',
+                category: 'Organization',
+                content: 'Independent soot brokers trade in salvage, rumors, and warded relic fragments. Rook acts as the least loyal but most informed fixer among them.'
+            }
+        ],
+        map: {
+            background: 'City',
+            backgroundImageUrl: '',
+            strokes: [
+                {
+                    id: 'map-embers-stroke-1',
+                    color: '#4b3a2a',
+                    width: 4,
+                    points: [
+                        { x: 0.16, y: 0.74 },
+                        { x: 0.28, y: 0.62 },
+                        { x: 0.38, y: 0.53 },
+                        { x: 0.52, y: 0.47 },
+                        { x: 0.7, y: 0.36 }
+                    ]
+                }
+            ],
+            icons: [
+                { id: 'map-embers-icon-1', type: 'Keep', label: 'Redglass Keep', x: 0.62, y: 0.31 },
+                { id: 'map-embers-icon-2', type: 'Town', label: 'Soot Market', x: 0.34, y: 0.58 },
+                { id: 'map-embers-icon-3', type: 'Dungeon', label: 'Cinder Vault', x: 0.8, y: 0.22 }
+            ],
+            decorations: [],
+            labels: [],
+            layers: {
+                rivers: [],
+                mountainChains: [],
+                forestBelts: []
+            }
+        },
+        maps: [
+            {
+                id: 'map-board-crown-of-embers',
+                name: 'Redglass Marches',
+                background: 'City',
+                backgroundImageUrl: '',
+                strokes: [
+                    {
+                        id: 'map-embers-stroke-1',
+                        color: '#4b3a2a',
+                        width: 4,
+                        points: [
+                            { x: 0.16, y: 0.74 },
+                            { x: 0.28, y: 0.62 },
+                            { x: 0.38, y: 0.53 },
+                            { x: 0.52, y: 0.47 },
+                            { x: 0.7, y: 0.36 }
+                        ]
+                    }
+                ],
+                icons: [
+                    { id: 'map-embers-icon-1', type: 'Keep', label: 'Redglass Keep', x: 0.62, y: 0.31 },
+                    { id: 'map-embers-icon-2', type: 'Town', label: 'Soot Market', x: 0.34, y: 0.58 },
+                    { id: 'map-embers-icon-3', type: 'Dungeon', label: 'Cinder Vault', x: 0.8, y: 0.22 }
+                ],
+                decorations: [],
+                labels: [],
+                layers: {
+                    rivers: [],
+                    mountainChains: [],
+                    forestBelts: []
+                }
+            }
+        ],
+        activeMapId: 'map-board-crown-of-embers',
         loot: ['Glasssteel buckler', 'Map to the Cinder Vault', 'Three sealed phoenix feathers'],
         npcs: ['Regent Maelis', 'Brother Tovin', 'Rook the soot broker']
     },
@@ -80,6 +159,79 @@ export const seedCampaigns: Campaign[] = [
                 visibility: 'Party'
             }
         ],
+        worldNotes: [
+            {
+                id: 'note-moonwake-1',
+                title: 'The Ledger Choir',
+                category: 'Enemy',
+                content: 'A circle of ghost accountants sings altered debts into storm-soaked ledgers. Their rewritten records can shift inheritance, titles, and civic authority overnight.'
+            }
+        ],
+        map: {
+            background: 'Coast',
+            backgroundImageUrl: '',
+            strokes: [
+                {
+                    id: 'map-moonwake-stroke-1',
+                    color: '#385f7a',
+                    width: 5,
+                    points: [
+                        { x: 0.12, y: 0.68 },
+                        { x: 0.28, y: 0.61 },
+                        { x: 0.44, y: 0.64 },
+                        { x: 0.57, y: 0.57 },
+                        { x: 0.74, y: 0.6 }
+                    ]
+                }
+            ],
+            icons: [
+                { id: 'map-moonwake-icon-1', type: 'Town', label: 'Saint Vey Harbor', x: 0.42, y: 0.49 },
+                { id: 'map-moonwake-icon-2', type: 'Portal', label: 'Storm Break', x: 0.76, y: 0.43 },
+                { id: 'map-moonwake-icon-3', type: 'Treasure', label: 'Ledger Cache', x: 0.23, y: 0.37 }
+            ],
+            decorations: [],
+            labels: [],
+            layers: {
+                rivers: [],
+                mountainChains: [],
+                forestBelts: []
+            }
+        },
+        maps: [
+            {
+                id: 'map-board-moonwake-ledger',
+                name: 'Moonwake Coastline',
+                background: 'Coast',
+                backgroundImageUrl: '',
+                strokes: [
+                    {
+                        id: 'map-moonwake-stroke-1',
+                        color: '#385f7a',
+                        width: 5,
+                        points: [
+                            { x: 0.12, y: 0.68 },
+                            { x: 0.28, y: 0.61 },
+                            { x: 0.44, y: 0.64 },
+                            { x: 0.57, y: 0.57 },
+                            { x: 0.74, y: 0.6 }
+                        ]
+                    }
+                ],
+                icons: [
+                    { id: 'map-moonwake-icon-1', type: 'Town', label: 'Saint Vey Harbor', x: 0.42, y: 0.49 },
+                    { id: 'map-moonwake-icon-2', type: 'Portal', label: 'Storm Break', x: 0.76, y: 0.43 },
+                    { id: 'map-moonwake-icon-3', type: 'Treasure', label: 'Ledger Cache', x: 0.23, y: 0.37 }
+                ],
+                decorations: [],
+                labels: [],
+                layers: {
+                    rivers: [],
+                    mountainChains: [],
+                    forestBelts: []
+                }
+            }
+        ],
+        activeMapId: 'map-board-moonwake-ledger',
         loot: ['Whisper-shell compass', 'Stormglass vial'],
         npcs: ['Captain Nereza', 'Ledger-Keeper Sol', 'The Lantern Magistrate']
     },
@@ -112,6 +264,79 @@ export const seedCampaigns: Campaign[] = [
                 visibility: 'Party'
             }
         ],
+        worldNotes: [
+            {
+                id: 'note-wild-1',
+                title: 'Rootmaze Bargains',
+                category: 'Lore',
+                content: 'The underworld below the orchards trades in memories, festival songs, and unfinished promises. Anything offered there returns changed.'
+            }
+        ],
+        map: {
+            background: 'Cavern',
+            backgroundImageUrl: '',
+            strokes: [
+                {
+                    id: 'map-wild-stroke-1',
+                    color: '#507255',
+                    width: 6,
+                    points: [
+                        { x: 0.2, y: 0.24 },
+                        { x: 0.34, y: 0.36 },
+                        { x: 0.3, y: 0.52 },
+                        { x: 0.48, y: 0.66 },
+                        { x: 0.7, y: 0.62 }
+                    ]
+                }
+            ],
+            icons: [
+                { id: 'map-wild-icon-1', type: 'Camp', label: 'Bramble Market', x: 0.25, y: 0.18 },
+                { id: 'map-wild-icon-2', type: 'Danger', label: 'Bargain Ring', x: 0.56, y: 0.48 },
+                { id: 'map-wild-icon-3', type: 'Portal', label: 'Mayor\'s Cellar', x: 0.74, y: 0.7 }
+            ],
+            decorations: [],
+            labels: [],
+            layers: {
+                rivers: [],
+                mountainChains: [],
+                forestBelts: []
+            }
+        },
+        maps: [
+            {
+                id: 'map-board-wild-below',
+                name: 'Rootmaze Hollow',
+                background: 'Cavern',
+                backgroundImageUrl: '',
+                strokes: [
+                    {
+                        id: 'map-wild-stroke-1',
+                        color: '#507255',
+                        width: 6,
+                        points: [
+                            { x: 0.2, y: 0.24 },
+                            { x: 0.34, y: 0.36 },
+                            { x: 0.3, y: 0.52 },
+                            { x: 0.48, y: 0.66 },
+                            { x: 0.7, y: 0.62 }
+                        ]
+                    }
+                ],
+                icons: [
+                    { id: 'map-wild-icon-1', type: 'Camp', label: 'Bramble Market', x: 0.25, y: 0.18 },
+                    { id: 'map-wild-icon-2', type: 'Danger', label: 'Bargain Ring', x: 0.56, y: 0.48 },
+                    { id: 'map-wild-icon-3', type: 'Portal', label: 'Mayor\'s Cellar', x: 0.74, y: 0.7 }
+                ],
+                decorations: [],
+                labels: [],
+                layers: {
+                    rivers: [],
+                    mountainChains: [],
+                    forestBelts: []
+                }
+            }
+        ],
+        activeMapId: 'map-board-wild-below',
         loot: ['Honeyed iron key'],
         npcs: ['Mayor Fen', 'Pip the pie judge', 'The Moss Matron']
     }

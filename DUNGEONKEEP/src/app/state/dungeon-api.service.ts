@@ -40,6 +40,10 @@ export interface ApiCampaignDto {
     npcs: string[];
     loot: string[];
     openThreads: ApiCampaignThreadDto[];
+    worldNotes: ApiCampaignWorldNoteDto[];
+    map: ApiCampaignMapDto;
+    maps: ApiCampaignMapBoardDto[];
+    activeMapId: string;
     currentUserRole: 'Owner' | 'Member';
     members: ApiCampaignMemberDto[];
 }
@@ -57,6 +61,90 @@ export interface ApiCampaignThreadDto {
     id: string;
     text: string;
     visibility: 'Party' | 'GMOnly';
+}
+
+export interface ApiCampaignWorldNoteDto {
+    id: string;
+    title: string;
+    category: 'Backstory' | 'Organization' | 'Ally' | 'Enemy' | 'Location' | 'Lore' | 'Custom';
+    content: string;
+}
+
+export interface ApiCampaignMapDto {
+    background: 'Parchment' | 'Cavern' | 'Coast' | 'City';
+    backgroundImageUrl: string;
+    strokes: ApiCampaignMapStrokeDto[];
+    icons: ApiCampaignMapIconDto[];
+    decorations: ApiCampaignMapDecorationDto[];
+    labels: ApiCampaignMapLabelDto[];
+    layers: ApiCampaignMapLayersDto;
+}
+
+export interface ApiCampaignMapBoardDto extends ApiCampaignMapDto {
+    id: string;
+    name: string;
+}
+
+export interface ApiCampaignMapLibraryDto {
+    activeMapId: string;
+    maps: ApiCampaignMapBoardDto[];
+}
+
+export interface ApiGenerateCampaignMapArtRequest {
+    background: ApiCampaignMapDto['background'];
+    mapName: string;
+    settlementScale?: 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis';
+    parchmentLayout?: 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular';
+    cavernLayout?: 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes';
+}
+
+export interface ApiGenerateCampaignMapArtResponse {
+    backgroundImageUrl: string;
+}
+
+export interface ApiCampaignMapStrokeDto {
+    id: string;
+    color: string;
+    width: number;
+    points: ApiCampaignMapPointDto[];
+}
+
+export interface ApiCampaignMapPointDto {
+    x: number;
+    y: number;
+}
+
+export interface ApiCampaignMapIconDto {
+    id: string;
+    type: 'Keep' | 'Town' | 'Camp' | 'Dungeon' | 'Danger' | 'Treasure' | 'Portal' | 'Tower';
+    label: string;
+    x: number;
+    y: number;
+}
+
+export interface ApiCampaignMapDecorationDto {
+    id: string;
+    type: 'Forest' | 'Mountain' | 'Hill' | 'Reef' | 'Cave' | 'Ward';
+    x: number;
+    y: number;
+    scale: number;
+    rotation: number;
+    opacity: number;
+}
+
+export interface ApiCampaignMapLabelDto {
+    id: string;
+    text: string;
+    tone: 'Region' | 'Feature';
+    x: number;
+    y: number;
+    rotation: number;
+}
+
+export interface ApiCampaignMapLayersDto {
+    rivers: ApiCampaignMapStrokeDto[];
+    mountainChains: ApiCampaignMapDecorationDto[];
+    forestBelts: ApiCampaignMapDecorationDto[];
 }
 
 export interface ApiCampaignMemberDto {
@@ -459,6 +547,26 @@ export class DungeonApiService {
 
     async archiveCampaignThread(campaignId: string, threadId: string): Promise<ApiCampaignDto> {
         return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/threads/${threadId}/archive`, {}));
+    }
+
+    async createCampaignWorldNote(campaignId: string, payload: { title: string; category: ApiCampaignWorldNoteDto['category']; content: string }): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/world-notes`, payload));
+    }
+
+    async updateCampaignWorldNote(campaignId: string, noteId: string, payload: { title: string; category: ApiCampaignWorldNoteDto['category']; content: string }): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/world-notes/${noteId}`, payload));
+    }
+
+    async deleteCampaignWorldNote(campaignId: string, noteId: string): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/world-notes/${noteId}/delete`, {}));
+    }
+
+    async updateCampaignMap(campaignId: string, payload: ApiCampaignMapLibraryDto): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/map`, { library: payload }));
+    }
+
+    async generateCampaignMapArtAi(campaignId: string, payload: ApiGenerateCampaignMapArtRequest): Promise<ApiGenerateCampaignMapArtResponse> {
+        return await firstValueFrom(this.http.post<ApiGenerateCampaignMapArtResponse>(`${this.baseUrl}/campaigns/${campaignId}/map/generate-ai-art`, payload));
     }
 
     async inviteCampaignMember(campaignId: string, email: string): Promise<ApiCampaignDto> {

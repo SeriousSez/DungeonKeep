@@ -9,7 +9,7 @@
     }
 
     @if (isOpen()) {
-    <div class="app-dropdown-panel" [style.max-height.px]="panelMaxHeight()" role="listbox">
+    <div class="app-dropdown-panel" [style.max-height.px]="panelMaxHeight()" [style.min-width.px]="getPanelMinWidth()" role="listbox">
         @if (searchable()) {
         <input type="text" class="app-dropdown-search" [value]="searchTerm()" [placeholder]="searchPlaceholder()" (input)="onSearchInput($any($event.target).value)" />
         }
@@ -25,7 +25,7 @@
             <button type="button" role="option" class="app-dropdown-option" [class.active]="isOptionSelected(option)" [disabled]="option.disabled || false" (click)="onOptionPicked(option.value)">
                 <div>
                     <span>{{ option.label }}</span>
-                    @if (option.description) {
+                    @if (showOptionDescriptions() && option.description) {
                     <p class="app-dropdown-description">{{ option.description }}</p>
                     }
                 </div>

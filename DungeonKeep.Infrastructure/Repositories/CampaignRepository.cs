@@ -9,8 +9,11 @@ namespace DungeonKeep.Infrastructure.Repositories;
 
 public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampaignRepository
 {
+    private readonly bool campaignSchemaReady = EnsureCampaignSchema(dbContext);
+
     public async Task<IReadOnlyList<Campaign>> GetAllForUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
+        _ = campaignSchemaReady;
         return await dbContext.Campaigns
             .Include(c => c.Memberships)
                 .ThenInclude(membership => membership.User)
@@ -23,6 +26,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        _ = campaignSchemaReady;
         return await dbContext.Campaigns
             .Include(c => c.Memberships)
                 .ThenInclude(membership => membership.User)
@@ -33,6 +37,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign> AddAsync(Campaign campaign, CancellationToken cancellationToken = default)
     {
+        _ = campaignSchemaReady;
         dbContext.Campaigns.Add(campaign);
         await dbContext.SaveChangesAsync(cancellationToken);
         return campaign;
@@ -40,6 +45,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> UpdateAsync(Guid campaignId, string name, string setting, string tone, int levelStart, int levelEnd, string hook, string nextSession, string summary, CancellationToken cancellationToken = default)
     {
+        _ = campaignSchemaReady;
         var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
         if (campaign is null)
         {
@@ -57,6 +63,32 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return await GetByIdAsync(campaignId, cancellationToken);
+    }
+
+    private static bool EnsureCampaignSchema(DungeonKeepDbContext dbContext)
+    {
+        try
+        {
+            using var connection = dbContext.Database.GetDbConnection();
+            if (connection.State != System.Data.ConnectionState.Open)
+            {
+                connection.Open();
+            }
+
+            using var existsCommand = connection.CreateCommand();
+            existsCommand.CommandText = "SELECT 1 FROM pragma_table_info('Campaigns') WHERE name = 'CampaignMapJson' LIMIT 1;";
+            if (existsCommand.ExecuteScalar() is not null)
+            {
+                return true;
+            }
+
+            dbContext.Database.ExecuteSqlRaw("ALTER TABLE \"Campaigns\" ADD COLUMN \"CampaignMapJson\" TEXT NOT NULL DEFAULT '{}';");
+        }
+        catch
+        {
+        }
+
+        return true;
     }
 
     public async Task<Campaign?> AddSessionAsync(Guid campaignId, CampaignSessionDto session, CancellationToken cancellationToken = default)
@@ -278,6 +310,109 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         return await GetByIdAsync(campaignId, cancellationToken);
     }
 
+    public async Task<Campaign?> AddWorldNoteAsync(Guid campaignId, CampaignWorldNoteDto note, CancellationToken cancellationToken = default)
+    {
+        var campaign = await dbContext.Campaigns
+            .Include(c => c.Characters)
+            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var notes = ParseWorldNotes(campaign.WorldNotesJson);
+        notes.Add(new PersistedCampaignWorldNote(
+            note.Id == Guid.Empty ? Guid.NewGuid() : note.Id,
+            note.Title.Trim(),
+            NormalizeWorldNoteCategory(note.Category),
+            note.Content.Trim()));
+
+        campaign.WorldNotesJson = JsonSerializer.Serialize(notes);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return await GetByIdAsync(campaignId, cancellationToken);
+    }
+
+    public async Task<Campaign?> UpdateWorldNoteAsync(Guid campaignId, CampaignWorldNoteDto note, CancellationToken cancellationToken = default)
+    {
+        var campaign = await dbContext.Campaigns
+            .Include(c => c.Characters)
+            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var notes = ParseWorldNotes(campaign.WorldNotesJson);
+        var updated = false;
+
+        for (var index = 0; index < notes.Count; index++)
+        {
+            if (notes[index].Id != note.Id)
+            {
+                continue;
+            }
+
+            notes[index] = notes[index] with
+            {
+                Title = note.Title.Trim(),
+                Category = NormalizeWorldNoteCategory(note.Category),
+                Content = note.Content.Trim()
+            };
+            updated = true;
+            break;
+        }
+
+        if (!updated)
+        {
+            return null;
+        }
+
+        campaign.WorldNotesJson = JsonSerializer.Serialize(notes);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return await GetByIdAsync(campaignId, cancellationToken);
+    }
+
+    public async Task<Campaign?> RemoveWorldNoteAsync(Guid campaignId, Guid noteId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await dbContext.Campaigns
+            .Include(c => c.Characters)
+            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var notes = ParseWorldNotes(campaign.WorldNotesJson);
+        var updatedNotes = notes.Where(note => note.Id != noteId).ToList();
+        if (updatedNotes.Count == notes.Count)
+        {
+            return null;
+        }
+
+        campaign.WorldNotesJson = JsonSerializer.Serialize(updatedNotes);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return await GetByIdAsync(campaignId, cancellationToken);
+    }
+
+    public async Task<Campaign?> UpdateMapAsync(Guid campaignId, CampaignMapLibraryDto library, CancellationToken cancellationToken = default)
+    {
+        var campaign = await dbContext.Campaigns
+            .Include(c => c.Characters)
+            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        campaign.CampaignMapJson = JsonSerializer.Serialize(NormalizeCampaignMapLibrary(library));
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return await GetByIdAsync(campaignId, cancellationToken);
+    }
+
     public async Task<Campaign?> InviteMemberAsync(Guid campaignId, string email, AuthenticatedUser user, CancellationToken cancellationToken = default)
     {
         var normalizedEmail = email.Trim().ToLowerInvariant();
@@ -383,6 +518,153 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         }
     }
 
+    private static List<PersistedCampaignWorldNote> ParseWorldNotes(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return [];
+        }
+
+        try
+        {
+            return (JsonSerializer.Deserialize<List<PersistedCampaignWorldNote>>(json) ?? [])
+                .Where(note => !string.IsNullOrWhiteSpace(note.Title) && !string.IsNullOrWhiteSpace(note.Content))
+                .Select(note => new PersistedCampaignWorldNote(
+                    note.Id == Guid.Empty ? Guid.NewGuid() : note.Id,
+                    note.Title.Trim(),
+                    NormalizeWorldNoteCategory(note.Category),
+                    note.Content.Trim()))
+                .ToList();
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private static CampaignMapDto NormalizeCampaignMap(CampaignMapDto map)
+    {
+        return new CampaignMapDto(
+            NormalizeMapBackground(map.Background),
+            string.IsNullOrWhiteSpace(map.BackgroundImageUrl) ? string.Empty : map.BackgroundImageUrl.Trim(),
+            (map.Strokes ?? [])
+                .Where(stroke => stroke.Points is { Count: > 0 })
+                .Select(stroke => new CampaignMapStrokeDto(
+                    stroke.Id == Guid.Empty ? Guid.NewGuid() : stroke.Id,
+                    NormalizeMapColor(stroke.Color),
+                    Math.Clamp(stroke.Width, 2, 18),
+                    stroke.Points
+                        .Select(point => new CampaignMapPointDto(ClampMapCoordinate(point.X), ClampMapCoordinate(point.Y)))
+                        .Distinct()
+                        .ToList()))
+                .Where(stroke => stroke.Points.Count > 0)
+                .ToList(),
+            (map.Icons ?? [])
+                .Select(icon => new CampaignMapIconDto(
+                    icon.Id == Guid.Empty ? Guid.NewGuid() : icon.Id,
+                    NormalizeMapIconType(icon.Type),
+                    string.IsNullOrWhiteSpace(icon.Label) ? DefaultMapIconLabel(icon.Type) : icon.Label.Trim(),
+                    ClampMapCoordinate(icon.X),
+                    ClampMapCoordinate(icon.Y)))
+                .ToList(),
+            (map.Decorations ?? [])
+                .Select(decoration => new CampaignMapDecorationDto(
+                    decoration.Id == Guid.Empty ? Guid.NewGuid() : decoration.Id,
+                    NormalizeMapDecorationType(decoration.Type),
+                    ClampMapCoordinate(decoration.X),
+                    ClampMapCoordinate(decoration.Y),
+                    ClampMapScale(decoration.Scale),
+                    ClampMapRotation(decoration.Rotation),
+                    ClampMapOpacity(decoration.Opacity)))
+                .ToList(),
+            (map.Labels ?? [])
+                .Where(label => !string.IsNullOrWhiteSpace(label.Text))
+                .Select(label => new CampaignMapLabelDto(
+                    label.Id == Guid.Empty ? Guid.NewGuid() : label.Id,
+                    label.Text.Trim(),
+                    NormalizeMapLabelTone(label.Tone),
+                    ClampMapCoordinate(label.X),
+                    ClampMapCoordinate(label.Y),
+                    ClampMapRotation(label.Rotation)))
+                .ToList(),
+            new CampaignMapLayersDto(
+                NormalizeMapStrokeCollection(map.Layers?.Rivers),
+                NormalizeMapDecorationCollection(map.Layers?.MountainChains),
+                NormalizeMapDecorationCollection(map.Layers?.ForestBelts)));
+    }
+
+    private static CampaignMapBoardDto NormalizeCampaignMapBoard(CampaignMapBoardDto map)
+    {
+        var normalized = NormalizeCampaignMap(new CampaignMapDto(
+            map.Background,
+            map.BackgroundImageUrl,
+            map.Strokes,
+            map.Icons,
+            map.Decorations,
+            map.Labels,
+            map.Layers));
+
+        return new CampaignMapBoardDto(
+            map.Id == Guid.Empty ? Guid.NewGuid() : map.Id,
+            string.IsNullOrWhiteSpace(map.Name) ? "Untitled Map" : map.Name.Trim(),
+            normalized.Background,
+            normalized.BackgroundImageUrl,
+            normalized.Strokes,
+            normalized.Icons,
+            normalized.Decorations,
+            normalized.Labels,
+            normalized.Layers);
+    }
+
+    private static CampaignMapLibraryDto NormalizeCampaignMapLibrary(CampaignMapLibraryDto library)
+    {
+        var maps = (library.Maps ?? [])
+            .Select(NormalizeCampaignMapBoard)
+            .DistinctBy(map => map.Id)
+            .ToList();
+
+        if (maps.Count == 0)
+        {
+            maps.Add(new CampaignMapBoardDto(Guid.NewGuid(), "Main Map", "Parchment", string.Empty, [], [], [], [], new CampaignMapLayersDto([], [], [])));
+        }
+
+        var activeMapId = library.ActiveMapId != Guid.Empty && maps.Any(map => map.Id == library.ActiveMapId)
+            ? library.ActiveMapId
+            : maps[0].Id;
+
+        return new CampaignMapLibraryDto(activeMapId, maps);
+    }
+
+    private static IReadOnlyList<CampaignMapStrokeDto> NormalizeMapStrokeCollection(IReadOnlyList<CampaignMapStrokeDto>? strokes)
+    {
+        return (strokes ?? [])
+            .Where(stroke => stroke.Points is { Count: > 0 })
+            .Select(stroke => new CampaignMapStrokeDto(
+                stroke.Id == Guid.Empty ? Guid.NewGuid() : stroke.Id,
+                NormalizeMapColor(stroke.Color),
+                Math.Clamp(stroke.Width, 2, 18),
+                stroke.Points
+                    .Select(point => new CampaignMapPointDto(ClampMapCoordinate(point.X), ClampMapCoordinate(point.Y)))
+                    .Distinct()
+                    .ToList()))
+            .Where(stroke => stroke.Points.Count > 0)
+            .ToList();
+    }
+
+    private static IReadOnlyList<CampaignMapDecorationDto> NormalizeMapDecorationCollection(IReadOnlyList<CampaignMapDecorationDto>? decorations)
+    {
+        return (decorations ?? [])
+            .Select(decoration => new CampaignMapDecorationDto(
+                decoration.Id == Guid.Empty ? Guid.NewGuid() : decoration.Id,
+                NormalizeMapDecorationType(decoration.Type),
+                ClampMapCoordinate(decoration.X),
+                ClampMapCoordinate(decoration.Y),
+                ClampMapScale(decoration.Scale),
+                ClampMapRotation(decoration.Rotation),
+                ClampMapOpacity(decoration.Opacity)))
+            .ToList();
+    }
+
     private async Task<Campaign?> UpdateNamedCollectionAsync(
         Guid campaignId,
         Action<List<string>> updateAction,
@@ -475,6 +757,138 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         return "Party";
     }
 
+    private static string NormalizeWorldNoteCategory(string? category)
+    {
+        return category?.Trim() switch
+        {
+            "Backstory" => "Backstory",
+            "Organization" => "Organization",
+            "Ally" => "Ally",
+            "Enemy" => "Enemy",
+            "Location" => "Location",
+            "Lore" => "Lore",
+            "Custom" => "Custom",
+            _ => "Lore"
+        };
+    }
+
+    private static string NormalizeMapBackground(string? background)
+    {
+        return background?.Trim() switch
+        {
+            "Cavern" => "Cavern",
+            "Coast" => "Coast",
+            "City" => "City",
+            _ => "Parchment"
+        };
+    }
+
+    private static string NormalizeMapColor(string? color)
+    {
+        return color?.Trim() switch
+        {
+            "#4b3a2a" => "#4b3a2a",
+            "#8a5a2b" => "#8a5a2b",
+            "#507255" => "#507255",
+            "#385f7a" => "#385f7a",
+            "#a03d2f" => "#a03d2f",
+            _ => "#8a5a2b"
+        };
+    }
+
+    private static string NormalizeMapIconType(string? iconType)
+    {
+        return iconType?.Trim() switch
+        {
+            "Town" => "Town",
+            "Camp" => "Camp",
+            "Dungeon" => "Dungeon",
+            "Danger" => "Danger",
+            "Treasure" => "Treasure",
+            "Portal" => "Portal",
+            "Tower" => "Tower",
+            _ => "Keep"
+        };
+    }
+
+    private static string NormalizeMapDecorationType(string? decorationType)
+    {
+        return decorationType?.Trim() switch
+        {
+            "Mountain" => "Mountain",
+            "Hill" => "Hill",
+            "Reef" => "Reef",
+            "Cave" => "Cave",
+            "Ward" => "Ward",
+            _ => "Forest"
+        };
+    }
+
+    private static string NormalizeMapLabelTone(string? tone)
+    {
+        return tone?.Trim() switch
+        {
+            "Feature" => "Feature",
+            _ => "Region"
+        };
+    }
+
+    private static string DefaultMapIconLabel(string? iconType)
+    {
+        return NormalizeMapIconType(iconType) switch
+        {
+            "Town" => "Town",
+            "Camp" => "Camp",
+            "Dungeon" => "Dungeon",
+            "Danger" => "Hazard",
+            "Treasure" => "Cache",
+            "Portal" => "Gate",
+            "Tower" => "Tower",
+            _ => "Keep"
+        };
+    }
+
+    private static double ClampMapCoordinate(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return 0.5d;
+        }
+
+        return Math.Clamp(value, 0d, 1d);
+    }
+
+    private static double ClampMapScale(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return 1d;
+        }
+
+        return Math.Clamp(value, 0.55d, 1.8d);
+    }
+
+    private static double ClampMapRotation(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return 0d;
+        }
+
+        return Math.Clamp(value, -180d, 180d);
+    }
+
+    private static double ClampMapOpacity(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return 0.75d;
+        }
+
+        return Math.Clamp(value, 0.24d, 1d);
+    }
+
     private sealed record PersistedCampaignThread(Guid Id, string Text, string Visibility);
+    private sealed record PersistedCampaignWorldNote(Guid Id, string Title, string Category, string Content);
     private sealed record PersistedCampaignSession(Guid Id, string Title, string Date, string Location, string Objective, string Threat);
 }

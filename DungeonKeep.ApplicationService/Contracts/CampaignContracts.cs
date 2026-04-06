@@ -16,6 +16,10 @@ public sealed record CampaignDto(
     IReadOnlyList<string> Npcs,
     IReadOnlyList<string> Loot,
     IReadOnlyList<CampaignThreadDto> OpenThreads,
+    IReadOnlyList<CampaignWorldNoteDto> WorldNotes,
+    CampaignMapDto Map,
+    IReadOnlyList<CampaignMapBoardDto> Maps,
+    Guid ActiveMapId,
     string CurrentUserRole,
     IReadOnlyList<CampaignMemberDto> Members
 );
@@ -33,6 +37,85 @@ public sealed record CampaignThreadDto(
     Guid Id,
     string Text,
     string Visibility
+);
+
+public sealed record CampaignWorldNoteDto(
+    Guid Id,
+    string Title,
+    string Category,
+    string Content
+);
+
+public sealed record CampaignMapDto(
+    string Background,
+    string BackgroundImageUrl,
+    IReadOnlyList<CampaignMapStrokeDto> Strokes,
+    IReadOnlyList<CampaignMapIconDto> Icons,
+    IReadOnlyList<CampaignMapDecorationDto> Decorations,
+    IReadOnlyList<CampaignMapLabelDto> Labels,
+    CampaignMapLayersDto Layers
+);
+
+public sealed record CampaignMapBoardDto(
+    Guid Id,
+    string Name,
+    string Background,
+    string BackgroundImageUrl,
+    IReadOnlyList<CampaignMapStrokeDto> Strokes,
+    IReadOnlyList<CampaignMapIconDto> Icons,
+    IReadOnlyList<CampaignMapDecorationDto> Decorations,
+    IReadOnlyList<CampaignMapLabelDto> Labels,
+    CampaignMapLayersDto Layers
+);
+
+public sealed record CampaignMapLibraryDto(
+    Guid ActiveMapId,
+    IReadOnlyList<CampaignMapBoardDto> Maps
+);
+
+public sealed record CampaignMapStrokeDto(
+    Guid Id,
+    string Color,
+    int Width,
+    IReadOnlyList<CampaignMapPointDto> Points
+);
+
+public sealed record CampaignMapPointDto(
+    double X,
+    double Y
+);
+
+public sealed record CampaignMapIconDto(
+    Guid Id,
+    string Type,
+    string Label,
+    double X,
+    double Y
+);
+
+public sealed record CampaignMapDecorationDto(
+    Guid Id,
+    string Type,
+    double X,
+    double Y,
+    double Scale,
+    double Rotation,
+    double Opacity
+);
+
+public sealed record CampaignMapLabelDto(
+    Guid Id,
+    string Text,
+    string Tone,
+    double X,
+    double Y,
+    double Rotation
+);
+
+public sealed record CampaignMapLayersDto(
+    IReadOnlyList<CampaignMapStrokeDto> Rivers,
+    IReadOnlyList<CampaignMapDecorationDto> MountainChains,
+    IReadOnlyList<CampaignMapDecorationDto> ForestBelts
 );
 
 public sealed record CampaignMemberDto(
@@ -75,6 +158,10 @@ public sealed record CreateCampaignNpcRequest(string Name);
 public sealed record RemoveCampaignNpcRequest(string Name);
 public sealed record CreateCampaignLootRequest(string Name);
 public sealed record RemoveCampaignLootRequest(string Name);
+public sealed record CreateCampaignWorldNoteRequest(string Title, string Category, string Content);
+public sealed record UpdateCampaignWorldNoteRequest(string Title, string Category, string Content);
+public sealed record DeleteCampaignWorldNoteRequest(Guid NoteId);
+public sealed record UpdateCampaignMapRequest(CampaignMapDto? Map, CampaignMapLibraryDto? Library);
 
 public sealed record CampaignInvitationEmail(
     Guid CampaignId,

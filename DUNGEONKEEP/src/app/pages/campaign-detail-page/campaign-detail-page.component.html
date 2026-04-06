@@ -43,6 +43,14 @@
             <span class="campaign-nav-label">Threads</span>
             <span class="campaign-nav-meta">{{ visibleThreads().length }} open</span>
         </a>
+        <a [routerLink]="['/campaigns', campaign.id, 'notes']" class="campaign-nav-link">
+            <span class="campaign-nav-label">World Notes</span>
+            <span class="campaign-nav-meta">{{ campaign.worldNotes.length }} entries</span>
+        </a>
+        <a [routerLink]="['/campaigns', campaign.id, 'maps']" class="campaign-nav-link">
+            <span class="campaign-nav-label">Maps</span>
+            <span class="campaign-nav-meta">{{ campaign.maps.length }} boards</span>
+        </a>
         <a [routerLink]="['/campaigns', campaign.id, 'members']" class="campaign-nav-link">
             <span class="campaign-nav-label">Members</span>
             <span class="campaign-nav-meta">{{ campaign.members?.length ?? 0 }} total</span>
@@ -137,6 +145,28 @@
                 <span class="count-badge">{{ visibleThreads().length }}</span>
             </div>
             <p>{{ visibleThreads().length > 0 ? visibleThreads()[0].text : 'No unresolved threads are open right now.' }}</p>
+        </a>
+
+        <a class="panel workspace-preview-card" [routerLink]="['/campaigns', campaign.id, 'notes']">
+            <div class="workspace-preview-header">
+                <div>
+                    <p class="eyebrow">World Notes</p>
+                    <h2>Lore Ledger</h2>
+                </div>
+                <span class="count-badge">{{ campaign.worldNotes.length }}</span>
+            </div>
+            <p>{{ campaign.worldNotes.length > 0 ? campaign.worldNotes[0].title + ' • ' + campaign.worldNotes[0].category : 'Track factions, places, allies, enemies, and setting lore from the world notes page.' }}</p>
+        </a>
+
+        <a class="panel workspace-preview-card" [routerLink]="['/campaigns', campaign.id, 'maps']">
+            <div class="workspace-preview-header">
+                <div>
+                    <p class="eyebrow">Map</p>
+                    <h2>Routes & Landmarks</h2>
+                </div>
+                <span class="count-badge">{{ campaign.maps.length }}</span>
+            </div>
+            <p>{{ campaign.maps.length > 0 ? campaign.maps[0].name + ' • ' + campaign.map.background : 'Sketch paths, add landmarks, and lay down encounter markers from the campaign map page.' }}</p>
         </a>
 
         <a class="panel workspace-preview-card" [routerLink]="['/campaigns', campaign.id, 'members']">

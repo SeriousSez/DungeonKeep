@@ -7,10 +7,11 @@ import { DropdownComponent, DropdownOption } from '../../components/dropdown/dro
 import { ItemDetailModalComponent } from '../../components/item-detail-modal/item-detail-modal.component';
 import { equipmentCatalog } from '../../data/new-character-standard-page.data';
 import type { InventoryEntry } from '../../data/new-character-standard-page.types';
+import type { CampaignWorldNote, CampaignWorldNoteCategory } from '../../models/dungeon.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
-type CampaignSection = 'party' | 'sessions' | 'npcs' | 'loot' | 'threads' | 'members';
+type CampaignSection = 'party' | 'sessions' | 'npcs' | 'loot' | 'threads' | 'notes' | 'members';
 type ThreatLevel = 'Low' | 'Moderate' | 'High' | 'Deadly';
 
 const lootRarityOrder = ['Common', 'Uncommon', 'Rare', 'Very Rare', 'Legendary', 'Artifact', 'Unique', '???'] as const;
@@ -39,6 +40,7 @@ export class CampaignSectionPageComponent {
             case 'npcs':
             case 'loot':
             case 'threads':
+            case 'notes':
             case 'members':
                 return routeSection;
             default:
@@ -64,6 +66,12 @@ export class CampaignSectionPageComponent {
     readonly lootDraft = signal('');
     readonly selectedLootCategory = signal('All');
     readonly selectedLootRarity = signal('All');
+    readonly noteEditorOpen = signal(false);
+    readonly noteEditorMode = signal<'add' | 'edit'>('add');
+    readonly noteEditorId = signal<string | null>(null);
+    readonly noteTitle = signal('');
+    readonly noteCategory = signal<CampaignWorldNoteCategory>('Lore');
+    readonly noteContent = signal('');
     readonly inviteEmail = signal('');
     readonly sectionFeedback = signal('');
 
@@ -76,6 +84,15 @@ export class CampaignSectionPageComponent {
         { value: 'Moderate', label: 'Moderate', description: 'Pressure is present, but manageable.' },
         { value: 'High', label: 'High', description: 'Meaningful danger or serious complications.' },
         { value: 'Deadly', label: 'Deadly', description: 'A major turning point with real stakes.' }
+    ];
+    readonly worldNoteCategoryOptions: DropdownOption[] = [
+        { value: 'Backstory', label: 'Backstory', description: 'History, myths, lineage, and old promises.' },
+        { value: 'Organization', label: 'Organization', description: 'Guilds, courts, cults, crews, and factions.' },
+        { value: 'Ally', label: 'Ally', description: 'Trusted patrons, guides, and recurring friends.' },
+        { value: 'Enemy', label: 'Enemy', description: 'Rivals, villains, hunters, and hostile powers.' },
+        { value: 'Location', label: 'Location', description: 'Settlements, ruins, landmarks, and strongholds.' },
+        { value: 'Lore', label: 'Lore', description: 'Setting truths, rumors, customs, and magical rules.' },
+        { value: 'Custom', label: 'Custom', description: 'Anything that does not fit the main buckets.' }
     ];
 
     readonly selectedCampaign = computed(() => {
@@ -112,6 +129,7 @@ export class CampaignSectionPageComponent {
 
         return campaign.openThreads.filter((thread) => thread.visibility === 'Party');
     });
+    readonly worldNotes = computed(() => this.selectedCampaign()?.worldNotes ?? []);
     readonly lootCategories = computed(() => {
         return ['All', ...new Set(equipmentCatalog.map((item) => item.category).sort((left, right) => left.localeCompare(right)))];
     });
@@ -159,6 +177,8 @@ export class CampaignSectionPageComponent {
                 return 'Campaign Loot';
             case 'threads':
                 return 'Open Threads';
+            case 'notes':
+                return 'World Notes';
             case 'members':
                 return 'Campaign Members';
         }
@@ -176,6 +196,8 @@ export class CampaignSectionPageComponent {
                 return 'Track treasure, clues, debts, and notable items the party has collected along the way.';
             case 'threads':
                 return 'Surface the unresolved problems, secrets, and hooks the party is still chasing.';
+            case 'notes':
+                return 'Capture persistent lore, key allies, enemies, factions, and locations so campaign knowledge stays easy to reference.';
             case 'members':
                 return 'See who has access to the campaign and whether each invite is active or still pending.';
         }
@@ -498,6 +520,96 @@ export class CampaignSectionPageComponent {
         this.cdr.detectChanges();
     }
 
+    openAddWorldNoteForm(): void {
+        this.clearSectionFeedback();
+        this.noteEditorMode.set('add');
+        this.noteEditorId.set(null);
+        this.noteTitle.set('');
+        this.noteCategory.set('Lore');
+        this.noteContent.set('');
+        this.noteEditorOpen.set(true);
+    }
+
+    openEditWorldNoteForm(note: CampaignWorldNote): void {
+        this.clearSectionFeedback();
+        this.noteEditorMode.set('edit');
+        this.noteEditorId.set(note.id);
+        this.noteTitle.set(note.title);
+        this.noteCategory.set(note.category);
+        this.noteContent.set(note.content);
+        this.noteEditorOpen.set(true);
+    }
+
+    closeWorldNoteForm(): void {
+        this.noteEditorId.set(null);
+        this.noteEditorOpen.set(false);
+    }
+
+    updateWorldNoteTitle(value: string): void {
+        this.noteTitle.set(value);
+    }
+
+    updateWorldNoteCategory(value: string | number): void {
+        this.noteCategory.set(this.normalizeWorldNoteCategory(value));
+    }
+
+    updateWorldNoteContent(value: string): void {
+        this.noteContent.set(value);
+    }
+
+    async submitWorldNote(): Promise<void> {
+        const campaign = this.selectedCampaign();
+        if (!campaign || campaign.currentUserRole !== 'Owner') {
+            return;
+        }
+
+        const title = this.noteTitle().trim();
+        const content = this.noteContent().trim();
+
+        if (!title || !content) {
+            this.sectionFeedback.set('Add both a note title and note details before saving.');
+            this.cdr.detectChanges();
+            return;
+        }
+
+        const payload = {
+            title,
+            category: this.noteCategory(),
+            content
+        };
+
+        const noteId = this.noteEditorId();
+        const saved = this.noteEditorMode() === 'edit' && noteId
+            ? await this.store.updateCampaignWorldNote(campaign.id, noteId, payload)
+            : await this.store.addCampaignWorldNote(campaign.id, payload);
+
+        this.sectionFeedback.set(saved
+            ? this.noteEditorMode() === 'edit' ? 'World note updated.' : 'World note added.'
+            : 'Unable to save the world note right now.');
+
+        if (saved) {
+            this.closeWorldNoteForm();
+        }
+
+        this.cdr.detectChanges();
+    }
+
+    async deleteWorldNote(noteId: string): Promise<void> {
+        const campaign = this.selectedCampaign();
+        if (!campaign || campaign.currentUserRole !== 'Owner') {
+            return;
+        }
+
+        const removed = await this.store.removeCampaignWorldNote(campaign.id, noteId);
+        this.sectionFeedback.set(removed ? 'World note removed.' : 'Unable to remove the world note right now.');
+
+        if (removed && this.noteEditorId() === noteId) {
+            this.closeWorldNoteForm();
+        }
+
+        this.cdr.detectChanges();
+    }
+
     submitThread(): void {
         const text = this.newThreadText().trim();
         const campaign = this.selectedCampaign();
@@ -531,5 +643,20 @@ export class CampaignSectionPageComponent {
         this.store.selectCampaign(campaign.id);
         this.store.archiveThread(threadId);
         this.closeAddThreadModal();
+    }
+
+    private normalizeWorldNoteCategory(value: string | number): CampaignWorldNoteCategory {
+        switch (value) {
+            case 'Backstory':
+            case 'Organization':
+            case 'Ally':
+            case 'Enemy':
+            case 'Location':
+            case 'Lore':
+            case 'Custom':
+                return value;
+            default:
+                return 'Lore';
+        }
     }
 }

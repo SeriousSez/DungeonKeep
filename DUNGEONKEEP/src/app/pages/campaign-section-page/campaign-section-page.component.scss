@@ -155,7 +155,8 @@
 .session-cards,
 .tag-grid,
 .member-list,
-.threads-list {
+.threads-list,
+.world-note-list {
     display: grid;
     gap: 14px;
 }
@@ -346,6 +347,58 @@ textarea {
     line-height: 1.5;
 }
 
+.world-note-editor,
+.world-note-card {
+    display: grid;
+    gap: 14px;
+    padding: 18px;
+    border: 1px solid var(--panel-border);
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--surface-raised) 88%, var(--panel-bg) 12%);
+}
+
+.world-note-editor-header,
+.world-note-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.world-note-editor-header h3,
+.world-note-card h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    color: var(--text-main);
+}
+
+.world-note-form-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(220px, 1fr);
+    gap: 12px;
+}
+
+.world-note-category-field {
+    align-self: end;
+}
+
+.world-note-editor-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.world-note-heading {
+    display: grid;
+    gap: 10px;
+}
+
+.world-note-card p {
+    margin: 0;
+    color: var(--text-muted);
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
 .equipment-filter-label {
     font-size: 0.78rem;
     font-weight: 700;
@@ -528,8 +581,14 @@ textarea {
     .thread-row,
     .party-member-card,
     .tag-card-header,
+    .world-note-editor-header,
+    .world-note-card-header,
     .inline-creator-row {
         flex-direction: column;
+    }
+
+    .world-note-form-grid {
+        grid-template-columns: 1fr;
     }
 
     .member-pill-group,

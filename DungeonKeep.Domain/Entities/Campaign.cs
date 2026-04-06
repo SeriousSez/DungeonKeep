@@ -15,6 +15,8 @@ public sealed class Campaign
     public string NpcsJson { get; set; } = "[]";
     public string LootJson { get; set; } = "[]";
     public string OpenThreadsJson { get; set; } = "[]";
+    public string WorldNotesJson { get; set; } = "[]";
+    public string CampaignMapJson { get; set; } = "{}";
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public List<Character> Characters { get; set; } = [];

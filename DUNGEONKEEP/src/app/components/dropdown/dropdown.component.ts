@@ -33,8 +33,10 @@ export class DropdownComponent {
     readonly options = input.required<ReadonlyArray<DropdownOption>>();
     readonly placeholder = input<string>('');
     readonly minWidth = input<number | null>(null);
+    readonly panelMinWidth = input<number | null>(null);
     readonly size = input<'wide' | 'compact' | 'narrow'>('compact');
     readonly optionDensity = input<'regular' | 'dense'>('regular');
+    readonly showOptionDescriptions = input<boolean>(true);
     readonly disabled = input<boolean>(false);
     readonly searchable = input<boolean>(false);
     readonly searchPlaceholder = input<string>('Search options...');
@@ -144,6 +146,10 @@ export class DropdownComponent {
         // Reserve vertical space for panel padding/border and optional search input.
         const panelChromeHeight = this.searchable() ? 58 : 18;
         return Math.max(96, this.panelMaxHeight() - panelChromeHeight);
+    }
+
+    getPanelMinWidth(): number | null {
+        return this.panelMinWidth() ?? this.minWidth() ?? null;
     }
 
     onValueChange(newValue: string | number): void {

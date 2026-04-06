@@ -54,6 +54,8 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
             entity.Property(c => c.NpcsJson).HasMaxLength(8000).IsRequired();
             entity.Property(c => c.LootJson).HasMaxLength(8000).IsRequired();
             entity.Property(c => c.OpenThreadsJson).HasMaxLength(8000).IsRequired();
+            entity.Property(c => c.WorldNotesJson).HasMaxLength(16000).IsRequired();
+            entity.Property(c => c.CampaignMapJson).HasMaxLength(48000).IsRequired();
             entity.Property(c => c.CreatedAtUtc).IsRequired();
 
             entity.HasMany(c => c.Characters)

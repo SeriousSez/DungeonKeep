@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { DungeonStoreService } from '../../state/dungeon-store.service';
@@ -12,4 +12,8 @@ import { DungeonStoreService } from '../../state/dungeon-store.service';
 })
 export class DashboardPageComponent {
     readonly store = inject(DungeonStoreService);
+    readonly notesLink = computed(() => {
+        const campaign = this.store.selectedCampaign();
+        return campaign ? ['/campaigns', campaign.id, 'notes'] : ['/campaigns/new'];
+    });
 }

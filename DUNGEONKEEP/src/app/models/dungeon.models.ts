@@ -24,6 +24,11 @@ export type CharacterStatus = 'Ready' | 'Resting' | 'Recovering';
 export type CampaignMemberRole = 'Owner' | 'Member';
 export type CampaignMemberStatus = 'Active' | 'Pending';
 export type CampaignThreadVisibility = 'Party' | 'GMOnly';
+export type CampaignWorldNoteCategory = 'Backstory' | 'Organization' | 'Ally' | 'Enemy' | 'Location' | 'Lore' | 'Custom';
+export type CampaignMapBackground = 'Parchment' | 'Cavern' | 'Coast' | 'City';
+export type CampaignMapIconType = 'Keep' | 'Town' | 'Camp' | 'Dungeon' | 'Danger' | 'Treasure' | 'Portal' | 'Tower';
+export type CampaignMapDecorationType = 'Forest' | 'Mountain' | 'Hill' | 'Reef' | 'Cave' | 'Ward';
+export type CampaignMapLabelTone = 'Region' | 'Feature';
 
 export interface SessionPrep {
     id: string;
@@ -48,6 +53,73 @@ export interface CampaignThread {
     visibility: CampaignThreadVisibility;
 }
 
+export interface CampaignWorldNote {
+    id: string;
+    title: string;
+    category: CampaignWorldNoteCategory;
+    content: string;
+}
+
+export interface CampaignMapPoint {
+    x: number;
+    y: number;
+}
+
+export interface CampaignMapStroke {
+    id: string;
+    color: string;
+    width: number;
+    points: CampaignMapPoint[];
+}
+
+export interface CampaignMapIcon {
+    id: string;
+    type: CampaignMapIconType;
+    label: string;
+    x: number;
+    y: number;
+}
+
+export interface CampaignMapDecoration {
+    id: string;
+    type: CampaignMapDecorationType;
+    x: number;
+    y: number;
+    scale: number;
+    rotation: number;
+    opacity: number;
+}
+
+export interface CampaignMapLabel {
+    id: string;
+    text: string;
+    tone: CampaignMapLabelTone;
+    x: number;
+    y: number;
+    rotation: number;
+}
+
+export interface CampaignMapLayers {
+    rivers: CampaignMapStroke[];
+    mountainChains: CampaignMapDecoration[];
+    forestBelts: CampaignMapDecoration[];
+}
+
+export interface CampaignMap {
+    background: CampaignMapBackground;
+    backgroundImageUrl: string;
+    strokes: CampaignMapStroke[];
+    icons: CampaignMapIcon[];
+    decorations: CampaignMapDecoration[];
+    labels: CampaignMapLabel[];
+    layers: CampaignMapLayers;
+}
+
+export interface CampaignMapBoard extends CampaignMap {
+    id: string;
+    name: string;
+}
+
 export interface Campaign {
     id: string;
     name: string;
@@ -62,6 +134,10 @@ export interface Campaign {
     partyCharacterIds: string[];
     sessions: SessionPrep[];
     openThreads: CampaignThread[];
+    worldNotes: CampaignWorldNote[];
+    map: CampaignMap;
+    maps: CampaignMapBoard[];
+    activeMapId: string;
     loot: string[];
     npcs: string[];
     currentUserRole?: CampaignMemberRole;

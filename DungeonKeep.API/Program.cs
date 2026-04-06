@@ -92,6 +92,22 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
+        dbContext.Database.ExecuteSqlRaw("ALTER TABLE Campaigns ADD COLUMN WorldNotesJson TEXT NOT NULL DEFAULT '[]';");
+    }
+    catch
+    {
+    }
+
+    try
+    {
+        dbContext.Database.ExecuteSqlRaw("ALTER TABLE Campaigns ADD COLUMN CampaignMapJson TEXT NOT NULL DEFAULT '{}';");
+    }
+    catch
+    {
+    }
+
+    try
+    {
         dbContext.Database.ExecuteSqlRaw("ALTER TABLE Characters ADD COLUMN Status TEXT NOT NULL DEFAULT 'Ready';");
     }
     catch
@@ -202,6 +218,8 @@ static void EnsureCharactersCampaignIdIsNullable(DungeonKeepDbContext dbContext)
 static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)
 {
     EnsureColumnExists(dbContext, "Campaigns", "OpenThreadsJson", "TEXT NOT NULL DEFAULT '[]'");
+    EnsureColumnExists(dbContext, "Campaigns", "WorldNotesJson", "TEXT NOT NULL DEFAULT '[]'");
+    EnsureColumnExists(dbContext, "Campaigns", "CampaignMapJson", "TEXT NOT NULL DEFAULT '{}'");
     EnsureColumnExists(dbContext, "Campaigns", "SessionsJson", "TEXT NOT NULL DEFAULT '[]'");
     EnsureColumnExists(dbContext, "Campaigns", "NpcsJson", "TEXT NOT NULL DEFAULT '[]'");
     EnsureColumnExists(dbContext, "Campaigns", "LootJson", "TEXT NOT NULL DEFAULT '[]'");

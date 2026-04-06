@@ -19,6 +19,9 @@ public sealed class CampaignService(
     private static readonly CampaignSessionDto[] DefaultSessions = [];
     private static readonly string[] DefaultNpcs = [];
     private static readonly string[] DefaultLoot = [];
+    private static readonly CampaignWorldNoteDto[] DefaultWorldNotes = [];
+    private static readonly CampaignMapDto DefaultCampaignMap = new("Parchment", string.Empty, [], [], [], [], new CampaignMapLayersDto([], [], []));
+    private static readonly CampaignMapBoardDto DefaultCampaignMapBoard = new(Guid.Parse("11111111-1111-1111-1111-111111111111"), "Main Map", "Parchment", string.Empty, [], [], [], [], new CampaignMapLayersDto([], [], []));
 
     public async Task<IReadOnlyList<CampaignDto>> GetAllAsync(Guid userId, CancellationToken cancellationToken = default)
     {
@@ -48,6 +51,8 @@ public sealed class CampaignService(
             NpcsJson = SerializeNamedItems(DefaultNpcs),
             LootJson = SerializeNamedItems(DefaultLoot),
             OpenThreadsJson = SerializeThreads(DefaultOpenThreads),
+            WorldNotesJson = SerializeWorldNotes(DefaultWorldNotes),
+            CampaignMapJson = SerializeCampaignMapLibrary(new CampaignMapLibraryDto(DefaultCampaignMapBoard.Id, [DefaultCampaignMapBoard])),
             CreatedAtUtc = DateTime.UtcNow,
             Memberships =
             [
@@ -280,6 +285,82 @@ public sealed class CampaignService(
         return updated is null ? null : MapCampaign(updated, userId);
     }
 
+    public async Task<CampaignDto?> AddWorldNoteAsync(Guid campaignId, CreateCampaignWorldNoteRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
+        if (campaign is null || string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.Content))
+        {
+            return null;
+        }
+
+        var updated = await campaignRepository.AddWorldNoteAsync(
+            campaignId,
+            new CampaignWorldNoteDto(Guid.NewGuid(), request.Title.Trim(), NormalizeWorldNoteCategory(request.Category), request.Content.Trim()),
+            cancellationToken);
+
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
+    public async Task<CampaignDto?> UpdateWorldNoteAsync(Guid campaignId, Guid noteId, UpdateCampaignWorldNoteRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
+        if (campaign is null || noteId == Guid.Empty || string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.Content))
+        {
+            return null;
+        }
+
+        var updated = await campaignRepository.UpdateWorldNoteAsync(
+            campaignId,
+            new CampaignWorldNoteDto(noteId, request.Title.Trim(), NormalizeWorldNoteCategory(request.Category), request.Content.Trim()),
+            cancellationToken);
+
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
+    public async Task<CampaignDto?> DeleteWorldNoteAsync(Guid campaignId, DeleteCampaignWorldNoteRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
+        if (campaign is null || request.NoteId == Guid.Empty)
+        {
+            return null;
+        }
+
+        var updated = await campaignRepository.RemoveWorldNoteAsync(campaignId, request.NoteId, cancellationToken);
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
+    public async Task<CampaignDto?> UpdateMapAsync(Guid campaignId, UpdateCampaignMapRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var library = request.Library is not null
+            ? NormalizeCampaignMapLibrary(request.Library)
+            : request.Map is not null
+                ? NormalizeCampaignMapLibrary(new CampaignMapLibraryDto(DefaultCampaignMapBoard.Id, [new CampaignMapBoardDto(
+                    DefaultCampaignMapBoard.Id,
+                    DefaultCampaignMapBoard.Name,
+                    request.Map.Background,
+                    request.Map.BackgroundImageUrl,
+                    request.Map.Strokes,
+                    request.Map.Icons,
+                    request.Map.Decorations,
+                    request.Map.Labels,
+                    request.Map.Layers)]))
+                : null;
+
+        if (library is null)
+        {
+            return null;
+        }
+
+        var updated = await campaignRepository.UpdateMapAsync(campaignId, library, cancellationToken);
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
     public async Task<CampaignDto?> InviteMemberAsync(Guid campaignId, InviteCampaignMemberRequest request, AuthenticatedUser user, string? clientBaseUrl, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.Email))
@@ -414,6 +495,9 @@ public sealed class CampaignService(
             .FirstOrDefault(member => member.UserId == userId && member.Status == "Active")
             ?.Role ?? "Member";
 
+        var library = ParseCampaignMapLibrary(campaign.CampaignMapJson);
+        var activeMap = library.Maps.FirstOrDefault(map => map.Id == library.ActiveMapId) ?? library.Maps[0];
+
         return new CampaignDto(
             campaign.Id,
             campaign.Name,
@@ -430,6 +514,10 @@ public sealed class CampaignService(
             ParseNamedItems(campaign.NpcsJson),
             ParseNamedItems(campaign.LootJson),
             ParseOpenThreads(campaign.OpenThreadsJson),
+            ParseWorldNotes(campaign.WorldNotesJson),
+            new CampaignMapDto(activeMap.Background, activeMap.BackgroundImageUrl, activeMap.Strokes, activeMap.Icons, activeMap.Decorations, activeMap.Labels, activeMap.Layers),
+            library.Maps,
+            activeMap.Id,
             currentUserRole,
             campaign.Memberships
                 .OrderBy(member => member.Status == "Active" ? 0 : 1)
@@ -531,6 +619,78 @@ public sealed class CampaignService(
         }
     }
 
+    private static IReadOnlyList<CampaignWorldNoteDto> ParseWorldNotes(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return DefaultWorldNotes;
+        }
+
+        try
+        {
+            var notes = JsonSerializer.Deserialize<List<CampaignWorldNoteDto>>(json);
+            if (notes is { Count: > 0 })
+            {
+                return notes
+                    .Where(note => !string.IsNullOrWhiteSpace(note.Title) && !string.IsNullOrWhiteSpace(note.Content))
+                    .Select(note => new CampaignWorldNoteDto(
+                        note.Id == Guid.Empty ? Guid.NewGuid() : note.Id,
+                        note.Title.Trim(),
+                        NormalizeWorldNoteCategory(note.Category),
+                        note.Content.Trim()))
+                    .ToList();
+            }
+        }
+        catch
+        {
+        }
+
+        return DefaultWorldNotes;
+    }
+
+    private static CampaignMapLibraryDto ParseCampaignMapLibrary(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new CampaignMapLibraryDto(DefaultCampaignMapBoard.Id, [DefaultCampaignMapBoard]);
+        }
+
+        try
+        {
+            var library = JsonSerializer.Deserialize<CampaignMapLibraryDto>(json);
+            if (library is not null)
+            {
+                return NormalizeCampaignMapLibrary(library);
+            }
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            var legacyMap = JsonSerializer.Deserialize<CampaignMapDto>(json);
+            if (legacyMap is not null)
+            {
+                return NormalizeCampaignMapLibrary(new CampaignMapLibraryDto(DefaultCampaignMapBoard.Id, [new CampaignMapBoardDto(
+                    DefaultCampaignMapBoard.Id,
+                    DefaultCampaignMapBoard.Name,
+                    legacyMap.Background,
+                    legacyMap.BackgroundImageUrl,
+                    legacyMap.Strokes,
+                    legacyMap.Icons,
+                    legacyMap.Decorations,
+                    legacyMap.Labels,
+                    legacyMap.Layers)]));
+            }
+        }
+        catch
+        {
+        }
+
+        return new CampaignMapLibraryDto(DefaultCampaignMapBoard.Id, [DefaultCampaignMapBoard]);
+    }
+
     private static string SerializeThreads(IEnumerable<CampaignThreadDto> threads)
     {
         return JsonSerializer.Serialize(threads.Select(thread => new CampaignThreadDto(
@@ -550,12 +710,308 @@ public sealed class CampaignService(
             NormalizeThreat(session.Threat))));
     }
 
+    private static string SerializeWorldNotes(IEnumerable<CampaignWorldNoteDto> notes)
+    {
+        return JsonSerializer.Serialize(notes
+            .Where(note => !string.IsNullOrWhiteSpace(note.Title) && !string.IsNullOrWhiteSpace(note.Content))
+            .Select(note => new CampaignWorldNoteDto(
+                note.Id == Guid.Empty ? Guid.NewGuid() : note.Id,
+                note.Title.Trim(),
+                NormalizeWorldNoteCategory(note.Category),
+                note.Content.Trim())));
+    }
+
+    private static string SerializeCampaignMapLibrary(CampaignMapLibraryDto library)
+    {
+        return JsonSerializer.Serialize(NormalizeCampaignMapLibrary(library));
+    }
+
     private static string SerializeNamedItems(IEnumerable<string> items)
     {
         return JsonSerializer.Serialize(items
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Select(item => item.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase));
+    }
+
+    private static string NormalizeWorldNoteCategory(string? category)
+    {
+        return category?.Trim() switch
+        {
+            "Backstory" => "Backstory",
+            "Organization" => "Organization",
+            "Ally" => "Ally",
+            "Enemy" => "Enemy",
+            "Location" => "Location",
+            "Lore" => "Lore",
+            "Custom" => "Custom",
+            _ => "Lore"
+        };
+    }
+
+    private static CampaignMapDto NormalizeCampaignMap(CampaignMapDto map)
+    {
+        var normalizedStrokes = (map.Strokes ?? [])
+            .Where(stroke => stroke.Points is { Count: > 0 })
+            .Select(stroke => new CampaignMapStrokeDto(
+                stroke.Id == Guid.Empty ? Guid.NewGuid() : stroke.Id,
+                NormalizeMapColor(stroke.Color),
+                Math.Clamp(stroke.Width, 2, 18),
+                NormalizeMapPoints(stroke.Points)))
+            .Where(stroke => stroke.Points.Count > 0)
+            .ToList();
+
+        var normalizedIcons = (map.Icons ?? [])
+            .Select(icon => new CampaignMapIconDto(
+                icon.Id == Guid.Empty ? Guid.NewGuid() : icon.Id,
+                NormalizeMapIconType(icon.Type),
+                string.IsNullOrWhiteSpace(icon.Label) ? DefaultMapIconLabel(icon.Type) : icon.Label.Trim(),
+                ClampMapCoordinate(icon.X),
+                ClampMapCoordinate(icon.Y)))
+            .ToList();
+
+        var normalizedDecorations = (map.Decorations ?? [])
+            .Select(decoration => new CampaignMapDecorationDto(
+                decoration.Id == Guid.Empty ? Guid.NewGuid() : decoration.Id,
+                NormalizeMapDecorationType(decoration.Type),
+                ClampMapCoordinate(decoration.X),
+                ClampMapCoordinate(decoration.Y),
+                ClampMapScale(decoration.Scale),
+                ClampMapRotation(decoration.Rotation),
+                ClampMapOpacity(decoration.Opacity)))
+            .ToList();
+
+        var normalizedLabels = (map.Labels ?? [])
+            .Where(label => !string.IsNullOrWhiteSpace(label.Text))
+            .Select(label => new CampaignMapLabelDto(
+                label.Id == Guid.Empty ? Guid.NewGuid() : label.Id,
+                label.Text.Trim(),
+                NormalizeMapLabelTone(label.Tone),
+                ClampMapCoordinate(label.X),
+                ClampMapCoordinate(label.Y),
+                ClampMapRotation(label.Rotation)))
+            .ToList();
+
+        var normalizedLayers = new CampaignMapLayersDto(
+            NormalizeMapStrokeCollection(map.Layers?.Rivers),
+            NormalizeMapDecorationCollection(map.Layers?.MountainChains),
+            NormalizeMapDecorationCollection(map.Layers?.ForestBelts));
+
+        return new CampaignMapDto(
+            NormalizeMapBackground(map.Background),
+            NormalizeMapBackgroundImageUrl(map.BackgroundImageUrl),
+            normalizedStrokes,
+            normalizedIcons,
+            normalizedDecorations,
+            normalizedLabels,
+            normalizedLayers);
+    }
+
+    private static CampaignMapBoardDto NormalizeCampaignMapBoard(CampaignMapBoardDto map)
+    {
+        var normalized = NormalizeCampaignMap(new CampaignMapDto(
+            map.Background,
+            map.BackgroundImageUrl,
+            map.Strokes,
+            map.Icons,
+            map.Decorations,
+            map.Labels,
+            map.Layers));
+
+        return new CampaignMapBoardDto(
+            map.Id == Guid.Empty ? Guid.NewGuid() : map.Id,
+            string.IsNullOrWhiteSpace(map.Name) ? "Untitled Map" : map.Name.Trim(),
+            normalized.Background,
+            normalized.BackgroundImageUrl,
+            normalized.Strokes,
+            normalized.Icons,
+            normalized.Decorations,
+            normalized.Labels,
+            normalized.Layers);
+    }
+
+    private static CampaignMapLibraryDto NormalizeCampaignMapLibrary(CampaignMapLibraryDto library)
+    {
+        var maps = (library.Maps ?? [])
+            .Select(NormalizeCampaignMapBoard)
+            .DistinctBy(map => map.Id)
+            .ToList();
+
+        if (maps.Count == 0)
+        {
+            maps.Add(new CampaignMapBoardDto(
+                DefaultCampaignMapBoard.Id,
+                DefaultCampaignMapBoard.Name,
+                DefaultCampaignMapBoard.Background,
+                DefaultCampaignMapBoard.BackgroundImageUrl,
+                DefaultCampaignMapBoard.Strokes,
+                DefaultCampaignMapBoard.Icons,
+                DefaultCampaignMapBoard.Decorations,
+                DefaultCampaignMapBoard.Labels,
+                DefaultCampaignMapBoard.Layers));
+        }
+
+        var activeMapId = library.ActiveMapId != Guid.Empty && maps.Any(map => map.Id == library.ActiveMapId)
+            ? library.ActiveMapId
+            : maps[0].Id;
+
+        return new CampaignMapLibraryDto(activeMapId, maps);
+    }
+
+    private static IReadOnlyList<CampaignMapPointDto> NormalizeMapPoints(IReadOnlyList<CampaignMapPointDto> points)
+    {
+        return points
+            .Select(point => new CampaignMapPointDto(ClampMapCoordinate(point.X), ClampMapCoordinate(point.Y)))
+            .Distinct()
+            .ToList();
+    }
+
+    private static IReadOnlyList<CampaignMapStrokeDto> NormalizeMapStrokeCollection(IReadOnlyList<CampaignMapStrokeDto>? strokes)
+    {
+        return (strokes ?? [])
+            .Where(stroke => stroke.Points is { Count: > 0 })
+            .Select(stroke => new CampaignMapStrokeDto(
+                stroke.Id == Guid.Empty ? Guid.NewGuid() : stroke.Id,
+                NormalizeMapColor(stroke.Color),
+                Math.Clamp(stroke.Width, 2, 18),
+                NormalizeMapPoints(stroke.Points)))
+            .Where(stroke => stroke.Points.Count > 0)
+            .ToList();
+    }
+
+    private static IReadOnlyList<CampaignMapDecorationDto> NormalizeMapDecorationCollection(IReadOnlyList<CampaignMapDecorationDto>? decorations)
+    {
+        return (decorations ?? [])
+            .Select(decoration => new CampaignMapDecorationDto(
+                decoration.Id == Guid.Empty ? Guid.NewGuid() : decoration.Id,
+                NormalizeMapDecorationType(decoration.Type),
+                ClampMapCoordinate(decoration.X),
+                ClampMapCoordinate(decoration.Y),
+                ClampMapScale(decoration.Scale),
+                ClampMapRotation(decoration.Rotation),
+                ClampMapOpacity(decoration.Opacity)))
+            .ToList();
+    }
+
+    private static double ClampMapCoordinate(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return 0.5d;
+        }
+
+        return Math.Clamp(value, 0d, 1d);
+    }
+
+    private static string NormalizeMapBackground(string? background)
+    {
+        return background?.Trim() switch
+        {
+            "Cavern" => "Cavern",
+            "Coast" => "Coast",
+            "City" => "City",
+            _ => "Parchment"
+        };
+    }
+
+    private static string NormalizeMapBackgroundImageUrl(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+    }
+
+    private static string NormalizeMapIconType(string? iconType)
+    {
+        return iconType?.Trim() switch
+        {
+            "Town" => "Town",
+            "Camp" => "Camp",
+            "Dungeon" => "Dungeon",
+            "Danger" => "Danger",
+            "Treasure" => "Treasure",
+            "Portal" => "Portal",
+            "Tower" => "Tower",
+            _ => "Keep"
+        };
+    }
+
+    private static string NormalizeMapDecorationType(string? decorationType)
+    {
+        return decorationType?.Trim() switch
+        {
+            "Mountain" => "Mountain",
+            "Hill" => "Hill",
+            "Reef" => "Reef",
+            "Cave" => "Cave",
+            "Ward" => "Ward",
+            _ => "Forest"
+        };
+    }
+
+    private static string NormalizeMapLabelTone(string? tone)
+    {
+        return tone?.Trim() switch
+        {
+            "Feature" => "Feature",
+            _ => "Region"
+        };
+    }
+
+    private static string DefaultMapIconLabel(string? iconType)
+    {
+        return NormalizeMapIconType(iconType) switch
+        {
+            "Town" => "Town",
+            "Camp" => "Camp",
+            "Dungeon" => "Dungeon",
+            "Danger" => "Hazard",
+            "Treasure" => "Cache",
+            "Portal" => "Gate",
+            "Tower" => "Tower",
+            _ => "Keep"
+        };
+    }
+
+    private static string NormalizeMapColor(string? color)
+    {
+        return color?.Trim() switch
+        {
+            "#4b3a2a" => "#4b3a2a",
+            "#8a5a2b" => "#8a5a2b",
+            "#507255" => "#507255",
+            "#385f7a" => "#385f7a",
+            "#a03d2f" => "#a03d2f",
+            _ => "#8a5a2b"
+        };
+    }
+
+    private static double ClampMapScale(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return 1d;
+        }
+
+        return Math.Clamp(value, 0.55d, 1.8d);
+    }
+
+    private static double ClampMapRotation(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return 0d;
+        }
+
+        return Math.Clamp(value, -180d, 180d);
+    }
+
+    private static double ClampMapOpacity(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return 0.75d;
+        }
+
+        return Math.Clamp(value, 0.24d, 1d);
     }
 
     private static string NormalizeThreat(string? threat)
