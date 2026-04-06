@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -201,10 +202,28 @@ export class NewCampaignPageComponent {
             this.inviteFeedback.set('');
             this.inviteEmail.set('');
             await this.router.navigate(['/campaigns', created.id]);
+        } catch (error) {
+            this.createError.set(this.readApiError(error, 'Could not create campaign right now. Please try again.'));
         } finally {
             this.createPending.set(false);
             this.cdr.detectChanges();
         }
+    }
+
+    private readApiError(error: unknown, fallback: string): string {
+        if (error instanceof HttpErrorResponse) {
+            if (typeof error.error === 'string' && error.error.trim()) {
+                return error.error.trim();
+            }
+
+            if (error.error && typeof error.error === 'object') {
+                const detail = 'detail' in error.error && typeof error.error.detail === 'string' ? error.error.detail : '';
+                const title = 'title' in error.error && typeof error.error.title === 'string' ? error.error.title : '';
+                return detail || title || fallback;
+            }
+        }
+
+        return fallback;
     }
 
     updateInviteEmail(value: string): void {

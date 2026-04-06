@@ -450,25 +450,21 @@ export class DungeonStoreService {
     }
 
     private async addCampaignFromApi(draft: CampaignDraft): Promise<Campaign | null> {
-        try {
-            const created = await this.api.createCampaign({
-                name: draft.name,
-                setting: draft.setting,
-                tone: draft.tone,
-                levelStart: Math.min(Math.max(Math.trunc(draft.levelStart), 1), 20),
-                levelEnd: Math.min(Math.max(Math.trunc(draft.levelEnd), Math.min(Math.max(Math.trunc(draft.levelStart), 1), 20)), 20),
-                hook: draft.hook,
-                nextSession: draft.nextSession,
-                summary: draft.summary || 'A newly formed campaign waits for its first legend.'
-            });
+        const created = await this.api.createCampaign({
+            name: draft.name,
+            setting: draft.setting,
+            tone: draft.tone,
+            levelStart: Math.min(Math.max(Math.trunc(draft.levelStart), 1), 20),
+            levelEnd: Math.min(Math.max(Math.trunc(draft.levelEnd), Math.min(Math.max(Math.trunc(draft.levelStart), 1), 20)), 20),
+            hook: draft.hook,
+            nextSession: draft.nextSession,
+            summary: draft.summary || 'A newly formed campaign waits for its first legend.'
+        });
 
-            const campaign = this.mapCampaignFromApi(created, []);
-            this.campaigns.update((campaigns) => [campaign, ...campaigns]);
-            this.selectedCampaignId.set(campaign.id);
-            return campaign;
-        } catch {
-            return null;
-        }
+        const campaign = this.mapCampaignFromApi(created, []);
+        this.campaigns.update((campaigns) => [campaign, ...campaigns]);
+        this.selectedCampaignId.set(campaign.id);
+        return campaign;
     }
 
     private async addCharacterFromApi(draft: CharacterDraft): Promise<Character | null> {

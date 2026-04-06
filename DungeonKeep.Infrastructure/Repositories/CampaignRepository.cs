@@ -3,6 +3,7 @@ using DungeonKeep.ApplicationService.Interfaces;
 using DungeonKeep.Domain.Entities;
 using DungeonKeep.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 using System.Text.Json;
 
 namespace DungeonKeep.Infrastructure.Repositories;
@@ -70,25 +71,51 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         try
         {
             using var connection = dbContext.Database.GetDbConnection();
-            if (connection.State != System.Data.ConnectionState.Open)
+            if (connection.State != ConnectionState.Open)
             {
                 connection.Open();
             }
 
-            using var existsCommand = connection.CreateCommand();
-            existsCommand.CommandText = "SELECT 1 FROM pragma_table_info('Campaigns') WHERE name = 'CampaignMapJson' LIMIT 1;";
-            if (existsCommand.ExecuteScalar() is not null)
-            {
-                return true;
-            }
+            dbContext.Database.ExecuteSqlRaw("CREATE TABLE IF NOT EXISTS \"CampaignMemberships\" (\"Id\" TEXT NOT NULL CONSTRAINT \"PK_CampaignMemberships\" PRIMARY KEY, \"CampaignId\" TEXT NOT NULL, \"UserId\" TEXT NULL, \"Email\" TEXT NOT NULL, \"Role\" TEXT NOT NULL DEFAULT 'Member', \"Status\" TEXT NOT NULL DEFAULT 'Pending', \"InvitedByUserId\" TEXT NULL, \"CreatedAtUtc\" TEXT NOT NULL);");
+            dbContext.Database.ExecuteSqlRaw("CREATE UNIQUE INDEX IF NOT EXISTS \"IX_CampaignMemberships_CampaignId_Email\" ON \"CampaignMemberships\" (\"CampaignId\", \"Email\");");
 
-            dbContext.Database.ExecuteSqlRaw("ALTER TABLE \"Campaigns\" ADD COLUMN \"CampaignMapJson\" TEXT NOT NULL DEFAULT '{}';");
+            EnsureColumnExists(dbContext, "Campaigns", "OpenThreadsJson", "TEXT NOT NULL DEFAULT '[]'");
+            EnsureColumnExists(dbContext, "Campaigns", "WorldNotesJson", "TEXT NOT NULL DEFAULT '[]'");
+            EnsureColumnExists(dbContext, "Campaigns", "CampaignMapJson", "TEXT NOT NULL DEFAULT '{}'");
+            EnsureColumnExists(dbContext, "Campaigns", "SessionsJson", "TEXT NOT NULL DEFAULT '[]'");
+            EnsureColumnExists(dbContext, "Campaigns", "NpcsJson", "TEXT NOT NULL DEFAULT '[]'");
+            EnsureColumnExists(dbContext, "Campaigns", "LootJson", "TEXT NOT NULL DEFAULT '[]'");
+            EnsureColumnExists(dbContext, "Campaigns", "Tone", "TEXT NOT NULL DEFAULT 'Heroic'");
+            EnsureColumnExists(dbContext, "Campaigns", "LevelStart", "INTEGER NOT NULL DEFAULT 1");
+            EnsureColumnExists(dbContext, "Campaigns", "LevelEnd", "INTEGER NOT NULL DEFAULT 4");
+            EnsureColumnExists(dbContext, "Campaigns", "Hook", "TEXT NOT NULL DEFAULT ''");
+            EnsureColumnExists(dbContext, "Campaigns", "NextSession", "TEXT NOT NULL DEFAULT ''");
         }
         catch
         {
         }
 
         return true;
+    }
+
+    private static void EnsureColumnExists(DungeonKeepDbContext dbContext, string tableName, string columnName, string columnDefinition)
+    {
+        using var connection = dbContext.Database.GetDbConnection();
+        if (connection.State != ConnectionState.Open)
+        {
+            connection.Open();
+        }
+
+        using var existsCommand = connection.CreateCommand();
+        existsCommand.CommandText = $"SELECT 1 FROM pragma_table_info('{tableName}') WHERE name = '{columnName}' LIMIT 1;";
+        if (existsCommand.ExecuteScalar() is not null)
+        {
+            return;
+        }
+
+#pragma warning disable EF1003
+        dbContext.Database.ExecuteSqlRaw("ALTER TABLE \"" + tableName + "\" ADD COLUMN \"" + columnName + "\" " + columnDefinition + ";");
+#pragma warning restore EF1003
     }
 
     public async Task<Campaign?> AddSessionAsync(Guid campaignId, CampaignSessionDto session, CancellationToken cancellationToken = default)
