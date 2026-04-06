@@ -2598,7 +2598,17 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             return null;
         }
 
-        return new CampaignMapDecorationDto(Guid.NewGuid(), NormalizeGeneratedDecorationType(payload.Type), ClampGeneratedCoordinate(payload.X.Value), ClampGeneratedCoordinate(payload.Y.Value), Math.Clamp(payload.Scale ?? 1, 0.45, 1.8), Math.Clamp(payload.Rotation ?? 0, -180d, 180d), Math.Clamp(payload.Opacity ?? 0.65, 0.18, 1));
+        var decorationType = NormalizeGeneratedDecorationType(payload.Type);
+
+        return new CampaignMapDecorationDto(
+            Guid.NewGuid(),
+            decorationType,
+            DefaultGeneratedDecorationColor(decorationType),
+            ClampGeneratedCoordinate(payload.X.Value),
+            ClampGeneratedCoordinate(payload.Y.Value),
+            Math.Clamp(payload.Scale ?? 1, 0.45, 1.8),
+            Math.Clamp(payload.Rotation ?? 0, -180d, 180d),
+            Math.Clamp(payload.Opacity ?? 0.65, 0.18, 1));
     }
 
     private static CampaignMapLabelDto? NormalizeGeneratedCampaignMapLabel(GenerateCampaignMapLabelPayload? payload)
@@ -2699,6 +2709,18 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
     {
         var trimmed = color?.Trim();
         return string.IsNullOrWhiteSpace(trimmed) ? fallbackColor : trimmed;
+    }
+
+    private static string DefaultGeneratedDecorationColor(string decorationType)
+    {
+        return decorationType switch
+        {
+            "Mountain" => "#4b3a2a",
+            "Forest" => "#507255",
+            "Reef" => "#385f7a",
+            "Ward" => "#a03d2f",
+            _ => "#8a5a2b"
+        };
     }
 
     private static double ClampGeneratedCoordinate(double value)

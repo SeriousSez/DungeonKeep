@@ -774,6 +774,7 @@ public sealed class CampaignService(
             .Select(decoration => new CampaignMapDecorationDto(
                 decoration.Id == Guid.Empty ? Guid.NewGuid() : decoration.Id,
                 NormalizeMapDecorationType(decoration.Type),
+                NormalizeMapDecorationColor(decoration.Type, decoration.Color),
                 ClampMapCoordinate(decoration.X),
                 ClampMapCoordinate(decoration.Y),
                 ClampMapScale(decoration.Scale),
@@ -885,6 +886,7 @@ public sealed class CampaignService(
             .Select(decoration => new CampaignMapDecorationDto(
                 decoration.Id == Guid.Empty ? Guid.NewGuid() : decoration.Id,
                 NormalizeMapDecorationType(decoration.Type),
+                NormalizeMapDecorationColor(decoration.Type, decoration.Color),
                 ClampMapCoordinate(decoration.X),
                 ClampMapCoordinate(decoration.Y),
                 ClampMapScale(decoration.Scale),
@@ -981,6 +983,26 @@ public sealed class CampaignService(
             "#385f7a" => "#385f7a",
             "#a03d2f" => "#a03d2f",
             _ => "#8a5a2b"
+        };
+    }
+
+    private static string NormalizeMapDecorationColor(string? decorationType, string? color)
+    {
+        return color?.Trim() switch
+        {
+            "#4b3a2a" => "#4b3a2a",
+            "#8a5a2b" => "#8a5a2b",
+            "#507255" => "#507255",
+            "#385f7a" => "#385f7a",
+            "#a03d2f" => "#a03d2f",
+            _ => NormalizeMapDecorationType(decorationType) switch
+            {
+                "Mountain" => "#4b3a2a",
+                "Forest" => "#507255",
+                "Reef" => "#385f7a",
+                "Ward" => "#a03d2f",
+                _ => "#8a5a2b"
+            }
         };
     }
 

@@ -671,6 +671,7 @@ export class DungeonStoreService {
             decorations: (map?.decorations ?? []).map((decoration) => ({
                 id: decoration.id,
                 type: this.normalizeMapDecorationType(decoration.type),
+                color: this.normalizeMapDecorationColor(decoration.type, decoration.color),
                 x: this.normalizeMapCoordinate(decoration.x),
                 y: this.normalizeMapCoordinate(decoration.y),
                 scale: this.normalizeMapScale(decoration.scale),
@@ -698,6 +699,7 @@ export class DungeonStoreService {
                 mountainChains: (map?.layers?.mountainChains ?? []).map((decoration) => ({
                     id: decoration.id,
                     type: this.normalizeMapDecorationType(decoration.type),
+                    color: this.normalizeMapDecorationColor(decoration.type, decoration.color),
                     x: this.normalizeMapCoordinate(decoration.x),
                     y: this.normalizeMapCoordinate(decoration.y),
                     scale: this.normalizeMapScale(decoration.scale),
@@ -707,6 +709,7 @@ export class DungeonStoreService {
                 forestBelts: (map?.layers?.forestBelts ?? []).map((decoration) => ({
                     id: decoration.id,
                     type: this.normalizeMapDecorationType(decoration.type),
+                    color: this.normalizeMapDecorationColor(decoration.type, decoration.color),
                     x: this.normalizeMapCoordinate(decoration.x),
                     y: this.normalizeMapCoordinate(decoration.y),
                     scale: this.normalizeMapScale(decoration.scale),
@@ -748,6 +751,7 @@ export class DungeonStoreService {
             decorations: map.decorations.map((decoration) => ({
                 id: decoration.id,
                 type: this.normalizeMapDecorationType(decoration.type),
+                color: this.normalizeMapDecorationColor(decoration.type, decoration.color),
                 x: this.normalizeMapCoordinate(decoration.x),
                 y: this.normalizeMapCoordinate(decoration.y),
                 scale: this.normalizeMapScale(decoration.scale),
@@ -775,6 +779,7 @@ export class DungeonStoreService {
                 mountainChains: map.layers.mountainChains.map((decoration) => ({
                     id: decoration.id,
                     type: this.normalizeMapDecorationType(decoration.type),
+                    color: this.normalizeMapDecorationColor(decoration.type, decoration.color),
                     x: this.normalizeMapCoordinate(decoration.x),
                     y: this.normalizeMapCoordinate(decoration.y),
                     scale: this.normalizeMapScale(decoration.scale),
@@ -784,6 +789,7 @@ export class DungeonStoreService {
                 forestBelts: map.layers.forestBelts.map((decoration) => ({
                     id: decoration.id,
                     type: this.normalizeMapDecorationType(decoration.type),
+                    color: this.normalizeMapDecorationColor(decoration.type, decoration.color),
                     x: this.normalizeMapCoordinate(decoration.x),
                     y: this.normalizeMapCoordinate(decoration.y),
                     scale: this.normalizeMapScale(decoration.scale),
@@ -1080,6 +1086,36 @@ export class DungeonStoreService {
                 return 'Feature';
             default:
                 return 'Region';
+        }
+    }
+
+    private normalizeMapDecorationColor(type: ApiCampaignMapDecorationDto['type'] | string | undefined, color: string | undefined): string {
+        const normalizedType = this.normalizeMapDecorationType(type);
+
+        switch (color) {
+            case '#4b3a2a':
+            case '#8a5a2b':
+            case '#507255':
+            case '#385f7a':
+            case '#a03d2f':
+                return color;
+            default:
+                return this.defaultMapDecorationColor(normalizedType);
+        }
+    }
+
+    private defaultMapDecorationColor(type: CampaignMapDecorationType): string {
+        switch (type) {
+            case 'Mountain':
+                return '#4b3a2a';
+            case 'Forest':
+                return '#507255';
+            case 'Reef':
+                return '#385f7a';
+            case 'Ward':
+                return '#a03d2f';
+            default:
+                return '#8a5a2b';
         }
     }
 

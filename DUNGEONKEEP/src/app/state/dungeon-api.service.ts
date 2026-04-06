@@ -131,6 +131,7 @@ export interface ApiCampaignMapIconDto {
 export interface ApiCampaignMapDecorationDto {
     id: string;
     type: 'Forest' | 'Mountain' | 'Hill' | 'Reef' | 'Cave' | 'Ward';
+    color?: string;
     x: number;
     y: number;
     scale: number;

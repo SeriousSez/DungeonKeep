@@ -14,6 +14,7 @@ import { MonsterReferencePageComponent } from './pages/monster-reference-page/mo
 import { NewCampaignPageComponent } from './pages/new-campaign-page/new-campaign-page.component';
 import { NewCharacterPageComponent } from './pages/new-character-page/new-character-page.component';
 import { NewCharacterStandardPageComponent } from './pages/new-character-standard-page/new-character-standard-page.component';
+import { NotFoundPage } from './pages/not-found-page/not-found-page';
 import { NpcEditorPageComponent } from './pages/npc-editor-page/npc-editor-page.component';
 import { NpcDetailPage } from './pages/npc-detail-page/npc-detail-page';
 import { NpcLibraryPageComponent } from './pages/npc-library-page/npc-library-page.component';
@@ -243,7 +244,13 @@ export const routes: Routes = [
         data: { title: 'Character', breadcrumb: 'Character', parentCrumbs: [{ label: 'Characters', url: '/characters' }] }
     },
     {
+        path: '404',
+        component: NotFoundPage,
+        data: { title: 'Page Not Found', breadcrumb: 'Not Found' }
+    },
+    {
         path: '**',
-        redirectTo: 'dashboard'
+        component: NotFoundPage,
+        data: { title: 'Page Not Found', breadcrumb: 'Not Found' }
     }
 ];

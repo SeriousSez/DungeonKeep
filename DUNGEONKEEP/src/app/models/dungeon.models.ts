@@ -83,6 +83,7 @@ export interface CampaignMapIcon {
 export interface CampaignMapDecoration {
     id: string;
     type: CampaignMapDecorationType;
+    color?: string;
     x: number;
     y: number;
     scale: number;

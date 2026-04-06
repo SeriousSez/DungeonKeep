@@ -7,6 +7,15 @@
     gap: 24px;
 }
 
+.page-stack--editor {
+    width: min(calc(100vw - 32px), 1880px);
+    max-width: none;
+    margin-left: 0;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
 .panel {
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);
@@ -69,6 +78,16 @@
 .campaign-nav-meta,
 .status-chip {
     color: var(--text-muted);
+}
+
+.page-stack--editor .page-intro {
+    width: min(100%, 1480px);
+    justify-self: center;
+}
+
+.page-stack--editor .back-link {
+    width: min(100%, 1480px);
+    justify-self: center;
 }
 
 .header-actions {
@@ -148,9 +167,14 @@
 
 .map-layout {
     display: grid;
-    grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
     gap: 24px;
     align-items: start;
+}
+
+.map-layout--editor {
+    display: grid;
+    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) minmax(260px, 320px);
+    grid-template-areas: "left stage right";
 }
 
 .map-sidebar,
@@ -160,10 +184,23 @@
     gap: 16px;
 }
 
+.map-sidebar--left {
+    grid-area: left;
+}
+
+.map-sidebar--right {
+    grid-area: right;
+}
+
 .map-stage-panel {
     align-self: start;
     align-content: start;
     grid-auto-rows: max-content;
+}
+
+.map-stage-panel--editor {
+    grid-area: stage;
+    min-width: 0;
 }
 
 .map-stage-panel--viewer {
@@ -176,12 +213,15 @@
     min-width: 0;
     position: sticky;
     top: 18px;
-    max-height: calc(75vh - 40px);
-    ;
+    max-height: calc(85vh - 120px);
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-gutter: stable;
+}
+
+.sidebar-section--fill {
+    align-content: start;
 }
 
 .map-sidebar::-webkit-scrollbar {
@@ -234,6 +274,15 @@ app-dropdown {
     grid-template-columns: 1fr;
 }
 
+.mode-detail-block {
+    display: grid;
+    gap: 12px;
+}
+
+.nested-heading {
+    margin-top: 4px;
+}
+
 .layer-grid,
 .seed-metrics-grid {
     display: grid;
@@ -242,6 +291,10 @@ app-dropdown {
 
 .layer-grid,
 .seed-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.layer-grid--stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -344,7 +397,7 @@ app-dropdown {
 }
 
 .terrain-palette-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .icon-palette-button {
@@ -417,6 +470,16 @@ app-dropdown {
     min-width: 0;
 }
 
+.inline-creator-row--stacked {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.inline-creator-row--stacked .primary-button,
+.inline-creator-row--stacked .ghost-button {
+    width: 100%;
+}
+
 .inline-creator-row input {
     flex: 1;
     min-width: 0;
@@ -462,6 +525,10 @@ app-dropdown {
     border: 1px solid var(--panel-border);
 }
 
+.map-board-shell--workspace {
+    padding: 12px;
+}
+
 .map-board {
     position: relative;
     overflow: hidden;
@@ -480,13 +547,29 @@ app-dropdown {
     opacity: 0.18;
 }
 
-@media (min-width: 981px) {
-    .map-layout {
+@media (min-width: 1201px) {
+    .map-layout--editor {
         align-items: start;
     }
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1200px) {
+    .page-stack--editor {
+        width: 100%;
+        margin-left: 0;
+        position: static;
+        left: auto;
+        transform: none;
+    }
+
+    .map-layout--editor {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "stage"
+            "left"
+            "right";
+    }
+
     .map-sidebar {
         position: static;
         top: auto;
@@ -696,12 +779,6 @@ app-dropdown {
 
     to {
         background-position: -200% 0;
-    }
-}
-
-@media (max-width: 1080px) {
-    .map-layout {
-        grid-template-columns: 1fr;
     }
 }
 

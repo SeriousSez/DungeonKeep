@@ -1,5 +1,5 @@
 @if (selectedCampaign(); as campaign) {
-<main class="page-stack">
+<main class="page-stack" [class.page-stack--editor]="isEditorMode()">
     <a [routerLink]="backLink().route" class="back-link">← {{ backLink().label }}</a>
 
     <section class="panel page-intro">
@@ -11,23 +11,22 @@
             </div>
             <div class="header-actions">
                 @if (isEditorMode() && canModify()) {
-                <button type="button" class="primary-button" [disabled]="!hasUnsavedChanges() || saveState() === 'saving'" (click)="saveMap()">{{ saveState() === 'saving' ? 'Saving...' : 'Save Map' }}</button>
-                <button type="button" class="ghost-button" [disabled]="saveState() === 'saving'" (click)="createMapBoard()">Create Map</button>
+                <button type="button" class="primary-button" [disabled]="!hasUnsavedChanges() || saveState() === 'saving' || isAiArtGenerating()" (click)="saveMap()">{{ saveState() === 'saving' ? 'Saving...' : 'Save Map' }}</button>
                 <a [routerLink]="['/campaigns', campaign.id, 'edit']" class="primary-button">Edit Campaign</a>
                 }
                 @if (!isEditorMode() && canEdit() && currentMapBoard(); as activeMap) {
                 <a [routerLink]="['/campaigns', campaign.id, 'maps', activeMap.id, 'edit']" class="primary-button">Edit Map</a>
                 }
-                @if (isEditorMode()) {
-                <span class="status-chip" [class.is-error]="saveState() === 'error'" [class.is-saving]="saveState() === 'saving'">{{ saveStatusText() }}</span>
+                @if (isEditorMode() && shouldShowSaveStatus()) {
+                <span class="status-chip" [class.is-error]="saveState() === 'error'" [class.is-saving]="saveState() === 'saving' || isAiArtGenerating()">{{ saveStatusText() }}</span>
                 }
             </div>
         </div>
     </section>
 
     @if (isEditorMode()) {
-    <section class="map-layout">
-        <aside class="panel map-sidebar">
+    <section class="map-layout map-layout--editor">
+        <aside class="panel map-sidebar map-sidebar--left">
             <div class="sidebar-section">
                 <div class="section-heading compact-heading">
                     <h2>Map Details</h2>
@@ -47,7 +46,7 @@
                     <button type="button" class="primary-button" (click)="applyMapName()">Apply</button>
                 </div>
                 <div class="tool-actions">
-                    <button type="button" class="ghost-button full-width-button" [disabled]="saveState() === 'saving'" (click)="createMapBoard()">Create Another Map</button>
+                    <button type="button" class="ghost-button full-width-button" [disabled]="saveState() === 'saving' || isAiArtGenerating()" (click)="createMapBoard()">Create Another Map</button>
                     <button type="button" class="ghost-button danger-button full-width-button" [disabled]="mapBoards().length <= 1" (click)="requestDeleteCurrentMap()">Delete {{ activeMap.name }}</button>
                 </div>
                 } @else {
@@ -61,24 +60,6 @@
                 <div class="section-heading compact-heading">
                     <h2>Generation</h2>
                 </div>
-                <div class="control-callout">
-                    <strong>Using {{ backgroundDisplayLabel(workingMap().background) }} generation</strong>
-                    <span>Open the generation modal to choose map type, structure, names, and extra AI direction before rendering art.</span>
-                    @if (showParchmentLayout()) {
-                    <span>Parchment layout should read as {{ parchmentLayout().toLowerCase() }}.</span>
-                    }
-                    @if (showCavernLayout()) {
-                    <span>Cavern layout should read as {{ cavernLayoutLabel().toLowerCase() }}.</span>
-                    }
-                    @if (showSettlementScale()) {
-                    <span>Primary settlement should read as a {{ settlementScale().toLowerCase() }}.</span>
-                    }
-                    @if (hasPreferredNamesQueued()) {
-                    <span>Categorized names are queued for the next AI generation pass.</span>
-                    }
-                    <span>Campaign seed suggests {{ backgroundDisplayLabel(campaignSeed().suggestedBackground) }}.</span>
-                </div>
-                <p class="sidebar-note">{{ campaignSeed().summary }}</p>
                 <div class="seed-metrics-grid">
                     <div class="seed-metric-card">
                         <span class="seed-metric-label">Region</span>
@@ -90,10 +71,40 @@
                     </div>
                 </div>
                 <div class="tool-actions">
-                    <button type="button" class="primary-button" [disabled]="isAiArtGenerating()" (click)="openMapArtModal()">{{ isAiArtGenerating() ? 'Generating Map Art...' : 'Generate Map Art' }}</button>
-                    <button type="button" class="ghost-button danger-button" [disabled]="!workingMap().backgroundImageUrl" (click)="clearBackgroundImage()">Clear Map Art</button>
+                    <button type="button" class="primary-button full-width-button" [disabled]="isAiArtGenerating()" (click)="openMapArtModal()">{{ isAiArtGenerating() ? 'Generating Map Art...' : 'Generate Map Art' }}</button>
+                    <button type="button" class="ghost-button danger-button full-width-button" [disabled]="!workingMap().backgroundImageUrl" (click)="clearBackgroundImage()">Clear Map Art</button>
                 </div>
             </div>
+            }
+
+            <div class="sidebar-section">
+                <div class="section-heading compact-heading">
+                    <h2>Readout</h2>
+                </div>
+                <div class="layer-grid layer-grid--stats">
+                    <div class="seed-metric-card">
+                        <span class="seed-metric-label">Routes</span>
+                        <strong>{{ workingMap().strokes.length + workingMap().layers.rivers.length }}</strong>
+                    </div>
+                    <div class="seed-metric-card">
+                        <span class="seed-metric-label">Landmarks</span>
+                        <strong>{{ workingMap().icons.length }}</strong>
+                    </div>
+                    <div class="seed-metric-card">
+                        <span class="seed-metric-label">Terrain</span>
+                        <strong>{{ workingMap().decorations.length + workingMap().layers.mountainChains.length + workingMap().layers.forestBelts.length }}</strong>
+                    </div>
+                    <div class="seed-metric-card">
+                        <span class="seed-metric-label">Labels</span>
+                        <strong>{{ workingMap().labels.length }}</strong>
+                    </div>
+                </div>
+                <p class="sidebar-note">Generation, board management, and live counts stay on the left so the map can remain the focal point.</p>
+            </div>
+        </aside>
+
+        <aside class="panel map-sidebar map-sidebar--right">
+            @if (canEdit()) {
 
             <div class="sidebar-section">
                 <div class="section-heading compact-heading">
@@ -107,48 +118,80 @@
                     <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'label'" (click)="selectLabelTool()">Place Labels</button>
                 </div>
 
-                <app-dropdown ariaLabel="Brush color" [value]="brushColor()" [options]="brushColorOptions" [minWidth]="220" (changed)="updateBrushColor($event)"></app-dropdown>
-                <app-dropdown ariaLabel="Brush size" [value]="brushWidth()" [options]="brushSizeOptions" [minWidth]="220" (changed)="updateBrushWidth($event)"></app-dropdown>
-                <p class="sidebar-note generator-note">Draw mode paints route strokes. Terrain, landmark, and label modes let you build a hand-authored map board yourself.</p>
-            </div>
-
-            <div class="sidebar-section">
-                <div class="section-heading compact-heading">
-                    <h2>Terrain Palette</h2>
-                    @if (activeTerrainOption()) {
-                    <button type="button" class="ghost-button compact-action" (click)="clearPlacementMode()">Stop Placing</button>
-                    }
+                @if (activeTool() === 'draw') {
+                <div class="mode-detail-block">
+                    <app-dropdown ariaLabel="Brush color" [value]="brushColor()" [options]="brushColorOptions" [minWidth]="220" (changed)="updateBrushColor($event)"></app-dropdown>
+                    <app-dropdown ariaLabel="Brush size" [value]="brushWidth()" [options]="brushSizeOptions" [minWidth]="220" (changed)="updateBrushWidth($event)"></app-dropdown>
+                    <p class="sidebar-note generator-note">Draw mode paints route strokes directly onto the board.</p>
                 </div>
-                <div class="icon-palette-grid terrain-palette-grid">
-                    @for (option of terrainOptions; track option.type) {
-                    <button type="button" class="icon-palette-button terrain-palette-button" [class.is-active]="pendingTerrainType() === option.type" (click)="selectTerrainTool(option.type)">
-                        <i [class]="option.iconClass"></i>
-                        <span>{{ option.label }}</span>
-                    </button>
-                    }
-                </div>
-                @if (activeTerrainOption(); as option) {
-                <p class="sidebar-note">Click the board to place {{ option.label.toLowerCase() }} and build out the terrain by hand.</p>
-                } @else {
-                <p class="sidebar-note">Use terrain tokens to sketch forests, mountains, reefs, caves, hills, and magical sites.</p>
                 }
-            </div>
 
-            <div class="sidebar-section">
-                <div class="section-heading compact-heading">
-                    <h2>Map Labels</h2>
-                    @if (activeTool() === 'label') {
-                    <button type="button" class="ghost-button compact-action" (click)="clearPlacementMode()">Stop Placing</button>
+                @if (activeTool() === 'terrain') {
+                <div class="mode-detail-block">
+                    <div class="section-heading compact-heading nested-heading">
+                        <h2>Terrain Palette</h2>
+                        @if (activeTerrainOption()) {
+                        <button type="button" class="ghost-button compact-action" (click)="clearPlacementMode()">Stop Placing</button>
+                        }
+                    </div>
+                    <label class="field-label">Terrain ink</label>
+                    <app-dropdown ariaLabel="Terrain ink" [value]="terrainColor()" [options]="terrainColorOptions" [minWidth]="220" (changed)="updateTerrainColor($event)"></app-dropdown>
+                    <div class="icon-palette-grid terrain-palette-grid">
+                        @for (option of terrainOptions; track option.type) {
+                        <button type="button" class="icon-palette-button terrain-palette-button" [class.is-active]="pendingTerrainType() === option.type" (click)="selectTerrainTool(option.type)">
+                            <i [class]="option.iconClass"></i>
+                            <span>{{ option.label }}</span>
+                        </button>
+                        }
+                    </div>
+                    @if (activeTerrainOption(); as option) {
+                    <p class="sidebar-note">Click the board to place {{ option.label.toLowerCase() }} and build out the terrain by hand.</p>
+                    } @else {
+                    <p class="sidebar-note">Use terrain tokens to sketch forests, mountains, reefs, caves, hills, and magical sites.</p>
                     }
                 </div>
-                <label class="field-label">Label type</label>
-                <app-dropdown ariaLabel="Label type" [value]="labelToneDraft()" [options]="labelToneOptions" [minWidth]="220" (changed)="updateLabelToneDraft($event)"></app-dropdown>
-                <label class="field-label" for="map-label-text">Label text</label>
-                <div class="inline-creator-row">
-                    <input id="map-label-text" type="text" [value]="labelTextDraft()" (input)="updateLabelTextDraft($any($event.target).value)" placeholder="Name this place" />
-                    <button type="button" class="primary-button" (click)="selectLabelTool()">Place</button>
+                }
+
+                @if (activeTool() === 'label') {
+                <div class="mode-detail-block">
+                    <div class="section-heading compact-heading nested-heading">
+                        <h2>Map Labels</h2>
+                        <button type="button" class="ghost-button compact-action" (click)="clearPlacementMode()">Stop Placing</button>
+                    </div>
+                    <label class="field-label">Label type</label>
+                    <app-dropdown ariaLabel="Label type" [value]="labelToneDraft()" [options]="labelToneOptions" [minWidth]="220" (changed)="updateLabelToneDraft($event)"></app-dropdown>
+                    <label class="field-label" for="map-label-text">Label text</label>
+                    <div class="inline-creator-row inline-creator-row--stacked">
+                        <input id="map-label-text" type="text" [value]="labelTextDraft()" (input)="updateLabelTextDraft($any($event.target).value)" placeholder="Name this place" />
+                        <button type="button" class="primary-button" (click)="selectLabelTool()">Place</button>
+                    </div>
+                    <p class="sidebar-note">Region labels are good for countries, seas, and forests. Feature labels work well for roads, ruins, rivers, and passes.</p>
                 </div>
-                <p class="sidebar-note">Region labels are good for countries, seas, and forests. Feature labels work well for roads, ruins, rivers, and passes.</p>
+                }
+
+                @if (activeTool() === 'icon') {
+                <div class="mode-detail-block">
+                    <div class="section-heading compact-heading nested-heading">
+                        <h2>Landmarks</h2>
+                        @if (activeIconOption()) {
+                        <button type="button" class="ghost-button compact-action" (click)="clearPlacementMode()">Stop Placing</button>
+                        }
+                    </div>
+                    <div class="icon-palette-grid">
+                        @for (option of iconOptions; track option.type) {
+                        <button type="button" class="icon-palette-button" [class.is-active]="pendingIconType() === option.type" (click)="selectIconTool(option.type)">
+                            <i [class]="option.iconClass"></i>
+                            <span>{{ option.label }}</span>
+                        </button>
+                        }
+                    </div>
+                    @if (activeIconOption(); as option) {
+                    <p class="sidebar-note">Click the map to place a {{ option.label.toLowerCase() }} marker. You can drag it after placing it.</p>
+                    } @else {
+                    <p class="sidebar-note">Pick a landmark type, then click the map to place it.</p>
+                    }
+                </div>
+                }
             </div>
 
             <div class="sidebar-section">
@@ -177,27 +220,6 @@
                 </div>
             </div>
 
-            <div class="sidebar-section">
-                <div class="section-heading compact-heading">
-                    <h2>Landmarks</h2>
-                    @if (activeIconOption(); as iconOption) {
-                    <button type="button" class="ghost-button compact-action" (click)="clearPlacementMode()">Stop Placing</button>
-                    }
-                </div>
-                <div class="icon-palette-grid">
-                    @for (option of iconOptions; track option.type) {
-                    <button type="button" class="icon-palette-button" [class.is-active]="pendingIconType() === option.type" (click)="selectIconTool(option.type)">
-                        <i [class]="option.iconClass"></i>
-                        <span>{{ option.label }}</span>
-                    </button>
-                    }
-                </div>
-                @if (activeIconOption(); as option) {
-                <p class="sidebar-note">Click the map to place a {{ option.label.toLowerCase() }} marker. You can drag it after placing it.</p>
-                } @else {
-                <p class="sidebar-note">Pick a landmark type, then click the map to place it.</p>
-                }
-            </div>
             } @else {
             <div class="sidebar-section">
                 <div class="section-heading compact-heading">
@@ -239,7 +261,7 @@
             </div>
         </aside>
 
-        <section class="panel map-stage-panel">
+        <section class="panel map-stage-panel map-stage-panel--editor">
             <div class="map-stage-header">
                 <div>
                     <p class="eyebrow">Map board</p>
@@ -278,7 +300,8 @@
                     @if (showMountainChains()) {
                     <div class="map-decoration-layer map-terrain-layer" aria-hidden="true">
                         @for (mountain of workingMap().layers.mountainChains; track mountain.id) {
-                        <span class="map-decoration-token is-mountain" [style.left.%]="mountain.x * 100" [style.top.%]="mountain.y * 100" [style.opacity]="mountain.opacity" [style.transform]="'translate(-50%, -50%) rotate(' + mountain.rotation + 'deg) scale(' + mountain.scale + ')'">
+                        <span class="map-decoration-token is-mountain" [style.left.%]="mountain.x * 100" [style.top.%]="mountain.y * 100" [style.opacity]="mountain.opacity" [style.color]="decorationColor(mountain)"
+                            [style.transform]="'translate(-50%, -50%) rotate(' + mountain.rotation + 'deg) scale(' + mountain.scale + ')'">
                             <i [class]="decorationClass(mountain.type)"></i>
                         </span>
                         }
@@ -288,7 +311,8 @@
                     @if (showForestBelts()) {
                     <div class="map-decoration-layer map-terrain-layer" aria-hidden="true">
                         @for (forest of workingMap().layers.forestBelts; track forest.id) {
-                        <span class="map-decoration-token is-forest" [style.left.%]="forest.x * 100" [style.top.%]="forest.y * 100" [style.opacity]="forest.opacity" [style.transform]="'translate(-50%, -50%) rotate(' + forest.rotation + 'deg) scale(' + forest.scale + ')'">
+                        <span class="map-decoration-token is-forest" [style.left.%]="forest.x * 100" [style.top.%]="forest.y * 100" [style.opacity]="forest.opacity" [style.color]="decorationColor(forest)"
+                            [style.transform]="'translate(-50%, -50%) rotate(' + forest.rotation + 'deg) scale(' + forest.scale + ')'">
                             <i [class]="decorationClass(forest.type)"></i>
                         </span>
                         }
@@ -307,7 +331,8 @@
 
                     <div class="map-decoration-layer" aria-hidden="true">
                         @for (decoration of workingMap().decorations; track decoration.id) {
-                        <span class="map-decoration-token" [style.left.%]="decoration.x * 100" [style.top.%]="decoration.y * 100" [style.opacity]="decoration.opacity" [style.transform]="'translate(-50%, -50%) rotate(' + decoration.rotation + 'deg) scale(' + decoration.scale + ')'">
+                        <span class="map-decoration-token" [style.left.%]="decoration.x * 100" [style.top.%]="decoration.y * 100" [style.opacity]="decoration.opacity" [style.color]="decorationColor(decoration)"
+                            [style.transform]="'translate(-50%, -50%) rotate(' + decoration.rotation + 'deg) scale(' + decoration.scale + ')'">
                             <i [class]="decorationClass(decoration.type)"></i>
                         </span>
                         }
@@ -379,7 +404,8 @@
                 @if (showMountainChains()) {
                 <div class="map-decoration-layer map-terrain-layer" aria-hidden="true">
                     @for (mountain of workingMap().layers.mountainChains; track mountain.id) {
-                    <span class="map-decoration-token is-mountain" [style.left.%]="mountain.x * 100" [style.top.%]="mountain.y * 100" [style.opacity]="mountain.opacity" [style.transform]="'translate(-50%, -50%) rotate(' + mountain.rotation + 'deg) scale(' + mountain.scale + ')'">
+                    <span class="map-decoration-token is-mountain" [style.left.%]="mountain.x * 100" [style.top.%]="mountain.y * 100" [style.opacity]="mountain.opacity" [style.color]="decorationColor(mountain)"
+                        [style.transform]="'translate(-50%, -50%) rotate(' + mountain.rotation + 'deg) scale(' + mountain.scale + ')'">
                         <i [class]="decorationClass(mountain.type)"></i>
                     </span>
                     }
@@ -389,7 +415,8 @@
                 @if (showForestBelts()) {
                 <div class="map-decoration-layer map-terrain-layer" aria-hidden="true">
                     @for (forest of workingMap().layers.forestBelts; track forest.id) {
-                    <span class="map-decoration-token is-forest" [style.left.%]="forest.x * 100" [style.top.%]="forest.y * 100" [style.opacity]="forest.opacity" [style.transform]="'translate(-50%, -50%) rotate(' + forest.rotation + 'deg) scale(' + forest.scale + ')'">
+                    <span class="map-decoration-token is-forest" [style.left.%]="forest.x * 100" [style.top.%]="forest.y * 100" [style.opacity]="forest.opacity" [style.color]="decorationColor(forest)"
+                        [style.transform]="'translate(-50%, -50%) rotate(' + forest.rotation + 'deg) scale(' + forest.scale + ')'">
                         <i [class]="decorationClass(forest.type)"></i>
                     </span>
                     }
@@ -407,7 +434,8 @@
 
                 <div class="map-decoration-layer" aria-hidden="true">
                     @for (decoration of workingMap().decorations; track decoration.id) {
-                    <span class="map-decoration-token" [style.left.%]="decoration.x * 100" [style.top.%]="decoration.y * 100" [style.opacity]="decoration.opacity" [style.transform]="'translate(-50%, -50%) rotate(' + decoration.rotation + 'deg) scale(' + decoration.scale + ')'">
+                    <span class="map-decoration-token" [style.left.%]="decoration.x * 100" [style.top.%]="decoration.y * 100" [style.opacity]="decoration.opacity" [style.color]="decorationColor(decoration)"
+                        [style.transform]="'translate(-50%, -50%) rotate(' + decoration.rotation + 'deg) scale(' + decoration.scale + ')'">
                         <i [class]="decorationClass(decoration.type)"></i>
                     </span>
                     }

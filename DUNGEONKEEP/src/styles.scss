@@ -17,6 +17,22 @@
     background: transparent;
 }
 
+*::-webkit-scrollbar-track-piece:vertical:start {
+    margin-top: 10px;
+}
+
+*::-webkit-scrollbar-track-piece:vertical:end {
+    margin-bottom: 10px;
+}
+
+*::-webkit-scrollbar-track-piece:horizontal:start {
+    margin-left: 10px;
+}
+
+*::-webkit-scrollbar-track-piece:horizontal:end {
+    margin-right: 10px;
+}
+
 *::-webkit-scrollbar-thumb {
     background: var(--scrollbar-thumb);
     border-radius: 999px;

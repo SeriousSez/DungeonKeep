@@ -1,0 +1,184 @@
+:host {
+    display: block;
+}
+
+.not-found-shell {
+    display: grid;
+}
+
+.panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 28px;
+    box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(18px);
+}
+
+.not-found-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(300px, 420px);
+    gap: 28px;
+    padding: 32px;
+    overflow: hidden;
+    position: relative;
+    background:
+        radial-gradient(circle at top left, color-mix(in srgb, var(--accent-primary) 18%, transparent), transparent 32%),
+        radial-gradient(circle at 82% 18%, color-mix(in srgb, var(--surface-raised) 76%, transparent), transparent 28%),
+        linear-gradient(180deg, color-mix(in srgb, var(--panel-bg) 92%, transparent), color-mix(in srgb, var(--surface-raised) 90%, transparent));
+}
+
+.not-found-hero::after {
+    content: '';
+    position: absolute;
+    inset: auto -8% -24% auto;
+    width: 360px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--accent-primary) 18%, transparent), transparent 68%);
+    pointer-events: none;
+}
+
+.not-found-copy,
+.not-found-card,
+.card-grid {
+    display: grid;
+}
+
+.not-found-copy {
+    gap: 20px;
+    align-content: start;
+    position: relative;
+    z-index: 1;
+}
+
+.eyebrow,
+.requested-path,
+.card-grid span {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.76rem;
+}
+
+.eyebrow {
+    margin: 0;
+    color: var(--text-soft);
+}
+
+.title-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.status-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 88px;
+    min-height: 88px;
+    padding: 12px;
+    border-radius: 24px;
+    background: color-mix(in srgb, var(--accent-primary) 18%, var(--surface-raised) 82%);
+    border: 1px solid color-mix(in srgb, var(--panel-border) 50%, var(--accent-primary) 50%);
+    color: var(--accent-primary);
+    font-family: var(--display-font);
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 1;
+}
+
+.title-row h1,
+.not-found-card strong,
+.card-grid strong {
+    margin: 0;
+    font-family: var(--display-font);
+}
+
+.title-row p,
+.not-found-card p,
+.requested-path {
+    margin: 0;
+    color: var(--text-muted);
+    line-height: 1.7;
+}
+
+.requested-path span {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--pill-border);
+    background: var(--pill-bg);
+    color: var(--text-main);
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 0.88rem;
+}
+
+.action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.not-found-card {
+    gap: 16px;
+    align-content: start;
+    padding: 24px;
+    border-radius: 24px;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 62%, var(--accent-primary) 38%);
+    background: color-mix(in srgb, var(--surface-raised) 90%, transparent);
+    position: relative;
+    z-index: 1;
+}
+
+.card-rune {
+    width: 56px;
+    height: 56px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--accent-primary) 16%, var(--surface-raised) 84%);
+    border: 1px solid color-mix(in srgb, var(--panel-border) 50%, var(--accent-primary) 50%);
+    color: var(--accent-primary);
+    font-size: 1.4rem;
+}
+
+.card-grid {
+    gap: 12px;
+}
+
+.card-grid>div {
+    display: grid;
+    gap: 4px;
+    padding: 14px;
+    border-radius: 18px;
+    border: 1px solid var(--panel-border);
+    background: color-mix(in srgb, var(--surface-raised) 92%, transparent);
+}
+
+.card-grid span {
+    color: var(--text-soft);
+}
+
+.card-grid strong {
+    font-size: 0.98rem;
+    color: var(--text-main);
+}
+
+@media (max-width: 860px) {
+    .not-found-hero {
+        grid-template-columns: 1fr;
+        padding: 24px;
+    }
+
+    .title-row {
+        grid-template-columns: 1fr;
+    }
+
+    .status-mark {
+        min-width: 72px;
+        min-height: 72px;
+    }
+}

@@ -50,80 +50,20 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
+try
 {
+    using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<DungeonKeepDbContext>();
     dbContext.Database.EnsureCreated();
 
-    try
-    {
-        dbContext.Database.ExecuteSqlRaw("CREATE TABLE IF NOT EXISTS AppUsers (Id TEXT NOT NULL CONSTRAINT PK_AppUsers PRIMARY KEY, Email TEXT NOT NULL, DisplayName TEXT NOT NULL, PasswordHash TEXT NOT NULL, CreatedAtUtc TEXT NOT NULL);");
-        dbContext.Database.ExecuteSqlRaw("CREATE UNIQUE INDEX IF NOT EXISTS IX_AppUsers_Email ON AppUsers (Email);");
-    }
-    catch
-    {
-    }
-
-    try
-    {
-        dbContext.Database.ExecuteSqlRaw("CREATE TABLE IF NOT EXISTS AuthSessions (Id TEXT NOT NULL CONSTRAINT PK_AuthSessions PRIMARY KEY, UserId TEXT NOT NULL, Token TEXT NOT NULL, CreatedAtUtc TEXT NOT NULL, ExpiresAtUtc TEXT NOT NULL);");
-        dbContext.Database.ExecuteSqlRaw("CREATE UNIQUE INDEX IF NOT EXISTS IX_AuthSessions_Token ON AuthSessions (Token);");
-    }
-    catch
-    {
-    }
-
-    try
-    {
-        dbContext.Database.ExecuteSqlRaw("CREATE TABLE IF NOT EXISTS CampaignMemberships (Id TEXT NOT NULL CONSTRAINT PK_CampaignMemberships PRIMARY KEY, CampaignId TEXT NOT NULL, UserId TEXT NULL, Email TEXT NOT NULL, Role TEXT NOT NULL DEFAULT 'Member', Status TEXT NOT NULL DEFAULT 'Pending', InvitedByUserId TEXT NULL, CreatedAtUtc TEXT NOT NULL);");
-        dbContext.Database.ExecuteSqlRaw("CREATE UNIQUE INDEX IF NOT EXISTS IX_CampaignMemberships_CampaignId_Email ON CampaignMemberships (CampaignId, Email);");
-    }
-    catch
-    {
-    }
-
-    try
-    {
-        dbContext.Database.ExecuteSqlRaw("ALTER TABLE Campaigns ADD COLUMN OpenThreadsJson TEXT NOT NULL DEFAULT '[]';");
-    }
-    catch
-    {
-    }
-
-    try
-    {
-        dbContext.Database.ExecuteSqlRaw("ALTER TABLE Campaigns ADD COLUMN WorldNotesJson TEXT NOT NULL DEFAULT '[]';");
-    }
-    catch
-    {
-    }
-
-    try
-    {
-        dbContext.Database.ExecuteSqlRaw("ALTER TABLE Campaigns ADD COLUMN CampaignMapJson TEXT NOT NULL DEFAULT '{}';");
-    }
-    catch
-    {
-    }
-
-    try
-    {
-        dbContext.Database.ExecuteSqlRaw("ALTER TABLE Characters ADD COLUMN Status TEXT NOT NULL DEFAULT 'Ready';");
-    }
-    catch
-    {
-    }
-
-    try
-    {
-        dbContext.Database.ExecuteSqlRaw("ALTER TABLE Characters ADD COLUMN OwnerUserId TEXT NULL;");
-    }
-    catch
-    {
-    }
-
+    EnsureBaseSqliteSchema(dbContext);
     EnsureCharactersCampaignIdIsNullable(dbContext);
     EnsureCurrentSqliteSchema(dbContext);
+}
+catch (Exception exception)
+{
+    app.Logger.LogCritical(exception, "SQLite schema initialization failed during startup.");
+    throw;
 }
 
 if (app.Environment.IsDevelopment())
@@ -143,27 +83,51 @@ app.MapHub<CampaignHub>("/hubs/campaign");
 
 app.Run();
 
+static void EnsureBaseSqliteSchema(DungeonKeepDbContext dbContext)
+{
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE TABLE IF NOT EXISTS AppUsers (Id TEXT NOT NULL CONSTRAINT PK_AppUsers PRIMARY KEY, Email TEXT NOT NULL, DisplayName TEXT NOT NULL, PasswordHash TEXT NOT NULL, CreatedAtUtc TEXT NOT NULL);"
+    );
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE UNIQUE INDEX IF NOT EXISTS IX_AppUsers_Email ON AppUsers (Email);"
+    );
+
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE TABLE IF NOT EXISTS AuthSessions (Id TEXT NOT NULL CONSTRAINT PK_AuthSessions PRIMARY KEY, UserId TEXT NOT NULL, Token TEXT NOT NULL, CreatedAtUtc TEXT NOT NULL, ExpiresAtUtc TEXT NOT NULL);"
+    );
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE UNIQUE INDEX IF NOT EXISTS IX_AuthSessions_Token ON AuthSessions (Token);"
+    );
+
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE TABLE IF NOT EXISTS CampaignMemberships (Id TEXT NOT NULL CONSTRAINT PK_CampaignMemberships PRIMARY KEY, CampaignId TEXT NOT NULL, UserId TEXT NULL, Email TEXT NOT NULL, Role TEXT NOT NULL DEFAULT 'Member', Status TEXT NOT NULL DEFAULT 'Pending', InvitedByUserId TEXT NULL, CreatedAtUtc TEXT NOT NULL);"
+    );
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE UNIQUE INDEX IF NOT EXISTS IX_CampaignMemberships_CampaignId_Email ON CampaignMemberships (CampaignId, Email);"
+    );
+}
+
 static void EnsureCharactersCampaignIdIsNullable(DungeonKeepDbContext dbContext)
 {
     const string emptyGuid = "00000000-0000-0000-0000-000000000000";
 
+    using var connection = dbContext.Database.GetDbConnection();
+    if (connection.State != ConnectionState.Open)
+    {
+        connection.Open();
+    }
+
+    using var pragmaCommand = connection.CreateCommand();
+    pragmaCommand.CommandText = "SELECT \"notnull\" FROM pragma_table_info('Characters') WHERE name = 'CampaignId' LIMIT 1;";
+    var campaignIdNotNull = Convert.ToInt32(pragmaCommand.ExecuteScalar() ?? 0);
+    if (campaignIdNotNull == 0)
+    {
+        return;
+    }
+
+    dbContext.Database.ExecuteSqlRaw("PRAGMA foreign_keys = OFF;");
     try
     {
-        using var connection = dbContext.Database.GetDbConnection();
-        if (connection.State != ConnectionState.Open)
-        {
-            connection.Open();
-        }
-
-        using var pragmaCommand = connection.CreateCommand();
-        pragmaCommand.CommandText = "SELECT \"notnull\" FROM pragma_table_info('Characters') WHERE name = 'CampaignId' LIMIT 1;";
-        var campaignIdNotNull = Convert.ToInt32(pragmaCommand.ExecuteScalar() ?? 0);
-        if (campaignIdNotNull == 0)
-        {
-            return;
-        }
-
-        dbContext.Database.ExecuteSqlRaw("PRAGMA foreign_keys = OFF;");
         dbContext.Database.ExecuteSqlRaw(@"
             CREATE TABLE IF NOT EXISTS Characters__new (
                 Id TEXT NOT NULL CONSTRAINT PK_Characters PRIMARY KEY,
@@ -201,17 +165,10 @@ static void EnsureCharactersCampaignIdIsNullable(DungeonKeepDbContext dbContext)
         dbContext.Database.ExecuteSqlRaw("DROP TABLE Characters;");
         dbContext.Database.ExecuteSqlRaw("ALTER TABLE Characters__new RENAME TO Characters;");
         dbContext.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS IX_Characters_CampaignId ON Characters (CampaignId);");
-        dbContext.Database.ExecuteSqlRaw("PRAGMA foreign_keys = ON;");
     }
-    catch
+    finally
     {
-        try
-        {
-            dbContext.Database.ExecuteSqlRaw("PRAGMA foreign_keys = ON;");
-        }
-        catch
-        {
-        }
+        dbContext.Database.ExecuteSqlRaw("PRAGMA foreign_keys = ON;");
     }
 }
 
@@ -265,38 +222,34 @@ static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)
     EnsureIndexExists(dbContext, "IX_Characters_OwnerUserId", "Characters", "OwnerUserId");
 }
 
-static void EnsureColumnExists(DungeonKeepDbContext dbContext, string tableName, string columnName, string columnDefinition)
+static void EnsureColumnExists(
+    DungeonKeepDbContext dbContext,
+    string tableName,
+    string columnName,
+    string columnDefinition)
 {
-    try
+    using var connection = dbContext.Database.GetDbConnection();
+    if (connection.State != ConnectionState.Open)
     {
-        using var connection = dbContext.Database.GetDbConnection();
-        if (connection.State != ConnectionState.Open)
-        {
-            connection.Open();
-        }
-
-        using var existsCommand = connection.CreateCommand();
-        existsCommand.CommandText = $"SELECT 1 FROM pragma_table_info('{tableName}') WHERE name = '{columnName}' LIMIT 1;";
-        var exists = existsCommand.ExecuteScalar() is not null;
-        if (exists)
-        {
-            return;
-        }
-
-        dbContext.Database.ExecuteSqlRaw($"ALTER TABLE \"{tableName}\" ADD COLUMN \"{columnName}\" {columnDefinition};");
+        connection.Open();
     }
-    catch
+
+    using var existsCommand = connection.CreateCommand();
+    existsCommand.CommandText = $"SELECT 1 FROM pragma_table_info('{tableName}') WHERE name = '{columnName}' LIMIT 1;";
+    var exists = existsCommand.ExecuteScalar() is not null;
+    if (exists)
     {
+        return;
     }
+
+#pragma warning disable EF1002
+    dbContext.Database.ExecuteSqlRaw($"ALTER TABLE \"{tableName}\" ADD COLUMN \"{columnName}\" {columnDefinition};");
+#pragma warning restore EF1002
 }
 
 static void EnsureIndexExists(DungeonKeepDbContext dbContext, string indexName, string tableName, string columnName)
 {
-    try
-    {
-        dbContext.Database.ExecuteSqlRaw($"CREATE INDEX IF NOT EXISTS \"{indexName}\" ON \"{tableName}\" (\"{columnName}\");");
-    }
-    catch
-    {
-    }
+#pragma warning disable EF1002
+    dbContext.Database.ExecuteSqlRaw($"CREATE INDEX IF NOT EXISTS \"{indexName}\" ON \"{tableName}\" (\"{columnName}\");");
+#pragma warning restore EF1002
 }

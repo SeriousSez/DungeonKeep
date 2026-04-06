@@ -228,9 +228,10 @@ export class CampaignMapPageComponent {
     readonly parchmentLayout = signal<ParchmentLayout>('Continent');
     readonly cavernLayout = signal<CavernLayout>('TunnelNetwork');
     readonly brushColor = signal('#8a5a2b');
+    readonly terrainColor = signal('#8a5a2b');
     readonly brushWidth = signal(5);
     readonly saveState = signal<'idle' | 'saving' | 'saved' | 'error'>('idle');
-    readonly saveMessage = signal('Changes stay local until you save them.');
+    readonly saveMessage = signal('');
     readonly hasUnsavedChanges = signal(false);
     readonly confirmAction = signal<MapConfirmAction>(null);
     readonly isDrawing = signal(false);
@@ -240,6 +241,7 @@ export class CampaignMapPageComponent {
 
     readonly backgroundOptions = MAP_BACKGROUND_OPTIONS;
     readonly brushColorOptions = BRUSH_COLOR_OPTIONS;
+    readonly terrainColorOptions = BRUSH_COLOR_OPTIONS;
     readonly brushSizeOptions = BRUSH_SIZE_OPTIONS;
     readonly settlementScaleOptions = SETTLEMENT_SCALE_OPTIONS;
     readonly parchmentLayoutOptions = PARCHMENT_LAYOUT_OPTIONS;
@@ -322,6 +324,10 @@ export class CampaignMapPageComponent {
         return '';
     });
     readonly saveStatusText = computed(() => {
+        if (this.isAiArtGenerating()) {
+            return this.saveMessage();
+        }
+
         switch (this.saveState()) {
             case 'saving':
                 return 'Saving changes...';
@@ -330,6 +336,17 @@ export class CampaignMapPageComponent {
             default:
                 return this.hasUnsavedChanges() ? 'Unsaved changes' : this.saveMessage();
         }
+    });
+    readonly shouldShowSaveStatus = computed(() => {
+        if (this.isAiArtGenerating() || this.hasUnsavedChanges()) {
+            return true;
+        }
+
+        if (this.saveState() === 'saving' || this.saveState() === 'saved' || this.saveState() === 'error') {
+            return true;
+        }
+
+        return this.saveMessage().trim().length > 0;
     });
     readonly confirmOpen = computed(() => this.confirmAction() !== null);
     readonly confirmTitle = computed(() => {
@@ -458,7 +475,7 @@ export class CampaignMapPageComponent {
             this.pendingDragHistory = null;
             this.hasUnsavedChanges.set(false);
             this.saveState.set('idle');
-            this.saveMessage.set(this.canModify() ? 'Changes stay local until you save them.' : this.canEdit() ? 'Viewing map. Click Edit Map to make changes.' : 'Members can review the map, but only owners can edit it.');
+            this.saveMessage.set(this.canModify() ? '' : this.canEdit() ? 'Viewing map. Click Edit Map to make changes.' : 'Members can review the map, but only owners can edit it.');
         });
 
         effect(() => {
@@ -540,6 +557,10 @@ export class CampaignMapPageComponent {
 
     updateBrushColor(value: string | number): void {
         this.brushColor.set(typeof value === 'string' ? value : '#8a5a2b');
+    }
+
+    updateTerrainColor(value: string | number): void {
+        this.terrainColor.set(this.normalizeEditorColor(value, '#8a5a2b'));
     }
 
     updateBrushWidth(value: string | number): void {
@@ -853,7 +874,6 @@ export class CampaignMapPageComponent {
         const cavernNames = this.parseNameList(options.cavernNamesText);
 
         this.isAiArtGenerating.set(true);
-        this.saveState.set('saving');
         this.saveMessage.set('Generating map art with OpenAI...');
         this.cdr.detectChanges();
 
@@ -1155,6 +1175,10 @@ export class CampaignMapPageComponent {
             default:
                 return 'fa-duotone fa-thin fa-trees';
         }
+    }
+
+    decorationColor(decoration: CampaignMapDecoration): string {
+        return this.normalizeEditorColor(decoration.color, this.defaultDecorationColor(decoration.type));
     }
 
     iconClass(iconType: CampaignMapIconType): string {
@@ -1478,6 +1502,29 @@ export class CampaignMapPageComponent {
         return this.terrainOptions.find((option) => option.type === type)?.label ?? 'Terrain';
     }
 
+    private defaultDecorationColor(type: CampaignMapDecorationType): string {
+        switch (type) {
+            case 'Mountain':
+                return '#4b3a2a';
+            case 'Forest':
+                return '#507255';
+            case 'Reef':
+                return '#385f7a';
+            case 'Ward':
+                return '#a03d2f';
+            default:
+                return '#8a5a2b';
+        }
+    }
+
+    private normalizeEditorColor(value: string | number | undefined, fallback: string): string {
+        if (typeof value === 'string' && BRUSH_COLOR_OPTIONS.some((option) => option.value === value)) {
+            return value;
+        }
+
+        return fallback;
+    }
+
     private parseNameList(value: string): string[] {
         return value
             .split(/\r?\n|,/)
@@ -1496,6 +1543,7 @@ export class CampaignMapPageComponent {
         return {
             id: this.createId(),
             type,
+            color: this.terrainColor(),
             x: point.x,
             y: point.y,
             scale: this.randomFloat(scaleRange[0], scaleRange[1]),
@@ -1730,6 +1778,7 @@ export class CampaignMapPageComponent {
                 return {
                     id: this.createId(),
                     type: decorationTypes[(index + offset) % decorationTypes.length],
+                    color: this.defaultDecorationColor(decorationTypes[(index + offset) % decorationTypes.length]),
                     x: point.x,
                     y: point.y,
                     scale: anchor.prominence === 'major' ? this.randomFloat(1.05, 1.45) : this.randomFloat(0.72, 1.08),
@@ -1848,6 +1897,7 @@ export class CampaignMapPageComponent {
         return Array.from({ length: count }, (_, index) => ({
             id: this.createId(),
             type: background === 'Cavern' ? 'Cave' : 'Mountain',
+            color: this.defaultDecorationColor(background === 'Cavern' ? 'Cave' : 'Mountain'),
             x: this.clampCoordinate(origin.x + index * 0.07 + this.randomFloat(-0.03, 0.03)),
             y: this.clampCoordinate(origin.y + index * 0.05 + this.randomFloat(-0.04, 0.04)),
             scale: this.randomFloat(0.82, 1.42),
@@ -1861,9 +1911,11 @@ export class CampaignMapPageComponent {
         const center = this.averagePoint(anchors.map((anchor) => ({ x: anchor.x, y: anchor.y })));
         return Array.from({ length: count }, (_, index) => {
             const point = this.offsetPoint({ x: center.x - 0.1 + (index % 3) * 0.06, y: center.y + 0.08 + Math.floor(index / 3) * 0.04 }, 0.07, 0.05);
+            const type: CampaignMapDecorationType = background === 'Coast' ? 'Reef' : 'Forest';
             return {
                 id: this.createId(),
-                type: background === 'Coast' ? 'Reef' : 'Forest',
+                type,
+                color: this.defaultDecorationColor(type),
                 x: point.x,
                 y: point.y,
                 scale: this.randomFloat(0.72, 1.18),

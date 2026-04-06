@@ -96,6 +96,7 @@ public sealed record CampaignMapIconDto(
 public sealed record CampaignMapDecorationDto(
     Guid Id,
     string Type,
+    string? Color,
     double X,
     double Y,
     double Scale,
