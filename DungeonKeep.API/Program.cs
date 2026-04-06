@@ -217,6 +217,13 @@ static void EnsureCharactersCampaignIdIsNullable(DungeonKeepDbContext dbContext)
 
 static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)
 {
+    EnsureColumnExists(dbContext, "CampaignMemberships", "UserId", "TEXT NULL");
+    EnsureColumnExists(dbContext, "CampaignMemberships", "Email", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "CampaignMemberships", "Role", "TEXT NOT NULL DEFAULT 'Member'");
+    EnsureColumnExists(dbContext, "CampaignMemberships", "Status", "TEXT NOT NULL DEFAULT 'Pending'");
+    EnsureColumnExists(dbContext, "CampaignMemberships", "InvitedByUserId", "TEXT NULL");
+    EnsureColumnExists(dbContext, "CampaignMemberships", "CreatedAtUtc", "TEXT NOT NULL DEFAULT ''");
+
     EnsureColumnExists(dbContext, "Campaigns", "OpenThreadsJson", "TEXT NOT NULL DEFAULT '[]'");
     EnsureColumnExists(dbContext, "Campaigns", "WorldNotesJson", "TEXT NOT NULL DEFAULT '[]'");
     EnsureColumnExists(dbContext, "Campaigns", "CampaignMapJson", "TEXT NOT NULL DEFAULT '{}'");
@@ -228,6 +235,7 @@ static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)
     EnsureColumnExists(dbContext, "Campaigns", "LevelEnd", "INTEGER NOT NULL DEFAULT 4");
     EnsureColumnExists(dbContext, "Campaigns", "Hook", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "Campaigns", "NextSession", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Campaigns", "Summary", "TEXT NOT NULL DEFAULT ''");
 
     EnsureColumnExists(dbContext, "Characters", "Status", "TEXT NOT NULL DEFAULT 'Ready'");
     EnsureColumnExists(dbContext, "Characters", "OwnerUserId", "TEXT NULL");

@@ -79,6 +79,13 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             dbContext.Database.ExecuteSqlRaw("CREATE TABLE IF NOT EXISTS \"CampaignMemberships\" (\"Id\" TEXT NOT NULL CONSTRAINT \"PK_CampaignMemberships\" PRIMARY KEY, \"CampaignId\" TEXT NOT NULL, \"UserId\" TEXT NULL, \"Email\" TEXT NOT NULL, \"Role\" TEXT NOT NULL DEFAULT 'Member', \"Status\" TEXT NOT NULL DEFAULT 'Pending', \"InvitedByUserId\" TEXT NULL, \"CreatedAtUtc\" TEXT NOT NULL);");
             dbContext.Database.ExecuteSqlRaw("CREATE UNIQUE INDEX IF NOT EXISTS \"IX_CampaignMemberships_CampaignId_Email\" ON \"CampaignMemberships\" (\"CampaignId\", \"Email\");");
 
+            EnsureColumnExists(dbContext, "CampaignMemberships", "UserId", "TEXT NULL");
+            EnsureColumnExists(dbContext, "CampaignMemberships", "Email", "TEXT NOT NULL DEFAULT ''");
+            EnsureColumnExists(dbContext, "CampaignMemberships", "Role", "TEXT NOT NULL DEFAULT 'Member'");
+            EnsureColumnExists(dbContext, "CampaignMemberships", "Status", "TEXT NOT NULL DEFAULT 'Pending'");
+            EnsureColumnExists(dbContext, "CampaignMemberships", "InvitedByUserId", "TEXT NULL");
+            EnsureColumnExists(dbContext, "CampaignMemberships", "CreatedAtUtc", "TEXT NOT NULL DEFAULT ''");
+
             EnsureColumnExists(dbContext, "Campaigns", "OpenThreadsJson", "TEXT NOT NULL DEFAULT '[]'");
             EnsureColumnExists(dbContext, "Campaigns", "WorldNotesJson", "TEXT NOT NULL DEFAULT '[]'");
             EnsureColumnExists(dbContext, "Campaigns", "CampaignMapJson", "TEXT NOT NULL DEFAULT '{}'");
@@ -90,6 +97,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             EnsureColumnExists(dbContext, "Campaigns", "LevelEnd", "INTEGER NOT NULL DEFAULT 4");
             EnsureColumnExists(dbContext, "Campaigns", "Hook", "TEXT NOT NULL DEFAULT ''");
             EnsureColumnExists(dbContext, "Campaigns", "NextSession", "TEXT NOT NULL DEFAULT ''");
+            EnsureColumnExists(dbContext, "Campaigns", "Summary", "TEXT NOT NULL DEFAULT ''");
         }
         catch
         {
