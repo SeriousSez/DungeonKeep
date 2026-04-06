@@ -40,7 +40,16 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
     {
         _ = campaignSchemaReady;
         dbContext.Campaigns.Add(campaign);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (RequiresCampaignSchemaRepair(exception))
+        {
+            EnsureCampaignSchema(dbContext);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
         return campaign;
     }
 
@@ -124,6 +133,15 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 #pragma warning disable EF1003
         dbContext.Database.ExecuteSqlRaw("ALTER TABLE \"" + tableName + "\" ADD COLUMN \"" + columnName + "\" " + columnDefinition + ";");
 #pragma warning restore EF1003
+    }
+
+    private static bool RequiresCampaignSchemaRepair(DbUpdateException exception)
+    {
+        var detail = exception.GetBaseException().Message;
+
+        return detail.Contains("table Campaigns has no column named", StringComparison.OrdinalIgnoreCase)
+            || detail.Contains("table CampaignMemberships has no column named", StringComparison.OrdinalIgnoreCase)
+            || detail.Contains("no such table: CampaignMemberships", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<Campaign?> AddSessionAsync(Guid campaignId, CampaignSessionDto session, CancellationToken cancellationToken = default)
