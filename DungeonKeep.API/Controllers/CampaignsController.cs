@@ -1,6 +1,7 @@
 using DungeonKeep.API.Hubs;
 using DungeonKeep.ApplicationService.Contracts;
 using DungeonKeep.ApplicationService.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Primitives;
@@ -14,7 +15,7 @@ namespace DungeonKeep.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public sealed class CampaignsController(ICampaignService campaignService, ICharacterService characterService, IAuthService authService, IHttpClientFactory httpClientFactory, IConfiguration configuration, IHubContext<CampaignHub> campaignHub) : ControllerBase
+public sealed class CampaignsController(ICampaignService campaignService, ICharacterService characterService, IAuthService authService, IHttpClientFactory httpClientFactory, IConfiguration configuration, IHubContext<CampaignHub> campaignHub, ILogger<CampaignsController> logger) : ControllerBase
 {
     private const string DefaultModel = "gpt-4.1-mini";
     private const string DefaultResponsesUrl = "https://api.openai.com/v1/responses";
@@ -69,8 +70,21 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             return Unauthorized();
         }
 
-        var created = await campaignService.CreateAsync(request, user, cancellationToken);
-        return CreatedAtAction(nameof(GetAll), new { id = created.Id }, created);
+        try
+        {
+            var created = await campaignService.CreateAsync(request, user, cancellationToken);
+            return CreatedAtAction(nameof(GetAll), new { id = created.Id }, created);
+        }
+        catch (DbUpdateException exception)
+        {
+            logger.LogError(exception, "Campaign creation failed for user {UserId}", user.Id);
+            return Problem(title: "Campaign creation failed.", detail: DescribeCreateFailure(exception), statusCode: StatusCodes.Status500InternalServerError);
+        }
+        catch (InvalidOperationException exception)
+        {
+            logger.LogError(exception, "Campaign creation failed for user {UserId}", user.Id);
+            return Problem(title: "Campaign creation failed.", detail: DescribeCreateFailure(exception), statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 
     [HttpPut("{campaignId:guid}")]
@@ -1062,6 +1076,22 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
     {
         var campaigns = await campaignService.GetAllAsync(userId, cancellationToken);
         return campaigns.FirstOrDefault(campaign => campaign.Id == campaignId);
+    }
+
+    private static string DescribeCreateFailure(Exception exception)
+    {
+        var detail = exception.GetBaseException().Message.Trim();
+
+        if (detail.Contains("no column named", StringComparison.OrdinalIgnoreCase)
+            || detail.Contains("has no column named", StringComparison.OrdinalIgnoreCase)
+            || detail.Contains("no such table", StringComparison.OrdinalIgnoreCase))
+        {
+            return "The production database schema is outdated. " + detail;
+        }
+
+        return string.IsNullOrWhiteSpace(detail)
+            ? "The server could not persist the campaign."
+            : detail;
     }
 
     private bool TryGetOpenAiConfiguration(out string apiKey, out string responsesUrl, out string model)
