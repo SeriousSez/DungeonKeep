@@ -19,14 +19,15 @@
 }
 
 .loading-state {
-    margin-top: 24px;
-    padding: 28px;
+    margin-top: 12px;
+    padding: clamp(16px, 3vw, 28px);
     display: grid;
     gap: 8px;
 
     h1 {
         margin: 0;
         font-family: var(--display-font);
+        font-size: clamp(1.3rem, 2.5vw, 1.8rem);
     }
 }
 
@@ -427,6 +428,7 @@
 .shell {
     max-width: 1480px;
     margin: 0 auto;
+    padding: 0 clamp(8px, 2vw, 20px);
 }
 
 // ── Breadcrumb host ───────────────────────────────────────────────────────────
@@ -441,127 +443,49 @@
 // ── Responsive ────────────────────────────────────────────────────────────────
 @media (max-width: 860px) {
     .topbar {
-        margin: 12px 12px 0;
-        padding: 10px 14px;
-        top: 6px;
+        margin: 8px 8px 0;
+        padding: 10px 12px;
+        top: 4px;
     }
 
-    .brand-link {
-        margin-right: 0;
+    .brand-mark {
+        width: 32px;
+        font-size: 0.9rem;
     }
 
-    .hamburger-btn {
-        display: inline-flex;
-        margin-left: auto;
-    }
-
-    .topbar-actions {
-        display: none;
-    }
-
-    .primary-nav {
-        position: absolute;
-        top: calc(100% + 10px);
-        left: 0;
-        right: 0;
-        height: auto;
-        max-height: calc(100dvh - 100px);
-        overflow-y: auto;
-        background: var(--color-surface-solid);
-        border: 1px solid var(--panel-border);
-        border-radius: 18px;
-        box-shadow: var(--panel-shadow);
-        flex-direction: column;
-        align-items: stretch;
-        gap: 4px;
-        padding: 10px;
-        display: none;
-        z-index: 150;
-    }
-
-    .primary-nav.is-open {
-        display: flex;
-    }
-
-    .nav-group {
-        height: auto;
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .nav-group-btn {
-        height: 44px;
-        border-radius: 12px;
-        justify-content: space-between;
-        padding: 0 14px;
-    }
-
-    .nav-dropdown {
-        position: static;
-        box-shadow: none;
-        margin-top: 4px;
-        margin-bottom: 2px;
-    }
-
-    .nav-dropdown--rules {
-        min-width: 0;
-        padding: 8px;
-    }
-
-    .nav-dropdown-grid {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
-
-    .nav-direct {
-        height: 44px;
-        border-radius: 12px;
-        padding: 0 14px;
-    }
-
-    .nav-mobile-footer {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 2px 0;
-        border-top: 1px solid var(--color-border);
-        margin-top: 6px;
-    }
-
-    .nav-mobile-footer .user-pill {
-        flex: 1;
-        justify-content: center;
-    }
-
-    .logout-btn-plain {
-        display: inline-flex;
-        align-items: center;
-        padding: 0 14px;
-        height: 36px;
-        border-radius: 999px;
-        border: 1px solid var(--pill-border);
-        background: transparent;
-        color: var(--text-soft);
-        font: inherit;
-        font-size: 0.84rem;
-        cursor: pointer;
-        transition: color 0.15s, background 0.15s;
-        white-space: nowrap;
-
-        &:hover {
-            color: var(--color-primary);
-            background: rgba(216, 147, 75, 0.12);
-        }
+    .brand-name {
+        font-size: clamp(0.9rem, 2vw, 1.1rem);
     }
 
     .shell {
-        padding: 0 12px;
+        padding: 0 8px;
+    }
+}
+
+@media (max-width: 600px) {
+    .topbar {
+        margin: 4px 4px 0;
+        padding: 8px 10px;
+    }
+
+    .brand-mark {
+        width: 28px;
+        font-size: 0.8rem;
+    }
+
+    .shell {
+        padding: 0 4px;
     }
 }
 
 @media (max-width: 420px) {
     .brand-name {
         display: none;
+    }
+
+    .topbar {
+        margin: 2px 2px 0;
+        padding: 6px 8px;
     }
 }
 

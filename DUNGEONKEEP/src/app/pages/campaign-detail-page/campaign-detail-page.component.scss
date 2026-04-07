@@ -22,7 +22,7 @@ html {
 }
 
 .page-intro {
-    padding: 24px;
+    padding: clamp(14px, 3vw, 24px);
 }
 
 .page-intro-header {
@@ -63,30 +63,33 @@ html {
     font-family: var(--display-font);
     font-weight: 700;
     letter-spacing: 0.02em;
+    font-size: clamp(1.2rem, 3vw, 1.8rem);
 }
 
 .page-intro p {
     margin: 0;
     color: var(--text-muted);
     line-height: 1.6;
+    font-size: clamp(0.9rem, 1.5vw, 1rem);
 }
 
 .campaign-nav {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 12px;
-    padding: 18px;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    padding: clamp(12px, 2vw, 18px);
 }
 
 .campaign-nav-link {
     display: grid;
     gap: 6px;
-    padding: 14px 16px;
+    padding: clamp(10px, 2vw, 14px) clamp(12px, 2.5vw, 16px);
     border: 1px solid var(--panel-border);
     border-radius: 16px;
     background: color-mix(in srgb, var(--surface-raised) 84%, var(--accent-primary) 16%);
     text-decoration: none;
     color: var(--text-main);
+    font-size: clamp(0.8rem, 1.2vw, 0.95rem);
     transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
 

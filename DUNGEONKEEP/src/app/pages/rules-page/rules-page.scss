@@ -17,7 +17,7 @@
 
 .rules-hero,
 .rules-section {
-    padding: 24px;
+    padding: clamp(14px, 3vw, 24px);
 }
 
 .rules-overview {
@@ -48,7 +48,7 @@
 
 .rules-hero h1 {
     max-width: 14ch;
-    font-size: clamp(2rem, 4vw, 3.4rem);
+    font-size: clamp(1.5rem, 4vw, 3.4rem);
     line-height: 1.04;
 }
 
@@ -72,20 +72,17 @@
 }
 
 .section-heading {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    align-items: end;
-    margin-bottom: 18px;
+    display: grid;
+    gap: 12px;
+    margin-bottom: 16px;
 }
 
-.section-heading>div {
-    min-width: 0;
-}
-
-.section-heading p {
-    max-width: 36ch;
-    text-align: right;
+@media (min-width: 768px) {
+    .section-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+    }
 }
 
 .rules-card-grid {
@@ -216,14 +213,54 @@
     .rules-hero,
     .rules-section,
     .rules-overview {
-        padding: 18px;
+        padding: 14px;
+    }
+
+    .rules-card-grid {
+        gap: 10px;
+    }
+
+    .rules-stat-grid {
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 10px;
     }
 
     .rules-card {
         grid-template-columns: auto minmax(0, 1fr);
+        gap: 10px;
+        padding: 12px;
+    }
+
+    .rules-card-icon {
+        width: 40px;
+        height: 40px;
     }
 
     .rules-card-arrow {
         display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .rules-page {
+        gap: 14px;
+    }
+
+    .rules-hero,
+    .rules-section,
+    .rules-overview {
+        padding: 12px;
+    }
+
+    .rules-hero h1 {
+        font-size: clamp(1.3rem, 3vw, 1.8rem);
+    }
+
+    .rules-stat-card {
+        padding: 12px 14px;
+    }
+
+    .rules-stat-value {
+        font-size: clamp(1.4rem, 3vw, 2rem);
     }
 }
