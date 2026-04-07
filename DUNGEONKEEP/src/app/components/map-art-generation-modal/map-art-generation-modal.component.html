@@ -30,6 +30,16 @@
                 </div>
                 }
 
+                <div class="map-art-field-block map-art-field-block--toggle">
+                    <label class="map-art-toggle" for="map-art-separate-labels">
+                        <input id="map-art-separate-labels" type="checkbox" [checked]="separateLabelsDraft()" (change)="updateSeparateLabels($any($event.target).checked)" />
+                        <span>
+                            <strong>Generate separate movable labels</strong>
+                            <small>{{ separateLabelsHelpText() }}</small>
+                        </span>
+                    </label>
+                </div>
+
                 @if (showParchmentLayout()) {
                 <div class="map-art-field-block">
                     <label class="map-art-field-label">Parchment layout</label>

@@ -117,19 +117,19 @@ export class DropdownComponent {
                     return;
                 }
 
-                const viewportPadding = 12;
                 const panelGap = 6;
                 const triggerRect = trigger.getBoundingClientRect();
+                const boundsRect = this.getAvailableBounds(trigger);
                 const desiredPanelHeight = panel.offsetHeight || panel.scrollHeight || this.defaultPanelMaxHeight;
                 const desiredPanelWidth = panel.offsetWidth || panel.scrollWidth || triggerRect.width;
-                const availableBelow = Math.max(0, view.innerHeight - triggerRect.bottom - viewportPadding - panelGap);
-                const availableAbove = Math.max(0, triggerRect.top - viewportPadding - panelGap);
-                const availableRight = Math.max(0, view.innerWidth - viewportPadding - triggerRect.left);
-                const availableLeft = Math.max(0, triggerRect.right - viewportPadding);
+                const availableBelow = Math.max(0, boundsRect.bottom - triggerRect.bottom - panelGap);
+                const availableAbove = Math.max(0, triggerRect.top - boundsRect.top - panelGap);
+                const availableRight = Math.max(0, boundsRect.right - triggerRect.left);
+                const availableLeft = Math.max(0, triggerRect.right - boundsRect.left);
                 const shouldOpenUpward = desiredPanelHeight > availableBelow && availableAbove > availableBelow;
                 const availableSpace = shouldOpenUpward ? availableAbove : availableBelow;
-                const startOverflow = triggerRect.left + desiredPanelWidth - (view.innerWidth - viewportPadding);
-                const endOverflow = viewportPadding - (triggerRect.right - desiredPanelWidth);
+                const startOverflow = triggerRect.left + desiredPanelWidth - boundsRect.right;
+                const endOverflow = boundsRect.left - (triggerRect.right - desiredPanelWidth);
 
                 this.opensUpward.set(shouldOpenUpward);
                 // Keep the dropdown panel within available viewport space.
@@ -239,5 +239,44 @@ export class DropdownComponent {
         if (!this.hostElement.nativeElement.contains(target)) {
             this.isOpen.set(false);
         }
+    }
+
+    private getAvailableBounds(trigger: HTMLElement): DOMRect {
+        const scrollContainer = this.getNearestScrollContainer(trigger);
+        if (!scrollContainer) {
+            return new DOMRect(
+                this.viewportPadding,
+                this.viewportPadding,
+                globalThis.window.innerWidth - this.viewportPadding * 2,
+                globalThis.window.innerHeight - this.viewportPadding * 2
+            );
+        }
+
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const top = Math.max(this.viewportPadding, containerRect.top);
+        const right = Math.min(globalThis.window.innerWidth - this.viewportPadding, containerRect.right);
+        const bottom = Math.min(globalThis.window.innerHeight - this.viewportPadding, containerRect.bottom);
+        const left = Math.max(this.viewportPadding, containerRect.left);
+
+        return new DOMRect(left, top, Math.max(0, right - left), Math.max(0, bottom - top));
+    }
+
+    private getNearestScrollContainer(element: HTMLElement): HTMLElement | null {
+        let current = element.parentElement;
+
+        while (current) {
+            const style = globalThis.window.getComputedStyle(current);
+            const overflowY = style.overflowY;
+            const overflow = style.overflow;
+            const isScrollable = /(auto|scroll|overlay)/.test(`${overflowY} ${overflow}`);
+
+            if (isScrollable && current.scrollHeight > current.clientHeight) {
+                return current;
+            }
+
+            current = current.parentElement;
+        }
+
+        return null;
     }
 }

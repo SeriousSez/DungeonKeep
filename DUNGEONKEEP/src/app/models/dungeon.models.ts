@@ -29,6 +29,9 @@ export type CampaignMapBackground = 'Parchment' | 'Cavern' | 'Coast' | 'City';
 export type CampaignMapIconType = 'Keep' | 'Town' | 'Camp' | 'Dungeon' | 'Danger' | 'Treasure' | 'Portal' | 'Tower';
 export type CampaignMapDecorationType = 'Forest' | 'Mountain' | 'Hill' | 'Reef' | 'Cave' | 'Ward';
 export type CampaignMapLabelTone = 'Region' | 'Feature';
+export type CampaignMapLabelFontFamily = 'display' | 'body';
+export type CampaignMapLabelFontStyle = 'normal' | 'italic';
+export type CampaignMapLabelTextTransform = 'none' | 'uppercase';
 
 export interface SessionPrep {
     id: string;
@@ -101,6 +104,17 @@ export interface CampaignMapDecoration {
     opacity: number;
 }
 
+export interface CampaignMapLabelStyle {
+    color: string;
+    fontFamily: CampaignMapLabelFontFamily;
+    fontSize: number;
+    fontWeight: number;
+    letterSpacing: number;
+    fontStyle: CampaignMapLabelFontStyle;
+    textTransform: CampaignMapLabelTextTransform;
+    opacity: number;
+}
+
 export interface CampaignMapLabel {
     id: string;
     text: string;
@@ -108,6 +122,7 @@ export interface CampaignMapLabel {
     x: number;
     y: number;
     rotation: number;
+    style: CampaignMapLabelStyle;
 }
 
 export interface CampaignMapLayers {

@@ -1,8 +1,8 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 
 import { raceMap } from '../data/races';
-import { AbilityScores, Campaign, CampaignDraft, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecorationType, CampaignMapIconType, CampaignMapLabelTone, CampaignThreadVisibility, CampaignWorldNoteCategory, Character, CharacterDraft, CharacterStatus, SkillProficiencies, ThreatLevel } from '../models/dungeon.models';
-import { ApiCampaignDto, ApiCampaignMapBoardDto, ApiCampaignMapDecorationDto, ApiCampaignMapDto, ApiCampaignMapLabelDto, ApiCampaignMapLibraryDto, ApiCampaignWorldNoteDto, ApiCharacterDto, DungeonApiService } from './dungeon-api.service';
+import { AbilityScores, Campaign, CampaignDraft, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecorationType, CampaignMapIconType, CampaignMapLabelStyle, CampaignMapLabelTone, CampaignThreadVisibility, CampaignWorldNoteCategory, Character, CharacterDraft, CharacterStatus, SkillProficiencies, ThreatLevel } from '../models/dungeon.models';
+import { ApiCampaignDto, ApiCampaignMapBoardDto, ApiCampaignMapDecorationDto, ApiCampaignMapDto, ApiCampaignMapLabelDto, ApiCampaignMapLabelStyleDto, ApiCampaignMapLibraryDto, ApiCampaignWorldNoteDto, ApiCharacterDto, DungeonApiService } from './dungeon-api.service';
 import { SessionService } from './session.service';
 
 @Injectable({ providedIn: 'root' })
@@ -306,11 +306,12 @@ export class DungeonStoreService {
         }
     }
 
-    async generateCampaignMapArtAi(campaignId: string, payload: { background: CampaignMapBackground; mapName: string; settlementScale?: 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis'; parchmentLayout?: 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular'; cavernLayout?: 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes'; settlementNames?: string[]; regionNames?: string[]; ruinNames?: string[]; cavernNames?: string[]; additionalDirection?: string }): Promise<string | null> {
+    async generateCampaignMapArtAi(campaignId: string, payload: { background: CampaignMapBackground; mapName: string; separateLabels?: boolean; settlementScale?: 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis'; parchmentLayout?: 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular'; cavernLayout?: 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes'; settlementNames?: string[]; regionNames?: string[]; ruinNames?: string[]; cavernNames?: string[]; additionalDirection?: string }): Promise<{ backgroundImageUrl: string; labels: Campaign['map']['labels'] } | null> {
         try {
             const generated = await this.api.generateCampaignMapArtAi(campaignId, {
                 background: this.normalizeMapBackground(payload.background),
                 mapName: payload.mapName.trim(),
+                separateLabels: payload.separateLabels,
                 settlementScale: payload.settlementScale,
                 parchmentLayout: payload.parchmentLayout,
                 cavernLayout: payload.cavernLayout,
@@ -321,7 +322,18 @@ export class DungeonStoreService {
                 additionalDirection: payload.additionalDirection?.trim() || undefined
             });
 
-            return this.normalizeMapBackgroundImageUrl(generated.backgroundImageUrl);
+            return {
+                backgroundImageUrl: this.normalizeMapBackgroundImageUrl(generated.backgroundImageUrl),
+                labels: (generated.labels ?? []).map((label) => ({
+                    id: label.id,
+                    text: label.text,
+                    tone: this.normalizeMapLabelTone(label.tone),
+                    x: this.normalizeMapCoordinate(label.x),
+                    y: this.normalizeMapCoordinate(label.y),
+                    rotation: Math.max(-180, Math.min(180, Number(label.rotation) || 0)),
+                    style: this.normalizeMapLabelStyle(label.style, label.tone)
+                }))
+            };
         } catch {
             return null;
         }
@@ -729,7 +741,8 @@ export class DungeonStoreService {
                 tone: this.normalizeMapLabelTone(label.tone),
                 x: this.normalizeMapCoordinate(label.x),
                 y: this.normalizeMapCoordinate(label.y),
-                rotation: this.normalizeMapRotation(label.rotation)
+                rotation: this.normalizeMapRotation(label.rotation),
+                style: this.normalizeMapLabelStyle(label.style, label.tone)
             })),
             layers: {
                 rivers: (map?.layers?.rivers ?? []).map((stroke) => ({
@@ -818,7 +831,8 @@ export class DungeonStoreService {
                 tone: this.normalizeMapLabelTone(label.tone),
                 x: this.normalizeMapCoordinate(label.x),
                 y: this.normalizeMapCoordinate(label.y),
-                rotation: this.normalizeMapRotation(label.rotation)
+                rotation: this.normalizeMapRotation(label.rotation),
+                style: this.normalizeMapLabelStyleToApi(label.style, label.tone)
             })),
             layers: {
                 rivers: map.layers.rivers.map((stroke) => ({
@@ -1148,6 +1162,37 @@ export class DungeonStoreService {
         }
     }
 
+    private normalizeMapLabelStyle(style: ApiCampaignMapLabelStyleDto | CampaignMapLabelStyle | undefined, tone: ApiCampaignMapLabelDto['tone'] | string | undefined): CampaignMapLabelStyle {
+        const normalizedTone = this.normalizeMapLabelTone(tone);
+        const defaults = this.defaultMapLabelStyle(normalizedTone);
+
+        return {
+            color: this.normalizeMapLabelColor(style?.color, normalizedTone),
+            fontFamily: this.normalizeMapLabelFontFamily(style?.fontFamily, normalizedTone),
+            fontSize: this.normalizeMapLabelFontSize(style?.fontSize, normalizedTone),
+            fontWeight: this.normalizeMapLabelFontWeight(style?.fontWeight, normalizedTone),
+            letterSpacing: this.normalizeMapLabelLetterSpacing(style?.letterSpacing, normalizedTone),
+            fontStyle: style?.fontStyle === 'italic' ? 'italic' : defaults.fontStyle,
+            textTransform: style?.textTransform === 'none' ? 'none' : defaults.textTransform,
+            opacity: this.normalizeMapLabelOpacity(style?.opacity, normalizedTone)
+        };
+    }
+
+    private normalizeMapLabelStyleToApi(style: CampaignMapLabelStyle | undefined, tone: CampaignMapLabelTone): ApiCampaignMapLabelStyleDto {
+        const normalized = this.normalizeMapLabelStyle(style, tone);
+
+        return {
+            color: normalized.color,
+            fontFamily: normalized.fontFamily,
+            fontSize: normalized.fontSize,
+            fontWeight: normalized.fontWeight,
+            letterSpacing: normalized.letterSpacing,
+            fontStyle: normalized.fontStyle,
+            textTransform: normalized.textTransform,
+            opacity: normalized.opacity
+        };
+    }
+
     private normalizeMapDecorationColor(type: ApiCampaignMapDecorationDto['type'] | string | undefined, color: string | undefined): string {
         const normalizedType = this.normalizeMapDecorationType(type);
 
@@ -1189,6 +1234,80 @@ export class DungeonStoreService {
             default:
                 return '#8a5a2b';
         }
+    }
+
+    private normalizeMapLabelColor(color: string | undefined, tone: CampaignMapLabelTone): string {
+        if (typeof color === 'string' && /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color.trim())) {
+            return color.trim();
+        }
+
+        return this.defaultMapLabelStyle(tone).color;
+    }
+
+    private normalizeMapLabelFontFamily(fontFamily: ApiCampaignMapLabelStyleDto['fontFamily'] | CampaignMapLabelStyle['fontFamily'] | undefined, tone: CampaignMapLabelTone): CampaignMapLabelStyle['fontFamily'] {
+        if (fontFamily === 'body' || fontFamily === 'display') {
+            return fontFamily;
+        }
+
+        return this.defaultMapLabelStyle(tone).fontFamily;
+    }
+
+    private normalizeMapLabelFontSize(value: number | undefined, tone: CampaignMapLabelTone): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return this.defaultMapLabelStyle(tone).fontSize;
+        }
+
+        return Math.max(0.72, Math.min(1.6, Number(value)));
+    }
+
+    private normalizeMapLabelFontWeight(value: number | undefined, tone: CampaignMapLabelTone): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return this.defaultMapLabelStyle(tone).fontWeight;
+        }
+
+        return Math.max(400, Math.min(800, Math.round(Number(value) / 50) * 50));
+    }
+
+    private normalizeMapLabelLetterSpacing(value: number | undefined, tone: CampaignMapLabelTone): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return this.defaultMapLabelStyle(tone).letterSpacing;
+        }
+
+        return Math.max(-0.02, Math.min(0.24, Number(value)));
+    }
+
+    private normalizeMapLabelOpacity(value: number | undefined, tone: CampaignMapLabelTone): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return this.defaultMapLabelStyle(tone).opacity;
+        }
+
+        return Math.max(0.45, Math.min(1, Number(value)));
+    }
+
+    private defaultMapLabelStyle(tone: CampaignMapLabelTone): CampaignMapLabelStyle {
+        if (tone === 'Feature') {
+            return {
+                color: '#8a5a2b',
+                fontFamily: 'body',
+                fontSize: 0.82,
+                fontWeight: 500,
+                letterSpacing: 0.08,
+                fontStyle: 'italic',
+                textTransform: 'none',
+                opacity: 0.86
+            };
+        }
+
+        return {
+            color: '#4b3a2a',
+            fontFamily: 'display',
+            fontSize: 1,
+            fontWeight: 650,
+            letterSpacing: 0.18,
+            fontStyle: 'normal',
+            textTransform: 'uppercase',
+            opacity: 0.96
+        };
     }
 
     private normalizeMapCoordinate(value: number | undefined): number {

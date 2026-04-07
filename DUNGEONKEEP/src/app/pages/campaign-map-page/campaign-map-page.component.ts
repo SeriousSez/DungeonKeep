@@ -5,12 +5,12 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { MapArtGenerationModalComponent, MapArtGenerationOptions } from '../../components/map-art-generation-modal/map-art-generation-modal.component';
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
-import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelTone, CampaignMapPoint, CampaignMapToken, CampaignTone } from '../../models/dungeon.models';
+import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelFontFamily, CampaignMapLabelTone, CampaignMapPoint, CampaignMapToken, CampaignTone } from '../../models/dungeon.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
-type MapTool = 'draw' | 'icon' | 'terrain' | 'label' | 'token';
-type MapConfirmAction = 'clear-map' | 'delete-icon' | 'delete-token' | 'delete-map' | null;
+type MapTool = 'select' | 'draw' | 'icon' | 'terrain' | 'label' | 'token';
+type MapConfirmAction = 'clear-map' | 'delete-icon' | 'delete-token' | 'delete-label' | 'delete-map' | null;
 type MapAnchorProminence = 'major' | 'minor';
 type SettlementScale = 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis';
 type ParchmentLayout = 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular';
@@ -218,10 +218,11 @@ export class CampaignMapPageComponent {
     readonly mapBoards = signal<CampaignMapBoard[]>([]);
     readonly currentMapId = signal('');
     readonly mapNameDraft = signal('');
-    readonly activeTool = signal<MapTool>('draw');
+    readonly activeTool = signal<MapTool>('select');
     readonly pendingIconType = signal<CampaignMapIconType | null>(null);
     readonly pendingTerrainType = signal<CampaignMapDecorationType | null>(null);
     readonly selectedIconId = signal<string | null>(null);
+    readonly selectedLabelId = signal<string | null>(null);
     readonly selectedTokenId = signal<string | null>(null);
     readonly iconLabelDraft = signal('');
     readonly tokenNameDraft = signal('');
@@ -238,6 +239,7 @@ export class CampaignMapPageComponent {
     readonly regionNamesDraft = signal('');
     readonly ruinNamesDraft = signal('');
     readonly cavernNamesDraft = signal('');
+    readonly separateLabelsDraft = signal(true);
     readonly additionalArtDirectionDraft = signal('');
     readonly settlementScale = signal<SettlementScale>('City');
     readonly parchmentLayout = signal<ParchmentLayout>('Continent');
@@ -329,6 +331,14 @@ export class CampaignMapPageComponent {
 
         return this.workingMap().tokens.find((token) => token.id === tokenId) ?? null;
     });
+    readonly selectedLabel = computed(() => {
+        const labelId = this.selectedLabelId();
+        if (!labelId) {
+            return null;
+        }
+
+        return this.workingMap().labels.find((label) => label.id === labelId) ?? null;
+    });
     readonly activeIconOption = computed(() => this.iconOptions.find((option) => option.type === this.pendingIconType()) ?? null);
     readonly activeTerrainOption = computed(() => this.terrainOptions.find((option) => option.type === this.pendingTerrainType()) ?? null);
     readonly hasPendingTokenPlacement = computed(() => this.activeTool() === 'token' && !!this.tokenPlacementImageUrl());
@@ -384,6 +394,8 @@ export class CampaignMapPageComponent {
                 return 'Clear Map?';
             case 'delete-token':
                 return 'Delete Token?';
+            case 'delete-label':
+                return 'Delete Label?';
             case 'delete-map':
                 return 'Delete Map?';
             default:
@@ -407,6 +419,11 @@ export class CampaignMapPageComponent {
             return token ? `Remove ${token.name}? This token will disappear for everyone viewing the map.` : 'Remove this token from the campaign map?';
         }
 
+        if (this.confirmAction() === 'delete-label') {
+            const label = this.selectedLabel();
+            return label ? `Remove ${label.text}? This label will disappear for everyone viewing the map.` : 'Remove this label from the campaign map?';
+        }
+
         const icon = this.selectedIcon();
         return icon ? `Remove ${icon.label}? This landmark marker will disappear for everyone in the campaign.` : 'Remove this landmark from the campaign map?';
     });
@@ -416,6 +433,8 @@ export class CampaignMapPageComponent {
                 return 'Clear Map';
             case 'delete-token':
                 return 'Delete Token';
+            case 'delete-label':
+                return 'Delete Label';
             case 'delete-map':
                 return 'Delete Map';
             default:
@@ -438,6 +457,8 @@ export class CampaignMapPageComponent {
     private activeStrokePointerId: number | null = null;
     private draggingIconId: string | null = null;
     private draggingPointerId: number | null = null;
+    private draggingLabelId: string | null = null;
+    private draggingLabelPointerId: number | null = null;
     private draggingTokenId: string | null = null;
     private draggingTokenPointerId: number | null = null;
     private pendingDragHistory: MapEditorHistoryEntry | null = null;
@@ -452,7 +473,8 @@ export class CampaignMapPageComponent {
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe((params) => {
                 const campaignId = params.get('id') ?? '';
-                const routeMapId = params.get('mapId') ?? '';
+                const routePath = this.route.snapshot.routeConfig?.path ?? '';
+                const routeMapId = params.get('mapId') ?? (routePath === 'campaigns/:id/maps/new' ? 'new' : '');
                 this.campaignId.set(campaignId);
                 this.routeMapId.set(routeMapId);
 
@@ -528,6 +550,16 @@ export class CampaignMapPageComponent {
             this.tokenNameDraft.set(selectedToken?.name ?? '');
             this.tokenNoteDraft.set(selectedToken?.note ?? '');
         });
+
+        effect(() => {
+            const selectedLabel = this.selectedLabel();
+            if (!selectedLabel) {
+                return;
+            }
+
+            this.labelTextDraft.set(selectedLabel.text);
+            this.labelToneDraft.set(selectedLabel.tone);
+        });
     }
 
     @HostListener('document:keydown', ['$event'])
@@ -552,6 +584,12 @@ export class CampaignMapPageComponent {
         if (handled) {
             event.preventDefault();
         }
+    }
+
+    selectSelectTool(): void {
+        this.activeTool.set('select');
+        this.pendingIconType.set(null);
+        this.pendingTerrainType.set(null);
     }
 
     selectDrawTool(): void {
@@ -596,7 +634,13 @@ export class CampaignMapPageComponent {
     clearPlacementMode(): void {
         this.pendingIconType.set(null);
         this.pendingTerrainType.set(null);
-        this.activeTool.set('draw');
+        this.activeTool.set('select');
+    }
+
+    selectLabel(labelId: string): void {
+        this.selectedLabelId.set(labelId);
+        this.selectedIconId.set(null);
+        this.selectedTokenId.set(null);
     }
 
     updateTokenPlacementNameDraft(value: string): void {
@@ -854,6 +898,29 @@ export class CampaignMapPageComponent {
         }
     }
 
+    applySelectedLabel(): void {
+        const selectedLabel = this.selectedLabel();
+        if (!selectedLabel || !this.canModify()) {
+            return;
+        }
+
+        const nextText = this.labelTextDraft().trim() || this.defaultLabelText(this.labelToneDraft());
+        const nextTone = this.labelToneDraft();
+        const nextStyle = selectedLabel.tone === nextTone
+            ? selectedLabel.style
+            : this.defaultMapLabelStyle(nextTone);
+
+        if (nextText === selectedLabel.text && nextTone === selectedLabel.tone) {
+            return;
+        }
+
+        this.captureHistorySnapshot();
+        this.mutateMap((map) => {
+            map.labels = map.labels.map((label) => label.id === selectedLabel.id ? { ...label, text: nextText, tone: nextTone, style: nextStyle } : label);
+        });
+        this.markDirty('Label updated.');
+    }
+
     applySelectedIconLabel(): void {
         const selectedIcon = this.selectedIcon();
         if (!selectedIcon || !this.canModify()) {
@@ -878,6 +945,14 @@ export class CampaignMapPageComponent {
         }
 
         this.confirmAction.set('delete-icon');
+    }
+
+    requestDeleteSelectedLabel(): void {
+        if (!this.selectedLabel() || !this.canModify()) {
+            return;
+        }
+
+        this.confirmAction.set('delete-label');
     }
 
     requestClearMap(): void {
@@ -922,11 +997,27 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        if (action === 'delete-label') {
+            const labelId = this.selectedLabelId();
+            if (!labelId) {
+                return;
+            }
+
+            this.captureHistorySnapshot();
+            this.mutateMap((map) => {
+                map.labels = map.labels.filter((label) => label.id !== labelId);
+            });
+            this.selectedLabelId.set(null);
+            this.markDirty('Label removed.');
+            return;
+        }
+
         if (action === 'clear-map') {
             const background = this.workingMap().background;
             this.captureHistorySnapshot();
             this.setWorkingMap(this.createEmptyMap(background));
             this.selectedIconId.set(null);
+            this.selectedLabelId.set(null);
             this.selectedTokenId.set(null);
             this.markDirty('Map cleared.');
             return;
@@ -1020,6 +1111,7 @@ export class CampaignMapPageComponent {
         await this.generateAiMapArtWithOptions({
             background: this.workingMap().background,
             mapName: this.mapNameDraft().trim(),
+            separateLabels: this.separateLabelsDraft(),
             settlementScale: this.settlementScale(),
             parchmentLayout: this.parchmentLayout(),
             cavernLayout: this.cavernLayout(),
@@ -1045,6 +1137,7 @@ export class CampaignMapPageComponent {
 
     async submitMapArtModal(options: MapArtGenerationOptions): Promise<void> {
         this.mapArtModalOpen.set(false);
+        this.separateLabelsDraft.set(options.separateLabels);
         this.settlementScale.set(options.settlementScale);
         this.parchmentLayout.set(options.parchmentLayout);
         this.cavernLayout.set(options.cavernLayout);
@@ -1075,9 +1168,10 @@ export class CampaignMapPageComponent {
         this.cdr.detectChanges();
 
         try {
-            const backgroundImageUrl = await this.store.generateCampaignMapArtAi(campaign.id, {
+            const generated = await this.store.generateCampaignMapArtAi(campaign.id, {
                 background,
                 mapName,
+                separateLabels: options.separateLabels,
                 settlementScale: background === 'City' ? options.settlementScale : undefined,
                 parchmentLayout: background === 'Parchment' ? options.parchmentLayout : undefined,
                 cavernLayout: background === 'Cavern' ? options.cavernLayout : undefined,
@@ -1087,6 +1181,8 @@ export class CampaignMapPageComponent {
                 cavernNames,
                 additionalDirection: options.additionalDirection.trim() || undefined
             });
+
+            const backgroundImageUrl = generated?.backgroundImageUrl ?? null;
 
             if (!backgroundImageUrl) {
                 this.saveState.set('error');
@@ -1100,7 +1196,7 @@ export class CampaignMapPageComponent {
                 map.backgroundImageUrl = backgroundImageUrl;
                 map.strokes = [];
                 map.decorations = [];
-                map.labels = [];
+                map.labels = generated?.labels ?? [];
                 map.layers = {
                     rivers: [],
                     mountainChains: [],
@@ -1108,7 +1204,9 @@ export class CampaignMapPageComponent {
                 };
             });
             this.saveState.set('idle');
-            this.markDirty('Map art generated. Existing routes were cleared and landmarks were kept. Save to keep it.');
+            this.markDirty(options.separateLabels
+                ? 'Map art generated with separate movable labels. Existing routes were cleared and landmarks were kept. Save to keep it.'
+                : 'Map art generated. Existing routes were cleared and landmarks were kept. Save to keep it.');
         } finally {
             this.isAiArtGenerating.set(false);
             this.cdr.detectChanges();
@@ -1171,6 +1269,7 @@ export class CampaignMapPageComponent {
                 map.tokens = [...map.tokens, token];
             });
             this.selectedIconId.set(null);
+            this.selectedLabelId.set(null);
             this.selectedTokenId.set(token.id);
             this.markDirty('Token placed.');
             return;
@@ -1191,6 +1290,7 @@ export class CampaignMapPageComponent {
                 map.icons = [...map.icons, icon];
             });
             this.selectedIconId.set(icon.id);
+            this.selectedLabelId.set(null);
             this.selectedTokenId.set(null);
             this.markDirty('Landmark added.');
             return;
@@ -1204,6 +1304,7 @@ export class CampaignMapPageComponent {
                 this.appendTerrainDecoration(map, decoration);
             });
             this.selectedIconId.set(null);
+            this.selectedLabelId.set(null);
             this.selectedTokenId.set(null);
             this.markDirty(`${this.terrainLabel(pendingTerrainType)} added.`);
             return;
@@ -1216,7 +1317,8 @@ export class CampaignMapPageComponent {
                 tone: this.labelToneDraft(),
                 x: point.x,
                 y: point.y,
-                rotation: this.labelToneDraft() === 'Feature' ? this.randomFloat(-10, 10) : this.randomFloat(-4, 4)
+                rotation: this.labelToneDraft() === 'Feature' ? this.randomFloat(-10, 10) : this.randomFloat(-4, 4),
+                style: this.defaultMapLabelStyle(this.labelToneDraft())
             };
 
             this.captureHistorySnapshot();
@@ -1224,17 +1326,27 @@ export class CampaignMapPageComponent {
                 map.labels = [...map.labels, label];
             });
             this.selectedIconId.set(null);
+            this.selectedLabelId.set(label.id);
             this.selectedTokenId.set(null);
             this.markDirty('Map label added.');
             return;
         }
 
+        if (this.activeTool() === 'select') {
+            const clickedLabel = this.findNearestLabelAtPoint(point.x, point.y);
+            if (clickedLabel) {
+                this.selectLabel(clickedLabel.id);
+                return;
+            }
+        }
+
         this.selectedIconId.set(null);
+        this.selectedLabelId.set(null);
         this.selectedTokenId.set(null);
     }
 
     handleBoardPointerDown(event: PointerEvent): void {
-        if (!this.canModify() || this.activeTool() !== 'draw' || event.button !== 0) {
+        if (!this.canModify() || event.button !== 0) {
             return;
         }
 
@@ -1243,7 +1355,27 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        if (this.activeTool() === 'select') {
+            const clickedLabel = this.findNearestLabelAtPoint(point.x, point.y);
+            if (clickedLabel) {
+                this.selectLabel(clickedLabel.id);
+                this.draggingLabelId = clickedLabel.id;
+                this.draggingLabelPointerId = event.pointerId;
+                this.pendingDragHistory = this.createHistoryEntry();
+                (event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId);
+                event.preventDefault();
+                return;
+            }
+
+            return;
+        }
+
+        if (this.activeTool() !== 'draw') {
+            return;
+        }
+
         this.selectedIconId.set(null);
+        this.selectedLabelId.set(null);
         this.isDrawing.set(true);
         this.captureHistorySnapshot();
         this.activeStrokePointerId = event.pointerId;
@@ -1265,6 +1397,20 @@ export class CampaignMapPageComponent {
     }
 
     handleBoardPointerMove(event: PointerEvent): void {
+        if (this.draggingLabelPointerId === event.pointerId && this.draggingLabelId) {
+            const point = this.getRelativePoint(event.clientX, event.clientY);
+            if (!point) {
+                return;
+            }
+
+            this.mutateMap((map) => {
+                map.labels = map.labels.map((label) => label.id === this.draggingLabelId ? { ...label, x: point.x, y: point.y } : label);
+            });
+
+            event.preventDefault();
+            return;
+        }
+
         if (!this.isDrawing() || this.activeStrokePointerId !== event.pointerId) {
             return;
         }
@@ -1292,6 +1438,25 @@ export class CampaignMapPageComponent {
     }
 
     handleBoardPointerUp(event: PointerEvent): void {
+        if (this.draggingLabelPointerId === event.pointerId && this.draggingLabelId) {
+            this.draggingLabelId = null;
+            this.draggingLabelPointerId = null;
+            (event.currentTarget as HTMLElement | null)?.releasePointerCapture(event.pointerId);
+
+            if (this.pendingDragHistory) {
+                const beforeDrag = this.historyEntrySignature(this.pendingDragHistory);
+                const afterDrag = this.historyEntrySignature(this.createHistoryEntry());
+                if (beforeDrag !== afterDrag) {
+                    this.pushHistoryEntry(this.pendingDragHistory, 'undo');
+                    this.redoStack.set([]);
+                }
+            }
+
+            this.pendingDragHistory = null;
+            this.markDirty('Label moved.');
+            return;
+        }
+
         if (!this.isDrawing() || this.activeStrokePointerId !== event.pointerId) {
             return;
         }
@@ -1314,6 +1479,7 @@ export class CampaignMapPageComponent {
 
     handleIconPointerDown(event: PointerEvent, iconId: string): void {
         this.selectedIconId.set(iconId);
+        this.selectedLabelId.set(null);
         this.selectedTokenId.set(null);
 
         if (!this.canModify() || event.button !== 0) {
@@ -1372,6 +1538,63 @@ export class CampaignMapPageComponent {
     selectToken(tokenId: string): void {
         this.selectedTokenId.set(tokenId);
         this.selectedIconId.set(null);
+        this.selectedLabelId.set(null);
+    }
+
+    handleLabelPointerDown(event: PointerEvent, labelId: string): void {
+        this.selectLabel(labelId);
+
+        if (!this.canModify() || event.button !== 0) {
+            event.stopPropagation();
+            return;
+        }
+
+        this.draggingLabelId = labelId;
+        this.draggingLabelPointerId = event.pointerId;
+        this.pendingDragHistory = this.createHistoryEntry();
+        (event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId);
+        event.stopPropagation();
+    }
+
+    handleLabelPointerMove(event: PointerEvent, labelId: string): void {
+        if (this.draggingLabelId !== labelId || this.draggingLabelPointerId !== event.pointerId) {
+            return;
+        }
+
+        const point = this.getRelativePoint(event.clientX, event.clientY);
+        if (!point) {
+            return;
+        }
+
+        this.mutateMap((map) => {
+            map.labels = map.labels.map((label) => label.id === labelId ? { ...label, x: point.x, y: point.y } : label);
+        });
+
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    handleLabelPointerUp(event: PointerEvent, labelId: string): void {
+        if (this.draggingLabelId !== labelId || this.draggingLabelPointerId !== event.pointerId) {
+            return;
+        }
+
+        this.draggingLabelId = null;
+        this.draggingLabelPointerId = null;
+        (event.currentTarget as HTMLElement | null)?.releasePointerCapture(event.pointerId);
+        event.stopPropagation();
+
+        if (this.pendingDragHistory) {
+            const beforeDrag = this.historyEntrySignature(this.pendingDragHistory);
+            const afterDrag = this.historyEntrySignature(this.createHistoryEntry());
+            if (beforeDrag !== afterDrag) {
+                this.pushHistoryEntry(this.pendingDragHistory, 'undo');
+                this.redoStack.set([]);
+            }
+        }
+
+        this.pendingDragHistory = null;
+        this.markDirty('Label moved.');
     }
 
     handleTokenPointerDown(event: PointerEvent, tokenId: string): void {
@@ -1465,6 +1688,10 @@ export class CampaignMapPageComponent {
         return this.normalizeEditorColor(decoration.color, this.defaultDecorationColor(decoration.type));
     }
 
+    mapLabelFontFamily(fontFamily: CampaignMapLabelFontFamily): string {
+        return fontFamily === 'body' ? 'var(--body-font)' : 'var(--display-font)';
+    }
+
     iconClass(iconType: CampaignMapIconType): string {
         return this.iconOptions.find((option) => option.type === iconType)?.iconClass ?? 'fa-duotone fa-thin fa-location-dot';
     }
@@ -1475,6 +1702,10 @@ export class CampaignMapPageComponent {
 
     isSelectedIcon(iconId: string): boolean {
         return this.selectedIconId() === iconId;
+    }
+
+    isSelectedLabel(labelId: string): boolean {
+        return this.selectedLabelId() === labelId;
     }
 
     private markDirty(message = 'Unsaved changes.'): void {
@@ -1530,9 +1761,10 @@ export class CampaignMapPageComponent {
             this.mapBoards.set(maps.length > 0 ? maps : [this.cloneMapBoard(activeMap)]);
             this.loadMapBoard(activeMap);
             this.selectedIconId.set(null);
+            this.selectedLabelId.set(null);
             this.selectedTokenId.set(null);
             this.pendingIconType.set(null);
-            this.activeTool.set('draw');
+            this.activeTool.set('select');
         } finally {
             this.historySuppressed = false;
         }
@@ -1613,7 +1845,10 @@ export class CampaignMapPageComponent {
             icons: map.icons.map((icon) => ({ ...icon })),
             tokens: map.tokens.map((token) => ({ ...token })),
             decorations: map.decorations.map((decoration) => ({ ...decoration })),
-            labels: map.labels.map((label) => ({ ...label })),
+            labels: map.labels.map((label) => ({
+                ...label,
+                style: { ...label.style }
+            })),
             layers: {
                 rivers: map.layers.rivers.map((stroke) => ({
                     id: stroke.id,
@@ -1644,6 +1879,32 @@ export class CampaignMapPageComponent {
         };
     }
 
+    private defaultMapLabelStyle(tone: CampaignMapLabelTone): CampaignMapLabel['style'] {
+        if (tone === 'Feature') {
+            return {
+                color: '#8a5a2b',
+                fontFamily: 'body',
+                fontSize: 0.82,
+                fontWeight: 500,
+                letterSpacing: 0.08,
+                fontStyle: 'italic',
+                textTransform: 'none',
+                opacity: 0.86
+            };
+        }
+
+        return {
+            color: '#4b3a2a',
+            fontFamily: 'display',
+            fontSize: 1,
+            fontWeight: 650,
+            letterSpacing: 0.18,
+            fontStyle: 'normal',
+            textTransform: 'uppercase',
+            opacity: 0.96
+        };
+    }
+
     private createEmptyMapBoard(name: string, background: CampaignMapBackground = 'Parchment'): CampaignMapBoard {
         return {
             id: this.createId(),
@@ -1663,11 +1924,33 @@ export class CampaignMapPageComponent {
     private loadMapBoard(map: CampaignMapBoard): void {
         this.currentMapId.set(map.id);
         this.workingMap.set(this.cloneMap(map));
+        this.activeTool.set('select');
+        this.pendingIconType.set(null);
+        this.pendingTerrainType.set(null);
         this.selectedIconId.set(null);
+        this.selectedLabelId.set(null);
         this.selectedTokenId.set(null);
         this.iconLabelDraft.set('');
         this.tokenNameDraft.set('');
         this.tokenNoteDraft.set('');
+        this.tokenPlacementNameDraft.set('Token');
+        this.tokenPlacementNoteDraft.set('');
+        this.tokenPlacementImageUrl.set('');
+        this.tokenPlacementSize.set(0.12);
+        this.tokenUploadFeedback.set('');
+        this.labelToneDraft.set('Region');
+        this.labelTextDraft.set(this.defaultLabelText('Region'));
+        this.mapArtModalOpen.set(false);
+        this.settlementNamesDraft.set('');
+        this.regionNamesDraft.set('');
+        this.ruinNamesDraft.set('');
+        this.cavernNamesDraft.set('');
+        this.separateLabelsDraft.set(true);
+        this.additionalArtDirectionDraft.set('');
+        this.settlementScale.set('City');
+        this.parchmentLayout.set('Continent');
+        this.cavernLayout.set('TunnelNetwork');
+        this.confirmAction.set(null);
         this.mapNameDraft.set(map.name);
     }
 
@@ -1786,6 +2069,24 @@ export class CampaignMapPageComponent {
 
     private defaultLabelText(tone: CampaignMapLabelTone): string {
         return tone === 'Feature' ? 'New Feature' : 'New Region';
+    }
+
+    private findNearestLabelAtPoint(x: number, y: number): CampaignMapLabel | null {
+        const labels = this.workingMap().labels;
+        let closestLabel: CampaignMapLabel | null = null;
+        let closestDistance = Number.POSITIVE_INFINITY;
+
+        for (const label of labels) {
+            const dx = label.x - x;
+            const dy = label.y - y;
+            const distance = Math.hypot(dx, dy * (10 / 7));
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestLabel = label;
+            }
+        }
+
+        return closestDistance <= 0.05 ? closestLabel : null;
     }
 
     private sanitizeTokenName(fileName: string): string {
@@ -2110,7 +2411,8 @@ export class CampaignMapPageComponent {
             tone: label.tone,
             x: label.x,
             y: label.y,
-            rotation: label.rotation
+            rotation: label.rotation,
+            style: this.defaultMapLabelStyle(label.tone)
         }));
     }
 

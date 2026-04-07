@@ -650,7 +650,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                     NormalizeMapLabelTone(label.Tone),
                     ClampMapCoordinate(label.X),
                     ClampMapCoordinate(label.Y),
-                    ClampMapRotation(label.Rotation)))
+                    ClampMapRotation(label.Rotation),
+                    NormalizeMapLabelStyle(label.Style, label.Tone)))
                 .ToList(),
             new CampaignMapLayersDto(
                 NormalizeMapStrokeCollection(map.Layers?.Rivers),
@@ -921,6 +922,22 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         };
     }
 
+    private static CampaignMapLabelStyleDto NormalizeMapLabelStyle(CampaignMapLabelStyleDto? style, string? tone)
+    {
+        var normalizedTone = NormalizeMapLabelTone(tone);
+        var defaults = DefaultMapLabelStyle(normalizedTone);
+
+        return new CampaignMapLabelStyleDto(
+            NormalizeMapLabelColor(style?.Color, normalizedTone),
+            NormalizeMapLabelFontFamily(style?.FontFamily, normalizedTone),
+            ClampMapLabelFontSize(style?.FontSize ?? defaults.FontSize, normalizedTone),
+            ClampMapLabelFontWeight(style?.FontWeight ?? defaults.FontWeight, normalizedTone),
+            ClampMapLabelLetterSpacing(style?.LetterSpacing ?? defaults.LetterSpacing, normalizedTone),
+            NormalizeMapLabelFontStyle(style?.FontStyle, defaults.FontStyle),
+            NormalizeMapLabelTextTransform(style?.TextTransform, defaults.TextTransform),
+            ClampMapLabelOpacity(style?.Opacity ?? defaults.Opacity, normalizedTone));
+    }
+
     private static string DefaultMapIconLabel(string? iconType)
     {
         return NormalizeMapIconType(iconType) switch
@@ -974,6 +991,80 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         }
 
         return Math.Clamp(value, 0.24d, 1d);
+    }
+
+    private static CampaignMapLabelStyleDto DefaultMapLabelStyle(string tone)
+    {
+        return tone == "Feature"
+            ? new CampaignMapLabelStyleDto("#8a5a2b", "body", 0.82d, 500, 0.08d, "italic", "none", 0.86d)
+            : new CampaignMapLabelStyleDto("#4b3a2a", "display", 1d, 650, 0.18d, "normal", "uppercase", 0.96d);
+    }
+
+    private static string NormalizeMapLabelColor(string? color, string tone)
+    {
+        if (!string.IsNullOrWhiteSpace(color) && System.Text.RegularExpressions.Regex.IsMatch(color.Trim(), "^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"))
+        {
+            return color.Trim();
+        }
+
+        return DefaultMapLabelStyle(tone).Color;
+    }
+
+    private static string NormalizeMapLabelFontFamily(string? fontFamily, string tone)
+    {
+        return string.Equals(fontFamily?.Trim(), "body", StringComparison.OrdinalIgnoreCase)
+            ? "body"
+            : DefaultMapLabelStyle(tone).FontFamily;
+    }
+
+    private static string NormalizeMapLabelFontStyle(string? fontStyle, string fallback)
+    {
+        return string.Equals(fontStyle?.Trim(), "italic", StringComparison.OrdinalIgnoreCase) ? "italic" : fallback;
+    }
+
+    private static string NormalizeMapLabelTextTransform(string? textTransform, string fallback)
+    {
+        return string.Equals(textTransform?.Trim(), "none", StringComparison.OrdinalIgnoreCase) ? "none" : fallback;
+    }
+
+    private static double ClampMapLabelFontSize(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).FontSize;
+        }
+
+        return Math.Clamp(value, 0.72d, 1.6d);
+    }
+
+    private static int ClampMapLabelFontWeight(int value, string tone)
+    {
+        if (value <= 0)
+        {
+            return DefaultMapLabelStyle(tone).FontWeight;
+        }
+
+        return Math.Clamp((int)Math.Round(value / 50d) * 50, 400, 800);
+    }
+
+    private static double ClampMapLabelLetterSpacing(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).LetterSpacing;
+        }
+
+        return Math.Clamp(value, -0.02d, 0.24d);
+    }
+
+    private static double ClampMapLabelOpacity(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).Opacity;
+        }
+
+        return Math.Clamp(value, 0.45d, 1d);
     }
 
     private sealed record PersistedCampaignThread(Guid Id, string Text, string Visibility);

@@ -94,6 +94,7 @@ export interface ApiCampaignMapLibraryDto {
 export interface ApiGenerateCampaignMapArtRequest {
     background: ApiCampaignMapDto['background'];
     mapName: string;
+    separateLabels?: boolean;
     settlementScale?: 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis';
     parchmentLayout?: 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular';
     cavernLayout?: 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes';
@@ -107,6 +108,7 @@ export interface ApiGenerateCampaignMapArtRequest {
 
 export interface ApiGenerateCampaignMapArtResponse {
     backgroundImageUrl: string;
+    labels: ApiCampaignMapLabelDto[];
 }
 
 export interface ApiCampaignMapStrokeDto {
@@ -157,6 +159,18 @@ export interface ApiCampaignMapLabelDto {
     x: number;
     y: number;
     rotation: number;
+    style?: ApiCampaignMapLabelStyleDto;
+}
+
+export interface ApiCampaignMapLabelStyleDto {
+    color: string;
+    fontFamily: 'display' | 'body';
+    fontSize: number;
+    fontWeight: number;
+    letterSpacing: number;
+    fontStyle: 'normal' | 'italic';
+    textTransform: 'none' | 'uppercase';
+    opacity: number;
 }
 
 export interface ApiCampaignMapLayersDto {

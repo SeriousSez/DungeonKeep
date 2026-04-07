@@ -122,7 +122,19 @@ public sealed record CampaignMapLabelDto(
     string Tone,
     double X,
     double Y,
-    double Rotation
+    double Rotation,
+    CampaignMapLabelStyleDto? Style
+);
+
+public sealed record CampaignMapLabelStyleDto(
+    string Color,
+    string FontFamily,
+    double FontSize,
+    int FontWeight,
+    double LetterSpacing,
+    string FontStyle,
+    string TextTransform,
+    double Opacity
 );
 
 public sealed record CampaignMapLayersDto(
