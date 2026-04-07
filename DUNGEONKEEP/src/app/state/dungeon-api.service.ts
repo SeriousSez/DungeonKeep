@@ -293,26 +293,130 @@ export interface ApiDndChatCampaignPartyMemberContext {
     flaws: string[];
 }
 
+export interface ApiDndChatCampaignSessionContext {
+    id: string;
+    title: string;
+    date: string;
+    location: string;
+    objective: string;
+    threat: string;
+}
+
+export interface ApiDndChatCampaignWorldNoteContext {
+    id: string;
+    title: string;
+    category: string;
+    content: string;
+}
+
+export interface ApiDndChatCampaignMemberContext {
+    userId?: string | null;
+    email: string;
+    displayName: string;
+    role: string;
+    status: string;
+}
+
+export interface ApiDndChatCampaignMapContext {
+    id: string;
+    name: string;
+    background: string;
+    locationLabels: string[];
+    tokenNames: string[];
+    iconLabels: string[];
+}
+
 export interface ApiDndChatCampaignContext {
     id: string;
     name: string;
     setting: string;
     tone: string;
+    levelRange: string;
     summary: string;
     hook: string;
     nextSession: string;
+    currentUserRole?: string;
     playerCount: number;
     party: ApiDndChatCampaignPartyMemberContext[];
+    sessions: ApiDndChatCampaignSessionContext[];
     openThreads: string[];
+    worldNotes: ApiDndChatCampaignWorldNoteContext[];
     npcs: string[];
     loot: string[];
+    members: ApiDndChatCampaignMemberContext[];
+    maps: ApiDndChatCampaignMapContext[];
+    activeMapId: string;
+}
+
+export interface ApiDndChatSessionContext {
+    id: string;
+    title: string;
+    date: string;
+    location: string;
+    objective: string;
+    threat: string;
+    shortDescription: string;
+    estimatedLength: string;
+    notes: string;
+    scenes: string[];
+    npcs: string[];
+    monsters: string[];
+    locations: string[];
+    loot: string[];
+    skillChecks: string[];
+    secrets: string[];
+    branchingPaths: string[];
+    nextSessionHooks: string[];
+}
+
+export interface ApiDndChatNpcRelationshipContext {
+    target: string;
+    type: string;
+    description: string;
+}
+
+export interface ApiDndChatNpcContext {
+    id: string;
+    name: string;
+    title: string;
+    race: string;
+    classOrRole: string;
+    faction: string;
+    occupation: string;
+    alignment: string;
+    currentStatus: string;
+    location: string;
+    shortDescription: string;
+    personalityTraits: string[];
+    ideals: string[];
+    bonds: string[];
+    flaws: string[];
+    motivations: string;
+    goals: string;
+    fears: string;
+    secrets: string[];
+    mannerisms: string[];
+    voiceNotes: string;
+    backstory: string;
+    notes: string;
+    combatNotes: string;
+    tags: string[];
+    relationships: ApiDndChatNpcRelationshipContext[];
+    questLinks: string[];
+    sessionAppearances: string[];
+    inventory: string[];
+    hostility: string;
+    isAlive: boolean;
+    isImportant: boolean;
 }
 
 export interface ApiDndChatPageContext {
     route: string;
-    pageType: 'character' | 'campaign' | 'sessions' | 'dashboard' | 'other';
+    pageType: string;
     character?: ApiDndChatCharacterContext;
     campaign?: ApiDndChatCampaignContext;
+    session?: ApiDndChatSessionContext;
+    npc?: ApiDndChatNpcContext;
 }
 
 export interface ApiDndChatRequest {
