@@ -141,8 +141,16 @@
 
 .header-main {
     display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+    align-items: start;
+    gap: 16px;
+    width: 100%;
+    min-width: 0;
+}
+
+.header-copy {
+    display: grid;
     gap: 6px;
-    flex: 1 1 100%;
     min-width: 0;
 }
 
@@ -151,7 +159,8 @@
     justify-items: end;
     align-content: start;
     gap: 10px;
-    min-width: min(100%, 24rem);
+    width: 100%;
+    min-width: 0;
 }
 
 .header-status-row {
@@ -1281,6 +1290,40 @@
 }
 
 @media (max-width: 1180px) {
+    .header-actions {
+        min-width: 0;
+        justify-items: stretch;
+        align-content: start;
+    }
+
+    .header-main {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .header-status-row {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .campaign-assignment-controls {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        width: 100%;
+        justify-content: stretch;
+        align-items: stretch;
+    }
+
+    .campaign-assignment-controls app-dropdown {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .assign-btn,
+    .remove-btn {
+        width: 100%;
+        min-height: 38px;
+    }
+
     .summary-panels {
         grid-template-columns: 1fr;
     }
@@ -1331,37 +1374,7 @@
     }
 
     .header-actions {
-        width: 100%;
-        min-width: 0;
-        justify-items: start;
-    }
-
-    .header-status-row {
-        width: 100%;
-        justify-content: space-between;
-    }
-
-    .campaign-assignment-controls {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        width: 100%;
-        justify-content: stretch;
-        align-items: stretch;
-    }
-
-    .campaign-assignment-controls app-dropdown {
-        grid-column: 1 / -1;
-        min-width: 0;
-    }
-
-    .assign-btn,
-    .remove-btn {
-        width: 100%;
-        min-height: 38px;
-    }
-
-    .remove-btn {
-        grid-column: 1 / -1;
+        justify-items: stretch;
     }
 
     .campaign-error {

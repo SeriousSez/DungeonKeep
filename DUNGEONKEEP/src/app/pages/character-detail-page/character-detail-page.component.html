@@ -4,13 +4,15 @@
         <div class="skeleton-line skeleton-back-link"></div>
         <div class="header-content skeleton-header-content">
             <div class="header-main skeleton-stack">
-                <div class="skeleton-line skeleton-eyebrow"></div>
-                <div class="skeleton-line skeleton-title"></div>
-                <div class="skeleton-line skeleton-copy"></div>
-            </div>
-            <div class="header-actions skeleton-actions">
-                <div class="skeleton-line skeleton-pill"></div>
-                <div class="skeleton-line skeleton-button"></div>
+                <div class="header-copy skeleton-stack">
+                    <div class="skeleton-line skeleton-eyebrow"></div>
+                    <div class="skeleton-line skeleton-title"></div>
+                    <div class="skeleton-line skeleton-copy"></div>
+                </div>
+                <div class="header-actions skeleton-actions">
+                    <div class="skeleton-line skeleton-pill"></div>
+                    <div class="skeleton-line skeleton-button"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -50,32 +52,34 @@
         <a routerLink="/characters" class="back-link">← Back to Characters</a>
         <div class="header-content">
             <div class="header-main">
-                <p class="eyebrow">Character Sheet</p>
-                <h1>{{ char.name }}</h1>
-                <p class="subheader">{{ char.race }} {{ char.className }} · Level {{ char.level }} · {{ campaignName() }}</p>
-            </div>
+                <div class="header-copy">
+                    <p class="eyebrow">Character Sheet</p>
+                    <h1>{{ char.name }}</h1>
+                    <p class="subheader">{{ char.race }} {{ char.className }} · Level {{ char.level }} · {{ campaignName() }}</p>
+                </div>
 
-            <div class="header-actions">
-                <div class="header-status-row">
-                    <span class="status-pill" [attr.data-status]="char.status">{{ char.status }}</span>
-                    <a class="edit-character-btn" [routerLink]="['/characters', char.id, 'builder', 'class']" aria-label="Open character builder" title="Open Character Builder">
-                        <i class="fa-duotone fa-thin fa-scroll"></i>
-                    </a>
-                </div>
-                @if (char.canEdit) {
-                <div class="campaign-assignment-controls">
-                    <app-dropdown [value]="selectedCampaignAssignment()" [options]="assignableCampaignOptions()" [placeholder]="'Choose campaign...'" size="compact" (changed)="onCampaignAssignmentChanged($event)"></app-dropdown>
-                    <button type="button" class="assign-btn" [disabled]="isUpdatingCampaign() || !selectedCampaignAssignment()" (click)="assignCharacterToCampaign()">
-                        {{ isUpdatingCampaign() ? 'Updating...' : 'Assign' }}
-                    </button>
-                    <button type="button" class="remove-btn" [disabled]="isUpdatingCampaign() || campaignName() === 'Unassigned'" (click)="removeCharacterFromCampaign()">
-                        Remove from Campaign
-                    </button>
-                </div>
-                @if (campaignUpdateError()) {
-                <p class="campaign-error">{{ campaignUpdateError() }}</p>
+                <div class="header-actions">
+                    <div class="header-status-row">
+                        <span class="status-pill" [attr.data-status]="char.status">{{ char.status }}</span>
+                        <a class="edit-character-btn" [routerLink]="['/characters', char.id, 'builder', 'class']" aria-label="Open character builder" title="Open Character Builder">
+                            <i class="fa-duotone fa-thin fa-scroll"></i>
+                        </a>
+                    </div>
+                    @if (char.canEdit) {
+                    <div class="campaign-assignment-controls">
+                        <app-dropdown [value]="selectedCampaignAssignment()" [options]="assignableCampaignOptions()" [placeholder]="'Choose campaign...'" size="compact" (changed)="onCampaignAssignmentChanged($event)"></app-dropdown>
+                        <button type="button" class="assign-btn" [disabled]="isUpdatingCampaign() || !selectedCampaignAssignment()" (click)="assignCharacterToCampaign()">
+                            {{ isUpdatingCampaign() ? 'Updating...' : 'Assign' }}
+                        </button>
+                        <button type="button" class="remove-btn" [disabled]="isUpdatingCampaign() || campaignName() === 'Unassigned'" (click)="removeCharacterFromCampaign()">
+                            Remove from Campaign
+                        </button>
+                    </div>
+                    @if (campaignUpdateError()) {
+                    <p class="campaign-error">{{ campaignUpdateError() }}</p>
+                    }
                 }
-                }
+                </div>
             </div>
         </div>
     </div>
