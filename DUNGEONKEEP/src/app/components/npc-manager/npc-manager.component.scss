@@ -7,7 +7,7 @@
 .editor-column,
 .library-card-row {
     display: grid;
-    gap: 18px;
+    gap: clamp(12px, 2vw, 18px);
 }
 
 .manager-surface,
@@ -17,7 +17,7 @@
     border: 1px solid var(--panel-border);
     border-radius: 18px;
     background: var(--surface-raised);
-    padding: 14px 16px;
+    padding: clamp(10px, 2.5vw, 16px);
 }
 
 .manager-layout {
@@ -50,7 +50,7 @@
     margin: 0 0 8px;
     text-transform: uppercase;
     letter-spacing: 0.18em;
-    font-size: 0.74rem;
+    font-size: clamp(0.65rem, 1vw, 0.74rem);
     color: var(--text-soft);
 }
 
@@ -66,7 +66,7 @@
 }
 
 .library-card-row {
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
 .library-card {
@@ -92,10 +92,59 @@
     background: transparent;
     color: var(--text-main);
     cursor: pointer;
+    font-size: clamp(0.85rem, 1.2vw, 0.95rem);
 }
 
 @media (max-width: 860px) {
     .manager-layout {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .npc-manager-shell {
+        gap: 12px;
+    }
+
+    .manager-surface,
+    .manager-feedback,
+    .manager-tools {
+        padding: 10px 12px;
+        border-radius: 16px;
+    }
+
+    .library-panel,
+    .library-card {
+        gap: 8px;
+    }
+
+    .library-card-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .manager-page-header h1 {
+        font-size: clamp(1.2rem, 2.5vw, 1.5rem);
+    }
+
+    .ghost-button {
+        min-height: 36px;
+        padding: 0 10px;
+    }
+}
+
+@media (max-width: 360px) {
+    .manager-surface,
+    .manager-feedback,
+    .manager-tools,
+    .library-card {
+        padding: 8px 10px;
+        border-radius: 14px;
+    }
+
+    .ghost-button {
+        min-height: 32px;
+        padding: 0 8px;
+        font-size: 0.8rem;
     }
 }
