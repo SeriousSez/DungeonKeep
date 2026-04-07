@@ -1692,6 +1692,14 @@ export class CampaignMapPageComponent {
         return fontFamily === 'body' ? 'var(--body-font)' : 'var(--display-font)';
     }
 
+    mapLabelPadding(style: CampaignMapLabel['style']): string {
+        return `${style.paddingY}px ${style.paddingX}px`;
+    }
+
+    mapLabelBorderStyle(style: CampaignMapLabel['style']): string {
+        return style.borderWidth > 0 ? 'solid' : 'none';
+    }
+
     iconClass(iconType: CampaignMapIconType): string {
         return this.iconOptions.find((option) => option.type === iconType)?.iconClass ?? 'fa-duotone fa-thin fa-location-dot';
     }
@@ -1882,26 +1890,42 @@ export class CampaignMapPageComponent {
     private defaultMapLabelStyle(tone: CampaignMapLabelTone): CampaignMapLabel['style'] {
         if (tone === 'Feature') {
             return {
-                color: '#8a5a2b',
+                color: '#f6ead8',
+                backgroundColor: 'transparent',
+                borderColor: 'transparent',
                 fontFamily: 'body',
-                fontSize: 0.82,
-                fontWeight: 500,
+                fontSize: 0.84,
+                fontWeight: 600,
                 letterSpacing: 0.08,
                 fontStyle: 'italic',
                 textTransform: 'none',
-                opacity: 0.86
+                borderWidth: 0,
+                borderRadius: 8,
+                paddingX: 0,
+                paddingY: 0,
+                textShadow: '0 1px 0 rgba(43, 28, 19, 0.72), 0 2px 10px rgba(0, 0, 0, 0.34)',
+                boxShadow: 'none',
+                opacity: 0.98
             };
         }
 
         return {
-            color: '#4b3a2a',
+            color: '#fff4e5',
+            backgroundColor: 'transparent',
+            borderColor: 'transparent',
             fontFamily: 'display',
             fontSize: 1,
             fontWeight: 650,
             letterSpacing: 0.18,
             fontStyle: 'normal',
             textTransform: 'uppercase',
-            opacity: 0.96
+            borderWidth: 0,
+            borderRadius: 8,
+            paddingX: 0,
+            paddingY: 0,
+            textShadow: '0 1px 0 rgba(43, 28, 19, 0.78), 0 2px 12px rgba(0, 0, 0, 0.4)',
+            boxShadow: 'none',
+            opacity: 1
         };
     }
 

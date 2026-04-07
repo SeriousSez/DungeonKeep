@@ -984,12 +984,20 @@ public sealed class CampaignService(
 
         return new CampaignMapLabelStyleDto(
             NormalizeMapLabelColor(style?.Color, normalizedTone),
+            NormalizeMapLabelCssColor(style?.BackgroundColor, defaults.BackgroundColor),
+            NormalizeMapLabelCssColor(style?.BorderColor, defaults.BorderColor),
             NormalizeMapLabelFontFamily(style?.FontFamily, normalizedTone),
             ClampMapLabelFontSize(style?.FontSize ?? defaults.FontSize, normalizedTone),
             ClampMapLabelFontWeight(style?.FontWeight ?? defaults.FontWeight, normalizedTone),
             ClampMapLabelLetterSpacing(style?.LetterSpacing ?? defaults.LetterSpacing, normalizedTone),
             NormalizeMapLabelFontStyle(style?.FontStyle, defaults.FontStyle),
             NormalizeMapLabelTextTransform(style?.TextTransform, defaults.TextTransform),
+            ClampMapLabelBorderWidth(style?.BorderWidth ?? defaults.BorderWidth, normalizedTone),
+            ClampMapLabelBorderRadius(style?.BorderRadius ?? defaults.BorderRadius, normalizedTone),
+            ClampMapLabelPaddingX(style?.PaddingX ?? defaults.PaddingX, normalizedTone),
+            ClampMapLabelPaddingY(style?.PaddingY ?? defaults.PaddingY, normalizedTone),
+            NormalizeMapLabelCssEffect(style?.TextShadow, defaults.TextShadow),
+            NormalizeMapLabelCssEffect(style?.BoxShadow, defaults.BoxShadow),
             ClampMapLabelOpacity(style?.Opacity ?? defaults.Opacity, normalizedTone));
     }
 
@@ -1044,18 +1052,21 @@ public sealed class CampaignService(
     private static CampaignMapLabelStyleDto DefaultMapLabelStyle(string tone)
     {
         return tone == "Feature"
-            ? new CampaignMapLabelStyleDto("#8a5a2b", "body", 0.82d, 500, 0.08d, "italic", "none", 0.86d)
-            : new CampaignMapLabelStyleDto("#4b3a2a", "display", 1d, 650, 0.18d, "normal", "uppercase", 0.96d);
+            ? new CampaignMapLabelStyleDto("#f6ead8", "transparent", "transparent", "body", 0.84d, 600, 0.08d, "italic", "none", 0d, 8d, 0d, 0d, "0 1px 0 rgba(43, 28, 19, 0.72), 0 2px 10px rgba(0, 0, 0, 0.34)", "none", 0.98d)
+            : new CampaignMapLabelStyleDto("#fff4e5", "transparent", "transparent", "display", 1d, 650, 0.18d, "normal", "uppercase", 0d, 8d, 0d, 0d, "0 1px 0 rgba(43, 28, 19, 0.78), 0 2px 12px rgba(0, 0, 0, 0.4)", "none", 1d);
     }
 
     private static string NormalizeMapLabelColor(string? color, string tone)
     {
-        if (!string.IsNullOrWhiteSpace(color) && System.Text.RegularExpressions.Regex.IsMatch(color.Trim(), "^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"))
-        {
-            return color.Trim();
-        }
+        return NormalizeMapLabelCssColor(color, DefaultMapLabelStyle(tone).Color);
+    }
 
-        return DefaultMapLabelStyle(tone).Color;
+    private static string NormalizeMapLabelCssColor(string? value, string fallback)
+    {
+        var trimmed = value?.Trim();
+        return !string.IsNullOrWhiteSpace(trimmed) && System.Text.RegularExpressions.Regex.IsMatch(trimmed, "^(transparent|#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\([\\d\\s.,%]+\\)|hsla?\\([\\d\\s.,%]+\\))$")
+            ? trimmed
+            : fallback;
     }
 
     private static string NormalizeMapLabelFontFamily(string? fontFamily, string tone)
@@ -1075,6 +1086,54 @@ public sealed class CampaignService(
         return string.Equals(textTransform?.Trim(), "none", StringComparison.OrdinalIgnoreCase) ? "none" : fallback;
     }
 
+    private static double ClampMapLabelBorderWidth(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).BorderWidth;
+        }
+
+        return Math.Clamp(value, 0d, 6d);
+    }
+
+    private static double ClampMapLabelBorderRadius(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).BorderRadius;
+        }
+
+        return Math.Clamp(value, 0d, 32d);
+    }
+
+    private static double ClampMapLabelPaddingX(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).PaddingX;
+        }
+
+        return Math.Clamp(value, 0d, 24d);
+    }
+
+    private static double ClampMapLabelPaddingY(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).PaddingY;
+        }
+
+        return Math.Clamp(value, 0d, 16d);
+    }
+
+    private static string NormalizeMapLabelCssEffect(string? value, string fallback)
+    {
+        var trimmed = value?.Trim();
+        return !string.IsNullOrWhiteSpace(trimmed) && trimmed.Length <= 120 && System.Text.RegularExpressions.Regex.IsMatch(trimmed, "^(none|[a-zA-Z0-9#(),.%\\s+-]+)$")
+            ? trimmed
+            : fallback;
+    }
+
     private static double ClampMapLabelFontSize(double value, string tone)
     {
         if (double.IsNaN(value) || double.IsInfinity(value))
@@ -1082,7 +1141,7 @@ public sealed class CampaignService(
             return DefaultMapLabelStyle(tone).FontSize;
         }
 
-        return Math.Clamp(value, 0.72d, 1.6d);
+        return Math.Clamp(value, 0.72d, 2.4d);
     }
 
     private static int ClampMapLabelFontWeight(int value, string tone)
@@ -1102,7 +1161,7 @@ public sealed class CampaignService(
             return DefaultMapLabelStyle(tone).LetterSpacing;
         }
 
-        return Math.Clamp(value, -0.02d, 0.24d);
+        return Math.Clamp(value, -0.04d, 0.32d);
     }
 
     private static double ClampMapLabelOpacity(double value, string tone)

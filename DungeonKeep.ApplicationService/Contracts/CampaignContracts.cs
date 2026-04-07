@@ -128,12 +128,20 @@ public sealed record CampaignMapLabelDto(
 
 public sealed record CampaignMapLabelStyleDto(
     string Color,
+    string BackgroundColor,
+    string BorderColor,
     string FontFamily,
     double FontSize,
     int FontWeight,
     double LetterSpacing,
     string FontStyle,
     string TextTransform,
+    double BorderWidth,
+    double BorderRadius,
+    double PaddingX,
+    double PaddingY,
+    string TextShadow,
+    string BoxShadow,
     double Opacity
 );
 

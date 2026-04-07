@@ -463,8 +463,10 @@
                         @for (label of workingMap().labels; track label.id) {
                         <button type="button" class="map-region-label map-region-label--interactive" [class.is-feature]="label.tone === 'Feature'" [class.is-selected]="isSelectedLabel(label.id)" [style.left.%]="label.x * 100" [style.top.%]="label.y * 100"
                             [style.transform]="'translate(-50%, -50%) rotate(' + label.rotation + 'deg)'" [style.color]="label.style.color" [style.font-family]="mapLabelFontFamily(label.style.fontFamily)" [style.font-size.rem]="label.style.fontSize" [style.font-weight]="label.style.fontWeight"
-                            [style.letter-spacing.em]="label.style.letterSpacing" [style.font-style]="label.style.fontStyle" [style.text-transform]="label.style.textTransform" [style.opacity]="label.style.opacity" (click)="$event.stopPropagation(); selectLabel(label.id)"
-                            (pointerdown)="handleLabelPointerDown($event, label.id)" (pointermove)="handleLabelPointerMove($event, label.id)" (pointerup)="handleLabelPointerUp($event, label.id)" (pointercancel)="handleLabelPointerUp($event, label.id)">{{ label.text }}</button>
+                            [style.letter-spacing.em]="label.style.letterSpacing" [style.font-style]="label.style.fontStyle" [style.text-transform]="label.style.textTransform" [style.background-color]="label.style.backgroundColor" [style.border-color]="label.style.borderColor"
+                            [style.border-width.px]="label.style.borderWidth" [style.border-style]="mapLabelBorderStyle(label.style)" [style.border-radius.px]="label.style.borderRadius" [style.padding]="mapLabelPadding(label.style)" [style.text-shadow]="label.style.textShadow"
+                            [style.box-shadow]="label.style.boxShadow" [style.opacity]="label.style.opacity" (click)="$event.stopPropagation(); selectLabel(label.id)" (pointerdown)="handleLabelPointerDown($event, label.id)" (pointermove)="handleLabelPointerMove($event, label.id)"
+                            (pointerup)="handleLabelPointerUp($event, label.id)" (pointercancel)="handleLabelPointerUp($event, label.id)">{{ label.text }}</button>
                         }
                     </div>
                     }
@@ -582,7 +584,8 @@
                     @for (label of workingMap().labels; track label.id) {
                     <span class="map-region-label" [class.is-feature]="label.tone === 'Feature'" [style.left.%]="label.x * 100" [style.top.%]="label.y * 100" [style.transform]="'translate(-50%, -50%) rotate(' + label.rotation + 'deg)'" [style.color]="label.style.color"
                         [style.font-family]="mapLabelFontFamily(label.style.fontFamily)" [style.font-size.rem]="label.style.fontSize" [style.font-weight]="label.style.fontWeight" [style.letter-spacing.em]="label.style.letterSpacing" [style.font-style]="label.style.fontStyle"
-                        [style.text-transform]="label.style.textTransform" [style.opacity]="label.style.opacity">{{ label.text }}</span>
+                        [style.text-transform]="label.style.textTransform" [style.background-color]="label.style.backgroundColor" [style.border-color]="label.style.borderColor" [style.border-width.px]="label.style.borderWidth" [style.border-style]="mapLabelBorderStyle(label.style)"
+                        [style.border-radius.px]="label.style.borderRadius" [style.padding]="mapLabelPadding(label.style)" [style.text-shadow]="label.style.textShadow" [style.box-shadow]="label.style.boxShadow" [style.opacity]="label.style.opacity">{{ label.text }}</span>
                     }
                 </div>
                 }

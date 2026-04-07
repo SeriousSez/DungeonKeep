@@ -1593,15 +1593,24 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         {
             ["type"] = "object",
             ["additionalProperties"] = false,
-            ["required"] = new[] { "color", "fontSize", "fontWeight", "letterSpacing", "fontStyle", "textTransform", "opacity" },
+            ["required"] = new[] { "color", "backgroundColor", "borderColor", "fontFamily", "fontSize", "fontWeight", "letterSpacing", "fontStyle", "textTransform", "borderWidth", "borderRadius", "paddingX", "paddingY", "textShadow", "boxShadow", "opacity" },
             ["properties"] = new Dictionary<string, object?>
             {
-                ["color"] = BuildJsonSchemaStringProperty("Hex color such as #4b3a2a."),
+                ["color"] = BuildJsonSchemaStringProperty("Text color such as #4b3a2a or rgba(...)."),
+                ["backgroundColor"] = BuildJsonSchemaStringProperty("Label background such as transparent, #fff7ea, or rgba(...)."),
+                ["borderColor"] = BuildJsonSchemaStringProperty("Border color such as transparent, #8a5a2b, or rgba(...)."),
+                ["fontFamily"] = BuildJsonSchemaStringProperty("One of: display, body."),
                 ["fontSize"] = new Dictionary<string, object?> { ["type"] = "number" },
                 ["fontWeight"] = new Dictionary<string, object?> { ["type"] = "integer" },
                 ["letterSpacing"] = new Dictionary<string, object?> { ["type"] = "number" },
                 ["fontStyle"] = BuildJsonSchemaStringProperty("One of: normal, italic."),
                 ["textTransform"] = BuildJsonSchemaStringProperty("One of: uppercase, none."),
+                ["borderWidth"] = new Dictionary<string, object?> { ["type"] = "number" },
+                ["borderRadius"] = new Dictionary<string, object?> { ["type"] = "number" },
+                ["paddingX"] = new Dictionary<string, object?> { ["type"] = "number" },
+                ["paddingY"] = new Dictionary<string, object?> { ["type"] = "number" },
+                ["textShadow"] = BuildJsonSchemaStringProperty("CSS text-shadow string such as none or 0 1px 2px rgba(0,0,0,0.3)."),
+                ["boxShadow"] = BuildJsonSchemaStringProperty("CSS box-shadow string such as none or 0 4px 12px rgba(0,0,0,0.18)."),
                 ["opacity"] = new Dictionary<string, object?> { ["type"] = "number" }
             }
         };
@@ -1897,7 +1906,14 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             "Spread labels across the composition and avoid stacking them directly on top of one another.",
             "Use tone Region for broad territories, districts, seas, or named zones.",
             "Use tone Feature for roads, gates, ruins, landmarks, bridges, passes, tunnels, or similar points of interest.",
-            "Each label must include a style object that visually fits the art: color as a hex value, fontFamily as display or body, fontSize in rem, fontWeight, letterSpacing in em, fontStyle, textTransform, and opacity.",
+            "Each label must include a full style object that visually fits the art: text color, backgroundColor, borderColor, fontFamily, fontSize in rem, fontWeight, letterSpacing in em, fontStyle, textTransform, borderWidth, borderRadius, paddingX, paddingY, textShadow, boxShadow, and opacity.",
+            "Use the style object to decide the complete label treatment, but keep generated labels background-free. Prefer bare ink, glow, or shadow treatment over plaques, cartouches, banners, or framed markers.",
+            "Take the underlying map art into account when styling each label. Maintain strong local contrast against the terrain, watercolor wash, and linework beneath the label.",
+            "Prefer solving contrast with the text color itself first, plus shadow or glow if needed. Do not rely on background plaques unless absolutely necessary.",
+            "Do not place dark text directly on dark terrain or water. Change the text color to a contrasting light or warm tone first, and only add a background if readability still fails.",
+            "For generated labels, keep backgroundColor transparent, borderColor transparent, borderWidth 0, paddingX 0, paddingY 0, and boxShadow none. Use text color and textShadow for readability.",
+            "If there is any doubt about readability, prefer stronger text contrast and clearer text shadow over adding a label background.",
+            "Visibility matters more than subtlety. Labels should still feel integrated with the art, but they must remain clearly readable.",
             "Let large region labels feel grand and integrated with the art. Let feature labels feel smaller, subtler, and more embedded in the composition.",
             "Prefer the provided names whenever they fit; invent concise fantasy names only when needed to fill gaps.",
             string.Empty,
@@ -2679,12 +2695,20 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
 
         return new GenerateCampaignMapLabelStylePayload(
             Color: GetOptionalString(element, "color"),
+            BackgroundColor: GetOptionalString(element, "backgroundColor"),
+            BorderColor: GetOptionalString(element, "borderColor"),
             FontFamily: GetOptionalString(element, "fontFamily"),
             FontSize: GetOptionalDouble(element, "fontSize"),
             FontWeight: GetOptionalInt(element, "fontWeight"),
             LetterSpacing: GetOptionalDouble(element, "letterSpacing"),
             FontStyle: GetOptionalString(element, "fontStyle"),
             TextTransform: GetOptionalString(element, "textTransform"),
+            BorderWidth: GetOptionalDouble(element, "borderWidth"),
+            BorderRadius: GetOptionalDouble(element, "borderRadius"),
+            PaddingX: GetOptionalDouble(element, "paddingX"),
+            PaddingY: GetOptionalDouble(element, "paddingY"),
+            TextShadow: GetOptionalString(element, "textShadow"),
+            BoxShadow: GetOptionalString(element, "boxShadow"),
             Opacity: GetOptionalDouble(element, "opacity"));
     }
 
@@ -3001,28 +3025,41 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
 
         return new CampaignMapLabelStyleDto(
             NormalizeGeneratedLabelColor(payload?.Color, defaults.Color),
+            defaults.BackgroundColor,
+            defaults.BorderColor,
             NormalizeGeneratedLabelFontFamily(payload?.FontFamily, defaults.FontFamily),
             ClampGeneratedLabelFontSize(payload?.FontSize ?? defaults.FontSize, defaults.FontSize),
             ClampGeneratedLabelFontWeight(payload?.FontWeight ?? defaults.FontWeight, defaults.FontWeight),
             ClampGeneratedLabelLetterSpacing(payload?.LetterSpacing ?? defaults.LetterSpacing, defaults.LetterSpacing),
             NormalizeGeneratedLabelFontStyle(payload?.FontStyle, defaults.FontStyle),
             NormalizeGeneratedLabelTextTransform(payload?.TextTransform, defaults.TextTransform),
+            defaults.BorderWidth,
+            ClampGeneratedLabelBorderRadius(payload?.BorderRadius ?? defaults.BorderRadius, defaults.BorderRadius),
+            defaults.PaddingX,
+            defaults.PaddingY,
+            NormalizeGeneratedLabelCssEffect(payload?.TextShadow, defaults.TextShadow),
+            defaults.BoxShadow,
             ClampGeneratedLabelOpacity(payload?.Opacity ?? defaults.Opacity, defaults.Opacity));
     }
 
     private static CampaignMapLabelStyleDto DefaultGeneratedLabelStyle(string tone)
     {
         return tone == "Feature"
-            ? new CampaignMapLabelStyleDto("#8a5a2b", "body", 0.82d, 500, 0.08d, "italic", "none", 0.86d)
-            : new CampaignMapLabelStyleDto("#4b3a2a", "display", 1d, 650, 0.18d, "normal", "uppercase", 0.96d);
+            ? new CampaignMapLabelStyleDto("#f6ead8", "transparent", "transparent", "body", 0.84d, 600, 0.08d, "italic", "none", 0d, 8d, 0d, 0d, "0 1px 0 rgba(43, 28, 19, 0.72), 0 2px 10px rgba(0, 0, 0, 0.34)", "none", 0.98d)
+            : new CampaignMapLabelStyleDto("#fff4e5", "transparent", "transparent", "display", 1d, 650, 0.18d, "normal", "uppercase", 0d, 8d, 0d, 0d, "0 1px 0 rgba(43, 28, 19, 0.78), 0 2px 12px rgba(0, 0, 0, 0.4)", "none", 1d);
     }
 
     private static string NormalizeGeneratedLabelColor(string? color, string fallbackColor)
     {
-        var trimmed = color?.Trim();
-        return !string.IsNullOrWhiteSpace(trimmed) && System.Text.RegularExpressions.Regex.IsMatch(trimmed, "^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
+        return NormalizeGeneratedLabelCssColor(color, fallbackColor);
+    }
+
+    private static string NormalizeGeneratedLabelCssColor(string? value, string fallback)
+    {
+        var trimmed = value?.Trim();
+        return !string.IsNullOrWhiteSpace(trimmed) && System.Text.RegularExpressions.Regex.IsMatch(trimmed, "^(transparent|#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\([\\d\\s.,%]+\\)|hsla?\\([\\d\\s.,%]+\\))$")
             ? trimmed
-            : fallbackColor;
+            : fallback;
     }
 
     private static string NormalizeGeneratedLabelFontFamily(string? fontFamily, string fallback)
@@ -3042,6 +3079,54 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         return string.Equals(textTransform?.Trim(), "none", StringComparison.OrdinalIgnoreCase) ? "none" : fallback;
     }
 
+    private static double ClampGeneratedLabelBorderWidth(double value, double fallback)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return fallback;
+        }
+
+        return Math.Clamp(value, 0d, 6d);
+    }
+
+    private static double ClampGeneratedLabelBorderRadius(double value, double fallback)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return fallback;
+        }
+
+        return Math.Clamp(value, 0d, 32d);
+    }
+
+    private static double ClampGeneratedLabelPaddingX(double value, double fallback)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return fallback;
+        }
+
+        return Math.Clamp(value, 0d, 24d);
+    }
+
+    private static double ClampGeneratedLabelPaddingY(double value, double fallback)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return fallback;
+        }
+
+        return Math.Clamp(value, 0d, 16d);
+    }
+
+    private static string NormalizeGeneratedLabelCssEffect(string? value, string fallback)
+    {
+        var trimmed = value?.Trim();
+        return !string.IsNullOrWhiteSpace(trimmed) && trimmed.Length <= 120 && System.Text.RegularExpressions.Regex.IsMatch(trimmed, "^(none|[a-zA-Z0-9#(),.%\\s+-]+)$")
+            ? trimmed
+            : fallback;
+    }
+
     private static double ClampGeneratedLabelFontSize(double value, double fallback)
     {
         if (double.IsNaN(value) || double.IsInfinity(value))
@@ -3049,7 +3134,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             return fallback;
         }
 
-        return Math.Clamp(value, 0.72d, 1.6d);
+        return Math.Clamp(value, 0.72d, 2.4d);
     }
 
     private static int ClampGeneratedLabelFontWeight(int value, int fallback)
@@ -3069,7 +3154,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             return fallback;
         }
 
-        return Math.Clamp(value, -0.02d, 0.24d);
+        return Math.Clamp(value, -0.04d, 0.32d);
     }
 
     private static double ClampGeneratedLabelOpacity(double value, double fallback)
@@ -3744,7 +3829,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
     private sealed record GenerateCampaignMapIconPayload(string? Type, string? Label, double? X, double? Y);
     private sealed record GenerateCampaignMapDecorationPayload(string? Type, double? X, double? Y, double? Scale, double? Rotation, double? Opacity);
     private sealed record GenerateCampaignMapLabelPayload(string? Text, string? Tone, double? X, double? Y, double? Rotation, GenerateCampaignMapLabelStylePayload? Style);
-    private sealed record GenerateCampaignMapLabelStylePayload(string? Color, string? FontFamily, double? FontSize, int? FontWeight, double? LetterSpacing, string? FontStyle, string? TextTransform, double? Opacity);
+    private sealed record GenerateCampaignMapLabelStylePayload(string? Color, string? BackgroundColor, string? BorderColor, string? FontFamily, double? FontSize, int? FontWeight, double? LetterSpacing, string? FontStyle, string? TextTransform, double? BorderWidth, double? BorderRadius, double? PaddingX, double? PaddingY, string? TextShadow, string? BoxShadow, double? Opacity);
     private sealed record GenerateCampaignMapLayersPayload(List<GenerateCampaignMapStrokePayload>? Rivers, List<GenerateCampaignMapDecorationPayload>? MountainChains, List<GenerateCampaignMapDecorationPayload>? ForestBelts);
 
     private sealed record GenerateNpcDraftPayload(

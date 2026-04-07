@@ -164,12 +164,20 @@ export interface ApiCampaignMapLabelDto {
 
 export interface ApiCampaignMapLabelStyleDto {
     color: string;
+    backgroundColor: string;
+    borderColor: string;
     fontFamily: 'display' | 'body';
     fontSize: number;
     fontWeight: number;
     letterSpacing: number;
     fontStyle: 'normal' | 'italic';
     textTransform: 'none' | 'uppercase';
+    borderWidth: number;
+    borderRadius: number;
+    paddingX: number;
+    paddingY: number;
+    textShadow: string;
+    boxShadow: string;
     opacity: number;
 }
 

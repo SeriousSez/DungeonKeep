@@ -106,12 +106,20 @@ export interface CampaignMapDecoration {
 
 export interface CampaignMapLabelStyle {
     color: string;
+    backgroundColor: string;
+    borderColor: string;
     fontFamily: CampaignMapLabelFontFamily;
     fontSize: number;
     fontWeight: number;
     letterSpacing: number;
     fontStyle: CampaignMapLabelFontStyle;
     textTransform: CampaignMapLabelTextTransform;
+    borderWidth: number;
+    borderRadius: number;
+    paddingX: number;
+    paddingY: number;
+    textShadow: string;
+    boxShadow: string;
     opacity: number;
 }
 
