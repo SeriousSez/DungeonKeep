@@ -25,6 +25,7 @@ export interface DropdownOption {
 export class DropdownComponent {
     private readonly hostElement = inject(ElementRef<HTMLElement>);
     private readonly defaultPanelMaxHeight = 300;
+    private readonly viewportPadding = 12;
     private suppressOutsideCloseUntil = 0;
 
     readonly id = input<string>('');
@@ -44,8 +45,10 @@ export class DropdownComponent {
 
     readonly isOpen = signal(false);
     readonly opensUpward = signal(false);
+    readonly panelAlignment = signal<'start' | 'end'>('start');
     readonly searchTerm = signal('');
     readonly panelMaxHeight = signal(this.defaultPanelMaxHeight);
+    readonly panelAvailableWidth = signal<number | null>(null);
 
     readonly filteredOptions = computed(() => {
         const query = this.searchTerm().trim().toLowerCase();
@@ -96,6 +99,8 @@ export class DropdownComponent {
             if (!this.isOpen()) {
                 this.opensUpward.set(false);
                 this.panelMaxHeight.set(this.defaultPanelMaxHeight);
+                this.panelAlignment.set('start');
+                this.panelAvailableWidth.set(null);
                 return;
             }
 
@@ -116,14 +121,30 @@ export class DropdownComponent {
                 const panelGap = 6;
                 const triggerRect = trigger.getBoundingClientRect();
                 const desiredPanelHeight = panel.offsetHeight || panel.scrollHeight || this.defaultPanelMaxHeight;
+                const desiredPanelWidth = panel.offsetWidth || panel.scrollWidth || triggerRect.width;
                 const availableBelow = Math.max(0, view.innerHeight - triggerRect.bottom - viewportPadding - panelGap);
                 const availableAbove = Math.max(0, triggerRect.top - viewportPadding - panelGap);
+                const availableRight = Math.max(0, view.innerWidth - viewportPadding - triggerRect.left);
+                const availableLeft = Math.max(0, triggerRect.right - viewportPadding);
                 const shouldOpenUpward = desiredPanelHeight > availableBelow && availableAbove > availableBelow;
                 const availableSpace = shouldOpenUpward ? availableAbove : availableBelow;
+                const startOverflow = triggerRect.left + desiredPanelWidth - (view.innerWidth - viewportPadding);
+                const endOverflow = viewportPadding - (triggerRect.right - desiredPanelWidth);
 
                 this.opensUpward.set(shouldOpenUpward);
                 // Keep the dropdown panel within available viewport space.
                 this.panelMaxHeight.set(Math.max(120, Math.min(this.defaultPanelMaxHeight, availableSpace)));
+
+                if (endOverflow > 0 && startOverflow <= 0) {
+                    this.panelAlignment.set('end');
+                } else if (startOverflow > 0 && endOverflow <= 0) {
+                    this.panelAlignment.set('start');
+                } else {
+                    this.panelAlignment.set(startOverflow < endOverflow ? 'end' : 'start');
+                }
+
+                const availableWidth = this.panelAlignment() === 'end' ? availableLeft : availableRight;
+                this.panelAvailableWidth.set(Math.max(triggerRect.width, availableWidth));
             };
 
             const frameId = view.requestAnimationFrame(() => {
@@ -149,7 +170,23 @@ export class DropdownComponent {
     }
 
     getPanelMinWidth(): number | null {
-        return this.panelMinWidth() ?? this.minWidth() ?? null;
+        const requestedWidth = this.panelMinWidth() ?? this.minWidth();
+        const availableWidth = this.panelAvailableWidth();
+
+        if (requestedWidth === null || requestedWidth === undefined) {
+            return null;
+        }
+
+        if (availableWidth === null) {
+            return requestedWidth;
+        }
+
+        return Math.min(requestedWidth, Math.max(availableWidth, 120));
+    }
+
+    getPanelMaxWidth(): number | null {
+        const availableWidth = this.panelAvailableWidth();
+        return availableWidth === null ? null : Math.max(availableWidth, 120);
     }
 
     onValueChange(newValue: string | number): void {

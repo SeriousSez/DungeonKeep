@@ -47,8 +47,17 @@ export class App {
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    if (!(event.target as HTMLElement).closest('.nav-group')) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    if (!target.closest('.nav-group')) {
       this.openDropdown.set(null);
+    }
+
+    if (this.mobileNavOpen() && !target.closest('.topbar')) {
+      this.closeMobileNav();
     }
   }
 

@@ -193,9 +193,13 @@
         .suggestion-group-list {
             display: grid;
             gap: 6px;
+            min-width: 0;
         }
 
         .suggestion-btn {
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
             background: none;
             border: 1px solid var(--panel-border);
             border-radius: 6px;
@@ -228,6 +232,9 @@
 
             .suggestion-text {
                 display: block;
+                min-width: 0;
+                overflow-wrap: anywhere;
+                word-break: break-word;
             }
 
             &:hover {
@@ -372,5 +379,9 @@
         margin-top: 8px;
         width: 100%;
         max-height: calc(100vh - 24px);
+    }
+
+    .divider {
+        display: none;
     }
 }

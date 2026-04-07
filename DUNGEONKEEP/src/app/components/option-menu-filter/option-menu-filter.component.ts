@@ -12,6 +12,7 @@ import type { DropdownOption } from '../dropdown/dropdown.component';
 })
 export class OptionMenuFilterComponent {
     private readonly hostElement = inject(ElementRef<HTMLElement>);
+    private readonly viewportPadding = 12;
 
     readonly options = input.required<ReadonlyArray<DropdownOption>>();
     readonly selectedValue = input.required<string>();
@@ -20,9 +21,15 @@ export class OptionMenuFilterComponent {
     readonly changed = output<string | number>();
 
     readonly menuOpen = signal(false);
+    readonly panelAlignment = signal<'start' | 'end'>('end');
 
     toggleMenu(): void {
-        this.menuOpen.update((open) => !open);
+        const nextOpen = !this.menuOpen();
+        this.menuOpen.set(nextOpen);
+
+        if (nextOpen) {
+            globalThis.window?.requestAnimationFrame(() => this.updatePanelAlignment());
+        }
     }
 
     pickOption(value: string | number): void {
@@ -44,5 +51,45 @@ export class OptionMenuFilterComponent {
         if (!this.hostElement.nativeElement.contains(target)) {
             this.menuOpen.set(false);
         }
+    }
+
+    @HostListener('window:resize')
+    onWindowResize(): void {
+        if (!this.menuOpen()) {
+            return;
+        }
+
+        this.updatePanelAlignment();
+    }
+
+    private updatePanelAlignment(): void {
+        const view = globalThis.window;
+        if (!view) {
+            return;
+        }
+
+        const trigger = this.hostElement.nativeElement.querySelector('.class-sort-trigger');
+        const panel = this.hostElement.nativeElement.querySelector('.class-sort-popover-panel');
+
+        if (!(trigger instanceof HTMLElement) || !(panel instanceof HTMLElement)) {
+            return;
+        }
+
+        const triggerRect = trigger.getBoundingClientRect();
+        const panelWidth = panel.offsetWidth || Math.min(320, Math.floor(view.innerWidth * 0.92));
+        const startOverflow = triggerRect.left + panelWidth - (view.innerWidth - this.viewportPadding);
+        const endOverflow = this.viewportPadding - (triggerRect.right - panelWidth);
+
+        if (endOverflow > 0 && startOverflow <= 0) {
+            this.panelAlignment.set('start');
+            return;
+        }
+
+        if (startOverflow > 0 && endOverflow <= 0) {
+            this.panelAlignment.set('end');
+            return;
+        }
+
+        this.panelAlignment.set(startOverflow < endOverflow ? 'start' : 'end');
     }
 }

@@ -81,6 +81,16 @@
     gap: 8px;
 }
 
+.app-dropdown-menu--align-end .app-dropdown-panel {
+    left: auto;
+    right: 0;
+}
+
+.app-dropdown-menu--align-start .app-dropdown-panel {
+    left: 0;
+    right: auto;
+}
+
 .app-dropdown-search {
     width: 100%;
     min-height: 34px;

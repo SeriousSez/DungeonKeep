@@ -278,13 +278,15 @@
 
 @media (max-width: 768px) {
     .modal-backdrop {
-        padding: 10px;
-        place-items: center;
+        align-items: start;
+        justify-items: center;
+        padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
     }
 
     .info-modal {
+        align-self: start;
         width: min(680px, 100%);
-        max-height: calc(100dvh - 20px);
+        max-height: calc(100dvh - 16px - env(safe-area-inset-bottom));
         border-radius: 16px;
         padding: 14px;
         gap: 10px;
@@ -313,6 +315,7 @@
     .info-modal-body {
         gap: 10px;
         padding-right: 0;
+        overscroll-behavior: contain;
     }
 
     .details-block {
@@ -345,6 +348,57 @@
         flex: 1 1 0;
         padding: 12px;
         font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 560px) {
+    .modal-backdrop {
+        padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
+    }
+
+    .info-modal {
+        width: 100%;
+        max-height: calc(100dvh - 8px - env(safe-area-inset-bottom));
+        border-radius: 14px;
+        padding: 12px;
+        gap: 8px;
+    }
+
+    .info-modal-header {
+        gap: 6px;
+    }
+
+    .info-modal-header h3 {
+        font-size: 1.05rem;
+    }
+
+    .modal-summary {
+        font-size: 0.95rem;
+        line-height: 1.45;
+    }
+
+    .details-block {
+        padding: 9px;
+    }
+
+    .details-block h4 {
+        font-size: 0.92rem;
+    }
+
+    .highlight-list {
+        gap: 4px;
+        padding-left: 16px;
+    }
+
+    .info-modal-footer {
+        flex-direction: column;
+        gap: 8px;
+        padding: 8px 0 calc(6px + env(safe-area-inset-bottom));
+    }
+
+    .info-modal-footer button {
+        width: 100%;
+        min-height: 42px;
     }
 }
 

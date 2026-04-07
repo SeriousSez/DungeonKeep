@@ -179,6 +179,17 @@ export class NewCharacterStandardPageComponent {
 
     constructor() {
         effect(() => {
+            if (this.routeStep() !== null) {
+                return;
+            }
+
+            void this.router.navigate(this.getBuilderStepRoute('class'), {
+                queryParamsHandling: 'preserve',
+                replaceUrl: true
+            });
+        });
+
+        effect(() => {
             const characterId = this.activeBuilderCharacterId();
             if (!characterId) {
                 return;

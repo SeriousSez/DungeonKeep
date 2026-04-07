@@ -29,6 +29,8 @@
 .page-shell {
     display: grid;
     gap: 18px;
+    width: 100%;
+    min-width: 0;
 
     >* {
         opacity: 0;
@@ -128,6 +130,7 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 16px;
+    min-width: 0;
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);
     border-radius: 18px;
@@ -138,6 +141,7 @@
 .header-main {
     display: grid;
     gap: 6px;
+    min-width: 0;
 }
 
 .header-actions {
@@ -145,6 +149,7 @@
     justify-items: end;
     align-content: start;
     gap: 10px;
+    min-width: min(100%, 24rem);
 }
 
 .header-status-row {
@@ -159,11 +164,13 @@
     font-weight: 700;
     font-size: 2rem;
     line-height: 1.1;
+    overflow-wrap: anywhere;
 }
 
 .header-content p {
     margin: 0;
     color: var(--text-muted);
+    min-width: 0;
 }
 
 .subheader {
@@ -177,9 +184,16 @@
     align-items: center;
     justify-content: flex-end;
     gap: 8px;
+    width: 100%;
     margin-top: 0;
     position: relative;
     z-index: 45;
+}
+
+.campaign-assignment-controls app-dropdown {
+    flex: 1 1 220px;
+    min-width: min(100%, 220px);
+    max-width: 100%;
 }
 
 .assign-btn,
@@ -191,6 +205,7 @@
     min-height: 32px;
     padding: 0 12px;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .edit-character-btn {
@@ -1299,6 +1314,14 @@
 }
 
 @media (max-width: 720px) {
+    .page-shell {
+        gap: 14px;
+    }
+
+    .panel {
+        padding: 12px;
+    }
+
     .header-content {
         flex-direction: column;
         align-items: flex-start;
@@ -1307,23 +1330,49 @@
 
     .header-actions {
         width: 100%;
+        min-width: 0;
         justify-items: start;
     }
 
     .header-status-row {
-        justify-content: flex-start;
+        width: 100%;
+        justify-content: space-between;
     }
 
     .campaign-assignment-controls {
-        justify-content: flex-start;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        width: 100%;
+        justify-content: stretch;
+        align-items: stretch;
+    }
+
+    .campaign-assignment-controls app-dropdown {
+        grid-column: 1 / -1;
+        min-width: 0;
+    }
+
+    .assign-btn,
+    .remove-btn {
+        width: 100%;
+        min-height: 38px;
+    }
+
+    .remove-btn {
+        grid-column: 1 / -1;
     }
 
     .campaign-error {
         text-align: left;
+        font-size: 0.82rem;
     }
 
     .header-content h1 {
-        font-size: 1.55rem;
+        font-size: 1.45rem;
+    }
+
+    .subheader {
+        font-size: 0.9rem;
     }
 
     .abilities-strip,
@@ -1338,10 +1387,36 @@
 
     .skill-row {
         grid-template-columns: auto 1fr auto auto;
+        padding: 8px 10px;
+        font-size: 0.8rem;
     }
 
     .skill-ability {
         display: none;
+    }
+
+    .section-title {
+        margin-bottom: 10px;
+        font-size: 0.98rem;
+    }
+
+    .subsection-title {
+        margin-top: 12px;
+    }
+
+    .passive-row,
+    .info-row,
+    .training-block,
+    .notes-block,
+    .mini-list li {
+        font-size: 0.82rem;
+    }
+
+    .left-column,
+    .middle-column,
+    .right-column {
+        max-height: none;
+        overflow: visible;
     }
 
     .actions-head,

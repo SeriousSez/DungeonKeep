@@ -165,12 +165,46 @@
 
 @media (max-width: 720px) {
     .roster-panel {
-        padding: 20px;
+        padding: 18px;
     }
 
     .panel-heading,
     .character-card-top,
     .character-actions {
         flex-direction: column;
+    }
+
+    .panel-heading {
+        margin-bottom: 16px;
+    }
+
+    .pill,
+    .status-pill {
+        align-self: flex-start;
+    }
+
+    .character-card {
+        padding: 16px;
+    }
+
+    .character-card h3 {
+        line-height: 1.1;
+        overflow-wrap: anywhere;
+    }
+
+    .character-card-top p,
+    .character-meta {
+        font-size: 0.86rem;
+    }
+
+    .primary-button,
+    .ghost-button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .empty-state-button {
+        min-width: 0;
+        width: 100%;
     }
 }

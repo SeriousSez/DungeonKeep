@@ -113,6 +113,11 @@
 .build-control {
     display: grid;
     gap: 6px;
+    min-width: 0;
+}
+
+.build-control app-dropdown {
+    width: 100%;
 }
 
 .build-control span {
@@ -226,5 +231,37 @@
 @media (max-width: 980px) {
     .method-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .page-stack {
+        gap: 18px;
+    }
+
+    .page-intro {
+        padding: 18px;
+    }
+
+    .page-intro h1 {
+        font-size: 1.8rem;
+        line-height: 1.05;
+    }
+
+    .method-card {
+        border-radius: 16px;
+    }
+
+    .method-body,
+    .method-body.no-media {
+        padding: 14px;
+    }
+
+    .method-media {
+        min-height: 132px;
+    }
+
+    .method-action {
+        width: 100%;
     }
 }

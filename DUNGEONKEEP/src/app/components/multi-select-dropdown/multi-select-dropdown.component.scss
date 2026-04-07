@@ -94,7 +94,6 @@
     position: absolute;
     top: 100%;
     left: 0;
-    right: 0;
     z-index: 5200;
     background: var(--surface-raised-solid);
     border: 1px solid var(--accent-primary);
@@ -104,6 +103,16 @@
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
     max-height: 300px;
     overflow: hidden;
+}
+
+.msd-open-align-start .msd-panel {
+    left: 0;
+    right: auto;
+}
+
+.msd-open-align-end .msd-panel {
+    left: auto;
+    right: 0;
 }
 
 .msd-open-up .msd-panel {

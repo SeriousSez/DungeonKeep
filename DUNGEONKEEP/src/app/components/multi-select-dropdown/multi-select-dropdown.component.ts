@@ -26,6 +26,7 @@ export class MultiSelectDropdownComponent {
     private readonly document = inject(DOCUMENT);
     private readonly el = inject<ElementRef<HTMLElement>>(ElementRef);
     private readonly defaultPanelMaxHeight = 300;
+    private readonly viewportPadding = 12;
     private suppressOutsideCloseUntil = 0;
 
     readonly groups = input.required<ReadonlyArray<MultiSelectOptionGroup>>();
@@ -38,7 +39,9 @@ export class MultiSelectDropdownComponent {
 
     readonly isOpen = signal(false);
     readonly opensUpward = signal(false);
+    readonly panelAlignment = signal<'start' | 'end'>('start');
     readonly panelMaxHeight = signal(this.defaultPanelMaxHeight);
+    readonly panelAvailableWidth = signal<number | null>(null);
     readonly isSingleSelect = computed(() => this.selectionMode() === 'single');
     readonly flatOptions = computed(() => this.groups().flatMap((group) => group.options));
     readonly triggerLabel = computed(() => {
@@ -71,6 +74,8 @@ export class MultiSelectDropdownComponent {
             if (!this.isOpen()) {
                 this.opensUpward.set(false);
                 this.panelMaxHeight.set(this.defaultPanelMaxHeight);
+                this.panelAlignment.set('start');
+                this.panelAvailableWidth.set(null);
                 return;
             }
 
@@ -98,14 +103,30 @@ export class MultiSelectDropdownComponent {
                 const panelGap = 6;
                 const triggerRect = trigger.getBoundingClientRect();
                 const desiredPanelHeight = Math.min(panel.scrollHeight, this.defaultPanelMaxHeight);
+                const desiredPanelWidth = panel.offsetWidth || panel.scrollWidth || triggerRect.width;
                 const availableBelow = Math.max(0, view.innerHeight - triggerRect.bottom - viewportPadding - panelGap);
                 const availableAbove = Math.max(0, triggerRect.top - viewportPadding - panelGap);
+                const availableRight = Math.max(0, view.innerWidth - viewportPadding - triggerRect.left);
+                const availableLeft = Math.max(0, triggerRect.right - viewportPadding);
                 const shouldOpenUpward = desiredPanelHeight > availableBelow && availableAbove > availableBelow;
                 const availableSpace = shouldOpenUpward ? availableAbove : availableBelow;
                 const panelMaxHeight = Math.max(120, Math.min(this.defaultPanelMaxHeight, availableSpace));
+                const startOverflow = triggerRect.left + desiredPanelWidth - (view.innerWidth - viewportPadding);
+                const endOverflow = viewportPadding - (triggerRect.right - desiredPanelWidth);
 
                 this.opensUpward.set(shouldOpenUpward);
                 this.panelMaxHeight.set(panelMaxHeight);
+
+                if (endOverflow > 0 && startOverflow <= 0) {
+                    this.panelAlignment.set('end');
+                } else if (startOverflow > 0 && endOverflow <= 0) {
+                    this.panelAlignment.set('start');
+                } else {
+                    this.panelAlignment.set(startOverflow < endOverflow ? 'end' : 'start');
+                }
+
+                const availableWidth = this.panelAlignment() === 'end' ? availableLeft : availableRight;
+                this.panelAvailableWidth.set(Math.max(triggerRect.width, availableWidth));
             };
 
             const frameId = view?.requestAnimationFrame(updatePanelPosition) ?? 0;
@@ -183,6 +204,11 @@ export class MultiSelectDropdownComponent {
 
     optionLabel(option: string | MultiSelectOption): string {
         return typeof option === 'string' ? option : option.label;
+    }
+
+    getPanelMaxWidth(): number | null {
+        const availableWidth = this.panelAvailableWidth();
+        return availableWidth === null ? null : Math.max(availableWidth, 120);
     }
 
     private resolveOptionLabel(value: string): string {
