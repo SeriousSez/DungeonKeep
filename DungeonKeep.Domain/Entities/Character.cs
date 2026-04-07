@@ -40,5 +40,6 @@ public sealed class Character
     public string SessionHistory { get; set; } = string.Empty; // JSON or delimited
 
     public Campaign? Campaign { get; set; }
+    public List<CharacterCampaignAssignment> CampaignAssignments { get; set; } = [];
     public AppUser? OwnerUser { get; set; }
 }

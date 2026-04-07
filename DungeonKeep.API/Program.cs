@@ -174,6 +174,8 @@ static void EnsureCharactersCampaignIdIsNullable(DungeonKeepDbContext dbContext)
 
 static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)
 {
+    const string emptyGuid = "00000000-0000-0000-0000-000000000000";
+
     EnsureColumnExists(dbContext, "CampaignMemberships", "UserId", "TEXT NULL");
     EnsureColumnExists(dbContext, "CampaignMemberships", "Email", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "CampaignMemberships", "Role", "TEXT NOT NULL DEFAULT 'Member'");
@@ -218,6 +220,17 @@ static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)
     EnsureColumnExists(dbContext, "Characters", "Goals", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "Characters", "Secrets", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "Characters", "SessionHistory", "TEXT NOT NULL DEFAULT ''");
+
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE TABLE IF NOT EXISTS CharacterCampaignAssignments (CharacterId TEXT NOT NULL, CampaignId TEXT NOT NULL, CONSTRAINT PK_CharacterCampaignAssignments PRIMARY KEY (CharacterId, CampaignId), CONSTRAINT FK_CharacterCampaignAssignments_Characters_CharacterId FOREIGN KEY (CharacterId) REFERENCES Characters (Id) ON DELETE CASCADE, CONSTRAINT FK_CharacterCampaignAssignments_Campaigns_CampaignId FOREIGN KEY (CampaignId) REFERENCES Campaigns (Id) ON DELETE CASCADE);"
+    );
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE INDEX IF NOT EXISTS IX_CharacterCampaignAssignments_CampaignId ON CharacterCampaignAssignments (CampaignId);"
+    );
+    dbContext.Database.ExecuteSqlRaw(
+        "INSERT OR IGNORE INTO CharacterCampaignAssignments (CharacterId, CampaignId) SELECT Id, CampaignId FROM Characters WHERE CampaignId IS NOT NULL AND CampaignId <> '' AND CampaignId <> {0};",
+        emptyGuid
+    );
 
     EnsureIndexExists(dbContext, "IX_Characters_OwnerUserId", "Characters", "OwnerUserId");
 }

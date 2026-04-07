@@ -94,6 +94,8 @@
     position: absolute;
     top: 100%;
     left: 0;
+    width: 100%;
+    min-width: 100%;
     z-index: 5200;
     background: var(--surface-raised-solid);
     border: 1px solid var(--accent-primary);

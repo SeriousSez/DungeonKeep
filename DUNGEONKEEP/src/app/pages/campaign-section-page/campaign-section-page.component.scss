@@ -116,6 +116,56 @@
     color: var(--text-muted);
 }
 
+.skeleton-panel {
+    overflow: hidden;
+}
+
+.skeleton-stack {
+    display: grid;
+    gap: 16px;
+}
+
+.skeleton-row {
+    display: grid;
+    gap: 10px;
+}
+
+.skeleton-line {
+    height: 14px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--surface-raised) 88%, transparent), color-mix(in srgb, var(--surface-raised) 60%, var(--accent-primary) 40%), color-mix(in srgb, var(--surface-raised) 88%, transparent));
+    background-size: 220% 100%;
+    animation: campaign-section-skeleton 1.6s linear infinite;
+}
+
+.skeleton-eyebrow {
+    width: 120px;
+}
+
+.skeleton-title {
+    width: min(420px, 82%);
+    height: 30px;
+}
+
+.skeleton-copy {
+    width: min(620px, 100%);
+}
+
+.skeleton-section-title {
+    width: 180px;
+    height: 22px;
+}
+
+@keyframes campaign-section-skeleton {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -20% 0;
+    }
+}
+
 .section-heading {
     display: flex;
     justify-content: space-between;

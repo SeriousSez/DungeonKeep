@@ -208,6 +208,7 @@ export interface Race {
 export interface Character {
     id: string;
     campaignId: string;
+    campaignIds?: string[];
     ownerUserId?: string | null;
     ownerDisplayName?: string;
     canEdit?: boolean;
@@ -267,6 +268,7 @@ export interface CharacterDraft {
     background: string;
     notes: string;
     campaignId?: string;
+    campaignIds?: string[];
     abilityScores?: AbilityScores;
     skills?: SkillProficiencies;
     armorClass?: number;

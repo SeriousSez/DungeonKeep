@@ -22,7 +22,8 @@ public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : IChara
     {
         return await dbContext.Characters
             .Include(c => c.OwnerUser)
-            .Where(c => c.CampaignId == campaignId)
+            .Include(c => c.CampaignAssignments)
+            .Where(c => c.CampaignAssignments.Any(assignment => assignment.CampaignId == campaignId))
             .OrderByDescending(c => c.CreatedAtUtc)
             .ToListAsync(cancellationToken);
     }
@@ -31,15 +32,18 @@ public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : IChara
     {
         return await dbContext.Characters
             .Include(c => c.OwnerUser)
-            .Where(c => c.OwnerUserId == userId && c.CampaignId == null)
+            .Include(c => c.CampaignAssignments)
+            .Where(c => c.OwnerUserId == userId && !c.CampaignAssignments.Any())
             .OrderByDescending(c => c.CreatedAtUtc)
             .ToListAsync(cancellationToken);
     }
 
     public async Task<Character> AddAsync(Character character, CancellationToken cancellationToken = default)
     {
+        SyncCampaignAssignments(character, character.CampaignAssignments.Select(assignment => assignment.CampaignId));
         dbContext.Characters.Add(character);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await dbContext.Entry(character).Collection(c => c.CampaignAssignments).LoadAsync(cancellationToken);
         return character;
     }
 
@@ -47,6 +51,7 @@ public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : IChara
     {
         return await dbContext.Characters
             .Include(c => c.OwnerUser)
+            .Include(c => c.CampaignAssignments)
             .FirstOrDefaultAsync(c => c.Id == characterId, cancellationToken);
     }
 
@@ -58,7 +63,7 @@ public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : IChara
         int level,
         string background,
         string notes,
-        Guid? campaignId,
+        IReadOnlyCollection<Guid> campaignIds,
         int hitPoints,
         int deathSaveFailures,
         int deathSaveSuccesses,
@@ -95,7 +100,7 @@ public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : IChara
         character.Level = level;
         character.Background = background;
         character.Notes = notes;
-        character.CampaignId = campaignId;
+        SyncCampaignAssignments(character, campaignIds);
         character.HitPoints = Math.Max(0, hitPoints);
         character.DeathSaveFailures = Math.Clamp(deathSaveFailures, 0, 3);
         character.DeathSaveSuccesses = Math.Clamp(deathSaveSuccesses, 0, 3);
@@ -121,27 +126,32 @@ public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : IChara
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await dbContext.Entry(character).Reference(c => c.OwnerUser).LoadAsync(cancellationToken);
+        await dbContext.Entry(character).Collection(c => c.CampaignAssignments).LoadAsync(cancellationToken);
         return character;
     }
 
-    public async Task<Character?> UpdateCampaignAsync(Guid characterId, Guid? campaignId, CancellationToken cancellationToken = default)
+    public async Task<Character?> UpdateCampaignAsync(Guid characterId, IReadOnlyCollection<Guid> campaignIds, CancellationToken cancellationToken = default)
     {
-        var character = await dbContext.Characters.FirstOrDefaultAsync(c => c.Id == characterId, cancellationToken);
+        var character = await dbContext.Characters
+            .Include(c => c.CampaignAssignments)
+            .FirstOrDefaultAsync(c => c.Id == characterId, cancellationToken);
         if (character is null)
         {
             return null;
         }
 
-        character.CampaignId = campaignId;
+        SyncCampaignAssignments(character, campaignIds);
         await dbContext.SaveChangesAsync(cancellationToken);
         await dbContext.Entry(character).Reference(c => c.OwnerUser).LoadAsync(cancellationToken);
+        await dbContext.Entry(character).Collection(c => c.CampaignAssignments).LoadAsync(cancellationToken);
         return character;
     }
 
     public async Task UnassignOwnedByUserInCampaignAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default)
     {
         var characters = await dbContext.Characters
-            .Where(character => character.CampaignId == campaignId && character.OwnerUserId == userId)
+            .Include(character => character.CampaignAssignments)
+            .Where(character => character.OwnerUserId == userId && character.CampaignAssignments.Any(assignment => assignment.CampaignId == campaignId))
             .ToListAsync(cancellationToken);
 
         if (characters.Count == 0)
@@ -151,7 +161,21 @@ public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : IChara
 
         foreach (var character in characters)
         {
-            character.CampaignId = null;
+            var assignmentToRemove = character.CampaignAssignments
+                .Where(assignment => assignment.CampaignId == campaignId)
+                .ToList();
+
+            foreach (var assignment in assignmentToRemove)
+            {
+                dbContext.CharacterCampaignAssignments.Remove(assignment);
+            }
+
+            var remainingCampaignIds = character.CampaignAssignments
+                .Where(assignment => assignment.CampaignId != campaignId)
+                .Select(assignment => assignment.CampaignId)
+                .ToList();
+
+            character.CampaignId = ResolvePrimaryCampaignId(remainingCampaignIds);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -198,5 +222,47 @@ public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : IChara
         await dbContext.SaveChangesAsync(cancellationToken);
         await dbContext.Entry(character).Reference(c => c.OwnerUser).LoadAsync(cancellationToken);
         return character;
+    }
+
+    private static void SyncCampaignAssignments(Character character, IEnumerable<Guid> campaignIds)
+    {
+        var normalizedCampaignIds = NormalizeCampaignIds(campaignIds);
+        var currentAssignments = character.CampaignAssignments ?? [];
+        var assignmentsByCampaignId = currentAssignments.ToDictionary(assignment => assignment.CampaignId, assignment => assignment);
+
+        foreach (var staleAssignment in currentAssignments.Where(assignment => !normalizedCampaignIds.Contains(assignment.CampaignId)).ToList())
+        {
+            currentAssignments.Remove(staleAssignment);
+        }
+
+        foreach (var campaignId in normalizedCampaignIds)
+        {
+            if (assignmentsByCampaignId.ContainsKey(campaignId))
+            {
+                continue;
+            }
+
+            currentAssignments.Add(new CharacterCampaignAssignment
+            {
+                CharacterId = character.Id,
+                CampaignId = campaignId
+            });
+        }
+
+        character.CampaignAssignments = currentAssignments;
+        character.CampaignId = ResolvePrimaryCampaignId(normalizedCampaignIds);
+    }
+
+    private static List<Guid> NormalizeCampaignIds(IEnumerable<Guid> campaignIds)
+    {
+        return campaignIds
+            .Where(campaignId => campaignId != Guid.Empty)
+            .Distinct()
+            .ToList();
+    }
+
+    private static Guid? ResolvePrimaryCampaignId(IReadOnlyList<Guid> campaignIds)
+    {
+        return campaignIds.Count > 0 ? campaignIds[0] : null;
     }
 }

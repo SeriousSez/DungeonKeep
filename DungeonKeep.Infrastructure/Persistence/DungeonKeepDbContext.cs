@@ -10,6 +10,7 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
     public DbSet<Campaign> Campaigns => Set<Campaign>();
     public DbSet<CampaignMembership> CampaignMemberships => Set<CampaignMembership>();
     public DbSet<Character> Characters => Set<Character>();
+    public DbSet<CharacterCampaignAssignment> CharacterCampaignAssignments => Set<CharacterCampaignAssignment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -88,6 +89,22 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
                 .WithMany()
                 .HasForeignKey(membership => membership.InvitedByUserId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<CharacterCampaignAssignment>(entity =>
+        {
+            entity.HasKey(assignment => new { assignment.CharacterId, assignment.CampaignId });
+            entity.HasIndex(assignment => assignment.CampaignId);
+
+            entity.HasOne(assignment => assignment.Character)
+                .WithMany(character => character.CampaignAssignments)
+                .HasForeignKey(assignment => assignment.CharacterId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(assignment => assignment.Campaign)
+                .WithMany(campaign => campaign.CharacterAssignments)
+                .HasForeignKey(assignment => assignment.CampaignId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Character>(entity =>

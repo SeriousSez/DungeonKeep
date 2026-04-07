@@ -1,5 +1,51 @@
 <main class="page-shell">
-    @if (character(); as char) {
+    @if (!initialized()) {
+    <div class="detail-header skeleton-panel">
+        <div class="skeleton-line skeleton-back-link"></div>
+        <div class="header-content skeleton-header-content">
+            <div class="header-main skeleton-stack">
+                <div class="skeleton-line skeleton-eyebrow"></div>
+                <div class="skeleton-line skeleton-title"></div>
+                <div class="skeleton-line skeleton-copy"></div>
+            </div>
+            <div class="header-actions skeleton-actions">
+                <div class="skeleton-line skeleton-pill"></div>
+                <div class="skeleton-line skeleton-button"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="summary-panels">
+        @for (panel of [1, 2]; track panel) {
+        <section class="panel summary-panel skeleton-panel skeleton-card">
+            <div class="skeleton-line skeleton-section-title"></div>
+            <div class="summary-strip skeleton-summary-strip">
+                @for (item of [1, 2, 3, 4]; track item) {
+                <div class="summary-item skeleton-summary-item">
+                    <div class="skeleton-line skeleton-label"></div>
+                    <div class="skeleton-line skeleton-value"></div>
+                </div>
+                }
+            </div>
+        </section>
+        }
+    </div>
+
+    <div class="content-grid">
+        <section class="panel skeleton-panel skeleton-card">
+            <div class="skeleton-line skeleton-section-title"></div>
+            @for (line of [1, 2, 3, 4, 5]; track line) {
+            <div class="skeleton-line skeleton-copy"></div>
+            }
+        </section>
+        <section class="panel skeleton-panel skeleton-card">
+            <div class="skeleton-line skeleton-section-title"></div>
+            @for (line of [1, 2, 3, 4]; track line) {
+            <div class="skeleton-line skeleton-copy"></div>
+            }
+        </section>
+    </div>
+    } @else if (character(); as char) {
     <div class="detail-header">
         <a routerLink="/characters" class="back-link">← Back to Characters</a>
         <div class="header-content">

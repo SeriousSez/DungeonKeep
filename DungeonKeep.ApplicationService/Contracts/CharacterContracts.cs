@@ -3,6 +3,7 @@ namespace DungeonKeep.ApplicationService.Contracts;
 public sealed record CharacterDto(
     Guid Id,
     Guid CampaignId,
+    Guid[] CampaignIds,
     Guid? OwnerUserId,
     string OwnerDisplayName,
     string Name,
@@ -46,7 +47,8 @@ public sealed record CreateCharacterRequest(
     int Level,
     string Background,
     string Notes,
-    Guid? CampaignId = null
+    Guid? CampaignId = null,
+    Guid[]? CampaignIds = null
     , string Species = ""
     , string Alignment = ""
     , string Lifestyle = ""
@@ -93,7 +95,8 @@ public sealed record UpdateCharacterRequest(
     int Level,
     string Background,
     string Notes,
-    Guid? CampaignId = null
+    Guid? CampaignId = null,
+    Guid[]? CampaignIds = null
     , string? Species = null
     , string? Alignment = null
     , string? Lifestyle = null
@@ -120,4 +123,4 @@ public sealed record UpdateCharacterRequest(
 
 public sealed record UpdateCharacterBackstoryRequest(string Backstory);
 public sealed record UpdateCharacterStatusRequest(string Status);
-public sealed record UpdateCharacterCampaignRequest(Guid? CampaignId);
+public sealed record UpdateCharacterCampaignRequest(Guid? CampaignId, Guid[]? CampaignIds = null);

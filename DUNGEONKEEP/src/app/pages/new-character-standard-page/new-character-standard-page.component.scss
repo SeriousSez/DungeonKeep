@@ -2005,16 +2005,18 @@ input {
     z-index: 3;
 }
 
-.assign-campaign-toggle {
-    display: flex;
-    align-items: center;
+.assign-campaign-field {
+    display: grid;
     gap: 8px;
     color: var(--text-main);
+}
 
-    input {
-        width: 16px;
-        height: 16px;
-    }
+.assign-campaign-label {
+    font-weight: 700;
+}
+
+.assign-campaign-empty {
+    margin: 0;
 }
 
 .background-choice-list details[open] p {
@@ -2112,6 +2114,43 @@ input {
     display: flex;
     align-items: center;
     gap: 6px;
+}
+
+.ability-method-panel {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    overflow: visible;
+}
+
+.ability-assignment-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
+    align-items: start;
+    overflow: visible;
+    min-width: 0;
+}
+
+.ability-assignment-tile {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.ability-assignment-tile app-dropdown {
+    width: 100%;
+}
+
+.ability-assignment-label {
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+}
+
+.ability-assignment-total {
+    font-size: 0.78rem;
+    font-weight: 700;
 }
 
 .ability-grid {
@@ -2802,6 +2841,10 @@ input {
         grid-template-columns: 1fr;
     }
 
+    .ability-assignment-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
     .proficiencies-grid {
         grid-template-columns: 1fr;
     }
@@ -2934,5 +2977,10 @@ input {
 
     .step-pill {
         font-size: 0.76rem;
+    }
+
+    .ability-assignment-label,
+    .ability-assignment-total {
+        font-size: 0.72rem;
     }
 }

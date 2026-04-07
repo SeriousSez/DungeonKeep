@@ -1,5 +1,31 @@
 <main class="page-stack">
-    @if (selectedCampaign(); as campaign) {
+    @if (!store.initialized()) {
+    <section class="panel skeleton-panel">
+        <div class="skeleton-line skeleton-eyebrow"></div>
+        <div class="skeleton-line skeleton-title"></div>
+        <div class="skeleton-line skeleton-copy"></div>
+    </section>
+
+    <section class="panel campaign-nav skeleton-nav">
+        @for (item of [1, 2, 3, 4, 5, 6]; track item) {
+        <div class="skeleton-nav-card">
+            <div class="skeleton-line skeleton-label"></div>
+            <div class="skeleton-line skeleton-meta"></div>
+        </div>
+        }
+    </section>
+
+    <section class="workspace-preview-grid">
+        @for (card of [1, 2, 3, 4]; track card) {
+        <article class="panel skeleton-panel skeleton-card">
+            <div class="skeleton-line skeleton-eyebrow"></div>
+            <div class="skeleton-line skeleton-section-title"></div>
+            <div class="skeleton-line skeleton-copy"></div>
+            <div class="skeleton-line skeleton-copy short"></div>
+        </article>
+        }
+    </section>
+    } @else if (selectedCampaign(); as campaign) {
     <a routerLink="/campaigns" class="back-link">← Back to Campaigns</a>
     <section class="panel page-intro">
         <div class="page-intro-header">

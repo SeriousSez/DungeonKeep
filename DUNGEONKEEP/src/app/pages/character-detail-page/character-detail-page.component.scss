@@ -142,6 +142,8 @@
 .header-main {
     display: grid;
     gap: 6px;
+    flex: 1 1 100%;
+    min-width: 0;
 }
 
 .header-actions {
@@ -149,6 +151,7 @@
     justify-items: end;
     align-content: start;
     gap: 10px;
+    min-width: min(100%, 24rem);
 }
 
 .header-status-row {
@@ -2222,4 +2225,93 @@
     padding-left: 18px;
     display: grid;
     gap: 8px;
+}
+
+.skeleton-panel {
+    overflow: hidden;
+}
+
+.skeleton-stack,
+.skeleton-card {
+    display: grid;
+    gap: 12px;
+}
+
+.skeleton-header-content {
+    width: 100%;
+}
+
+.skeleton-actions {
+    width: min(100%, 16rem);
+}
+
+.skeleton-summary-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 10px;
+}
+
+.skeleton-summary-item {
+    display: grid;
+    gap: 10px;
+}
+
+.skeleton-line {
+    height: 14px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--surface-raised) 88%, transparent), color-mix(in srgb, var(--surface-raised) 60%, var(--accent-primary) 40%), color-mix(in srgb, var(--surface-raised) 88%, transparent));
+    background-size: 220% 100%;
+    animation: character-detail-skeleton 1.6s linear infinite;
+}
+
+.skeleton-back-link {
+    width: 150px;
+}
+
+.skeleton-eyebrow {
+    width: 120px;
+}
+
+.skeleton-title {
+    width: min(360px, 82%);
+    height: 30px;
+}
+
+.skeleton-copy {
+    width: min(620px, 100%);
+}
+
+.skeleton-pill {
+    width: 110px;
+    height: 28px;
+}
+
+.skeleton-button {
+    width: 160px;
+    height: 38px;
+}
+
+.skeleton-section-title {
+    width: 170px;
+    height: 24px;
+}
+
+.skeleton-label {
+    width: 60px;
+    height: 11px;
+}
+
+.skeleton-value {
+    width: 85%;
+    height: 20px;
+}
+
+@keyframes character-detail-skeleton {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -20% 0;
+    }
 }

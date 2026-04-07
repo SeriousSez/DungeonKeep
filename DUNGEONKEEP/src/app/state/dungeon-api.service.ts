@@ -176,6 +176,7 @@ export interface ApiCampaignMemberDto {
 export interface ApiCharacterDto {
     id: string;
     campaignId: string;
+    campaignIds: string[];
     ownerUserId: string | null;
     ownerDisplayName: string;
     name: string;
@@ -608,6 +609,7 @@ export class DungeonApiService {
         background: string;
         notes: string;
         campaignId?: string;
+        campaignIds?: string[];
         species?: string;
         alignment?: string;
         lifestyle?: string;
@@ -642,6 +644,7 @@ export class DungeonApiService {
         background: string;
         notes: string;
         campaignId?: string;
+        campaignIds?: string[];
         species?: string;
         alignment?: string;
         lifestyle?: string;
@@ -668,8 +671,11 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.put<ApiCharacterDto>(`${this.baseUrl}/characters/${characterId}`, payload));
     }
 
-    async updateCharacterCampaign(characterId: string, campaignId: string | null): Promise<ApiCharacterDto> {
-        return await firstValueFrom(this.http.put<ApiCharacterDto>(`${this.baseUrl}/characters/${characterId}/campaign`, { campaignId }));
+    async updateCharacterCampaign(characterId: string, campaignIds: string[]): Promise<ApiCharacterDto> {
+        return await firstValueFrom(this.http.put<ApiCharacterDto>(`${this.baseUrl}/characters/${characterId}/campaign`, {
+            campaignId: campaignIds[0] ?? null,
+            campaignIds
+        }));
     }
 
     async generateCharacterBackstory(payload: ApiGenerateCharacterBackstoryRequest): Promise<ApiGenerateCharacterBackstoryResponse> {

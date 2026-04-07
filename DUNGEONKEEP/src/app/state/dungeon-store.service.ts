@@ -30,6 +30,8 @@ export class DungeonStoreService {
     readonly campaigns = signal<Campaign[]>([]);
     readonly characters = signal<Character[]>([]);
     readonly selectedCampaignId = signal('');
+    readonly initialized = signal(false);
+    readonly isHydrating = signal(false);
 
     private readonly api = inject(DungeonApiService);
     private readonly session = inject(SessionService);
@@ -79,6 +81,8 @@ export class DungeonStoreService {
 
             if (!currentUserId) {
                 this.clearState();
+                this.isHydrating.set(false);
+                this.initialized.set(true);
                 return;
             }
 
@@ -111,6 +115,8 @@ export class DungeonStoreService {
             return null;
         }
 
+        const campaignIds = draft.campaignIds ?? (draft.campaignId ? [draft.campaignId] : undefined);
+
         try {
             const updated = await this.api.updateCharacter(characterId, {
                 name: draft.name,
@@ -119,7 +125,8 @@ export class DungeonStoreService {
                 level: Math.max(1, draft.level),
                 background: draft.background || 'Freshly arrived adventurer',
                 notes: draft.notes || 'No field notes yet.',
-                campaignId: draft.campaignId,
+                campaignId: campaignIds?.[0],
+                campaignIds,
                 species: draft.race,
                 alignment: draft.alignment,
                 lifestyle: draft.lifestyle,
@@ -362,11 +369,15 @@ export class DungeonStoreService {
         }
 
         try {
-            const updated = await this.api.updateCharacterCampaign(characterId, campaignId);
+            const updated = await this.api.updateCharacterCampaign(characterId, campaignId ? [campaignId] : []);
             this.characters.update((characters) =>
                 characters.map((character) =>
                     character.id === characterId
-                        ? { ...character, campaignId: updated.campaignId }
+                        ? {
+                            ...character,
+                            campaignId: updated.campaignId,
+                            campaignIds: updated.campaignIds
+                        }
                         : character
                 )
             );
@@ -374,7 +385,7 @@ export class DungeonStoreService {
             this.campaigns.update((campaigns) =>
                 campaigns.map((campaign) => {
                     const isCurrentCampaign = campaign.partyCharacterIds.includes(characterId);
-                    const shouldContain = campaign.id === updated.campaignId;
+                    const shouldContain = updated.campaignIds.includes(campaign.id);
 
                     if (isCurrentCampaign && !shouldContain) {
                         return {
@@ -472,6 +483,8 @@ export class DungeonStoreService {
             return null;
         }
 
+        const campaignIds = draft.campaignIds ?? (draft.campaignId ? [draft.campaignId] : undefined);
+
         try {
             const created = await this.api.createCharacter({
                 name: draft.name,
@@ -480,7 +493,8 @@ export class DungeonStoreService {
                 level: Math.max(1, draft.level),
                 background: draft.background || 'Freshly arrived adventurer',
                 notes: draft.notes || 'No field notes yet.',
-                campaignId: draft.campaignId,
+                campaignId: campaignIds?.[0],
+                campaignIds,
                 species: draft.race || '',
                 alignment: draft.alignment || '',
                 lifestyle: draft.lifestyle || '',
@@ -508,13 +522,15 @@ export class DungeonStoreService {
             const character = this.mapCharacterFromApi(created, draft);
             this.characters.update((characters) => [character, ...characters]);
 
-            if (character.campaignId && character.campaignId !== DungeonStoreService.UNASSIGNED_CAMPAIGN_ID) {
+            if ((character.campaignIds?.length ?? 0) > 0) {
                 this.campaigns.update((campaigns) =>
                     campaigns.map((campaign) =>
-                        campaign.id === character.campaignId
+                        character.campaignIds?.includes(campaign.id)
                             ? {
                                 ...campaign,
-                                partyCharacterIds: [...campaign.partyCharacterIds, character.id]
+                                partyCharacterIds: campaign.partyCharacterIds.includes(character.id)
+                                    ? campaign.partyCharacterIds
+                                    : [...campaign.partyCharacterIds, character.id]
                             }
                             : campaign
                     )
@@ -528,6 +544,9 @@ export class DungeonStoreService {
     }
 
     private async hydrateFromApi(): Promise<void> {
+        this.isHydrating.set(true);
+        this.initialized.set(false);
+
         try {
             const campaignDtos = await this.api.getCampaigns();
 
@@ -540,24 +559,38 @@ export class DungeonStoreService {
 
             const unassignedDtos = await this.api.getUnassignedCharacters();
             const characterLookup = new Map<string, ApiCharacterDto[]>(characterPairs);
-            const allCharacters: Character[] = [];
+            const characterMap = new Map<string, Character>();
 
             const mappedCampaigns = campaignDtos.map((campaignDto) => {
                 const apiCharacters = characterLookup.get(campaignDto.id) ?? [];
                 const mappedCharacters = apiCharacters.map((characterDto) => this.mapCharacterFromApi(characterDto));
-                allCharacters.push(...mappedCharacters);
+
+                for (const mappedCharacter of mappedCharacters) {
+                    const existing = characterMap.get(mappedCharacter.id);
+                    if (!existing) {
+                        characterMap.set(mappedCharacter.id, mappedCharacter);
+                        continue;
+                    }
+
+                    const mergedCampaignIds = Array.from(new Set([...(existing.campaignIds ?? []), ...(mappedCharacter.campaignIds ?? [])]));
+                    characterMap.set(mappedCharacter.id, {
+                        ...existing,
+                        ...mappedCharacter,
+                        campaignId: mergedCampaignIds[0] ?? DungeonStoreService.UNASSIGNED_CAMPAIGN_ID,
+                        campaignIds: mergedCampaignIds
+                    });
+                }
 
                 return this.mapCampaignFromApi(campaignDto, mappedCharacters.map((character) => character.id));
             });
 
-            const knownCharacterIds = new Set(allCharacters.map((character) => character.id));
             for (const unassignedDto of unassignedDtos) {
-                if (!knownCharacterIds.has(unassignedDto.id)) {
-                    allCharacters.push(this.mapCharacterFromApi(unassignedDto));
+                if (!characterMap.has(unassignedDto.id)) {
+                    characterMap.set(unassignedDto.id, this.mapCharacterFromApi(unassignedDto));
                 }
             }
 
-            this.characters.set(allCharacters);
+            this.characters.set(Array.from(characterMap.values()));
             this.campaigns.set(mappedCampaigns);
 
             const selected = this.selectedCampaignId();
@@ -566,6 +599,9 @@ export class DungeonStoreService {
             }
         } catch {
             this.clearState();
+        } finally {
+            this.isHydrating.set(false);
+            this.initialized.set(true);
         }
     }
 
@@ -878,6 +914,11 @@ export class DungeonStoreService {
         return {
             id: character.id,
             campaignId: character.campaignId,
+            campaignIds: character.campaignIds?.length
+                ? character.campaignIds
+                : character.campaignId && character.campaignId !== DungeonStoreService.UNASSIGNED_CAMPAIGN_ID
+                    ? [character.campaignId]
+                    : [],
             ownerUserId: character.ownerUserId,
             ownerDisplayName: character.ownerDisplayName || character.playerName,
             canEdit: character.canEdit,

@@ -325,6 +325,7 @@ export class CharacterDetailPageComponent {
 
 
     readonly characterId = this.route.snapshot.paramMap.get('id') || '';
+    readonly initialized = computed(() => this.store.initialized());
     readonly activeCombatTab = signal<CombatTab>('actions');
     readonly activeSpellFilter = signal<SpellFilter>('all');
     readonly spellSearchTerm = signal('');

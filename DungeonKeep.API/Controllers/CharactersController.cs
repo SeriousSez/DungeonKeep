@@ -106,6 +106,10 @@ public sealed class CharactersController(ICharacterService characterService, IAu
         {
             return StatusCode(403);
         }
+        catch (InvalidOperationException)
+        {
+            return NotFound("Character or campaign was not found.");
+        }
 
         if (updated is null)
         {
@@ -132,6 +136,10 @@ public sealed class CharactersController(ICharacterService characterService, IAu
         catch (UnauthorizedAccessException)
         {
             return StatusCode(403);
+        }
+        catch (InvalidOperationException)
+        {
+            return NotFound("Character or campaign was not found.");
         }
 
         if (updated is null)

@@ -20,5 +20,6 @@ public sealed class Campaign
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public List<Character> Characters { get; set; } = [];
+    public List<CharacterCampaignAssignment> CharacterAssignments { get; set; } = [];
     public List<CampaignMembership> Memberships { get; set; } = [];
 }

@@ -233,6 +233,78 @@ html {
     font-size: 1.2rem;
 }
 
+.skeleton-panel {
+    overflow: hidden;
+}
+
+.skeleton-card {
+    display: grid;
+    gap: 12px;
+}
+
+.skeleton-nav {
+    align-items: stretch;
+}
+
+.skeleton-nav-card {
+    display: grid;
+    gap: 10px;
+    padding: clamp(10px, 2vw, 14px) clamp(12px, 2.5vw, 16px);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--surface-raised) 84%, var(--accent-primary) 16%);
+}
+
+.skeleton-line {
+    height: 14px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--surface-raised) 88%, transparent), color-mix(in srgb, var(--surface-raised) 60%, var(--accent-primary) 40%), color-mix(in srgb, var(--surface-raised) 88%, transparent));
+    background-size: 220% 100%;
+    animation: campaign-detail-skeleton 1.6s linear infinite;
+}
+
+.skeleton-eyebrow {
+    width: 120px;
+}
+
+.skeleton-title {
+    width: min(420px, 82%);
+    height: 30px;
+}
+
+.skeleton-copy {
+    width: min(620px, 100%);
+}
+
+.skeleton-copy.short {
+    width: 70%;
+}
+
+.skeleton-label {
+    width: 90px;
+    height: 12px;
+}
+
+.skeleton-meta {
+    width: 75%;
+    height: 12px;
+}
+
+.skeleton-section-title {
+    width: 180px;
+    height: 24px;
+}
+
+@keyframes campaign-detail-skeleton {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -20% 0;
+    }
+}
+
 .count-badge {
     display: inline-flex;
     align-items: center;
