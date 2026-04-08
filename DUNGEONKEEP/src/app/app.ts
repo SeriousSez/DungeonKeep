@@ -32,7 +32,7 @@ export class App {
       }
 
       const user = this.currentUser();
-      const currentUrl = this.router.url;
+      const currentUrl = this.getCurrentUrl();
       const isAuthRoute = currentUrl === '/auth' || currentUrl.startsWith('/auth?') || currentUrl.startsWith('/auth#');
 
       if (!user && !isAuthRoute) {
@@ -44,6 +44,19 @@ export class App {
         void this.router.navigateByUrl('/dashboard');
       }
     });
+  }
+
+  private getCurrentUrl(): string {
+    const routerUrl = this.router.url;
+    if (routerUrl && routerUrl !== '/') {
+      return routerUrl;
+    }
+
+    if (typeof window === 'undefined') {
+      return routerUrl;
+    }
+
+    return `${window.location.pathname}${window.location.search}${window.location.hash}`;
   }
 
   @HostListener('document:click', ['$event'])
