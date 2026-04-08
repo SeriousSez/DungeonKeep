@@ -96,9 +96,23 @@ export class AuthShellComponent {
             this.loginForm.controls.email.getRawValue(),
             this.loginForm.controls.password.getRawValue()
         );
+        const email = this.loginForm.controls.email.getRawValue();
 
         this.isSubmitting.set(false);
         if (!result.ok) {
+            if (result.activationRequired) {
+                this.activationForm.controls.email.setValue(email);
+                this.setActivationCode('');
+                this.infoMessage.set(result.error ?? 'Activate your account with the emailed code before signing in.');
+                void this.router.navigate([], {
+                    relativeTo: this.route,
+                    queryParams: { mode: 'activate', email },
+                    replaceUrl: true
+                });
+                this.cdr.detectChanges();
+                return;
+            }
+
             this.errorMessage.set(result.error ?? 'Unable to sign in.');
         }
 

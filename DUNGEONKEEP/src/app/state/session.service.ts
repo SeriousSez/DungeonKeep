@@ -44,14 +44,19 @@ export class SessionService {
         }
     }
 
-    async login(email: string, password: string): Promise<{ ok: boolean; error?: string }> {
+    async login(email: string, password: string): Promise<{ ok: boolean; activationRequired?: boolean; error?: string }> {
         try {
             const session = await this.api.login({ email, password });
             this.applySession(session);
             this.initialized.set(true);
             return { ok: true };
         } catch (error) {
-            return { ok: false, error: this.readApiError(error, 'Email or password was invalid.') };
+            const apiError = this.readApiError(error, 'Email or password was invalid.');
+            return {
+                ok: false,
+                activationRequired: this.isActivationRequiredError(error, apiError),
+                error: apiError
+            };
         }
     }
 
@@ -106,5 +111,11 @@ export class SessionService {
         }
 
         return fallback;
+    }
+
+    private isActivationRequiredError(error: unknown, message: string): boolean {
+        return error instanceof HttpErrorResponse
+            && error.status === 403
+            && message.toLowerCase().includes('activate your account');
     }
 }
