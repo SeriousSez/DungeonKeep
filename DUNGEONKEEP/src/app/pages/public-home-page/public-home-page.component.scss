@@ -1,5 +1,6 @@
 :host {
     display: block;
+    width: 100%;
 }
 
 .landing-shell {
@@ -7,6 +8,9 @@
     gap: 24px;
     max-width: 1480px;
     margin: 0 auto;
+    min-height: 100dvh;
+    align-content: center;
+    padding-block: 24px;
 }
 
 .panel {
@@ -211,6 +215,8 @@
 @media (max-width: 640px) {
     .landing-shell {
         gap: 16px;
+        min-height: auto;
+        padding-block: 16px;
     }
 
     .hero-panel,
@@ -228,6 +234,10 @@
     .hero-actions {
         display: grid;
         grid-template-columns: 1fr;
+    }
+
+    .workflow-header {
+        margin-bottom: 12px;
     }
 
     .hero-button,

@@ -6,6 +6,14 @@ namespace DungeonKeep.ApplicationService.Services;
 
 public sealed class CharacterService(ICampaignRepository campaignRepository, ICharacterRepository characterRepository, IBackstoryGenerator backstoryGenerator) : ICharacterService
 {
+    public async Task<IReadOnlyList<CharacterDto>> GetAccessibleAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var characters = await characterRepository.GetAccessibleByUserIdAsync(userId, cancellationToken);
+        return characters
+            .Select(character => MapCharacter(character, userId))
+            .ToList();
+    }
+
     public async Task<bool> DeleteAsync(Guid characterId, Guid userId, CancellationToken cancellationToken = default)
     {
         var character = await characterRepository.GetByIdAsync(characterId, cancellationToken);

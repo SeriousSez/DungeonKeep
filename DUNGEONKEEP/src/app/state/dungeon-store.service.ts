@@ -610,18 +610,27 @@ export class DungeonStoreService {
         this.initialized.set(false);
 
         try {
-            const campaignDtos = await this.api.getCampaigns();
+            const [campaignDtos, accessibleCharacterDtos] = await Promise.all([
+                this.api.getCampaigns(),
+                this.api.getAccessibleCharacters()
+            ]);
 
-            const characterPairs = await Promise.all(
-                campaignDtos.map(async (campaign) => {
-                    const characters = await this.api.getCharacters(campaign.id);
-                    return [campaign.id, characters] as const;
-                })
-            );
-
-            const unassignedDtos = await this.api.getUnassignedCharacters();
-            const characterLookup = new Map<string, ApiCharacterDto[]>(characterPairs);
             const characterMap = new Map<string, Character>();
+            const characterLookup = new Map<string, ApiCharacterDto[]>();
+
+            for (const characterDto of accessibleCharacterDtos) {
+                const campaignIds = characterDto.campaignIds?.length
+                    ? characterDto.campaignIds
+                    : (characterDto.campaignId && characterDto.campaignId !== DungeonStoreService.UNASSIGNED_CAMPAIGN_ID
+                        ? [characterDto.campaignId]
+                        : []);
+
+                for (const campaignId of campaignIds) {
+                    const existingCharacters = characterLookup.get(campaignId) ?? [];
+                    existingCharacters.push(characterDto);
+                    characterLookup.set(campaignId, existingCharacters);
+                }
+            }
 
             const mappedCampaigns = campaignDtos.map((campaignDto) => {
                 const apiCharacters = characterLookup.get(campaignDto.id) ?? [];
@@ -646,9 +655,9 @@ export class DungeonStoreService {
                 return this.mapCampaignFromApi(campaignDto, mappedCharacters.map((character) => character.id));
             });
 
-            for (const unassignedDto of unassignedDtos) {
-                if (!characterMap.has(unassignedDto.id)) {
-                    characterMap.set(unassignedDto.id, this.mapCharacterFromApi(unassignedDto));
+            for (const accessibleCharacterDto of accessibleCharacterDtos) {
+                if (!characterMap.has(accessibleCharacterDto.id)) {
+                    characterMap.set(accessibleCharacterDto.id, this.mapCharacterFromApi(accessibleCharacterDto));
                 }
             }
 

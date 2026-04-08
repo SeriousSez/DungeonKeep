@@ -1,4 +1,42 @@
 <main class="page-stack">
+    @if (!store.initialized()) {
+    <section class="npc-library-skeleton">
+        <div class="skeleton-line skeleton-back-link"></div>
+
+        <section class="manager-skeleton-surface" aria-hidden="true">
+            <div class="skeleton-stack">
+                <div class="skeleton-line skeleton-eyebrow"></div>
+                <div class="skeleton-line skeleton-title"></div>
+                <div class="skeleton-line skeleton-copy"></div>
+            </div>
+        </section>
+
+        <section class="manager-skeleton-layout" aria-hidden="true">
+            <article class="manager-skeleton-panel list-panel-skeleton">
+                <div class="skeleton-stack">
+                    <div class="skeleton-line skeleton-search"></div>
+                    <div class="skeleton-filter-row">
+                        <div class="skeleton-chip"></div>
+                        <div class="skeleton-chip"></div>
+                        <div class="skeleton-chip"></div>
+                    </div>
+                </div>
+
+                <div class="skeleton-card-grid">
+                    @for (card of [1, 2, 3, 4]; track card) {
+                    <article class="npc-card-skeleton">
+                        <div class="skeleton-stack">
+                            <div class="skeleton-line skeleton-card-title"></div>
+                            <div class="skeleton-line skeleton-card-copy short"></div>
+                            <div class="skeleton-line skeleton-card-copy"></div>
+                        </div>
+                    </article>
+                    }
+                </div>
+            </article>
+        </section>
+    </section>
+    } @else {
     @if (importCampaign(); as campaign) {
     <a [routerLink]="['/campaigns', campaign.id, 'npcs']" class="back-link">← Back to Campaign NPCs</a>
     } @else {
@@ -6,4 +44,5 @@
     }
 
     <app-npc-manager [libraryMode]="true" [canEdit]="true" [listOnly]="true" [importTargetCampaignId]="importCampaignId()"></app-npc-manager>
+    }
 </main>

@@ -736,6 +736,10 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.get<ApiCharacterDto[]>(`${this.baseUrl}/characters/mine/unassigned`));
     }
 
+    async getAccessibleCharacters(): Promise<ApiCharacterDto[]> {
+        return await firstValueFrom(this.http.get<ApiCharacterDto[]>(`${this.baseUrl}/characters`));
+    }
+
 
     async createCharacter(payload: {
         name: string;

@@ -1,9 +1,4 @@
-@if (!isInitialized()) {
-<main class="loading-state panel">
-    <p class="eyebrow">Loading</p>
-    <h1>Restoring your table access...</h1>
-</main>
-} @else if (!currentUser()) {
+@if (!currentUser()) {
 <main class="auth-shell-wrap">
     <router-outlet />
 </main>
@@ -32,12 +27,6 @@
                     <a routerLink="/campaigns/new" routerLinkActive="is-active" (click)="closeDropdown(); closeMobileNav()">
                         <i class="fa-duotone fa-thin fa-circle-plus"></i>
                         New Campaign
-                    </a>
-                    <div class="nav-dropdown-rule"></div>
-                    <p class="nav-dropdown-section">Prepare</p>
-                    <a routerLink="/npcs" routerLinkActive="is-active" (click)="closeDropdown(); closeMobileNav()">
-                        <i class="fa-duotone fa-thin fa-user-helmet-safety"></i>
-                        NPC Library
                     </a>
                 </div>
             </div>

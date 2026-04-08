@@ -1,4 +1,59 @@
 <main class="page-stack">
+    @if (!store.initialized()) {
+    <section class="panel page-intro skeleton-panel">
+        <div class="page-intro-body skeleton-intro-body">
+            <div class="skeleton-stack intro-copy-skeleton">
+                <div class="skeleton-line skeleton-eyebrow"></div>
+                <div class="skeleton-line skeleton-title"></div>
+                <div class="skeleton-line skeleton-copy"></div>
+            </div>
+            <div class="create-link skeleton-button" aria-hidden="true"></div>
+        </div>
+    </section>
+
+    <section class="page-stats">
+        @for (stat of [1, 2]; track stat) {
+        <div class="stat-card skeleton-card" aria-hidden="true">
+            <div class="skeleton-line skeleton-stat-label"></div>
+            <div class="skeleton-line skeleton-stat-value"></div>
+        </div>
+        }
+    </section>
+
+    <section class="panel roster-panel skeleton-panel">
+        <div class="roster-heading-skeleton">
+            <div class="skeleton-stack">
+                <div class="skeleton-line skeleton-eyebrow"></div>
+                <div class="skeleton-line skeleton-section-title"></div>
+            </div>
+            <div class="skeleton-pill" aria-hidden="true"></div>
+        </div>
+
+        <div class="roster-skeleton-grid">
+            @for (card of [1, 2, 3]; track card) {
+            <article class="roster-skeleton-card" aria-hidden="true">
+                <div class="roster-skeleton-header">
+                    <div class="skeleton-stack roster-skeleton-copy">
+                        <div class="skeleton-line skeleton-card-title"></div>
+                        <div class="skeleton-line skeleton-card-subtitle"></div>
+                    </div>
+                    <div class="skeleton-pill skeleton-status-pill"></div>
+                </div>
+
+                <div class="skeleton-meta-group">
+                    <div class="skeleton-line skeleton-meta-line"></div>
+                    <div class="skeleton-line skeleton-meta-line medium"></div>
+                </div>
+
+                <div class="roster-skeleton-actions">
+                    <div class="skeleton-action ghost"></div>
+                    <div class="skeleton-action primary"></div>
+                </div>
+            </article>
+            }
+        </div>
+    </section>
+    } @else {
     <section class="panel page-intro">
         <div class="page-intro-body">
             <div>
@@ -26,4 +81,5 @@
 
     <app-confirm-modal [open]="!!confirmDeleteId" title="Delete Character?" message="Are you sure you want to delete this character? This action cannot be undone." confirmText="Delete" cancelText="Cancel" (confirmed)="handleDeleteConfirmed()"
         (cancelled)="handleDeleteCancelled()"></app-confirm-modal>
+    }
 </main>

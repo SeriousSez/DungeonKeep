@@ -7,6 +7,18 @@ namespace DungeonKeep.Infrastructure.Repositories;
 
 public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : ICharacterRepository
 {
+    public async Task<IReadOnlyList<Character>> GetAccessibleByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Characters
+            .Include(c => c.OwnerUser)
+            .Include(c => c.CampaignAssignments)
+            .Where(c => c.OwnerUserId == userId
+                || c.CampaignAssignments.Any(assignment => assignment.Campaign != null
+                    && assignment.Campaign.Memberships.Any(membership => membership.UserId == userId && membership.Status == "Active")))
+            .OrderByDescending(c => c.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<bool> DeleteAsync(Guid characterId, CancellationToken cancellationToken = default)
     {
         var character = await dbContext.Characters.FirstOrDefaultAsync(c => c.Id == characterId, cancellationToken);

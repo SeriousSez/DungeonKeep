@@ -15,7 +15,7 @@ import { DungeonStoreService } from '../../state/dungeon-store.service';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NpcLibraryPageComponent {
-    private readonly store = inject(DungeonStoreService);
+    readonly store = inject(DungeonStoreService);
     private readonly route = inject(ActivatedRoute);
     private readonly destroyRef = inject(DestroyRef);
 

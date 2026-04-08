@@ -4,6 +4,7 @@ namespace DungeonKeep.ApplicationService.Interfaces;
 
 public interface ICharacterRepository
 {
+    Task<IReadOnlyList<Character>> GetAccessibleByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Character>> GetByCampaignIdAsync(Guid campaignId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Character>> GetUnassignedOwnedByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<Character> AddAsync(Character character, CancellationToken cancellationToken = default);
