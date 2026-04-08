@@ -1,6 +1,7 @@
 using DungeonKeep.ApplicationService.Contracts;
 using DungeonKeep.ApplicationService.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Primitives;
 
 namespace DungeonKeep.API.Controllers;
 
@@ -13,7 +14,7 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
     {
         try
         {
-            var created = await authService.SignupAsync(request, cancellationToken);
+            var created = await authService.SignupAsync(request, GetClientBaseUrl(), cancellationToken);
             return Ok(created);
         }
         catch (InvalidOperationException exception)
@@ -41,7 +42,7 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
     {
         try
         {
-            var result = await authService.ResendActivationCodeAsync(request, cancellationToken);
+            var result = await authService.ResendActivationCodeAsync(request, GetClientBaseUrl(), cancellationToken);
             return Ok(result);
         }
         catch (InvalidOperationException exception)
@@ -88,5 +89,40 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
         return authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
             ? authorization[7..].Trim()
             : string.Empty;
+    }
+
+    private string? GetClientBaseUrl()
+    {
+        if (TryGetAbsoluteHttpUrl(Request.Headers.Origin, out var originBaseUrl))
+        {
+            return originBaseUrl;
+        }
+
+        if (TryGetAbsoluteHttpUrl(Request.Headers.Referer, out var refererBaseUrl))
+        {
+            return refererBaseUrl;
+        }
+
+        return null;
+    }
+
+    private static bool TryGetAbsoluteHttpUrl(StringValues headerValues, out string? baseUrl)
+    {
+        baseUrl = null;
+        var candidate = headerValues.FirstOrDefault();
+
+        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        baseUrl = uri.GetLeftPart(UriPartial.Authority);
+        return true;
     }
 }

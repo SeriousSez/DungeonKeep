@@ -49,6 +49,7 @@ public sealed record AccountActivationEmail(
     string RecipientEmail,
     string RecipientDisplayName,
     string ActivationCode,
+    string ActivationUrl,
     DateTime ExpiresAtUtc
 );
 

@@ -10,7 +10,7 @@ public sealed class AuthService(IAuthRepository authRepository, IAccountActivati
 {
     private static readonly TimeSpan ActivationCodeLifetime = TimeSpan.FromMinutes(20);
 
-    public async Task<SignupPendingActivationDto> SignupAsync(SignupRequest request, CancellationToken cancellationToken = default)
+    public async Task<SignupPendingActivationDto> SignupAsync(SignupRequest request, string? clientBaseUrl, CancellationToken cancellationToken = default)
     {
         var normalizedEmail = NormalizeEmail(request.Email);
         if (string.IsNullOrWhiteSpace(request.DisplayName) || string.IsNullOrWhiteSpace(normalizedEmail) || string.IsNullOrWhiteSpace(request.Password))
@@ -55,7 +55,12 @@ public sealed class AuthService(IAuthRepository authRepository, IAccountActivati
         }
 
         await accountActivationEmailService.SendActivationCodeAsync(
-            new AccountActivationEmail(user.Email, user.DisplayName, activationCode, activationExpiresAtUtc),
+            new AccountActivationEmail(
+                user.Email,
+                user.DisplayName,
+                activationCode,
+                BuildActivationUrl(clientBaseUrl, user.Email),
+                activationExpiresAtUtc),
             cancellationToken);
 
         return new SignupPendingActivationDto(
@@ -98,7 +103,7 @@ public sealed class AuthService(IAuthRepository authRepository, IAccountActivati
         return new ActivationResultDto(user.Email, "Account activated. You can sign in now.");
     }
 
-    public async Task<ActivationResultDto> ResendActivationCodeAsync(ResendActivationCodeRequest request, CancellationToken cancellationToken = default)
+    public async Task<ActivationResultDto> ResendActivationCodeAsync(ResendActivationCodeRequest request, string? clientBaseUrl, CancellationToken cancellationToken = default)
     {
         var normalizedEmail = NormalizeEmail(request.Email);
         if (string.IsNullOrWhiteSpace(normalizedEmail))
@@ -121,7 +126,12 @@ public sealed class AuthService(IAuthRepository authRepository, IAccountActivati
 
         await authRepository.UpdateUserAsync(user, cancellationToken);
         await accountActivationEmailService.SendActivationCodeAsync(
-            new AccountActivationEmail(user.Email, user.DisplayName, activationCode, activationExpiresAtUtc),
+            new AccountActivationEmail(
+                user.Email,
+                user.DisplayName,
+                activationCode,
+                BuildActivationUrl(clientBaseUrl, user.Email),
+                activationExpiresAtUtc),
             cancellationToken);
 
         return new ActivationResultDto(
@@ -232,6 +242,15 @@ public sealed class AuthService(IAuthRepository authRepository, IAccountActivati
         {
             return false;
         }
+    }
+
+    private static string BuildActivationUrl(string? clientBaseUrl, string email)
+    {
+        var normalizedBaseUrl = string.IsNullOrWhiteSpace(clientBaseUrl)
+            ? "http://localhost:4200"
+            : clientBaseUrl.Trim().TrimEnd('/');
+
+        return $"{normalizedBaseUrl}/auth?mode=activate&email={Uri.EscapeDataString(email)}";
     }
 
     private static string HashPassword(string password)

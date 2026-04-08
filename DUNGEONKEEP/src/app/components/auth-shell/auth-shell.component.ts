@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { SessionService } from '../../state/session.service';
 
@@ -14,6 +16,9 @@ import { SessionService } from '../../state/session.service';
 export class AuthShellComponent {
     private readonly session = inject(SessionService);
     private readonly cdr = inject(ChangeDetectorRef);
+    private readonly route = inject(ActivatedRoute);
+    private readonly router = inject(Router);
+    private readonly destroyRef = inject(DestroyRef);
 
     readonly mode = signal<'login' | 'signup' | 'activate'>('login');
     readonly errorMessage = signal('');
@@ -36,10 +41,40 @@ export class AuthShellComponent {
         code: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(6), Validators.maxLength(6)] })
     });
 
-    setMode(mode: 'login' | 'signup' | 'activate'): void {
-        this.mode.set(mode);
+    constructor() {
+        this.route.queryParamMap
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe((params) => {
+                const mode = params.get('mode');
+                const email = params.get('email') ?? '';
+
+                if (mode === 'activate') {
+                    this.mode.set('activate');
+                    if (email) {
+                        this.activationForm.controls.email.setValue(email);
+                        this.loginForm.controls.email.setValue(email);
+                    }
+                } else if (mode === 'signup') {
+                    this.mode.set('signup');
+                } else {
+                    this.mode.set('login');
+                    if (email) {
+                        this.loginForm.controls.email.setValue(email);
+                    }
+                }
+
+                this.errorMessage.set('');
+            });
+    }
+
+    setMode(mode: 'login' | 'signup'): void {
         this.errorMessage.set('');
         this.infoMessage.set('');
+        void this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: mode === 'signup' ? { mode: 'signup' } : {},
+            replaceUrl: true
+        });
     }
 
     async submitLogin(): Promise<void> {
@@ -89,8 +124,12 @@ export class AuthShellComponent {
             this.activationForm.controls.email.setValue(email);
             this.activationForm.controls.code.setValue('');
             this.loginForm.controls.email.setValue(email);
-            this.mode.set('activate');
             this.infoMessage.set(result.message ?? 'Check your email for the activation code.');
+            void this.router.navigate([], {
+                relativeTo: this.route,
+                queryParams: { mode: 'activate', email },
+                replaceUrl: true
+            });
         }
 
         this.cdr.detectChanges();
@@ -117,8 +156,12 @@ export class AuthShellComponent {
         } else {
             const email = result.email ?? this.activationForm.controls.email.getRawValue();
             this.loginForm.controls.email.setValue(email);
-            this.mode.set('login');
             this.infoMessage.set(result.message ?? 'Account activated. You can sign in now.');
+            void this.router.navigate([], {
+                relativeTo: this.route,
+                queryParams: { email },
+                replaceUrl: true
+            });
         }
 
         this.cdr.detectChanges();

@@ -82,6 +82,7 @@ public sealed class SmtpAccountActivationEmailService(
         var recipientEmail = activationEmail.RecipientEmail.Trim();
         var recipientDisplayName = HtmlEncoder.Encode(activationEmail.RecipientDisplayName);
         var activationCode = HtmlEncoder.Encode(activationEmail.ActivationCode);
+        var activationUrl = activationEmail.ActivationUrl;
         var expiresAt = activationEmail.ExpiresAtUtc.ToLocalTime().ToString("f");
 
         var message = new MimeMessage();
@@ -111,11 +112,15 @@ public sealed class SmtpAccountActivationEmailService(
                     <td style="padding:28px;">
                       <p style="margin:0 0 14px;font-size:16px;line-height:1.6;">Welcome to DungeonKeep, <strong>{{recipientDisplayName}}</strong>.</p>
                       <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#5a4637;">Enter this activation code in the sign-in screen to finish setting up your account.</p>
+                      <p style="margin:0 0 20px;">
+                        <a href="{{activationUrl}}" style="display:inline-block;padding:13px 20px;border-radius:999px;background:#a95a29;color:#fffaf2;text-decoration:none;font-weight:700;">Open Activation Page</a>
+                      </p>
                       <div style="margin:0 0 20px;padding:18px;border:1px solid #e0d3c1;border-radius:16px;background:#fffefb;text-align:center;">
                         <div style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#8a6a55;font-weight:700;margin-bottom:8px;">Activation code</div>
                         <div style="font-size:34px;letter-spacing:.24em;font-weight:700;color:#7a4c2e;">{{activationCode}}</div>
                       </div>
                       <p style="margin:0;font-size:14px;line-height:1.6;color:#4d3b30;">This code expires at <strong>{{HtmlEncoder.Encode(expiresAt)}}</strong>.</p>
+                      <p style="margin:20px 0 0;font-size:13px;line-height:1.6;color:#7b6554;">If the button does not work, copy and paste this link into your browser:<br><a href="{{activationUrl}}" style="color:#7a4c2e;word-break:break-all;">{{activationUrl}}</a></p>
                     </td>
                   </tr>
                 </table>
@@ -132,6 +137,9 @@ public sealed class SmtpAccountActivationEmailService(
         Use this activation code to finish setting up your account:
 
         {activationEmail.ActivationCode}
+
+        Open the activation page here:
+        {activationUrl}
 
         This code expires at {expiresAt}.
         """;

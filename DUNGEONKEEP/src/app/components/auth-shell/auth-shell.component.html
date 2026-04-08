@@ -11,7 +11,6 @@
         <div class="auth-tabs" role="tablist" aria-label="Authentication options">
             <button type="button" class="auth-tab" [class.is-active]="mode() === 'login'" (click)="setMode('login')">Log In</button>
             <button type="button" class="auth-tab" [class.is-active]="mode() === 'signup'" (click)="setMode('signup')">Sign Up</button>
-            <button type="button" class="auth-tab" [class.is-active]="mode() === 'activate'" (click)="setMode('activate')">Activate</button>
         </div>
 
         @if (infoMessage()) {
