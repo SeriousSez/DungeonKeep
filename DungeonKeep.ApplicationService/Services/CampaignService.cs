@@ -510,7 +510,7 @@ public sealed class CampaignService(
             campaign.NextSession,
             campaign.Summary,
             campaign.CreatedAtUtc,
-            campaign.Characters.Count,
+            campaign.CharacterAssignments.Count,
             ParseSessions(campaign.SessionsJson),
             ParseNamedItems(campaign.NpcsJson),
             ParseNamedItems(campaign.LootJson),

@@ -16,10 +16,11 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
     {
         _ = campaignSchemaReady;
         return await dbContext.Campaigns
+            .AsNoTracking()
+            .AsSplitQuery()
             .Include(c => c.Memberships)
                 .ThenInclude(membership => membership.User)
-            .Include(c => c.Characters)
-                .ThenInclude(character => character.OwnerUser)
+            .Include(c => c.CharacterAssignments)
             .Where(c => c.Memberships.Any(membership => membership.UserId == userId && membership.Status == "Active"))
             .OrderByDescending(c => c.CreatedAtUtc)
             .ToListAsync(cancellationToken);
@@ -29,10 +30,11 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
     {
         _ = campaignSchemaReady;
         return await dbContext.Campaigns
+            .AsNoTracking()
+            .AsSplitQuery()
             .Include(c => c.Memberships)
                 .ThenInclude(membership => membership.User)
-            .Include(c => c.Characters)
-                .ThenInclude(character => character.OwnerUser)
+            .Include(c => c.CharacterAssignments)
             .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
     }
 
@@ -146,9 +148,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> AddSessionAsync(Guid campaignId, CampaignSessionDto session, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -171,9 +171,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> UpdateSessionAsync(Guid campaignId, CampaignSessionDto session, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -214,9 +212,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> RemoveSessionAsync(Guid campaignId, Guid sessionId, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -275,9 +271,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> AddThreadAsync(Guid campaignId, Guid threadId, string text, string visibility, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -297,9 +291,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> UpdateThreadAsync(Guid campaignId, Guid threadId, string text, string visibility, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -339,9 +331,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> ArchiveThreadAsync(Guid campaignId, Guid threadId, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -365,9 +355,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> AddWorldNoteAsync(Guid campaignId, CampaignWorldNoteDto note, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -388,9 +376,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> UpdateWorldNoteAsync(Guid campaignId, CampaignWorldNoteDto note, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -429,9 +415,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> RemoveWorldNoteAsync(Guid campaignId, Guid noteId, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -452,9 +436,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> UpdateMapAsync(Guid campaignId, CampaignMapLibraryDto library, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -472,8 +454,6 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         var campaign = await dbContext.Campaigns
             .Include(c => c.Memberships)
                 .ThenInclude(membership => membership.User)
-            .Include(c => c.Characters)
-                .ThenInclude(character => character.OwnerUser)
             .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
@@ -741,9 +721,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         Action<Campaign, string> writeJson,
         CancellationToken cancellationToken)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -754,7 +732,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         updateAction(items);
         writeJson(campaign, JsonSerializer.Serialize(items));
         await dbContext.SaveChangesAsync(cancellationToken);
-        return campaign;
+        return await GetByIdAsync(campaignId, cancellationToken);
     }
 
     private static List<PersistedCampaignSession> ParseSessions(string json)
