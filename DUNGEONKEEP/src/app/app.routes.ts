@@ -19,6 +19,7 @@ import { NpcEditorPageComponent } from './pages/npc-editor-page/npc-editor-page.
 import { NpcDetailPage } from './pages/npc-detail-page/npc-detail-page';
 import { NpcLibraryPageComponent } from './pages/npc-library-page/npc-library-page.component';
 import { PremadeCharactersPageComponent } from './pages/premade-characters-page.component';
+import { PublicHomePageComponent } from './pages/public-home-page/public-home-page.component';
 import { AuthShellComponent } from './components/auth-shell/auth-shell.component';
 import { RulesPage } from './pages/rules-page/rules-page';
 import { RulesDetailPage } from './pages/rules-detail-page/rules-detail-page';
@@ -26,8 +27,8 @@ import { RulesDetailPage } from './pages/rules-detail-page/rules-detail-page';
 export const routes: Routes = [
     {
         path: '',
-        pathMatch: 'full',
-        redirectTo: 'dashboard'
+        component: PublicHomePageComponent,
+        data: { title: 'DungeonKeep', breadcrumb: 'Home' }
     },
     {
         path: 'auth',

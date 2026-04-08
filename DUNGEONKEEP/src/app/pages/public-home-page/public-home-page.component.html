@@ -1,0 +1,68 @@
+<main class="landing-shell">
+    <section class="hero-panel panel">
+        <div class="hero-copy">
+            <p class="eyebrow">DungeonKeep</p>
+            <h1>The tabletop campaign keep for worlds, parties, and session prep.</h1>
+            <p class="hero-text">
+                Keep your campaign bible, player roster, reusable NPC cast, and next-session notes in one place built for D&amp;D tables.
+            </p>
+
+            <div class="hero-actions">
+                <a routerLink="/auth" [queryParams]="{ mode: 'signup' }" class="primary-button hero-button">Create Your Keep</a>
+                <a routerLink="/auth" class="ghost-button hero-button">Log In</a>
+            </div>
+        </div>
+
+        <section class="hero-preview" aria-label="Preview of DungeonKeep features">
+            <article class="preview-card preview-card--primary">
+                <p class="eyebrow">Live Overview</p>
+                <h2>The Shattered Crown</h2>
+                <p>3 sessions prepared, 8 unresolved threads, 12 active NPCs, and a map board ready before the party arrives.</p>
+                <div class="preview-pill-row">
+                    <span class="preview-pill">Maps</span>
+                    <span class="preview-pill">World Notes</span>
+                    <span class="preview-pill">Party</span>
+                </div>
+            </article>
+
+            <article class="preview-card preview-card--secondary">
+                <p class="eyebrow">Reusable Library</p>
+                <h3>Bring your cast anywhere</h3>
+                <p>Build NPCs once, then reuse them across campaigns without rebuilding every contact, rival, or patron.</p>
+            </article>
+        </section>
+    </section>
+
+    <section class="feature-grid">
+        @for (feature of featureCards; track feature.title) {
+        <article class="panel feature-card">
+            <div class="feature-icon" aria-hidden="true">
+                <i class="fa-duotone fa-thin" [class]="'fa-duotone fa-thin fa-' + feature.icon"></i>
+            </div>
+            <p class="eyebrow">{{ feature.eyebrow }}</p>
+            <h2>{{ feature.title }}</h2>
+            <p>{{ feature.copy }}</p>
+        </article>
+        }
+    </section>
+
+    <section class="panel workflow-panel">
+        <div class="workflow-header">
+            <div>
+                <p class="eyebrow">How It Flows</p>
+                <h2>From campaign seed to live table control</h2>
+            </div>
+            <a routerLink="/auth" [queryParams]="{ mode: 'signup' }" class="ghost-button">Start Free</a>
+        </div>
+
+        <div class="workflow-grid">
+            @for (item of workflowSteps; track item.step) {
+            <article class="workflow-step">
+                <span class="workflow-badge">{{ item.step }}</span>
+                <h3>{{ item.title }}</h3>
+                <p>{{ item.copy }}</p>
+            </article>
+            }
+        </div>
+    </section>
+</main>

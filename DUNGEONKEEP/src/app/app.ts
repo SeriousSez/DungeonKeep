@@ -34,13 +34,14 @@ export class App {
       const user = this.currentUser();
       const currentUrl = this.getCurrentUrl();
       const isAuthRoute = currentUrl === '/auth' || currentUrl.startsWith('/auth?') || currentUrl.startsWith('/auth#');
+      const isPublicHomeRoute = currentUrl === '/' || currentUrl === '';
 
-      if (!user && !isAuthRoute) {
-        void this.router.navigateByUrl('/auth');
+      if (!user && !isAuthRoute && !isPublicHomeRoute) {
+        void this.router.navigateByUrl('/');
         return;
       }
 
-      if (user && isAuthRoute) {
+      if (user && (isAuthRoute || isPublicHomeRoute)) {
         void this.router.navigateByUrl('/dashboard');
       }
     });
