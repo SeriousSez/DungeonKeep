@@ -46,6 +46,29 @@ npm start
 - Database file: `DungeonKeep.API/dungeonkeep.dev.db`
 - The schema is initialized/updated on startup.
 
+## Production MySQL
+
+- Production can use MySQL by setting `Database:Provider` to `MySql`.
+- Configure `ConnectionStrings:DungeonKeepMySql` with the production connection string.
+- Keep `ConnectionStrings:DungeonKeepSqlite` pointing at the deployed SQLite file if you want first-start automatic import.
+- SQLite remains the default for local development.
+
+### Automatic First-Start Import
+
+- Set `Database:AutoMigrateSqliteToMySqlOnStartup` to `true` in production.
+- On startup, if MySQL is selected, the MySQL database is empty, and the SQLite source file exists with DungeonKeep data, the API imports the SQLite data automatically before serving requests.
+- If MySQL already has data, startup skips the import.
+
+### One-Time SQLite to MySQL Migration
+
+Run this from the repository root after configuring `ConnectionStrings:DungeonKeepMySql`:
+
+```powershell
+dotnet run --project DungeonKeep.API -- --migrate-sqlite-to-mysql
+```
+
+The migration command copies users, campaigns, characters, memberships, auth sessions, and character assignments into an empty MySQL database.
+
 ## Common Commands
 
 Frontend:

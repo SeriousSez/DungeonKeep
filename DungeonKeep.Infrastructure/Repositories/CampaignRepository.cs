@@ -10,7 +10,7 @@ namespace DungeonKeep.Infrastructure.Repositories;
 
 public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampaignRepository
 {
-    private readonly bool campaignSchemaReady = EnsureCampaignSchema(dbContext);
+    private readonly bool campaignSchemaReady = dbContext.Database.IsSqlite() ? EnsureCampaignSchema(dbContext) : true;
 
     public async Task<IReadOnlyList<Campaign>> GetAllForUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {

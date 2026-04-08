@@ -71,6 +71,7 @@ jobs:
         shell: pwsh
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          MYSQL_CONNECTION_STRING: ${{ secrets.MYSQL_CONNECTION_STRING }}
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
@@ -93,8 +94,14 @@ jobs:
           $emailEnabled = (-not [string]::IsNullOrWhiteSpace($env:SMTP_HOST)) -and (-not [string]::IsNullOrWhiteSpace($env:SMTP_FROM_ADDRESS))
 
           $config = @{
+            Database = @{
+              Provider = "MySql"
+              AutoMigrateSqliteToMySqlOnStartup = $true
+            }
             ConnectionStrings = @{
               DungeonKeep = "Data Source=dungeonkeep.db"
+              DungeonKeepSqlite = "Data Source=dungeonkeep.db"
+              DungeonKeepMySql = $env:MYSQL_CONNECTION_STRING
             }
             OpenAI = @{
               ApiKey = $env:OPENAI_API_KEY
@@ -160,13 +167,23 @@ jobs:
           }
 
           $json = $raw | ConvertFrom-Json
-          $connStr = $json.ConnectionStrings.DungeonKeep
+          $provider = $json.Database.Provider
+          $sqliteConnStr = $json.ConnectionStrings.DungeonKeepSqlite
+          $mySqlConnStr = $json.ConnectionStrings.DungeonKeepMySql
 
-          if ([string]::IsNullOrWhiteSpace($connStr)) {
-            throw "Published appsettings.Production.json has empty ConnectionStrings.DungeonKeep."
+          if ($provider -ne 'MySql') {
+            throw "Published appsettings.Production.json must set Database.Provider to MySql for production deploys."
           }
 
-          Write-Host "Published config validation passed. ConnectionStrings.DungeonKeep is populated."
+          if ([string]::IsNullOrWhiteSpace($sqliteConnStr)) {
+            throw "Published appsettings.Production.json has empty ConnectionStrings.DungeonKeepSqlite."
+          }
+
+          if ([string]::IsNullOrWhiteSpace($mySqlConnStr)) {
+            throw "Published appsettings.Production.json has empty ConnectionStrings.DungeonKeepMySql."
+          }
+
+          Write-Host "Published config validation passed. Production MySQL and source SQLite connection strings are populated."
 
       - name: Upload API artifact
         uses: actions/upload-artifact@v4

@@ -1,5 +1,7 @@
+using DungeonKeep.API.Data;
 using DungeonKeep.API.Hubs;
 using DungeonKeep.ApplicationService.Extensions;
+using DungeonKeep.Infrastructure.Configuration;
 using DungeonKeep.Infrastructure.Extensions;
 using DungeonKeep.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +14,8 @@ builder.Configuration.AddJsonFile(
     optional: true,
     reloadOnChange: true
 );
+
+var databaseProvider = DatabaseConfiguration.GetProvider(builder.Configuration);
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ??
 [
@@ -50,19 +54,30 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+if (args.Contains("--migrate-sqlite-to-mysql", StringComparer.OrdinalIgnoreCase))
+{
+    await SqliteToMySqlMigrator.MigrateAsync(builder.Configuration, app.Logger);
+    return;
+}
+
+await SqliteToMySqlMigrator.MigrateOnStartupIfNeededAsync(builder.Configuration, app.Logger);
+
 try
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<DungeonKeepDbContext>();
     dbContext.Database.EnsureCreated();
 
-    EnsureBaseSqliteSchema(dbContext);
-    EnsureCharactersCampaignIdIsNullable(dbContext);
-    EnsureCurrentSqliteSchema(dbContext);
+    if (databaseProvider == DatabaseProvider.Sqlite)
+    {
+        EnsureBaseSqliteSchema(dbContext);
+        EnsureCharactersCampaignIdIsNullable(dbContext);
+        EnsureCurrentSqliteSchema(dbContext);
+    }
 }
 catch (Exception exception)
 {
-    app.Logger.LogCritical(exception, "SQLite schema initialization failed during startup.");
+    app.Logger.LogCritical(exception, "{DatabaseProvider} schema initialization failed during startup.", databaseProvider);
     throw;
 }
 
