@@ -16,14 +16,31 @@ export class SessionService {
         void this.restoreSession();
     }
 
-    async signup(displayName: string, email: string, password: string): Promise<{ ok: boolean; error?: string }> {
+    async signup(displayName: string, email: string, password: string): Promise<{ ok: boolean; email?: string; message?: string; error?: string }> {
         try {
-            const session = await this.api.signup({ displayName, email, password });
-            this.applySession(session);
+            const result = await this.api.signup({ displayName, email, password });
             this.initialized.set(true);
-            return { ok: true };
-        } catch {
-            return { ok: false, error: 'Unable to create account with those details.' };
+            return { ok: true, email: result.email, message: result.message };
+        } catch (error) {
+            return { ok: false, error: this.readApiError(error, 'Unable to create account with those details.') };
+        }
+    }
+
+    async activateAccount(email: string, code: string): Promise<{ ok: boolean; email?: string; message?: string; error?: string }> {
+        try {
+            const result = await this.api.activateAccount({ email, code });
+            return { ok: true, email: result.email, message: result.message };
+        } catch (error) {
+            return { ok: false, error: this.readApiError(error, 'Unable to activate this account right now.') };
+        }
+    }
+
+    async resendActivationCode(email: string): Promise<{ ok: boolean; email?: string; message?: string; error?: string }> {
+        try {
+            const result = await this.api.resendActivationCode({ email });
+            return { ok: true, email: result.email, message: result.message };
+        } catch (error) {
+            return { ok: false, error: this.readApiError(error, 'Unable to resend the activation code right now.') };
         }
     }
 
@@ -33,8 +50,8 @@ export class SessionService {
             this.applySession(session);
             this.initialized.set(true);
             return { ok: true };
-        } catch {
-            return { ok: false, error: 'Email or password was invalid.' };
+        } catch (error) {
+            return { ok: false, error: this.readApiError(error, 'Email or password was invalid.') };
         }
     }
 
@@ -73,5 +90,21 @@ export class SessionService {
         saveSessionUser(session.user);
         this.token.set(session.token);
         this.currentUser.set(session.user);
+    }
+
+    private readApiError(error: unknown, fallback: string): string {
+        if (error instanceof HttpErrorResponse) {
+            if (typeof error.error === 'string' && error.error.trim()) {
+                return error.error.trim();
+            }
+
+            if (error.error && typeof error.error === 'object') {
+                const detail = 'detail' in error.error && typeof error.error.detail === 'string' ? error.error.detail : '';
+                const title = 'title' in error.error && typeof error.error.title === 'string' ? error.error.title : '';
+                return detail || title || fallback;
+            }
+        }
+
+        return fallback;
     }
 }

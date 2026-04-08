@@ -20,6 +20,9 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
             entity.Property(user => user.Email).HasMaxLength(320).IsRequired();
             entity.Property(user => user.DisplayName).HasMaxLength(120).IsRequired();
             entity.Property(user => user.PasswordHash).HasMaxLength(2048).IsRequired();
+            entity.Property(user => user.IsEmailVerified).IsRequired();
+            entity.Property(user => user.ActivationCodeHash).HasMaxLength(256).IsRequired();
+            entity.Property(user => user.ActivationCodeExpiresAtUtc);
             entity.Property(user => user.CreatedAtUtc).IsRequired();
 
             entity.HasIndex(user => user.Email).IsUnique();

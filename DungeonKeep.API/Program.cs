@@ -86,7 +86,7 @@ app.Run();
 static void EnsureBaseSqliteSchema(DungeonKeepDbContext dbContext)
 {
     dbContext.Database.ExecuteSqlRaw(
-        "CREATE TABLE IF NOT EXISTS AppUsers (Id TEXT NOT NULL CONSTRAINT PK_AppUsers PRIMARY KEY, Email TEXT NOT NULL, DisplayName TEXT NOT NULL, PasswordHash TEXT NOT NULL, CreatedAtUtc TEXT NOT NULL);"
+        "CREATE TABLE IF NOT EXISTS AppUsers (Id TEXT NOT NULL CONSTRAINT PK_AppUsers PRIMARY KEY, Email TEXT NOT NULL, DisplayName TEXT NOT NULL, PasswordHash TEXT NOT NULL, IsEmailVerified INTEGER NOT NULL DEFAULT 0, ActivationCodeHash TEXT NOT NULL DEFAULT '', ActivationCodeExpiresAtUtc TEXT NULL, CreatedAtUtc TEXT NOT NULL);"
     );
     dbContext.Database.ExecuteSqlRaw(
         "CREATE UNIQUE INDEX IF NOT EXISTS IX_AppUsers_Email ON AppUsers (Email);"
@@ -175,6 +175,10 @@ static void EnsureCharactersCampaignIdIsNullable(DungeonKeepDbContext dbContext)
 static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)
 {
     const string emptyGuid = "00000000-0000-0000-0000-000000000000";
+
+    EnsureColumnExists(dbContext, "AppUsers", "IsEmailVerified", "INTEGER NOT NULL DEFAULT 0");
+    EnsureColumnExists(dbContext, "AppUsers", "ActivationCodeHash", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "AppUsers", "ActivationCodeExpiresAtUtc", "TEXT NULL");
 
     EnsureColumnExists(dbContext, "CampaignMemberships", "UserId", "TEXT NULL");
     EnsureColumnExists(dbContext, "CampaignMemberships", "Email", "TEXT NOT NULL DEFAULT ''");

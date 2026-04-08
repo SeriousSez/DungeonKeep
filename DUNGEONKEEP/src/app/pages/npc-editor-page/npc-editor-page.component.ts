@@ -146,6 +146,23 @@ export class NpcEditorPageComponent {
             this.initialized.set(true);
             this.cdr.detectChanges();
         });
+
+        effect(() => {
+            const campaign = this.currentCampaign();
+            const campaignId = this.campaignId();
+            const npcId = this.npcId();
+
+            if (this.isLibraryMode() || !campaignId || !campaign || campaign.currentUserRole === 'Owner') {
+                return;
+            }
+
+            void this.router.navigate(
+                npcId
+                    ? ['/campaigns', campaignId, 'npcs', npcId]
+                    : ['/campaigns', campaignId, 'npcs'],
+                { replaceUrl: true }
+            );
+        });
     }
 
     handleDraftChanged(npc: CampaignNpc): void {
@@ -192,6 +209,12 @@ export class NpcEditorPageComponent {
     }
 
     async saveNpc(npc: CampaignNpc): Promise<void> {
+        if (!this.canEdit()) {
+            this.saveError.set('Only campaign owners can edit campaign NPCs.');
+            this.cdr.detectChanges();
+            return;
+        }
+
         const sanitizedNpc = sanitizeNpc(npc);
         const existingNpc = this.npcId()
             ? this.allNpcs().find((entry) => entry.id === this.npcId()) ?? null
@@ -222,6 +245,10 @@ export class NpcEditorPageComponent {
     }
 
     saveNpcToLibrary(): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
         const activeNpc = this.editorNpc();
         if (!activeNpc) {
             return;

@@ -9,7 +9,7 @@ namespace DungeonKeep.API.Controllers;
 public sealed class AuthController(IAuthService authService) : ControllerBase
 {
     [HttpPost("signup")]
-    public async Task<ActionResult<AuthSessionDto>> Signup([FromBody] SignupRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<SignupPendingActivationDto>> Signup([FromBody] SignupRequest request, CancellationToken cancellationToken)
     {
         try
         {
@@ -22,16 +22,51 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
         }
     }
 
+    [HttpPost("activate")]
+    public async Task<ActionResult<ActivationResultDto>> Activate([FromBody] ActivateAccountRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await authService.ActivateAsync(request, cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+    }
+
+    [HttpPost("resend-activation")]
+    public async Task<ActionResult<ActivationResultDto>> ResendActivation([FromBody] ResendActivationCodeRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await authService.ResendActivationCodeAsync(request, cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+    }
+
     [HttpPost("login")]
     public async Task<ActionResult<AuthSessionDto>> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
     {
-        var session = await authService.LoginAsync(request, cancellationToken);
-        if (session is null)
+        try
         {
-            return Unauthorized("Email or password was invalid.");
-        }
+            var session = await authService.LoginAsync(request, cancellationToken);
+            if (session is null)
+            {
+                return Unauthorized("Email or password was invalid.");
+            }
 
-        return Ok(session);
+            return Ok(session);
+        }
+        catch (AccountActivationRequiredException)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, "Activate your account with the emailed code before signing in.");
+        }
     }
 
     [HttpGet("session")]

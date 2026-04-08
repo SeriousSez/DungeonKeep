@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { CreationStudioComponent } from '../../components/creation-studio/creation-studio.component';
@@ -52,6 +52,17 @@ export class CampaignEditPageComponent {
     });
 
     readonly updateError = signal('');
+
+    constructor() {
+        effect(() => {
+            const campaign = this.selectedCampaign();
+            if (!campaign || campaign.currentUserRole === 'Owner') {
+                return;
+            }
+
+            void this.router.navigate(['/campaigns', campaign.id], { replaceUrl: true });
+        });
+    }
 
     async handleCampaignUpdate(draft: CampaignDraft): Promise<void> {
         const id = this.campaignId();

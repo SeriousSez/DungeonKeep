@@ -526,6 +526,16 @@ export class CampaignMapPageComponent {
                 ?? maps.find((map) => map.id === campaign.activeMapId)
                 ?? maps[0];
 
+            if (this.routeMode() === 'edit' && !this.canEdit()) {
+                if (activeMap) {
+                    void this.router.navigate(this.mapViewRoute(campaign.id, activeMap.id), { replaceUrl: true });
+                } else {
+                    void this.router.navigate(this.mapListRoute(campaign.id), { replaceUrl: true });
+                }
+
+                return;
+            }
+
             if (routeMapId && !maps.some((map) => map.id === routeMapId) && activeMap) {
                 void this.router.navigate(this.mapRouteForCurrentMode(campaign.id, activeMap.id), { replaceUrl: true });
             }

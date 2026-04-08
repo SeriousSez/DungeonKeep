@@ -28,10 +28,12 @@ public static class ServiceCollectionExtensions
 
         if (emailOptions.IsEnabled)
         {
+            services.AddScoped<IAccountActivationEmailService, SmtpAccountActivationEmailService>();
             services.AddScoped<ICampaignInviteEmailService, SmtpCampaignInviteEmailService>();
         }
         else
         {
+            services.AddScoped<IAccountActivationEmailService, NoOpAccountActivationEmailService>();
             services.AddScoped<ICampaignInviteEmailService, NoOpCampaignInviteEmailService>();
         }
 

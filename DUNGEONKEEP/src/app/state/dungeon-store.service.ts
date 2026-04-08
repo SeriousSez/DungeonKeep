@@ -187,6 +187,10 @@ export class DungeonStoreService {
     }
 
     async addCampaignSession(campaignId: string, draft: { title: string; date: string; location: string; objective: string; threat: ThreatLevel }): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.createCampaignSession(campaignId, draft);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -197,6 +201,10 @@ export class DungeonStoreService {
     }
 
     async updateCampaignSession(campaignId: string, sessionId: string, draft: { title: string; date: string; location: string; objective: string; threat: ThreatLevel }): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.updateCampaignSession(campaignId, sessionId, draft);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -207,6 +215,10 @@ export class DungeonStoreService {
     }
 
     async deleteCampaignSession(campaignId: string, sessionId: string): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.deleteCampaignSession(campaignId, sessionId);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -217,6 +229,10 @@ export class DungeonStoreService {
     }
 
     async addCampaignNpc(campaignId: string, name: string): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.addCampaignNpc(campaignId, name);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -227,6 +243,10 @@ export class DungeonStoreService {
     }
 
     async removeCampaignNpc(campaignId: string, name: string): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.removeCampaignNpc(campaignId, name);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -237,6 +257,10 @@ export class DungeonStoreService {
     }
 
     async addCampaignLoot(campaignId: string, name: string): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.addCampaignLoot(campaignId, name);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -247,6 +271,10 @@ export class DungeonStoreService {
     }
 
     async removeCampaignLoot(campaignId: string, name: string): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.removeCampaignLoot(campaignId, name);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -267,6 +295,10 @@ export class DungeonStoreService {
     }
 
     async addCampaignWorldNote(campaignId: string, payload: { title: string; category: CampaignWorldNoteCategory; content: string }): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.createCampaignWorldNote(campaignId, payload);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -277,6 +309,10 @@ export class DungeonStoreService {
     }
 
     async updateCampaignWorldNote(campaignId: string, noteId: string, payload: { title: string; category: CampaignWorldNoteCategory; content: string }): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.updateCampaignWorldNote(campaignId, noteId, payload);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -287,6 +323,10 @@ export class DungeonStoreService {
     }
 
     async removeCampaignWorldNote(campaignId: string, noteId: string): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.deleteCampaignWorldNote(campaignId, noteId);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -297,6 +337,10 @@ export class DungeonStoreService {
     }
 
     async updateCampaignMap(campaignId: string, payload: { activeMapId: string; maps: CampaignMapBoard[] }): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.updateCampaignMap(campaignId, this.mapCampaignMapLibraryToApi(payload));
             this.replaceCampaignFromApi(campaignId, updated);
@@ -342,6 +386,10 @@ export class DungeonStoreService {
     }
 
     async updateCampaign(campaignId: string, draft: CampaignDraft): Promise<Campaign | null> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return null;
+        }
+
         const campaignData = {
             name: draft.name.trim(),
             setting: draft.setting.trim(),
@@ -1809,5 +1857,13 @@ export class DungeonStoreService {
         this.campaigns.set([]);
         this.characters.set([]);
         this.selectedCampaignId.set('');
+    }
+
+    private canManageCampaignContent(campaignId: string): boolean {
+        if (!campaignId) {
+            return false;
+        }
+
+        return this.campaigns().some((campaign) => campaign.id === campaignId && campaign.currentUserRole === 'Owner');
     }
 }

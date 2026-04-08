@@ -320,6 +320,10 @@ export class CampaignSectionPageComponent {
     }
 
     openAddThreadModal(): void {
+        if (this.selectedCampaign()?.currentUserRole !== 'Owner') {
+            return;
+        }
+
         this.clearSectionFeedback();
         this.threadModalMode.set('add');
         this.modalThreadId.set(null);
@@ -329,6 +333,10 @@ export class CampaignSectionPageComponent {
     }
 
     openEditThreadModal(threadId: string, text: string, visibility: 'Party' | 'GMOnly'): void {
+        if (this.selectedCampaign()?.currentUserRole !== 'Owner') {
+            return;
+        }
+
         this.clearSectionFeedback();
         this.threadModalMode.set('edit');
         this.modalThreadId.set(threadId);
@@ -371,6 +379,10 @@ export class CampaignSectionPageComponent {
     }
 
     openAddSessionModal(): void {
+        if (this.selectedCampaign()?.currentUserRole !== 'Owner') {
+            return;
+        }
+
         this.clearSectionFeedback();
         this.sessionModalMode.set('add');
         this.sessionModalId.set(null);
@@ -383,6 +395,10 @@ export class CampaignSectionPageComponent {
     }
 
     openEditSessionModal(sessionId: string, title: string, date: string, location: string, objective: string, threat: ThreatLevel): void {
+        if (this.selectedCampaign()?.currentUserRole !== 'Owner') {
+            return;
+        }
+
         this.clearSectionFeedback();
         this.sessionModalMode.set('edit');
         this.sessionModalId.set(sessionId);
@@ -597,6 +613,10 @@ export class CampaignSectionPageComponent {
     }
 
     openAddWorldNoteForm(): void {
+        if (this.selectedCampaign()?.currentUserRole !== 'Owner') {
+            return;
+        }
+
         this.clearSectionFeedback();
         this.noteEditorMode.set('add');
         this.noteEditorId.set(null);
@@ -607,6 +627,10 @@ export class CampaignSectionPageComponent {
     }
 
     openEditWorldNoteForm(note: CampaignWorldNote): void {
+        if (this.selectedCampaign()?.currentUserRole !== 'Owner') {
+            return;
+        }
+
         this.clearSectionFeedback();
         this.noteEditorMode.set('edit');
         this.noteEditorId.set(note.id);

@@ -246,6 +246,16 @@ export interface ApiAuthSessionDto {
     user: ApiAuthUserDto;
 }
 
+export interface ApiSignupPendingActivationDto {
+    email: string;
+    message: string;
+}
+
+export interface ApiActivationResultDto {
+    email: string;
+    message: string;
+}
+
 export interface ApiGenerateCharacterBackstoryRequest {
     className: string;
     background: string;
@@ -824,8 +834,16 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.post<ApiCharacterDto>(`${this.baseUrl}/characters/${characterId}/promote`, {}));
     }
 
-    async signup(payload: { displayName: string; email: string; password: string }): Promise<ApiAuthSessionDto> {
-        return await firstValueFrom(this.http.post<ApiAuthSessionDto>(`${this.baseUrl}/auth/signup`, payload));
+    async signup(payload: { displayName: string; email: string; password: string }): Promise<ApiSignupPendingActivationDto> {
+        return await firstValueFrom(this.http.post<ApiSignupPendingActivationDto>(`${this.baseUrl}/auth/signup`, payload));
+    }
+
+    async activateAccount(payload: { email: string; code: string }): Promise<ApiActivationResultDto> {
+        return await firstValueFrom(this.http.post<ApiActivationResultDto>(`${this.baseUrl}/auth/activate`, payload));
+    }
+
+    async resendActivationCode(payload: { email: string }): Promise<ApiActivationResultDto> {
+        return await firstValueFrom(this.http.post<ApiActivationResultDto>(`${this.baseUrl}/auth/resend-activation`, payload));
     }
 
     async login(payload: { email: string; password: string }): Promise<ApiAuthSessionDto> {

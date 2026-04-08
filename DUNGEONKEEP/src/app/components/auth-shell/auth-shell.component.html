@@ -11,7 +11,12 @@
         <div class="auth-tabs" role="tablist" aria-label="Authentication options">
             <button type="button" class="auth-tab" [class.is-active]="mode() === 'login'" (click)="setMode('login')">Log In</button>
             <button type="button" class="auth-tab" [class.is-active]="mode() === 'signup'" (click)="setMode('signup')">Sign Up</button>
+            <button type="button" class="auth-tab" [class.is-active]="mode() === 'activate'" (click)="setMode('activate')">Activate</button>
         </div>
+
+        @if (infoMessage()) {
+        <p class="info-copy">{{ infoMessage() }}</p>
+        }
 
         @if (errorMessage()) {
         <p class="error-copy">{{ errorMessage() }}</p>
@@ -31,7 +36,7 @@
 
             <button type="submit" class="primary-button" [disabled]="isSubmitting()">{{ isSubmitting() ? 'Signing In...' : 'Sign In' }}</button>
         </form>
-        } @else {
+        } @else if (mode() === 'signup') {
         <form class="auth-form" [formGroup]="signupForm" (ngSubmit)="submitSignup()">
             <label class="field">
                 <span>Display Name</span>
@@ -49,6 +54,23 @@
             </label>
 
             <button type="submit" class="primary-button" [disabled]="isSubmitting()">{{ isSubmitting() ? 'Creating Account...' : 'Create Account' }}</button>
+        </form>
+        } @else {
+        <form class="auth-form" [formGroup]="activationForm" (ngSubmit)="submitActivation()">
+            <label class="field">
+                <span>Email</span>
+                <input type="email" formControlName="email" autocomplete="email" />
+            </label>
+
+            <label class="field">
+                <span>Activation Code</span>
+                <input type="text" formControlName="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" />
+            </label>
+
+            <p class="helper-copy">Use the six-digit code from your activation email. You need to activate your account before the first sign-in.</p>
+
+            <button type="submit" class="primary-button" [disabled]="isSubmitting()">{{ isSubmitting() ? 'Activating...' : 'Activate Account' }}</button>
+            <button type="button" class="secondary-button" [disabled]="isSubmitting()" (click)="resendActivationCode()">{{ isSubmitting() ? 'Sending...' : 'Resend Code' }}</button>
         </form>
         }
     </div>
