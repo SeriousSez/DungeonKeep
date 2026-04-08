@@ -1,4 +1,40 @@
 <main class="page-stack">
+    @if (!store.initialized()) {
+    <section class="panel page-intro skeleton-panel">
+        <div class="page-intro-copy skeleton-stack">
+            <div class="skeleton-line skeleton-eyebrow"></div>
+            <div class="skeleton-line skeleton-title"></div>
+            <div class="skeleton-line skeleton-copy"></div>
+        </div>
+
+        <div class="create-link skeleton-button" aria-hidden="true"></div>
+    </section>
+
+    <section class="campaign-list">
+        @for (card of [1, 2, 3]; track card) {
+        <article class="campaign-card skeleton-card" aria-hidden="true">
+            <div class="campaign-card-top">
+                <div class="skeleton-stack campaign-card-copy">
+                    <div class="skeleton-line skeleton-card-title"></div>
+                    <div class="skeleton-line skeleton-card-copy short"></div>
+                </div>
+                <div class="campaign-pill skeleton-pill"></div>
+            </div>
+
+            <div class="skeleton-stack">
+                <div class="skeleton-line skeleton-card-copy"></div>
+                <div class="skeleton-line skeleton-card-copy medium"></div>
+            </div>
+
+            <div class="campaign-meta skeleton-meta-row">
+                @for (meta of [1, 2, 3]; track meta) {
+                <div class="skeleton-line skeleton-meta-pill"></div>
+                }
+            </div>
+        </article>
+        }
+    </section>
+    } @else {
     <section class="panel page-intro">
         <div class="page-intro-copy">
             <p class="eyebrow">Campaign management</p>
@@ -38,5 +74,6 @@
         </a>
         }
     </section>
+    }
     }
 </main>

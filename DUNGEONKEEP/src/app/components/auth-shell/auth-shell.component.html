@@ -63,7 +63,12 @@
 
             <label class="field">
                 <span>Activation Code</span>
-                <input type="text" formControlName="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" />
+                <div class="activation-code-inputs">
+                    @for (slot of activationCodeSlots; track slot) {
+                    <input #activationDigitInput class="activation-code-digit" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" [value]="activationCodeDigits()[slot]" [attr.aria-label]="'Activation code digit ' + (slot + 1)"
+                        (input)="handleActivationDigitInput($event, slot)" (keydown)="handleActivationDigitKeydown($event, slot)" (paste)="handleActivationCodePaste($event, slot)" (focus)="handleActivationDigitFocus(slot)" />
+                    }
+                </div>
             </label>
 
             <p class="helper-copy">Use the six-digit code from your activation email. You need to activate your account before the first sign-in.</p>

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, ElementRef, QueryList, ViewChildren, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -14,6 +14,8 @@ import { SessionService } from '../../state/session.service';
     styleUrl: './auth-shell.component.scss'
 })
 export class AuthShellComponent {
+    @ViewChildren('activationDigitInput') private activationDigitInputs?: QueryList<ElementRef<HTMLInputElement>>;
+
     private readonly session = inject(SessionService);
     private readonly cdr = inject(ChangeDetectorRef);
     private readonly route = inject(ActivatedRoute);
@@ -24,6 +26,8 @@ export class AuthShellComponent {
     readonly errorMessage = signal('');
     readonly infoMessage = signal('');
     readonly isSubmitting = signal(false);
+    readonly activationCodeDigits = signal<string[]>(Array.from({ length: 6 }, () => ''));
+    readonly activationCodeSlots = [0, 1, 2, 3, 4, 5] as const;
 
     readonly loginForm = new FormGroup({
         email: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
@@ -50,6 +54,7 @@ export class AuthShellComponent {
 
                 if (mode === 'activate') {
                     this.mode.set('activate');
+                    this.setActivationCode('');
                     if (email) {
                         this.activationForm.controls.email.setValue(email);
                         this.loginForm.controls.email.setValue(email);
@@ -122,7 +127,7 @@ export class AuthShellComponent {
         } else {
             const email = result.email ?? this.signupForm.controls.email.getRawValue();
             this.activationForm.controls.email.setValue(email);
-            this.activationForm.controls.code.setValue('');
+            this.setActivationCode('');
             this.loginForm.controls.email.setValue(email);
             this.infoMessage.set(result.message ?? 'Check your email for the activation code.');
             void this.router.navigate([], {
@@ -188,5 +193,110 @@ export class AuthShellComponent {
         }
 
         this.cdr.detectChanges();
+    }
+
+    handleActivationDigitInput(event: Event, index: number): void {
+        const input = event.target as HTMLInputElement;
+        const digits = input.value.replace(/\D/g, '');
+
+        if (!digits) {
+            this.updateActivationDigit(index, '');
+            return;
+        }
+
+        this.applyActivationDigits(digits, index);
+    }
+
+    handleActivationDigitKeydown(event: KeyboardEvent, index: number): void {
+        const input = event.target as HTMLInputElement;
+
+        if (event.key === 'Backspace') {
+            if (input.value) {
+                this.updateActivationDigit(index, '');
+                event.preventDefault();
+                return;
+            }
+
+            if (index > 0) {
+                this.updateActivationDigit(index - 1, '');
+                this.focusActivationDigit(index - 1);
+                event.preventDefault();
+            }
+
+            return;
+        }
+
+        if (event.key === 'ArrowLeft' && index > 0) {
+            this.focusActivationDigit(index - 1);
+            event.preventDefault();
+            return;
+        }
+
+        if (event.key === 'ArrowRight' && index < this.activationCodeSlots.length - 1) {
+            this.focusActivationDigit(index + 1);
+            event.preventDefault();
+        }
+    }
+
+    handleActivationCodePaste(event: ClipboardEvent, index: number): void {
+        const pastedValue = event.clipboardData?.getData('text') ?? '';
+        const digits = pastedValue.replace(/\D/g, '');
+
+        if (!digits) {
+            return;
+        }
+
+        event.preventDefault();
+        this.applyActivationDigits(digits, index);
+    }
+
+    handleActivationDigitFocus(index: number): void {
+        const input = this.activationDigitInputs?.get(index)?.nativeElement;
+        input?.select();
+    }
+
+    private applyActivationDigits(value: string, startIndex: number): void {
+        const digits = value.replace(/\D/g, '').slice(0, this.activationCodeSlots.length - startIndex);
+
+        if (!digits) {
+            return;
+        }
+
+        const nextDigits = [...this.activationCodeDigits()];
+        for (let offset = 0; offset < digits.length; offset += 1) {
+            nextDigits[startIndex + offset] = digits[offset] ?? '';
+        }
+
+        this.activationCodeDigits.set(nextDigits);
+        this.syncActivationCodeControl();
+
+        const nextIndex = Math.min(startIndex + digits.length, this.activationCodeSlots.length - 1);
+        this.focusActivationDigit(nextIndex);
+    }
+
+    private updateActivationDigit(index: number, value: string): void {
+        const nextDigits = [...this.activationCodeDigits()];
+        nextDigits[index] = value.replace(/\D/g, '').slice(0, 1);
+        this.activationCodeDigits.set(nextDigits);
+        this.syncActivationCodeControl();
+    }
+
+    private syncActivationCodeControl(): void {
+        this.activationForm.controls.code.setValue(this.activationCodeDigits().join(''));
+    }
+
+    private setActivationCode(code: string): void {
+        const normalizedCode = code.replace(/\D/g, '').slice(0, this.activationCodeSlots.length);
+        const nextDigits = Array.from({ length: this.activationCodeSlots.length }, (_, index) => normalizedCode[index] ?? '');
+        this.activationCodeDigits.set(nextDigits);
+        this.activationForm.controls.code.setValue(normalizedCode);
+    }
+
+    private focusActivationDigit(index: number): void {
+        queueMicrotask(() => {
+            const input = this.activationDigitInputs?.get(index)?.nativeElement;
+            input?.focus();
+            input?.select();
+        });
     }
 }

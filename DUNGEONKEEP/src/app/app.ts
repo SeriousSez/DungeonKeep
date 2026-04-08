@@ -33,13 +33,14 @@ export class App {
 
       const user = this.currentUser();
       const currentUrl = this.router.url;
+      const isAuthRoute = currentUrl === '/auth' || currentUrl.startsWith('/auth?') || currentUrl.startsWith('/auth#');
 
-      if (!user && currentUrl !== '/auth') {
+      if (!user && !isAuthRoute) {
         void this.router.navigateByUrl('/auth');
         return;
       }
 
-      if (user && currentUrl.startsWith('/auth')) {
+      if (user && isAuthRoute) {
         void this.router.navigateByUrl('/dashboard');
       }
     });
