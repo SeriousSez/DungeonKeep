@@ -5,7 +5,7 @@
         <i class="fa-duotone fa-thin fa-chevron-down" aria-hidden="true"></i>
     </button>
 
-    @if (selectedDescription()) {
+    @if (showSelectedDescription() && selectedDescription()) {
     <p class="app-dropdown-selected-description">{{ selectedDescription() }}</p>
     }
 

@@ -504,6 +504,16 @@ export interface ApiGenerateSessionDraftRequest {
     locationHint: string;
     estimatedLengthHint: string;
     markdownNotesHint: string;
+    monsterCatalogContext: string;
+    preferredNpcNames: string[];
+    avoidedNpcNames: string[];
+    preferredMonsterNames: string[];
+    avoidedMonsterNames: string[];
+    encounterCount: number | null;
+    combatEncounterCount: number | null;
+    difficultyPreference: string;
+    sessionFocus: string;
+    additionalConstraints: string;
 }
 
 export interface ApiGenerateSessionSceneResponse {
@@ -580,6 +590,9 @@ export interface ApiGenerateNpcDraftRequest {
     factionHint: string;
     locationHint: string;
     motivationHint: string;
+    functionHint: string;
+    toneHint: string;
+    campaignTieHint: string;
     notesHint: string;
     existingNpcNames: string[];
 }

@@ -69,6 +69,9 @@ interface NpcGenerationPrompt {
     factionHint: string;
     locationHint: string;
     motivationHint: string;
+    functionHint: string;
+    toneHint: string;
+    campaignTieHint: string;
     notesHint: string;
 }
 
@@ -119,8 +122,30 @@ export class NpcEditorComponent {
         factionHint: '',
         locationHint: '',
         motivationHint: '',
+        functionHint: '',
+        toneHint: '',
+        campaignTieHint: '',
         notesHint: ''
     });
+
+    readonly npcFunctionOptions: DropdownOption[] = [
+        { value: 'Ally', label: 'Ally' },
+        { value: 'Quest giver', label: 'Quest giver' },
+        { value: 'Rival', label: 'Rival' },
+        { value: 'Suspect', label: 'Suspect' },
+        { value: 'Patron', label: 'Patron' },
+        { value: 'Villain', label: 'Villain' },
+        { value: 'Comic relief', label: 'Comic relief' }
+    ];
+
+    readonly npcToneOptions: DropdownOption[] = [
+        { value: 'Warm', label: 'Warm' },
+        { value: 'Sinister', label: 'Sinister' },
+        { value: 'Tragic', label: 'Tragic' },
+        { value: 'Eccentric', label: 'Eccentric' },
+        { value: 'Smug', label: 'Smug' },
+        { value: 'Desperate', label: 'Desperate' }
+    ];
 
     readonly relationshipTypeOptions: DropdownOption[] = [
         { value: 'Ally', label: 'Ally' },
@@ -319,6 +344,24 @@ export class NpcEditorComponent {
         this.generationPrompt.update((prompt) => ({ ...prompt, motivationHint: value }));
     }
 
+    updateGenerationFunctionHint(value: string | number): void {
+        this.generationPrompt.update((prompt) => ({
+            ...prompt,
+            functionHint: typeof value === 'string' ? value : ''
+        }));
+    }
+
+    updateGenerationToneHint(value: string | number): void {
+        this.generationPrompt.update((prompt) => ({
+            ...prompt,
+            toneHint: typeof value === 'string' ? value : ''
+        }));
+    }
+
+    updateGenerationCampaignTieHint(value: string): void {
+        this.generationPrompt.update((prompt) => ({ ...prompt, campaignTieHint: value }));
+    }
+
     updateGenerationNotesHint(value: string): void {
         this.generationPrompt.update((prompt) => ({ ...prompt, notesHint: value }));
     }
@@ -455,6 +498,9 @@ export class NpcEditorComponent {
             factionHint: npc.faction,
             locationHint: npc.location,
             motivationHint: npc.motivations,
+            functionHint: npc.isImportant ? 'Quest giver' : '',
+            toneHint: '',
+            campaignTieHint: npc.questLinks[0] ?? '',
             notesHint: npc.notes
         };
     }

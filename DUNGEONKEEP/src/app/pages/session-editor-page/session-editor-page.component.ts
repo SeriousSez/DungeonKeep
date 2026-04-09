@@ -15,12 +15,15 @@ import { debounceTime } from 'rxjs';
 import { marked } from 'marked';
 
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
+import { MultiSelectDropdownComponent, type MultiSelectOptionGroup } from '../../components/multi-select-dropdown/multi-select-dropdown.component';
+import { monsterCatalog } from '../../data/monster-catalog.generated';
 import { SESSION_EDITOR_SAMPLE_DRAFT } from '../../data/session-editor.mock';
 import {
     persistStoredSessionEditorDraft,
     readStoredSessionEditorDraft,
     removeStoredSessionEditorDraft
 } from '../../data/session-editor.storage';
+import { MonsterCatalogEntry } from '../../models/monster-reference.models';
 import { ThreatLevel } from '../../models/dungeon.models';
 import {
     SessionEditorDraft,
@@ -129,13 +132,22 @@ interface SessionGenerationHints {
     locationHint: string;
     estimatedLengthHint: string;
     markdownNotesHint: string;
+    preferredNpcNames: string[];
+    avoidedNpcNames: string[];
+    preferredMonsterNames: string[];
+    avoidedMonsterNames: string[];
+    encounterCount: number | null;
+    combatEncounterCount: number | null;
+    difficultyPreference: string;
+    sessionFocus: string;
+    additionalConstraints: string;
 }
 
 type SessionCreationMode = 'standard' | 'ai';
 
 @Component({
     selector: 'app-session-editor-page',
-    imports: [CommonModule, ReactiveFormsModule, RouterLink, DropdownComponent, ConfirmModalComponent],
+    imports: [CommonModule, ReactiveFormsModule, RouterLink, DropdownComponent, MultiSelectDropdownComponent, ConfirmModalComponent],
     templateUrl: './session-editor-page.component.html',
     styleUrl: './session-editor-page.component.scss',
     standalone: true,
@@ -163,7 +175,16 @@ export class SessionEditorPageComponent {
         shortDescriptionHint: '',
         locationHint: '',
         estimatedLengthHint: '',
-        markdownNotesHint: ''
+        markdownNotesHint: '',
+        preferredNpcNames: [],
+        avoidedNpcNames: [],
+        preferredMonsterNames: [],
+        avoidedMonsterNames: [],
+        encounterCount: null,
+        combatEncounterCount: null,
+        difficultyPreference: '',
+        sessionFocus: '',
+        additionalConstraints: ''
     });
     readonly creationMode = signal<SessionCreationMode>('standard');
     readonly lastAutosavedAt = signal<string>('');
@@ -181,6 +202,49 @@ export class SessionEditorPageComponent {
     readonly skillOptions: DropdownOption[] = [
         'Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation', 'Investigation', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Sleight of Hand', 'Stealth', 'Survival'
     ].map((skill) => ({ value: skill, label: skill }));
+
+    readonly generationDifficultyOptions: DropdownOption[] = [
+        { value: '', label: 'Auto', description: 'Let the AI set encounter pressure from the rest of the brief.' },
+        { value: 'Low', label: 'Low', description: 'Lower-pressure fights and setbacks.' },
+        { value: 'Moderate', label: 'Moderate', description: 'Steady risk with manageable danger.' },
+        { value: 'High', label: 'High', description: 'Tough encounters and sharper consequences.' },
+        { value: 'Deadly', label: 'Deadly', description: 'One or more highly dangerous encounters.' }
+    ];
+
+    readonly sessionFocusOptions: DropdownOption[] = [
+        { value: '', label: 'Balanced', description: 'Mix social scenes, exploration, and combat naturally.' },
+        { value: 'Social', label: 'Social', description: 'Bias toward conversation, intrigue, and negotiations.' },
+        { value: 'Exploration', label: 'Exploration', description: 'Bias toward discovery, travel, and investigation.' },
+        { value: 'Combat', label: 'Combat', description: 'Bias toward tactical set pieces and danger.' },
+        { value: 'Investigation', label: 'Investigation', description: 'Bias toward clues, mysteries, and reveals.' }
+    ];
+
+    readonly generationNpcGroups = computed<MultiSelectOptionGroup[]>(() => {
+        const npcNames = Array.from(new Set((this.currentCampaign()?.npcs ?? []).map((name) => name.trim()).filter(Boolean)))
+            .sort((left, right) => left.localeCompare(right));
+
+        return npcNames.length > 0
+            ? [{ label: 'Campaign NPCs', options: npcNames }]
+            : [];
+    });
+
+    readonly generationMonsterGroups = computed<MultiSelectOptionGroup[]>(() => {
+        const grouped = new Map<string, string[]>();
+
+        for (const monster of monsterCatalog) {
+            const category = monster.creatureCategory.trim() || 'Other';
+            const group = grouped.get(category) ?? [];
+            group.push(monster.name);
+            grouped.set(category, group);
+        }
+
+        return Array.from(grouped.entries())
+            .sort(([left], [right]) => left.localeCompare(right))
+            .map(([label, options]) => ({
+                label,
+                options: options.sort((left, right) => left.localeCompare(right))
+            }));
+    });
 
     readonly editorForm: SessionEditorForm = this.fb.group({
         title: this.fb.control('', { validators: [Validators.required] }),
@@ -246,7 +310,16 @@ export class SessionEditorPageComponent {
                     shortDescriptionHint: '',
                     locationHint: '',
                     estimatedLengthHint: '',
-                    markdownNotesHint: ''
+                    markdownNotesHint: '',
+                    preferredNpcNames: [],
+                    avoidedNpcNames: [],
+                    preferredMonsterNames: [],
+                    avoidedMonsterNames: [],
+                    encounterCount: null,
+                    combatEncounterCount: null,
+                    difficultyPreference: '',
+                    sessionFocus: '',
+                    additionalConstraints: ''
                 });
 
                 if (campaignId) {
@@ -334,7 +407,17 @@ export class SessionEditorPageComponent {
                 shortDescriptionHint: generationHints.shortDescriptionHint.trim() || currentDraft.shortDescription,
                 locationHint: generationHints.locationHint.trim() || currentDraft.inGameLocation,
                 estimatedLengthHint: generationHints.estimatedLengthHint.trim() || currentDraft.estimatedLength,
-                markdownNotesHint: generationHints.markdownNotesHint.trim() || currentDraft.markdownNotes
+                markdownNotesHint: generationHints.markdownNotesHint.trim() || currentDraft.markdownNotes,
+                monsterCatalogContext: this.buildMonsterCatalogContext(currentDraft, generationHints),
+                preferredNpcNames: generationHints.preferredNpcNames,
+                avoidedNpcNames: generationHints.avoidedNpcNames,
+                preferredMonsterNames: generationHints.preferredMonsterNames,
+                avoidedMonsterNames: generationHints.avoidedMonsterNames,
+                encounterCount: generationHints.encounterCount,
+                combatEncounterCount: generationHints.combatEncounterCount,
+                difficultyPreference: generationHints.difficultyPreference,
+                sessionFocus: generationHints.sessionFocus,
+                additionalConstraints: generationHints.additionalConstraints.trim()
             });
 
             const mergedDraft = this.mergeGeneratedDraft(currentDraft, generated);
@@ -374,6 +457,48 @@ export class SessionEditorPageComponent {
 
     updateGenerationNotesHint(value: string): void {
         this.generationHints.update((hints) => ({ ...hints, markdownNotesHint: value }));
+    }
+
+    updateGenerationPreferredNpcNames(value: string[]): void {
+        this.generationHints.update((hints) => ({ ...hints, preferredNpcNames: value }));
+    }
+
+    updateGenerationAvoidedNpcNames(value: string[]): void {
+        this.generationHints.update((hints) => ({ ...hints, avoidedNpcNames: value }));
+    }
+
+    updateGenerationPreferredMonsterNames(value: string[]): void {
+        this.generationHints.update((hints) => ({ ...hints, preferredMonsterNames: value }));
+    }
+
+    updateGenerationAvoidedMonsterNames(value: string[]): void {
+        this.generationHints.update((hints) => ({ ...hints, avoidedMonsterNames: value }));
+    }
+
+    updateGenerationEncounterCount(value: string): void {
+        this.generationHints.update((hints) => ({ ...hints, encounterCount: this.parsePositiveInteger(value) }));
+    }
+
+    updateGenerationCombatEncounterCount(value: string): void {
+        this.generationHints.update((hints) => ({ ...hints, combatEncounterCount: this.parseNonNegativeInteger(value) }));
+    }
+
+    updateGenerationDifficultyPreference(value: string | number): void {
+        const difficultyPreference = value === 'Low' || value === 'Moderate' || value === 'High' || value === 'Deadly'
+            ? value
+            : '';
+        this.generationHints.update((hints) => ({ ...hints, difficultyPreference }));
+    }
+
+    updateGenerationSessionFocus(value: string | number): void {
+        const sessionFocus = value === 'Social' || value === 'Exploration' || value === 'Combat' || value === 'Investigation'
+            ? value
+            : '';
+        this.generationHints.update((hints) => ({ ...hints, sessionFocus }));
+    }
+
+    updateGenerationAdditionalConstraints(value: string): void {
+        this.generationHints.update((hints) => ({ ...hints, additionalConstraints: value }));
     }
 
     async saveSession(): Promise<void> {
@@ -926,6 +1051,224 @@ export class SessionEditorPageComponent {
             id: this.fb.control(entry?.id ?? this.generateId('entry')),
             text: this.fb.control(entry?.text ?? '')
         });
+    }
+
+    private buildMonsterCatalogContext(draft: SessionEditorDraft, hints: SessionGenerationHints): string {
+        const campaign = this.currentCampaign();
+        const avoidedMonsterNames = new Set(hints.avoidedMonsterNames.map((name) => name.trim().toLowerCase()).filter(Boolean));
+        const contextParts = [
+            campaign?.name,
+            campaign?.setting,
+            campaign?.tone,
+            campaign?.hook,
+            campaign?.nextSession,
+            campaign?.summary,
+            draft.title,
+            draft.shortDescription,
+            draft.inGameLocation,
+            draft.estimatedLength,
+            draft.markdownNotes,
+            ...draft.scenes.flatMap((scene) => [scene.title, scene.description, scene.trigger, ...scene.keyEvents, ...scene.possibleOutcomes]),
+            ...draft.locations.flatMap((location) => [location.name, location.description, location.secrets, location.encounters]),
+            ...draft.npcs.flatMap((npc) => [npc.name, npc.role, npc.personality, npc.motivation, npc.voiceNotes]),
+            ...draft.monsters.flatMap((monster) => [monster.name, monster.type, monster.challengeRating, monster.keyAbilities, monster.notes]),
+            ...draft.secrets.map((entry) => entry.text),
+            ...draft.branchingPaths.map((entry) => entry.text),
+            ...draft.nextSessionHooks.map((entry) => entry.text),
+            ...hints.preferredNpcNames,
+            ...hints.preferredMonsterNames,
+            hints.difficultyPreference,
+            hints.sessionFocus,
+            hints.additionalConstraints,
+            hints.encounterCount === null ? '' : `total encounters ${hints.encounterCount}`,
+            hints.combatEncounterCount === null ? '' : `combat encounters ${hints.combatEncounterCount}`
+        ];
+        const searchText = contextParts
+            .filter((value) => typeof value === 'string' && value.trim().length > 0)
+            .join(' ')
+            .toLowerCase();
+
+        const rankedMonsters = [...monsterCatalog]
+            .filter((monster) => !avoidedMonsterNames.has(monster.name.trim().toLowerCase()))
+            .map((monster) => ({
+                monster,
+                score: this.rankMonsterForSession(monster, searchText, draft.threatLevel, campaign?.levelStart, campaign?.levelEnd, hints.preferredMonsterNames)
+            }))
+            .sort((left, right) => right.score - left.score || left.monster.name.localeCompare(right.monster.name))
+            .slice(0, 18)
+            .map(({ monster }) => this.formatMonsterContextLine(monster));
+
+        if (rankedMonsters.length === 0) {
+            return 'No curated monster matches were available.';
+        }
+
+        return rankedMonsters.join('\n');
+    }
+
+    private rankMonsterForSession(
+        monster: MonsterCatalogEntry,
+        searchText: string,
+        threatLevel: ThreatLevel | '' | undefined,
+        levelStart?: number,
+        levelEnd?: number,
+        preferredMonsterNames: string[] = []
+    ): number {
+        let score = this.fallbackMonsterScore(monster);
+        const searchableFields = [
+            monster.name,
+            monster.creatureType,
+            monster.creatureCategory,
+            monster.alignment,
+            monster.sourceLabel,
+            monster.speed,
+            monster.languages,
+            monster.senses,
+            monster.skills,
+            ...monster.traits.map((entry) => `${entry.title} ${entry.text}`),
+            ...monster.actions.map((entry) => `${entry.title} ${entry.text}`),
+            ...monster.legendaryActions.map((entry) => `${entry.title} ${entry.text}`)
+        ].join(' ').toLowerCase();
+
+        for (const token of this.tokenizeSearchText(searchText)) {
+            if (monster.name.toLowerCase().includes(token)) {
+                score += 18;
+            }
+
+            if (searchableFields.includes(token)) {
+                score += 6;
+            }
+        }
+
+        const numericChallengeRating = this.parseMonsterChallengeRating(monster.challengeRating);
+        const targetChallengeRating = this.targetChallengeRating(threatLevel, levelStart, levelEnd);
+        if (targetChallengeRating !== null && numericChallengeRating !== null) {
+            score += Math.max(0, 20 - Math.abs(targetChallengeRating - numericChallengeRating) * 3);
+        }
+
+        if (preferredMonsterNames.some((name) => name.localeCompare(monster.name, undefined, { sensitivity: 'accent' }) === 0)) {
+            score += 40;
+        }
+
+        if (threatLevel === 'Deadly' && monster.legendary) {
+            score += 12;
+        }
+
+        if (threatLevel === 'Low' && numericChallengeRating !== null && numericChallengeRating <= 2) {
+            score += 10;
+        }
+
+        return score;
+    }
+
+    private fallbackMonsterScore(monster: MonsterCatalogEntry): number {
+        let score = 0;
+
+        if (monster.sourceUrl) {
+            score += 4;
+        }
+
+        if (monster.legendary) {
+            score += 2;
+        }
+
+        if (monster.actions.length > 0) {
+            score += 3;
+        }
+
+        return score;
+    }
+
+    private targetChallengeRating(threatLevel: ThreatLevel | '' | undefined, levelStart?: number, levelEnd?: number): number | null {
+        const averageLevel = typeof levelStart === 'number' && typeof levelEnd === 'number'
+            ? (levelStart + levelEnd) / 2
+            : null;
+
+        switch (threatLevel) {
+            case 'Low':
+                return averageLevel === null ? 1 : Math.max(0.125, averageLevel / 3);
+            case 'Moderate':
+                return averageLevel === null ? 3 : Math.max(0.25, averageLevel / 2);
+            case 'High':
+                return averageLevel === null ? 6 : Math.max(1, averageLevel * 0.8);
+            case 'Deadly':
+                return averageLevel === null ? 10 : Math.max(2, averageLevel * 1.2);
+            default:
+                return averageLevel === null ? null : Math.max(0.25, averageLevel * 0.65);
+        }
+    }
+
+    private parseMonsterChallengeRating(challengeRating: string): number | null {
+        const normalized = challengeRating.trim();
+        if (!normalized) {
+            return null;
+        }
+
+        if (normalized.includes('/')) {
+            const [numeratorText, denominatorText] = normalized.split('/');
+            const numerator = Number(numeratorText);
+            const denominator = Number(denominatorText);
+            if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) {
+                return null;
+            }
+
+            return numerator / denominator;
+        }
+
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    private formatMonsterContextLine(monster: MonsterCatalogEntry): string {
+        const details = [
+            `CR ${monster.challengeRating || '?'}`,
+            monster.creatureType,
+            monster.size,
+            monster.speed ? `speed ${monster.speed}` : '',
+            monster.languages ? `languages ${monster.languages}` : '',
+            monster.challengeXp ? `XP ${monster.challengeXp}` : ''
+        ].filter((value) => value.trim().length > 0);
+
+        const spotlight = [
+            monster.skills,
+            monster.senses,
+            monster.traits[0]?.title,
+            monster.actions[0]?.title
+        ].filter((value) => typeof value === 'string' && value.trim().length > 0);
+
+        const spotlightText = spotlight.length > 0
+            ? ` | notable: ${spotlight.join('; ')}`
+            : '';
+
+        return `${monster.name}: ${details.join(', ')}${spotlightText}`;
+    }
+
+    private tokenizeSearchText(searchText: string): string[] {
+        return Array.from(new Set(
+            searchText
+                .split(/[^a-z0-9]+/)
+                .map((token) => token.trim())
+                .filter((token) => token.length >= 4)
+        ));
+    }
+
+    private parsePositiveInteger(value: string): number | null {
+        const normalized = value.trim();
+        if (!normalized) {
+            return null;
+        }
+
+        const parsed = Number.parseInt(normalized, 10);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    }
+
+    private parseNonNegativeInteger(value: string): number | null {
+        const normalized = value.trim();
+        if (!normalized) {
+            return null;
+        }
+
+        const parsed = Number.parseInt(normalized, 10);
+        return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
     }
 
     private generateId(prefix: string): string {

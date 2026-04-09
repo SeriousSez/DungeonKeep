@@ -1,22 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
 
+import { MonsterStatBlockModalComponent } from '../../components/monster-stat-block-modal/monster-stat-block-modal.component';
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
-import { loadMonsterReferenceEntries, saveMonsterReferenceEntries } from '../../data/monster-reference.storage';
-import { MonsterReferenceEntry } from '../../models/monster-reference.models';
-import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
+import { monsterCatalog } from '../../data/monster-catalog.generated';
+import { MonsterCatalogEntry } from '../../models/monster-reference.models';
 
-type MonsterSortOption = 'recent' | 'name' | 'cr-low' | 'cr-high';
+type MonsterSortOption = 'name' | 'cr-low' | 'cr-high' | 'type';
 
-interface MonsterReferenceDraft {
-    name: string;
-    challengeRating: string;
-    creatureType: string;
-    sourceUrl: string;
-    sourceLabel: string;
-    tags: string;
-    notes: string;
+interface SortPill {
+    value: string;
+    label: string;
 }
 
 interface SourceShortcut {
@@ -45,48 +39,54 @@ const creatureTypeOptions: DropdownOption[] = [
 ];
 
 const sortOptions: DropdownOption[] = [
-    { value: 'recent', label: 'Recently Updated', description: 'Show the most recently edited monsters first.' },
-    { value: 'name', label: 'Name', description: 'Sort the catalog alphabetically.' },
+    { value: 'name', label: 'Name', description: 'Sort the compendium alphabetically.' },
     { value: 'cr-low', label: 'CR Low to High', description: 'Group easier threats before deadlier ones.' },
-    { value: 'cr-high', label: 'CR High to Low', description: 'Bubble boss threats to the top.' }
+    { value: 'cr-high', label: 'CR High to Low', description: 'Bubble boss threats to the top.' },
+    { value: 'type', label: 'Creature Type', description: 'Cluster monsters by base creature category.' }
 ];
 
 const officialSourceShortcuts: SourceShortcut[] = [
     {
-        label: 'Browse All Monsters',
-        description: 'Open the official D&D Beyond monster index sorted by challenge rating.',
-        url: 'https://www.dndbeyond.com/monsters?sort=cr'
+        label: 'Browse AideDD Monsters',
+        description: 'Open the same stat block directory used by the imported monster links.',
+        url: 'https://www.aidedd.org/dnd-filters/monsters.php'
     },
     {
-        label: 'Open SRD Reference',
-        description: 'Cross-check open rules material when you only need the free-reference subset.',
-        url: 'https://www.dndbeyond.com/srd'
+        label: 'Browse D&D Beyond Index',
+        description: 'Cross-check the official D&D Beyond monster listing by challenge rating.',
+        url: 'https://www.dndbeyond.com/monsters?sort=cr'
     }
 ];
 
 @Component({
     selector: 'app-monster-reference-page',
     standalone: true,
-    imports: [CommonModule, RouterLink, DropdownComponent, ConfirmModalComponent],
+    imports: [CommonModule, DropdownComponent, MonsterStatBlockModalComponent],
     templateUrl: './monster-reference-page.component.html',
     styleUrl: './monster-reference-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MonsterReferencePageComponent {
     readonly officialSourceShortcuts = officialSourceShortcuts;
-    readonly creatureTypeOptions = creatureTypeOptions;
     readonly sortOptions = sortOptions;
 
-    readonly entries = signal<MonsterReferenceEntry[]>(loadMonsterReferenceEntries());
+    readonly entries = signal<MonsterCatalogEntry[]>(monsterCatalog.map((entry) => normalizeMonsterCatalogEntry(entry)));
     readonly searchTerm = signal('');
     readonly selectedType = signal('All');
     readonly selectedSource = signal('All sources');
-    readonly selectedSort = signal<MonsterSortOption>('recent');
-    readonly editingEntryId = signal<string | null>(null);
-    readonly pendingDelete = signal<MonsterReferenceEntry | null>(null);
-    readonly draftError = signal('');
-    readonly draftMessage = signal('');
-    readonly draft = signal<MonsterReferenceDraft>(this.createEmptyDraft());
+    readonly selectedSort = signal<MonsterSortOption>('name');
+    readonly selectedSortPill = signal('');
+    readonly selectedMonster = signal<MonsterCatalogEntry | null>(null);
+
+    readonly creatureTypeOptions = computed<DropdownOption[]>(() => {
+        const labels = Array.from(new Set(this.entries().map((entry) => entry.creatureCategory).filter(Boolean)))
+            .sort((left, right) => left.localeCompare(right));
+
+        return [
+            { value: 'All', label: 'All Types' },
+            ...labels.map((label) => ({ value: label, label }))
+        ];
+    });
 
     readonly sourceOptions = computed<DropdownOption[]>(() => {
         const labels = Array.from(new Set(this.entries().map((entry) => entry.sourceLabel.trim()).filter(Boolean)))
@@ -98,34 +98,20 @@ export class MonsterReferencePageComponent {
         ];
     });
 
-    readonly filteredEntries = computed(() => {
-        const query = this.searchTerm().trim().toLowerCase();
+    readonly baseSortedEntries = computed(() => {
         const selectedType = this.selectedType();
         const selectedSource = this.selectedSource();
         const selectedSort = this.selectedSort();
 
         const filtered = this.entries()
-            .filter((entry) => selectedType === 'All' || entry.creatureType === selectedType)
-            .filter((entry) => selectedSource === 'All sources' || entry.sourceLabel === selectedSource)
-            .filter((entry) => {
-                if (!query) {
-                    return true;
-                }
-
-                const haystack = [
-                    entry.name,
-                    entry.challengeRating,
-                    entry.creatureType,
-                    entry.sourceLabel,
-                    entry.notes,
-                    entry.tags.join(' ')
-                ].join(' ').toLowerCase();
-
-                return haystack.includes(query);
-            });
+            .filter((entry) => selectedType === 'All' || entry.creatureCategory === selectedType)
+            .filter((entry) => selectedSource === 'All sources' || entry.sourceLabel === selectedSource);
 
         const sorted = [...filtered];
         switch (selectedSort) {
+            case 'type':
+                sorted.sort((left, right) => left.creatureCategory.localeCompare(right.creatureCategory) || left.name.localeCompare(right.name));
+                break;
             case 'name':
                 sorted.sort((left, right) => left.name.localeCompare(right.name));
                 break;
@@ -135,28 +121,73 @@ export class MonsterReferencePageComponent {
             case 'cr-high':
                 sorted.sort((left, right) => this.parseChallengeRating(right.challengeRating) - this.parseChallengeRating(left.challengeRating) || left.name.localeCompare(right.name));
                 break;
-            case 'recent':
             default:
-                sorted.sort((left, right) => right.lastUpdated.localeCompare(left.lastUpdated) || left.name.localeCompare(right.name));
+                sorted.sort((left, right) => left.name.localeCompare(right.name));
                 break;
         }
 
         return sorted;
     });
 
-    readonly trackedCount = computed(() => this.entries().length);
-    readonly notedCount = computed(() => this.entries().filter((entry) => entry.notes.trim().length > 0).length);
-    readonly uniqueTypeCount = computed(() => new Set(this.entries().map((entry) => entry.creatureType).filter(Boolean)).size);
-    readonly uniqueTagCount = computed(() => new Set(this.entries().flatMap((entry) => entry.tags)).size);
-    readonly isEditing = computed(() => this.editingEntryId() !== null);
-    readonly deleteModalOpen = computed(() => this.pendingDelete() !== null);
-    readonly deleteModalMessage = computed(() => {
-        const pending = this.pendingDelete();
-        if (!pending) {
-            return 'Remove this monster reference?';
+    readonly sortedEntries = computed(() => {
+        const query = this.searchTerm().trim().toLowerCase();
+        if (!query) {
+            return this.baseSortedEntries();
         }
 
-        return `Remove ${pending.name} from your personal monster catalog? Notes and tags saved for it on this device will be lost.`;
+        return this.baseSortedEntries().filter((entry) => {
+            const haystack = [
+                entry.name,
+                entry.challengeRating,
+                entry.creatureType,
+                entry.creatureCategory,
+                entry.size,
+                entry.alignment,
+                entry.sourceLabel,
+                entry.legendary ? 'legendary' : '',
+                entry.speed
+            ].join(' ').toLowerCase();
+
+            return haystack.includes(query);
+        });
+    });
+
+    readonly sortPills = computed<SortPill[]>(() => {
+        const seen = new Set<string>();
+        const pills: SortPill[] = [];
+
+        for (const entry of this.baseSortedEntries()) {
+            const value = this.getSortPillValue(entry);
+            if (!value || seen.has(value)) {
+                continue;
+            }
+
+            seen.add(value);
+            pills.push({
+                value,
+                label: this.getSortPillLabel(value)
+            });
+        }
+
+        return pills;
+    });
+
+    readonly filteredEntries = computed(() => {
+        const activePill = this.selectedSortPill();
+        if (!activePill) {
+            return this.sortedEntries();
+        }
+
+        return this.sortedEntries().filter((entry) => this.getSortPillValue(entry) === activePill);
+    });
+
+    readonly trackedCount = computed(() => this.entries().length);
+    readonly linkedStatBlockCount = computed(() => this.entries().filter((entry) => entry.sourceUrl.length > 0).length);
+    readonly uniqueTypeCount = computed(() => new Set(this.entries().map((entry) => entry.creatureCategory).filter(Boolean)).size);
+    readonly legendaryCount = computed(() => this.entries().filter((entry) => entry.legendary).length);
+    readonly selectedSortDescription = computed(() => {
+        const selected = this.sortOptions.find((option) => String(option.value) === String(this.selectedSort()));
+        return selected?.description?.trim() ?? '';
     });
 
     updateSearchTerm(value: string): void {
@@ -173,142 +204,20 @@ export class MonsterReferencePageComponent {
 
     updateSelectedSort(value: string | number): void {
         const nextValue = String(value) as MonsterSortOption;
-        this.selectedSort.set(nextValue === 'name' || nextValue === 'cr-low' || nextValue === 'cr-high' ? nextValue : 'recent');
+        this.selectedSort.set(nextValue === 'cr-low' || nextValue === 'cr-high' || nextValue === 'type' ? nextValue : 'name');
+        this.selectedSortPill.set('');
     }
 
-    updateDraftField(field: keyof MonsterReferenceDraft, value: string): void {
-        this.draft.update((draft) => ({ ...draft, [field]: value }));
+    toggleSortPill(value: string): void {
+        this.selectedSortPill.update((current) => current === value ? '' : value);
     }
 
-    updateDraftCreatureType(value: string | number): void {
-        this.updateDraftField('creatureType', String(value));
+    openMonster(entry: MonsterCatalogEntry): void {
+        this.selectedMonster.set(entry);
     }
 
-    saveDraft(): void {
-        const draft = this.draft();
-        const normalizedName = draft.name.trim();
-        const normalizedUrl = draft.sourceUrl.trim();
-
-        if (!normalizedName) {
-            this.draftError.set('Monster name is required.');
-            this.draftMessage.set('');
-            return;
-        }
-
-        if (!normalizedUrl || !/^https?:\/\//i.test(normalizedUrl)) {
-            this.draftError.set('Add a valid official source URL so this entry can open the canonical monster page.');
-            this.draftMessage.set('');
-            return;
-        }
-
-        const timestamp = new Date().toISOString();
-        const editingId = this.editingEntryId();
-        const nextEntry: MonsterReferenceEntry = {
-            id: editingId ?? this.generateId('monster-ref'),
-            name: normalizedName,
-            challengeRating: draft.challengeRating.trim(),
-            creatureType: draft.creatureType.trim() || 'Other',
-            tags: this.normalizeTags(draft.tags),
-            sourceUrl: normalizedUrl,
-            sourceLabel: draft.sourceLabel.trim() || this.deriveSourceLabel(normalizedUrl),
-            notes: draft.notes.trim(),
-            lastUpdated: timestamp
-        };
-
-        const updatedEntries = editingId
-            ? this.entries().map((entry) => entry.id === editingId ? nextEntry : entry)
-            : [nextEntry, ...this.entries()];
-
-        this.entries.set(updatedEntries);
-        saveMonsterReferenceEntries(updatedEntries);
-        this.editingEntryId.set(null);
-        this.draft.set(this.createEmptyDraft());
-        this.draftError.set('');
-        this.draftMessage.set(editingId ? 'Monster reference updated.' : 'Monster reference saved.');
-    }
-
-    editEntry(entryId: string): void {
-        const entry = this.entries().find((item) => item.id === entryId);
-        if (!entry) {
-            return;
-        }
-
-        this.editingEntryId.set(entry.id);
-        this.draft.set({
-            name: entry.name,
-            challengeRating: entry.challengeRating,
-            creatureType: entry.creatureType,
-            sourceUrl: entry.sourceUrl,
-            sourceLabel: entry.sourceLabel,
-            tags: entry.tags.join(', '),
-            notes: entry.notes
-        });
-        this.draftError.set('');
-        this.draftMessage.set('Editing monster reference.');
-    }
-
-    cancelEdit(): void {
-        this.editingEntryId.set(null);
-        this.draft.set(this.createEmptyDraft());
-        this.draftError.set('');
-        this.draftMessage.set('');
-    }
-
-    requestDelete(entryId: string): void {
-        const entry = this.entries().find((item) => item.id === entryId) ?? null;
-        this.pendingDelete.set(entry);
-    }
-
-    confirmDelete(): void {
-        const pending = this.pendingDelete();
-        if (!pending) {
-            return;
-        }
-
-        const updatedEntries = this.entries().filter((entry) => entry.id !== pending.id);
-        this.entries.set(updatedEntries);
-        saveMonsterReferenceEntries(updatedEntries);
-        if (this.editingEntryId() === pending.id) {
-            this.cancelEdit();
-        }
-
-        this.pendingDelete.set(null);
-        this.draftMessage.set('Monster reference removed.');
-        this.draftError.set('');
-    }
-
-    closeDeleteModal(): void {
-        this.pendingDelete.set(null);
-    }
-
-    private createEmptyDraft(): MonsterReferenceDraft {
-        return {
-            name: '',
-            challengeRating: '',
-            creatureType: 'Humanoid',
-            sourceUrl: '',
-            sourceLabel: 'D&D Beyond',
-            tags: '',
-            notes: ''
-        };
-    }
-
-    private normalizeTags(value: string): string[] {
-        return Array.from(new Set(
-            value
-                .split(',')
-                .map((tag) => tag.trim())
-                .filter(Boolean)
-        )).sort((left, right) => left.localeCompare(right));
-    }
-
-    private deriveSourceLabel(url: string): string {
-        try {
-            const hostname = new URL(url).hostname.replace(/^www\./, '');
-            return hostname === 'dndbeyond.com' ? 'D&D Beyond' : hostname;
-        } catch {
-            return 'Reference Link';
-        }
+    closeMonsterModal(): void {
+        this.selectedMonster.set(null);
     }
 
     private parseChallengeRating(value: string): number {
@@ -326,7 +235,103 @@ export class MonsterReferencePageComponent {
         return Number.isFinite(parsed) ? parsed : -1;
     }
 
-    private generateId(prefix: string): string {
-        return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+    private getSortPillValue(entry: MonsterCatalogEntry): string {
+        switch (this.selectedSort()) {
+            case 'type':
+                return entry.creatureCategory || 'Other';
+            case 'cr-low':
+            case 'cr-high':
+                return entry.challengeRating || 'Unknown';
+            case 'name':
+            default:
+                return getAlphabeticalPill(entry.name);
+        }
     }
+
+    private getSortPillLabel(value: string): string {
+        if (this.selectedSort() === 'name') {
+            return value;
+        }
+
+        return value;
+    }
+}
+
+function getAlphabeticalPill(name: string): string {
+    const trimmed = name.trim();
+    if (!trimmed) {
+        return '#';
+    }
+
+    const character = trimmed.charAt(0).toUpperCase();
+    return /[A-Z]/.test(character) ? character : '#';
+}
+
+function normalizeMonsterCatalogEntry(entry: MonsterCatalogEntry): MonsterCatalogEntry {
+    return {
+        ...entry,
+        name: sanitizeMonsterName(entry.name, entry.slug),
+        creatureType: normalizeCreatureType(entry.creatureType),
+        creatureCategory: normalizeLabel(entry.creatureCategory) || deriveCreatureCategory(entry.creatureType),
+        size: normalizeLabel(entry.size),
+        alignment: entry.alignment.trim(),
+        speed: entry.speed.trim(),
+        sourceLabel: entry.sourceLabel.trim()
+    };
+}
+
+function sanitizeMonsterName(value: string, slug: string): string {
+    const trimmed = value.trim();
+    if (!trimmed || /^\d+(?:\.\d+)?$/.test(trimmed)) {
+        return formatMonsterName(slug);
+    }
+
+    return trimmed;
+}
+
+function formatMonsterName(value: string): string {
+    const normalized = value.replace(/[-_]+/g, ' ').trim();
+    if (!normalized) {
+        return 'Unknown Monster';
+    }
+
+    return normalized
+        .split(/\s+/)
+        .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+        .join(' ');
+}
+
+function normalizeLabel(value: string): string {
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return '';
+    }
+
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
+function normalizeCreatureType(value: string): string {
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return 'Unknown';
+    }
+
+    return trimmed
+        .split(',')
+        .map((segment) => normalizeLabel(segment))
+        .join(', ');
+}
+
+function deriveCreatureCategory(value: string): string {
+    const trimmed = value.trim().toLowerCase();
+    if (!trimmed) {
+        return 'Other';
+    }
+
+    const base = trimmed.split('(')[0].split(',')[0].trim();
+    if (!base) {
+        return 'Other';
+    }
+
+    return base.charAt(0).toUpperCase() + base.slice(1);
 }

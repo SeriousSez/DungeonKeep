@@ -22,6 +22,9 @@ interface NpcGenerationPrompt {
     factionHint: string;
     locationHint: string;
     motivationHint: string;
+    functionHint: string;
+    toneHint: string;
+    campaignTieHint: string;
     notesHint: string;
 }
 
@@ -318,6 +321,9 @@ export class NpcManagerComponent {
                 factionHint: prompt.factionHint.trim() || activeNpc.faction,
                 locationHint: prompt.locationHint.trim() || activeNpc.location,
                 motivationHint: prompt.motivationHint.trim() || activeNpc.motivations,
+                functionHint: prompt.functionHint.trim(),
+                toneHint: prompt.toneHint.trim(),
+                campaignTieHint: prompt.campaignTieHint.trim(),
                 notesHint: prompt.notesHint.trim() || activeNpc.notes,
                 existingNpcNames: this.allNpcs()
                     .filter((npc) => npc.id !== activeNpc.id)

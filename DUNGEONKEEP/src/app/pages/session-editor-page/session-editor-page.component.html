@@ -86,6 +86,75 @@
             </label>
         </div>
 
+        <details class="generation-advanced-panel">
+            <summary>
+                <div>
+                    <p class="eyebrow">Advanced Guidance</p>
+                    <h3>Optional preferences and constraints</h3>
+                </div>
+                <span class="generation-advanced-summary">Leave this empty and the AI will choose on its own.</span>
+            </summary>
+
+            <div class="section-body section-grid two-up generation-advanced-grid">
+                <label class="field full-span">
+                    <span>Preferred NPCs</span>
+                    @if (generationNpcGroups().length) {
+                    <app-multi-select-dropdown [groups]="generationNpcGroups()" [value]="generationHints().preferredNpcNames" placeholder="Let the AI choose NPCs" (changed)="updateGenerationPreferredNpcNames($event)"></app-multi-select-dropdown>
+                    } @else {
+                    <p class="advanced-empty-note">No campaign NPCs are available yet. The AI can introduce new NPCs if needed.</p>
+                    }
+                </label>
+
+                <label class="field full-span">
+                    <span>Avoid NPCs</span>
+                    @if (generationNpcGroups().length) {
+                    <app-multi-select-dropdown [groups]="generationNpcGroups()" [value]="generationHints().avoidedNpcNames" placeholder="No NPC exclusions" (changed)="updateGenerationAvoidedNpcNames($event)"></app-multi-select-dropdown>
+                    } @else {
+                    <p class="advanced-empty-note">No campaign NPCs are available to exclude.</p>
+                    }
+                </label>
+
+                <label class="field full-span">
+                    <span>Preferred Monsters</span>
+                    <app-multi-select-dropdown [groups]="generationMonsterGroups()" [value]="generationHints().preferredMonsterNames" [searchable]="true" searchPlaceholder="Search monsters" placeholder="Let the AI choose monsters"
+                        (changed)="updateGenerationPreferredMonsterNames($event)"></app-multi-select-dropdown>
+                    <small class="advanced-helper">Use this when you already know which creatures should appear. The AI may still add supporting monsters if needed.</small>
+                </label>
+
+                <label class="field full-span">
+                    <span>Avoid Monsters</span>
+                    <app-multi-select-dropdown [groups]="generationMonsterGroups()" [value]="generationHints().avoidedMonsterNames" [searchable]="true" searchPlaceholder="Search monsters" placeholder="No monster exclusions"
+                        (changed)="updateGenerationAvoidedMonsterNames($event)"></app-multi-select-dropdown>
+                </label>
+
+                <label class="field">
+                    <span>Total Encounters</span>
+                    <input type="number" min="1" [value]="generationHints().encounterCount ?? ''" (input)="updateGenerationEncounterCount($any($event.target).value)" placeholder="Auto" />
+                </label>
+
+                <label class="field">
+                    <span>Combat Encounters</span>
+                    <input type="number" min="0" [value]="generationHints().combatEncounterCount ?? ''" (input)="updateGenerationCombatEncounterCount($any($event.target).value)" placeholder="Auto" />
+                </label>
+
+                <label class="field">
+                    <span>Difficulty</span>
+                    <app-dropdown ariaLabel="Difficulty preference" [value]="generationHints().difficultyPreference" [options]="generationDifficultyOptions" [searchable]="false" [placeholder]="'Auto'" (changed)="updateGenerationDifficultyPreference($event)"></app-dropdown>
+                </label>
+
+                <label class="field">
+                    <span>Session Focus</span>
+                    <app-dropdown ariaLabel="Session focus" [value]="generationHints().sessionFocus" [options]="sessionFocusOptions" [searchable]="false" [placeholder]="'Balanced'" (changed)="updateGenerationSessionFocus($event)"></app-dropdown>
+                </label>
+
+                <label class="field full-span">
+                    <span>Constraints</span>
+                    <textarea rows="3" [value]="generationHints().additionalConstraints" (input)="updateGenerationAdditionalConstraints($any($event.target).value)" placeholder="No travel, keep it city-based, include a betrayal, avoid lethal combat, and so on."></textarea>
+                    <small class="advanced-helper">These are preferences, not hard locks. If there is not enough here for a full session, the AI can add what is missing and you can refine the draft afterwards.</small>
+                </label>
+            </div>
+        </details>
+
         <div class="generation-actions-row">
             <button type="button" class="ghost-button" (click)="selectCreationMode('standard')">Back to editor</button>
             <button type="button" class="primary-button" [class.is-loading]="generationInProgress()" [disabled]="generationInProgress()" (click)="generateSessionDraft()">{{ generationInProgress() ? 'Generating...' : 'Generate session draft' }}</button>

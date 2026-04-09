@@ -35,6 +35,8 @@ export class MultiSelectDropdownComponent {
     readonly placeholder = input<string>('Select...');
     readonly maxSelections = input<number | null>(null);
     readonly selectionMode = input<'single' | 'multiple'>('multiple');
+    readonly searchable = input<boolean>(false);
+    readonly searchPlaceholder = input<string>('Search...');
     readonly changed = output<string[]>();
 
     readonly isOpen = signal(false);
@@ -44,6 +46,20 @@ export class MultiSelectDropdownComponent {
     readonly panelAvailableWidth = signal<number | null>(null);
     readonly isSingleSelect = computed(() => this.selectionMode() === 'single');
     readonly flatOptions = computed(() => this.groups().flatMap((group) => group.options));
+    readonly searchTerm = signal('');
+    readonly filteredGroups = computed(() => {
+        const query = this.searchTerm().trim().toLowerCase();
+        if (!query) {
+            return this.groups();
+        }
+
+        return this.groups()
+            .map((group) => ({
+                ...group,
+                options: group.options.filter((option) => this.optionLabel(option).toLowerCase().includes(query))
+            }))
+            .filter((group) => group.options.length > 0);
+    });
     readonly triggerLabel = computed(() => {
         const values = this.value();
         if (values.length === 0) {
@@ -76,6 +92,7 @@ export class MultiSelectDropdownComponent {
                 this.panelMaxHeight.set(this.defaultPanelMaxHeight);
                 this.panelAlignment.set('start');
                 this.panelAvailableWidth.set(null);
+                this.searchTerm.set('');
                 return;
             }
 
@@ -173,10 +190,16 @@ export class MultiSelectDropdownComponent {
             const nextOpen = !open;
             if (nextOpen) {
                 this.suppressOutsideCloseUntil = Date.now() + 150;
+            } else {
+                this.searchTerm.set('');
             }
 
             return nextOpen;
         });
+    }
+
+    updateSearchTerm(value: string): void {
+        this.searchTerm.set(value);
     }
 
     onToggle(option: string, checked: boolean): void {

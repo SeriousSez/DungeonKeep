@@ -134,6 +134,41 @@
     max-height: 300px;
 }
 
+.msd-search-shell {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 10px 12px 8px;
+    background: var(--surface-raised-solid);
+    border-bottom: 1px solid var(--panel-border);
+}
+
+.msd-search-input {
+    width: 100%;
+    min-height: 36px;
+    padding: 0 10px;
+    border-radius: 8px;
+    border: 1px solid var(--panel-border);
+    background: var(--surface-raised);
+    color: var(--text-main);
+    font: inherit;
+    font-size: 0.88rem;
+
+    &:focus {
+        outline: none;
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+    }
+}
+
+.msd-empty-state {
+    margin: 0;
+    padding: 16px 12px;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    text-align: center;
+}
+
 .msd-group {
     padding: 8px 0;
 

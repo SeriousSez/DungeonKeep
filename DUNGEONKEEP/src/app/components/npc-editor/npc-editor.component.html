@@ -87,10 +87,39 @@
                 <span>Motivation Hint</span>
                 <textarea rows="3" [value]="generationPrompt().motivationHint" (input)="updateGenerationMotivationHint($any($event.target).value)" placeholder="Desperate to protect a sibling, secretly hunting a relic."></textarea>
             </label>
+
             <label class="field">
                 <span>Extra Direction</span>
                 <textarea rows="3" [value]="generationPrompt().notesHint" (input)="updateGenerationNotesHint($any($event.target).value)" placeholder="Make them suspicious but helpful, with a rumor tied to the lighthouse cult."></textarea>
             </label>
+
+            <details class="generation-advanced-panel field full-span">
+                <summary>
+                    <div>
+                        <p class="eyebrow">Advanced Guidance</p>
+                        <h4>Optional role, tone, and campaign tie</h4>
+                    </div>
+                    <span class="generation-advanced-summary">Leave these open and the AI will choose.</span>
+                </summary>
+
+                <div class="section-grid two-up generation-advanced-grid">
+                    <label class="field">
+                        <span>NPC Function</span>
+                        <app-dropdown ariaLabel="NPC function hint" [value]="generationPrompt().functionHint" [options]="npcFunctionOptions" [searchable]="false" [placeholder]="'Auto'" (changed)="updateGenerationFunctionHint($event)"></app-dropdown>
+                    </label>
+
+                    <label class="field">
+                        <span>Tone</span>
+                        <app-dropdown ariaLabel="NPC tone hint" [value]="generationPrompt().toneHint" [options]="npcToneOptions" [searchable]="false" [placeholder]="'Auto'" (changed)="updateGenerationToneHint($event)"></app-dropdown>
+                    </label>
+
+                    <label class="field full-span">
+                        <span>Campaign Tie</span>
+                        <textarea rows="3" [value]="generationPrompt().campaignTieHint" (input)="updateGenerationCampaignTieHint($any($event.target).value)" placeholder="Connected to the lighthouse cult, owes the party a favor, or knows something about the missing relic."></textarea>
+                        <small class="advanced-helper">Use this to anchor the NPC to an active thread, faction, or party relationship.</small>
+                    </label>
+                </div>
+            </details>
         </div>
 
         <div class="generation-actions-row">

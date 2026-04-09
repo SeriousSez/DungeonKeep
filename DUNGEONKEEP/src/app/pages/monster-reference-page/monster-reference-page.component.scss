@@ -4,7 +4,8 @@
 
 .monster-reference-page {
     display: grid;
-    gap: 24px;
+    gap: 20px;
+    padding-bottom: 32px;
 }
 
 .panel {
@@ -19,8 +20,14 @@
 .monster-hero {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 20px;
-    align-items: end;
+    gap: 16px;
+    align-items: start;
+    padding-block: 18px;
+}
+
+.monster-hero-copy {
+    display: grid;
+    gap: 8px;
 }
 
 .eyebrow {
@@ -41,9 +48,9 @@
 }
 
 .monster-hero h1 {
-    max-width: 18ch;
-    font-size: clamp(2rem, 4vw, 3.1rem);
-    line-height: 1.03;
+    max-width: 15ch;
+    font-size: clamp(1.6rem, 2.8vw, 2.35rem);
+    line-height: 1.06;
 }
 
 .monster-hero-text,
@@ -58,16 +65,22 @@
 }
 
 .monster-hero-text {
-    margin: 12px 0 0;
-    max-width: 76ch;
+    margin: 0;
+    max-width: 62ch;
+    line-height: 1.45;
+    font-size: 0.96rem;
 }
 
 .monster-hero-actions,
-.editor-actions,
 .monster-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+}
+
+.monster-hero-actions {
+    align-self: start;
+    justify-content: flex-end;
 }
 
 .section-heading {
@@ -98,12 +111,26 @@
     max-width: none;
 }
 
-.stats-grid,
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.monster-grid {
+    max-height: 1000px;
+    overflow: auto;
+}
+
 .shortcut-grid,
 .monster-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
+}
+
+.monster-card {
+    cursor: pointer;
 }
 
 .stat-card,
@@ -178,16 +205,7 @@
     font-weight: 700;
 }
 
-.monster-layout {
-    display: grid;
-    grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.35fr);
-    gap: 24px;
-    align-items: start;
-}
-
-.editor-panel,
 .library-panel,
-.editor-grid,
 .filter-grid,
 .monster-card,
 .tag-list {
@@ -195,18 +213,61 @@
     gap: 16px;
 }
 
-.editor-panel {
-    position: sticky;
-    top: 24px;
-}
-
-.editor-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .field {
     display: grid;
     gap: 8px;
+}
+
+.filter-field-inline {
+    display: grid;
+    grid-template-columns: minmax(220px, 296px) minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+}
+
+.filter-field-inline>app-dropdown,
+.filter-field-inline>.filter-field-inline-description {
+    min-width: 0;
+    justify-self: stretch;
+}
+
+.filter-field-inline-description {
+    display: block;
+    margin: 0;
+    padding-top: 10px;
+    color: var(--text-muted);
+    font-size: 0.84rem;
+    line-height: 1.35;
+}
+
+.sort-pill-rail {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.sort-pill-button {
+    min-height: 36px;
+    padding: 0 14px;
+    border: 1px solid var(--panel-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--surface-raised) 86%, var(--accent-primary) 14%);
+    color: var(--text-main);
+    font: inherit;
+    font-size: 0.84rem;
+    cursor: pointer;
+    transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+
+.sort-pill-button:hover {
+    border-color: color-mix(in srgb, var(--accent-primary) 40%, var(--panel-border));
+    transform: translateY(-1px);
+}
+
+.sort-pill-button-active {
+    border-color: transparent;
+    background: var(--gradient-primary);
+    color: var(--surface-raised-solid);
 }
 
 .field span {
@@ -217,43 +278,27 @@
     color: var(--text-soft);
 }
 
-.full-span,
 .filter-field-search {
     grid-column: 1 / -1;
 }
 
+.filter-field-sort {
+    grid-column: span 2;
+}
+
 input,
-textarea,
 .primary-button,
 .ghost-button {
     font: inherit;
 }
 
-input,
-textarea {
+input {
     width: 100%;
     border-radius: 14px;
     border: 1px solid var(--panel-border);
     background: var(--surface-raised);
     color: var(--text-main);
     padding: 12px 14px;
-}
-
-textarea {
-    resize: vertical;
-    min-height: 140px;
-}
-
-.feedback {
-    margin: 0;
-}
-
-.feedback-error {
-    color: #a33a2a;
-}
-
-.feedback-success {
-    color: var(--text-main);
 }
 
 .filter-grid {
@@ -324,6 +369,7 @@ textarea {
 .ghost-button {
     background: transparent;
     color: var(--text-main);
+    text-decoration: none;
 }
 
 .primary-button {
@@ -333,16 +379,20 @@ textarea {
 }
 
 @media (max-width: 1120px) {
-    .monster-layout {
+    .filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .filter-field-inline {
         grid-template-columns: 1fr;
     }
 
-    .editor-panel {
-        position: static;
+    .filter-field-inline-description {
+        padding-top: 0;
     }
 
-    .filter-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+    .filter-field-sort {
+        grid-column: 1 / -1;
     }
 }
 
@@ -350,6 +400,7 @@ textarea {
     .monster-hero {
         grid-template-columns: 1fr;
         align-items: start;
+        padding-block: 16px;
     }
 
     .section-heading {
@@ -365,7 +416,6 @@ textarea {
     .stats-grid,
     .shortcut-grid,
     .monster-grid,
-    .editor-grid,
     .filter-grid {
         grid-template-columns: 1fr;
     }
@@ -376,8 +426,17 @@ textarea {
         padding: 18px;
     }
 
+    .monster-hero {
+        gap: 12px;
+        padding-block: 14px;
+    }
+
+    .monster-hero h1 {
+        max-width: none;
+        font-size: 1.5rem;
+    }
+
     .monster-actions,
-    .editor-actions,
     .monster-hero-actions,
     .ghost-button,
     .primary-button {

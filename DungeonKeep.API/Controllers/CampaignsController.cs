@@ -1979,6 +1979,18 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         var locationHint = string.IsNullOrWhiteSpace(request.LocationHint) ? "No location hint provided" : request.LocationHint.Trim();
         var estimatedLengthHint = string.IsNullOrWhiteSpace(request.EstimatedLengthHint) ? "No pacing hint provided" : request.EstimatedLengthHint.Trim();
         var markdownNotesHint = string.IsNullOrWhiteSpace(request.MarkdownNotesHint) ? "No extra notes provided" : request.MarkdownNotesHint.Trim();
+        var monsterCatalogContext = string.IsNullOrWhiteSpace(request.MonsterCatalogContext)
+            ? "No curated monster list provided"
+            : request.MonsterCatalogContext.Trim();
+        var preferredNpcNames = request.PreferredNpcNames is { Count: > 0 } ? FormatList(request.PreferredNpcNames) : "No preferred NPCs provided";
+        var avoidedNpcNames = request.AvoidedNpcNames is { Count: > 0 } ? FormatList(request.AvoidedNpcNames) : "No avoided NPCs provided";
+        var preferredMonsterNames = request.PreferredMonsterNames is { Count: > 0 } ? FormatList(request.PreferredMonsterNames) : "No preferred monsters provided";
+        var avoidedMonsterNames = request.AvoidedMonsterNames is { Count: > 0 } ? FormatList(request.AvoidedMonsterNames) : "No avoided monsters provided";
+        var encounterCount = request.EncounterCount is int encounterCountValue && encounterCountValue > 0 ? encounterCountValue.ToString() : "Auto";
+        var combatEncounterCount = request.CombatEncounterCount is int combatEncounterCountValue && combatEncounterCountValue >= 0 ? combatEncounterCountValue.ToString() : "Auto";
+        var difficultyPreference = string.IsNullOrWhiteSpace(request.DifficultyPreference) ? "Auto" : request.DifficultyPreference.Trim();
+        var sessionFocus = string.IsNullOrWhiteSpace(request.SessionFocus) ? "Balanced" : request.SessionFocus.Trim();
+        var additionalConstraints = string.IsNullOrWhiteSpace(request.AdditionalConstraints) ? "No extra constraints provided" : request.AdditionalConstraints.Trim();
 
         return string.Join('\n',
         [
@@ -1999,6 +2011,12 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             "Write richer descriptions, stronger motivations, and more specific outcomes than a minimal outline would provide.",
             "Keep the session practical for a DM to run at the table.",
             "Ground the material in the existing campaign context and avoid contradicting it.",
+            "When suggesting monsters, prefer the curated monster list provided below. Reuse exact monster names from that list whenever they fit.",
+            "Do not invent a different monster when a strong curated match already exists.",
+            "If none of the curated options fit the session, you may omit monsters or use a clearly justified alternative.",
+            "Treat the advanced guidance below as preferences unless it is framed as an explicit avoidance.",
+            "If the provided guidance is too sparse for a full session, add supporting NPCs, monsters, encounters, and connective scenes that fit the campaign.",
+            "Avoid the listed NPCs and monsters unless there is no plausible alternative.",
             string.Empty,
             $"Campaign name: {campaign.Name}",
             $"Campaign setting: {campaign.Setting}",
@@ -2015,7 +2033,21 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             $"Objective hint: {shortDescriptionHint}",
             $"Location hint: {locationHint}",
             $"Pacing hint: {estimatedLengthHint}",
-            $"Current notes hint: {markdownNotesHint}"
+            $"Current notes hint: {markdownNotesHint}",
+            string.Empty,
+            "Advanced guidance:",
+            $"Preferred NPCs: {preferredNpcNames}",
+            $"Avoid NPCs: {avoidedNpcNames}",
+            $"Preferred monsters: {preferredMonsterNames}",
+            $"Avoid monsters: {avoidedMonsterNames}",
+            $"Target encounter count: {encounterCount}",
+            $"Target combat encounter count: {combatEncounterCount}",
+            $"Difficulty preference: {difficultyPreference}",
+            $"Session focus: {sessionFocus}",
+            $"Additional constraints: {additionalConstraints}",
+            string.Empty,
+            "Curated monster list:",
+            monsterCatalogContext
         ]);
     }
 
@@ -2050,6 +2082,9 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         var factionHint = string.IsNullOrWhiteSpace(request.FactionHint) ? "No faction hint provided" : request.FactionHint.Trim();
         var locationHint = string.IsNullOrWhiteSpace(request.LocationHint) ? "No location hint provided" : request.LocationHint.Trim();
         var motivationHint = string.IsNullOrWhiteSpace(request.MotivationHint) ? "No motivation hint provided" : request.MotivationHint.Trim();
+        var functionHint = string.IsNullOrWhiteSpace(request.FunctionHint) ? "No NPC function hint provided" : request.FunctionHint.Trim();
+        var toneHint = string.IsNullOrWhiteSpace(request.ToneHint) ? "No tone hint provided" : request.ToneHint.Trim();
+        var campaignTieHint = string.IsNullOrWhiteSpace(request.CampaignTieHint) ? "No campaign tie hint provided" : request.CampaignTieHint.Trim();
         var notesHint = string.IsNullOrWhiteSpace(request.NotesHint) ? "No extra notes provided" : request.NotesHint.Trim();
 
         var lines = new List<string>
@@ -2088,7 +2123,11 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         lines.Add($"Faction hint: {factionHint}");
         lines.Add($"Location hint: {locationHint}");
         lines.Add($"Motivation hint: {motivationHint}");
+        lines.Add($"NPC function hint: {functionHint}");
+        lines.Add($"Tone hint: {toneHint}");
+        lines.Add($"Campaign tie hint: {campaignTieHint}");
         lines.Add($"Additional notes hint: {notesHint}");
+        lines.Add("Treat the NPC function, tone, and campaign tie as shaping guidance for the draft's role in play, voice, and connection to the campaign.");
 
         return string.Join('\n', lines);
     }
@@ -3740,7 +3779,22 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
 
     public sealed record GenerateCampaignDraftResponse(string Name, string Setting, string Tone, int LevelStart, int LevelEnd, string Hook, string NextSession, string Summary);
 
-    public sealed record GenerateSessionDraftRequest(string? TitleHint, string? ShortDescriptionHint, string? LocationHint, string? EstimatedLengthHint, string? MarkdownNotesHint);
+    public sealed record GenerateSessionDraftRequest(
+        string? TitleHint,
+        string? ShortDescriptionHint,
+        string? LocationHint,
+        string? EstimatedLengthHint,
+        string? MarkdownNotesHint,
+        string? MonsterCatalogContext,
+        IReadOnlyList<string>? PreferredNpcNames,
+        IReadOnlyList<string>? AvoidedNpcNames,
+        IReadOnlyList<string>? PreferredMonsterNames,
+        IReadOnlyList<string>? AvoidedMonsterNames,
+        int? EncounterCount,
+        int? CombatEncounterCount,
+        string? DifficultyPreference,
+        string? SessionFocus,
+        string? AdditionalConstraints);
 
     public sealed record GenerateCampaignMapRequest(string? Background, string? MapName, IReadOnlyList<string>? ExistingLandmarkLabels, string? ReferenceImageUrl);
 
@@ -3774,6 +3828,9 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         string? FactionHint,
         string? LocationHint,
         string? MotivationHint,
+        string? FunctionHint,
+        string? ToneHint,
+        string? CampaignTieHint,
         string? NotesHint,
         IReadOnlyList<string>? ExistingNpcNames);
 

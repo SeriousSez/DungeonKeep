@@ -1,0 +1,135 @@
+<div class="modal-backdrop" (click)="close()">
+    <article class="monster-stat-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+        <header class="monster-strip">
+            <div class="monster-strip-icon" aria-hidden="true">
+                <i class="fa-duotone fa-thin fa-dragon"></i>
+            </div>
+            <div class="monster-strip-copy">
+                <h3>{{ monster().name }}</h3>
+                <p>{{ subtitle() }}</p>
+            </div>
+            <button type="button" class="close-modal" (click)="close()" aria-label="Close">
+                <i class="fa-duotone fa-thin fa-xmark"></i>
+            </button>
+        </header>
+
+        <div class="monster-sheet-body">
+            <div class="monster-tags-row">
+                <span class="monster-tags-label">PROFILE:</span>
+                @for (tag of profileTags(); track tag) {
+                <span class="monster-tag">{{ tag }}</span>
+                }
+            </div>
+
+            <hr class="sheet-divider" />
+
+            <div class="monster-facts-grid">
+                <article class="monster-fact-card">
+                    <span class="monster-fact-label">Armor Class</span>
+                    <strong>{{ armorClassText() }}</strong>
+                </article>
+                <article class="monster-fact-card">
+                    <span class="monster-fact-label">Hit Points</span>
+                    <strong>{{ hitPointsText() }}</strong>
+                </article>
+                <article class="monster-fact-card">
+                    <span class="monster-fact-label">Speed</span>
+                    <strong>{{ speedText() }}</strong>
+                </article>
+                <article class="monster-fact-card">
+                    <span class="monster-fact-label">Challenge</span>
+                    <strong>{{ monster().challengeRating || '—' }}</strong>
+                </article>
+            </div>
+
+            <hr class="sheet-divider" />
+
+            <div class="monster-abilities-grid">
+                @for (ability of abilityRows(); track ability.label) {
+                <article class="monster-ability-card">
+                    <span class="monster-ability-label">{{ ability.label }}</span>
+                    <strong>{{ scoreText(ability.value) }}</strong>
+                    <span>{{ modifierText(ability.value) }}</span>
+                </article>
+                }
+            </div>
+
+            <hr class="sheet-divider" />
+
+            <dl class="monster-details-list">
+                <div>
+                    <dt>Source:</dt>
+                    <dd>{{ monster().sourceLabel || 'Unknown' }}</dd>
+                </div>
+                <div>
+                    <dt>Type:</dt>
+                    <dd>{{ monster().creatureType || '—' }}</dd>
+                </div>
+                <div>
+                    <dt>Size:</dt>
+                    <dd>{{ monster().size || '—' }}</dd>
+                </div>
+                <div>
+                    <dt>Alignment:</dt>
+                    <dd>{{ monster().alignment || '—' }}</dd>
+                </div>
+                <div>
+                    <dt>Legendary:</dt>
+                    <dd>{{ monster().legendary ? 'Yes' : 'No' }}</dd>
+                </div>
+            </dl>
+
+            @if (supplementalDetails().length) {
+            <hr class="sheet-divider" />
+
+            <dl class="monster-details-list monster-details-list-extended">
+                @for (detail of supplementalDetails(); track detail.label) {
+                <div>
+                    <dt>{{ detail.label }}:</dt>
+                    <dd>{{ detail.value }}</dd>
+                </div>
+                }
+            </dl>
+            }
+
+            @if (textSections().length) {
+            <hr class="sheet-divider" />
+
+            <div class="monster-text-sections">
+                @for (section of textSections(); track trackTextSection($index, section)) {
+                <section class="monster-text-section">
+                    <h4>{{ section.heading }}</h4>
+
+                    <div class="monster-text-entry-list">
+                        @for (entry of section.entries; track entry.title + entry.text) {
+                        <article class="monster-text-entry">
+                            <p>
+                                @if (entry.title) {
+                                <strong><em>{{ entry.title }}. </em></strong>
+                                }
+                                <span [innerHTML]="formatEntryText(entry.text)"></span>
+                            </p>
+                        </article>
+                        }
+                    </div>
+                </section>
+                }
+            </div>
+            }
+
+            <hr class="sheet-divider" />
+
+            <p class="monster-note">
+                This in-app stat block summarizes the local monster data from your catalog. Use the official link for the full trait, action, reaction, and legendary action text when it is available.
+            </p>
+
+            <div class="monster-actions-row">
+                @if (monster().sourceUrl) {
+                <a class="primary-link-btn" [href]="monster().sourceUrl" target="_blank" rel="noopener noreferrer">Open Full Stat Block</a>
+                } @else {
+                <span class="monster-missing-link">No external stat block link is available for this monster.</span>
+                }
+            </div>
+        </div>
+    </article>
+</div>

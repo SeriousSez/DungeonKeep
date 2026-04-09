@@ -92,6 +92,39 @@ p {
     align-items: flex-start;
 }
 
+.generation-advanced-panel {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--surface-raised) 84%, transparent);
+}
+
+.generation-advanced-panel summary {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    list-style: none;
+}
+
+.generation-advanced-panel summary::-webkit-details-marker {
+    display: none;
+}
+
+.generation-advanced-summary,
+.advanced-helper {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+.generation-advanced-grid {
+    padding-top: 6px;
+}
+
 .editor-status {
     margin: 0;
     padding: 12px 14px;

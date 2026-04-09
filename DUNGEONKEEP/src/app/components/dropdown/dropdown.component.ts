@@ -38,6 +38,7 @@ export class DropdownComponent {
     readonly size = input<'wide' | 'compact' | 'narrow'>('compact');
     readonly optionDensity = input<'regular' | 'dense'>('regular');
     readonly showOptionDescriptions = input<boolean>(true);
+    readonly showSelectedDescription = input<boolean>(true);
     readonly disabled = input<boolean>(false);
     readonly searchable = input<boolean>(false);
     readonly searchPlaceholder = input<string>('Search options...');

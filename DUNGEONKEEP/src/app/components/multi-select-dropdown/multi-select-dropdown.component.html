@@ -14,7 +14,16 @@
     @if (isOpen()) {
     <div class="msd-panel" role="listbox" [attr.aria-multiselectable]="isSingleSelect() ? null : 'true'" [style.max-height.px]="panelMaxHeight()" [style.max-width.px]="getPanelMaxWidth()">
         <div class="msd-panel-inner" [style.max-height.px]="panelMaxHeight()">
-            @for (group of groups(); track group.label) {
+            @if (searchable()) {
+            <div class="msd-search-shell">
+                <input type="search" class="msd-search-input" [value]="searchTerm()" [placeholder]="searchPlaceholder()" (input)="updateSearchTerm($any($event.target).value)" />
+            </div>
+            }
+
+            @if (filteredGroups().length === 0) {
+            <p class="msd-empty-state">No options match this search.</p>
+            } @else {
+            @for (group of filteredGroups(); track group.label) {
             <div class="msd-group">
                 @if (group.label) {
                 <p class="msd-group-label">{{ group.label }}</p>
@@ -29,6 +38,7 @@
                 </label>
                 }
             </div>
+            }
             }
         </div>
     </div>
