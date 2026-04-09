@@ -7,6 +7,15 @@
     </section>
 
     <section class="panel standard-steps-shell">
+        @if (showBuilderSkeleton()) {
+        <div class="step-rail step-rail--skeleton" aria-hidden="true">
+            @for (slot of builderSkeletonStepSlots; track slot) {
+            <span class="step-pill step-pill--skeleton">
+                <span class="builder-skeleton-line builder-skeleton-line--pill"></span>
+            </span>
+            }
+        </div>
+        } @else {
         <div class="step-rail" role="tablist" aria-label="Character Builder Steps">
             @for (step of standardSteps; track step.key) {
             <a class="step-pill" [class.active]="activeStandardStep() === step.key" [attr.aria-selected]="activeStandardStep() === step.key" [routerLink]="getBuilderStepRoute(step.key)" queryParamsHandling="preserve" [attr.title]="step.label">
@@ -15,8 +24,31 @@
             </a>
             }
         </div>
+        }
     </section>
 
+    @if (showBuilderSkeleton()) {
+    <section class="panel step-panel step-panel--skeleton" aria-hidden="true">
+        <div class="builder-skeleton-group builder-skeleton-group--header">
+            <span class="builder-skeleton-line builder-skeleton-line--title"></span>
+            <span class="builder-skeleton-line builder-skeleton-line--button"></span>
+        </div>
+        <span class="builder-skeleton-line builder-skeleton-line--search"></span>
+        <div class="class-category-list class-category-list--skeleton">
+            @for (row of builderSkeletonOptionRows; track row) {
+            <section class="class-category-block class-category-block--skeleton">
+                <div class="class-category-header class-category-header--skeleton">
+                    <span class="builder-skeleton-line builder-skeleton-line--section"></span>
+                    <span class="builder-skeleton-line builder-skeleton-line--meta"></span>
+                </div>
+                <div class="option-list">
+                    <span class="option-row option-row--skeleton"></span>
+                </div>
+            </section>
+            }
+        </div>
+    </section>
+    } @else {
     @switch (activeStandardStep()) {
     @case ('home') {
     <section class="panel step-panel">
@@ -1795,6 +1827,7 @@
         </div>
         <p class="muted">Complete your character now, then assign or change campaign placement at any time.</p>
     </section>
+    }
     }
     }
 

@@ -1,6 +1,6 @@
 ﻿import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule, DOCUMENT } from '@angular/common';
-import { ChangeDetectorRef, Component, computed, effect, inject, signal } from '@angular/core';
+import { afterNextRender, ChangeDetectorRef, Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs/operators';
@@ -158,15 +158,15 @@ export class NewCharacterStandardPageComponent {
 
     private readonly routeStep = toSignal(
         this.route.paramMap.pipe(map((params) => params.get('step') as StandardStep | null)),
-        { initialValue: null }
+        { initialValue: this.route.snapshot.paramMap.get('step') as StandardStep | null }
     );
     private readonly routeCharacterIdParam = toSignal(
         this.route.paramMap.pipe(map((params) => params.get('id') ?? '')),
-        { initialValue: '' }
+        { initialValue: this.route.snapshot.paramMap.get('id') ?? '' }
     );
     private readonly routeCharacterId = toSignal(
         this.route.queryParamMap.pipe(map((params) => params.get('characterId') ?? '')),
-        { initialValue: '' }
+        { initialValue: this.route.snapshot.queryParamMap.get('characterId') ?? '' }
     );
     private readonly hydratedCharacterId = signal('');
     private readonly navigationEditLevel = signal<number | null>(this.resolveNavigationEditLevel());
@@ -176,8 +176,61 @@ export class NewCharacterStandardPageComponent {
         return step && validSteps.has(step) ? step : 'class';
     });
     readonly activeBuilderCharacterId = computed(() => this.routeCharacterIdParam() || this.routeCharacterId());
+    readonly builderSkeletonStepSlots = [0, 1, 2, 3, 4, 5, 6] as const;
+    readonly builderSkeletonOptionRows = [0, 1, 2, 3] as const;
+    readonly showBuilderSkeleton = computed(() => {
+        const sessionInitialized = this.session.initialized();
+        const storeInitialized = this.store.initialized();
+        const characterId = this.activeBuilderCharacterId();
+
+        if (!sessionInitialized || !storeInitialized) {
+            return true;
+        }
+
+        if (this.store.isHydrating() && this.store.characters().length === 0) {
+            return true;
+        }
+
+        if (!characterId) {
+            return false;
+        }
+
+        if (this.store.isHydrating() && !this.store.characters().some((entry) => entry.id === characterId)) {
+            return true;
+        }
+
+        return false;
+    });
 
     constructor() {
+        afterNextRender(() => {
+            const view = this.document.defaultView;
+            if (!view) {
+                this.cdr.detectChanges();
+                return;
+            }
+
+            view.requestAnimationFrame(() => this.cdr.detectChanges());
+        });
+
+        effect((onCleanup) => {
+            this.session.initialized();
+            this.store.initialized();
+            this.store.isHydrating();
+            this.store.characters();
+            this.activeBuilderCharacterId();
+            this.hydratedCharacterId();
+
+            const view = this.document.defaultView;
+            if (!view) {
+                this.cdr.detectChanges();
+                return;
+            }
+
+            const frameId = view.requestAnimationFrame(() => this.cdr.detectChanges());
+            onCleanup(() => view.cancelAnimationFrame(frameId));
+        });
+
         effect(() => {
             if (this.routeStep() !== null) {
                 return;

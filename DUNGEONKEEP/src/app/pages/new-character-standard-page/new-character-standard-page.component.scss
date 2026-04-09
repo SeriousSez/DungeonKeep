@@ -41,6 +41,16 @@
     }
 }
 
+@keyframes dk-skeleton-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
 .page-stack {
     display: grid;
     gap: 24px;
@@ -150,6 +160,92 @@
     padding: 20px;
     display: grid;
     gap: 14px;
+}
+
+.step-panel--skeleton {
+    gap: 18px;
+}
+
+.builder-skeleton-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.builder-skeleton-line {
+    display: block;
+    border-radius: 999px;
+    background: linear-gradient(90deg,
+            color-mix(in srgb, var(--color-surface-alt) 78%, transparent) 0%,
+            color-mix(in srgb, var(--color-surface) 92%, white 8%) 50%,
+            color-mix(in srgb, var(--color-surface-alt) 78%, transparent) 100%);
+    background-size: 200% 100%;
+    animation: dk-skeleton-shimmer 1.6s linear infinite;
+}
+
+.builder-skeleton-line--pill {
+    width: 72px;
+    height: 12px;
+}
+
+.builder-skeleton-line--title {
+    width: min(260px, 58%);
+    height: 20px;
+}
+
+.builder-skeleton-line--button {
+    width: 118px;
+    height: 34px;
+}
+
+.builder-skeleton-line--search {
+    width: 100%;
+    height: 38px;
+    border-radius: 10px;
+}
+
+.builder-skeleton-line--section {
+    width: 148px;
+    height: 13px;
+}
+
+.builder-skeleton-line--meta {
+    width: 92px;
+    height: 11px;
+}
+
+.step-rail--skeleton {
+    width: 100%;
+}
+
+.step-pill--skeleton {
+    min-width: 88px;
+    cursor: default;
+}
+
+.class-category-list--skeleton {
+    gap: 14px;
+}
+
+.class-category-block--skeleton {
+    gap: 12px;
+}
+
+.class-category-header--skeleton {
+    align-items: center;
+}
+
+.option-row--skeleton {
+    min-height: 56px;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    background: linear-gradient(90deg,
+            color-mix(in srgb, var(--surface-raised) 92%, transparent) 0%,
+            color-mix(in srgb, var(--color-surface) 96%, white 4%) 50%,
+            color-mix(in srgb, var(--surface-raised) 92%, transparent) 100%);
+    background-size: 200% 100%;
+    animation: dk-skeleton-shimmer 1.6s linear infinite;
 }
 
 .step-panel h2,
