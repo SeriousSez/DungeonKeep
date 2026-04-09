@@ -205,21 +205,20 @@
 }
 
 .campaign-assignment-controls {
-    display: flex;
-    flex-wrap: nowrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: flex-end;
     gap: 8px;
     width: 100%;
+    min-width: 0;
     margin-top: 0;
     position: relative;
     z-index: 45;
 }
 
 .campaign-assignment-controls app-dropdown {
-    flex: 1 1 220px;
-    min-width: min(100%, 220px);
-    max-width: 100%;
+    width: 100%;
+    min-width: 0;
 }
 
 .campaign-assignment-buttons {
@@ -227,6 +226,8 @@
     align-items: center;
     gap: 8px;
     flex-wrap: nowrap;
+    justify-self: end;
+    min-width: 0;
 }
 
 .assign-btn,
@@ -239,20 +240,6 @@
     padding: 0 12px;
     cursor: pointer;
     white-space: nowrap;
-}
-
-.remove-btn-label-short {
-    display: none;
-}
-
-@media (max-width: 1366px) {
-    .remove-btn-label-full {
-        display: none;
-    }
-
-    .remove-btn-label-short {
-        display: inline;
-    }
 }
 
 .edit-character-btn {
@@ -1342,17 +1329,15 @@
     }
 
     .campaign-assignment-controls {
-        display: flex;
-        flex-wrap: nowrap;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
         width: 100%;
-        justify-content: flex-end;
         align-items: center;
     }
 
     .campaign-assignment-controls app-dropdown {
         min-width: 0;
-        max-width: none;
-        flex: 1 1 auto;
+        width: 100%;
     }
 
     .campaign-assignment-buttons {

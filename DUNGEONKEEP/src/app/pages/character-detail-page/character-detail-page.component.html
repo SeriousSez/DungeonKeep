@@ -73,8 +73,7 @@
                                 {{ isUpdatingCampaign() ? 'Updating...' : 'Assign' }}
                             </button>
                             <button type="button" class="remove-btn" [disabled]="isUpdatingCampaign() || campaignName() === 'Unassigned'" (click)="removeCharacterFromCampaign()" aria-label="Remove from Campaign">
-                                <span class="remove-btn-label-full">Remove from Campaign</span>
-                                <span class="remove-btn-label-short">Remove</span>
+                                Remove
                             </button>
                         </div>
                     </div>

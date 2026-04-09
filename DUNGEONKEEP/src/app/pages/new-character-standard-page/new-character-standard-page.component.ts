@@ -173,7 +173,7 @@ export class NewCharacterStandardPageComponent {
 
     readonly activeStandardStep = computed<StandardStep>(() => {
         const step = this.routeStep();
-        return step && validSteps.has(step) ? step : 'home';
+        return step && validSteps.has(step) ? step : 'class';
     });
     readonly activeBuilderCharacterId = computed(() => this.routeCharacterIdParam() || this.routeCharacterId());
 
