@@ -32,23 +32,47 @@ export class App {
       }
 
       const user = this.currentUser();
-      const currentUrl = this.router.url;
+      const currentUrl = this.getCurrentUrl();
+      const isAuthRoute = currentUrl === '/auth' || currentUrl.startsWith('/auth?') || currentUrl.startsWith('/auth#');
+      const isPublicHomeRoute = currentUrl === '/' || currentUrl === '';
 
-      if (!user && currentUrl !== '/auth') {
-        void this.router.navigateByUrl('/auth');
+      if (!user && !isAuthRoute && !isPublicHomeRoute) {
+        void this.router.navigateByUrl('/');
         return;
       }
 
-      if (user && currentUrl.startsWith('/auth')) {
+      if (user && (isAuthRoute || isPublicHomeRoute)) {
         void this.router.navigateByUrl('/dashboard');
       }
     });
   }
 
+  private getCurrentUrl(): string {
+    const routerUrl = this.router.url;
+    if (routerUrl && routerUrl !== '/') {
+      return routerUrl;
+    }
+
+    if (typeof window === 'undefined') {
+      return routerUrl;
+    }
+
+    return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  }
+
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    if (!(event.target as HTMLElement).closest('.nav-group')) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    if (!target.closest('.nav-group')) {
       this.openDropdown.set(null);
+    }
+
+    if (this.mobileNavOpen() && !target.closest('.topbar')) {
+      this.closeMobileNav();
     }
   }
 

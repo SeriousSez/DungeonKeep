@@ -8,6 +8,19 @@ namespace DungeonKeep.API.Controllers;
 [Route("api/[controller]")]
 public sealed class CharactersController(ICharacterService characterService, IAuthService authService) : ControllerBase
 {
+    [HttpGet]
+    public async Task<ActionResult<IReadOnlyList<CharacterDto>>> GetAccessible(CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var characters = await characterService.GetAccessibleAsync(user.Id, cancellationToken);
+        return Ok(characters);
+    }
+
     [HttpPost("{characterId:guid}/delete")]
     public async Task<IActionResult> DeleteViaPost(Guid characterId, CancellationToken cancellationToken)
     {
@@ -106,6 +119,10 @@ public sealed class CharactersController(ICharacterService characterService, IAu
         {
             return StatusCode(403);
         }
+        catch (InvalidOperationException)
+        {
+            return NotFound("Character or campaign was not found.");
+        }
 
         if (updated is null)
         {
@@ -132,6 +149,10 @@ public sealed class CharactersController(ICharacterService characterService, IAu
         catch (UnauthorizedAccessException)
         {
             return StatusCode(403);
+        }
+        catch (InvalidOperationException)
+        {
+            return NotFound("Character or campaign was not found.");
         }
 
         if (updated is null)

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
@@ -18,6 +18,7 @@ export class CampaignMapsPageComponent {
     readonly store = inject(DungeonStoreService);
     private readonly route = inject(ActivatedRoute);
     private readonly destroyRef = inject(DestroyRef);
+    private readonly cdr = inject(ChangeDetectorRef);
 
     readonly campaignId = signal('');
 
@@ -29,6 +30,7 @@ export class CampaignMapsPageComponent {
 
         return this.store.campaigns().find((campaign) => campaign.id === campaignId) ?? null;
     });
+    readonly campaignReady = computed(() => this.selectedCampaign()?.detailsLoaded === true);
 
     readonly canEdit = computed(() => this.selectedCampaign()?.currentUserRole === 'Owner');
     readonly mapBoards = computed(() => this.normalizeMapBoards(this.selectedCampaign()));
@@ -42,8 +44,14 @@ export class CampaignMapsPageComponent {
 
                 if (campaignId) {
                     this.store.selectCampaign(campaignId);
+                    void this.ensureCampaignDetails(campaignId);
                 }
             });
+    }
+
+    private async ensureCampaignDetails(campaignId: string): Promise<void> {
+        await this.store.ensureCampaignLoaded(campaignId);
+        this.cdr.detectChanges();
     }
 
     isActiveBoard(mapId: string): boolean {

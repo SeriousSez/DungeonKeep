@@ -29,6 +29,9 @@ export type CampaignMapBackground = 'Parchment' | 'Cavern' | 'Coast' | 'City';
 export type CampaignMapIconType = 'Keep' | 'Town' | 'Camp' | 'Dungeon' | 'Danger' | 'Treasure' | 'Portal' | 'Tower';
 export type CampaignMapDecorationType = 'Forest' | 'Mountain' | 'Hill' | 'Reef' | 'Cave' | 'Ward';
 export type CampaignMapLabelTone = 'Region' | 'Feature';
+export type CampaignMapLabelFontFamily = 'display' | 'body';
+export type CampaignMapLabelFontStyle = 'normal' | 'italic';
+export type CampaignMapLabelTextTransform = 'none' | 'uppercase';
 
 export interface SessionPrep {
     id: string;
@@ -101,6 +104,25 @@ export interface CampaignMapDecoration {
     opacity: number;
 }
 
+export interface CampaignMapLabelStyle {
+    color: string;
+    backgroundColor: string;
+    borderColor: string;
+    fontFamily: CampaignMapLabelFontFamily;
+    fontSize: number;
+    fontWeight: number;
+    letterSpacing: number;
+    fontStyle: CampaignMapLabelFontStyle;
+    textTransform: CampaignMapLabelTextTransform;
+    borderWidth: number;
+    borderRadius: number;
+    paddingX: number;
+    paddingY: number;
+    textShadow: string;
+    boxShadow: string;
+    opacity: number;
+}
+
 export interface CampaignMapLabel {
     id: string;
     text: string;
@@ -108,6 +130,7 @@ export interface CampaignMapLabel {
     x: number;
     y: number;
     rotation: number;
+    style: CampaignMapLabelStyle;
 }
 
 export interface CampaignMapLayers {
@@ -143,6 +166,11 @@ export interface Campaign {
     summary: string;
     hook: string;
     nextSession: string;
+    characterCount: number;
+    sessionCount: number;
+    npcCount: number;
+    openThreadCount: number;
+    detailsLoaded: boolean;
     partyCharacterIds: string[];
     sessions: SessionPrep[];
     openThreads: CampaignThread[];
@@ -208,6 +236,7 @@ export interface Race {
 export interface Character {
     id: string;
     campaignId: string;
+    campaignIds?: string[];
     ownerUserId?: string | null;
     ownerDisplayName?: string;
     canEdit?: boolean;
@@ -267,6 +296,7 @@ export interface CharacterDraft {
     background: string;
     notes: string;
     campaignId?: string;
+    campaignIds?: string[];
     abilityScores?: AbilityScores;
     skills?: SkillProficiencies;
     armorClass?: number;

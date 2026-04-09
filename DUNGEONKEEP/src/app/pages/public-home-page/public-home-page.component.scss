@@ -1,0 +1,247 @@
+:host {
+    display: block;
+    width: 100%;
+}
+
+.landing-shell {
+    display: grid;
+    gap: 24px;
+    max-width: 1480px;
+    margin: 0 auto;
+    min-height: 100dvh;
+    align-content: center;
+    padding-block: 24px;
+}
+
+.panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 28px;
+    box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(18px);
+}
+
+.hero-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+    gap: 20px;
+    padding: clamp(18px, 3vw, 30px);
+    overflow: hidden;
+    position: relative;
+}
+
+.hero-panel::after {
+    content: '';
+    position: absolute;
+    inset: auto -8% -40% auto;
+    width: 360px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(169, 90, 41, 0.18), transparent 70%);
+    pointer-events: none;
+}
+
+.hero-copy,
+.hero-preview,
+.workflow-header,
+.workflow-step,
+.feature-card {
+    display: grid;
+    gap: 12px;
+}
+
+.hero-copy {
+    align-content: start;
+    padding-right: clamp(0px, 1vw, 18px);
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 0.74rem;
+    color: var(--text-soft);
+}
+
+.hero-copy h1,
+.workflow-header h2,
+.feature-card h2,
+.preview-card h2,
+.preview-card h3,
+.workflow-step h3 {
+    margin: 0;
+    font-family: var(--display-font);
+}
+
+.hero-copy h1 {
+    font-size: clamp(2.2rem, 5vw, 4.1rem);
+    line-height: 1.04;
+    max-width: 12ch;
+}
+
+.hero-text,
+.feature-card p,
+.preview-card p,
+.workflow-step p {
+    margin: 0;
+    color: var(--text-muted);
+    line-height: 1.7;
+}
+
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-top: 6px;
+}
+
+.hero-button {
+    min-height: 46px;
+    padding: 0 18px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hero-preview {
+    align-content: start;
+    position: relative;
+    z-index: 1;
+}
+
+.preview-card {
+    border: 1px solid var(--panel-border);
+    border-radius: 22px;
+    padding: 18px;
+    background: var(--surface-raised);
+}
+
+.preview-card--primary {
+    background:
+        linear-gradient(160deg, color-mix(in srgb, var(--surface-raised) 85%, var(--accent-primary) 15%), var(--surface-raised));
+}
+
+.preview-pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 6px;
+}
+
+.preview-pill,
+.workflow-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--pill-border);
+    background: var(--pill-bg);
+    font-size: 0.82rem;
+}
+
+.feature-grid,
+.workflow-grid {
+    display: grid;
+    gap: 18px;
+}
+
+.feature-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.feature-card {
+    padding: 18px;
+    align-content: start;
+}
+
+.feature-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    border: 1px solid var(--pill-border);
+    background: color-mix(in srgb, var(--pill-bg) 80%, var(--accent-primary) 20%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-primary);
+    font-size: 1.1rem;
+}
+
+.workflow-panel {
+    padding: clamp(18px, 3vw, 26px);
+    gap: 18px;
+}
+
+.workflow-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+}
+
+.workflow-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.workflow-step {
+    padding: 18px;
+    border-radius: 22px;
+    border: 1px solid var(--panel-border);
+    background: var(--surface-raised);
+}
+
+.workflow-badge {
+    width: 42px;
+    padding: 0;
+    font-weight: 700;
+    background: color-mix(in srgb, var(--pill-bg) 78%, var(--accent-primary) 22%);
+}
+
+@media (max-width: 980px) {
+
+    .hero-panel,
+    .feature-grid,
+    .workflow-grid,
+    .workflow-header {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-copy h1 {
+        max-width: 14ch;
+    }
+}
+
+@media (max-width: 640px) {
+    .landing-shell {
+        gap: 16px;
+        min-height: auto;
+        padding-block: 16px;
+    }
+
+    .hero-panel,
+    .feature-card,
+    .workflow-step,
+    .preview-card,
+    .workflow-panel {
+        padding: 14px;
+    }
+
+    .hero-copy h1 {
+        font-size: clamp(1.9rem, 10vw, 2.8rem);
+    }
+
+    .hero-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .workflow-header {
+        margin-bottom: 12px;
+    }
+
+    .hero-button,
+    .workflow-header .ghost-button {
+        width: 100%;
+    }
+}

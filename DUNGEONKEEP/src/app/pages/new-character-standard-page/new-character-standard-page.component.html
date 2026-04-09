@@ -1485,12 +1485,12 @@
         <section class="ability-method-panel">
             <h3>Standard Array</h3>
             <p class="muted">Assign each value once: 15, 14, 13, 12, 10, 8.</p>
-            <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;overflow-x:auto">
+            <div class="ability-assignment-grid">
                 @for (ability of abilityTiles; track ability) {
-                <div style="display:flex;flex-direction:column;gap:4px;min-width:80px">
-                    <span style="font-weight:700;font-size:.75rem;text-transform:uppercase">{{ abilityAbbreviations[ability] }}</span>
+                <div class="ability-assignment-tile">
+                    <span class="ability-assignment-label">{{ abilityAbbreviations[ability] }}</span>
                     <app-dropdown [value]="getStandardArraySelection(ability)" [options]="getStandardArrayDropdownOptions(ability)" [placeholder]="'--'" size="narrow" (changed)="onStandardArraySelectedFromDropdown(ability, $event)"></app-dropdown>
-                    <span style="font-size:.78rem;font-weight:700">TOTAL: {{ getAbilityBaseScore(ability) || '--' }}</span>
+                    <span class="ability-assignment-total">TOTAL: {{ getAbilityBaseScore(ability) || '--' }}</span>
                 </div>
                 }
             </div>
@@ -1499,13 +1499,13 @@
 
         @if (selectedAbilityMethod() === 'manual-rolled') {
         <section class="ability-method-panel">
-            <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;overflow-x:auto">
+            <div class="ability-assignment-grid">
                 @for (ability of abilityTiles; track ability; let idx = $index) {
-                <div style="display:flex;flex-direction:column;gap:4px;min-width:80px">
-                    <span style="font-weight:700;font-size:.75rem;text-transform:uppercase">{{ abilityAbbreviations[ability] }}</span>
+                <div class="ability-assignment-tile">
+                    <span class="ability-assignment-label">{{ abilityAbbreviations[ability] }}</span>
                     <input type="number" min="3" max="20" style="min-height:30px;font:inherit;border:1px solid var(--panel-border);border-radius:6px;background:var(--surface-raised);color:var(--text-main);padding:0 6px" [value]="getAbilityBaseScore(ability) || ''"
                         (input)="onAbilityScoreInput(ability, $any($event.target).value)" (blur)="onAbilityScoreCommit(ability, $any($event.target).value)" (change)="onAbilityScoreCommit(ability, $any($event.target).value)" />
-                    <span style="font-size:.78rem;font-weight:700">TOTAL: {{ getAbilityBaseScore(ability) || '--' }}</span>
+                    <span class="ability-assignment-total">TOTAL: {{ getAbilityBaseScore(ability) || '--' }}</span>
                 </div>
                 }
             </div>
@@ -1543,12 +1543,12 @@
                 <h3>Point Buy</h3>
             </div>
             <p class="muted">POINTS REMAINING: <strong>{{ pointBuyRemaining() }} / {{ pointBuyBudget }}</strong></p>
-            <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;overflow-x:auto">
+            <div class="ability-assignment-grid">
                 @for (ability of abilityTiles; track ability) {
-                <div style="display:flex;flex-direction:column;gap:4px;min-width:80px">
-                    <span style="font-weight:700;font-size:.75rem;text-transform:uppercase">{{ abilityAbbreviations[ability] }}</span>
+                <div class="ability-assignment-tile">
+                    <span class="ability-assignment-label">{{ abilityAbbreviations[ability] }}</span>
                     <app-dropdown [value]="getPointBuySelection(ability)" [options]="getPointBuyDropdownOptions(ability)" size="narrow" (changed)="onPointBuySelectedFromDropdown(ability, $event)"></app-dropdown>
-                    <span style="font-size:.78rem;font-weight:700">TOTAL: {{ getAbilityBaseScore(ability) }}</span>
+                    <span class="ability-assignment-total">TOTAL: {{ getAbilityBaseScore(ability) }}</span>
                 </div>
                 }
             </div>
@@ -1774,10 +1774,16 @@
             <input class="wide-input" type="text" [value]="completionPlayerName()" (input)="onCompletionPlayerNameChanged($any($event.target).value)" [placeholder]="suggestedPlayerName() || 'Enter player name'" />
         </label>
 
-        <label class="assign-campaign-toggle">
-            <input type="checkbox" [checked]="assignToCurrentCampaignOnCreate()" [disabled]="!store.selectedCampaign()" (change)="onAssignToCurrentCampaignChanged($any($event.target).checked)" />
-            <span>Assign to current campaign ({{ store.selectedCampaign()?.name || 'No campaign selected' }})</span>
-        </label>
+        <div class="assign-campaign-field">
+            <span class="assign-campaign-label">Campaign</span>
+
+            @if (completionCampaignGroups().length > 0) {
+            <app-multi-select-dropdown [groups]="completionCampaignGroups()" [value]="selectedCampaignIdsOnCreate()" placeholder="Leave unassigned for now" (changed)="onCompletionCampaignSelectionChanged($event)"></app-multi-select-dropdown>
+            }
+            @else {
+            <p class="muted assign-campaign-empty">You are not a member of any campaigns yet.</p>
+            }
+        </div>
 
         @if (completionError()) {
         <p class="muted">{{ completionError() }}</p>

@@ -29,10 +29,10 @@ jobs:
       web: ${{ steps.changes.outputs.web }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Detect file changes
-        uses: dorny/paths-filter@v2
+        uses: dorny/paths-filter@v4
         id: changes
         with:
           filters: |
@@ -59,7 +59,7 @@ jobs:
       publish-path: ${{ steps.publish.outputs.publish_path || env.PUBLISH_PATH }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -71,6 +71,7 @@ jobs:
         shell: pwsh
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          MYSQL_CONNECTION_STRING: ${{ secrets.MYSQL_CONNECTION_STRING }}
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
@@ -93,8 +94,14 @@ jobs:
           $emailEnabled = (-not [string]::IsNullOrWhiteSpace($env:SMTP_HOST)) -and (-not [string]::IsNullOrWhiteSpace($env:SMTP_FROM_ADDRESS))
 
           $config = @{
+            Database = @{
+              Provider = "MySql"
+              AutoMigrateSqliteToMySqlOnStartup = $false
+            }
             ConnectionStrings = @{
               DungeonKeep = "Data Source=dungeonkeep.db"
+              DungeonKeepSqlite = "Data Source=dungeonkeep.db"
+              DungeonKeepMySql = $env:MYSQL_CONNECTION_STRING
             }
             OpenAI = @{
               ApiKey = $env:OPENAI_API_KEY
@@ -160,13 +167,28 @@ jobs:
           }
 
           $json = $raw | ConvertFrom-Json
-          $connStr = $json.ConnectionStrings.DungeonKeep
+          $provider = $json.Database.Provider
+          $autoImport = $json.Database.AutoMigrateSqliteToMySqlOnStartup
+          $sqliteConnStr = $json.ConnectionStrings.DungeonKeepSqlite
+          $mySqlConnStr = $json.ConnectionStrings.DungeonKeepMySql
 
-          if ([string]::IsNullOrWhiteSpace($connStr)) {
-            throw "Published appsettings.Production.json has empty ConnectionStrings.DungeonKeep."
+          if ($provider -ne 'MySql') {
+            throw "Published appsettings.Production.json must set Database.Provider to MySql for production deploys."
           }
 
-          Write-Host "Published config validation passed. ConnectionStrings.DungeonKeep is populated."
+          if ($autoImport -ne $false) {
+            throw "Published appsettings.Production.json must set Database.AutoMigrateSqliteToMySqlOnStartup to false after MySQL migration is complete."
+          }
+
+          if ([string]::IsNullOrWhiteSpace($sqliteConnStr)) {
+            throw "Published appsettings.Production.json has empty ConnectionStrings.DungeonKeepSqlite."
+          }
+
+          if ([string]::IsNullOrWhiteSpace($mySqlConnStr)) {
+            throw "Published appsettings.Production.json has empty ConnectionStrings.DungeonKeepMySql."
+          }
+
+          Write-Host "Published config validation passed. Production is pinned to MySQL with startup SQLite import disabled."
 
       - name: Upload API artifact
         uses: actions/upload-artifact@v4
@@ -180,7 +202,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

@@ -10,16 +10,47 @@ namespace DungeonKeep.Infrastructure.Repositories;
 
 public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampaignRepository
 {
-    private readonly bool campaignSchemaReady = EnsureCampaignSchema(dbContext);
+    private readonly bool campaignSchemaReady = dbContext.Database.IsSqlite() ? EnsureCampaignSchema(dbContext) : true;
+
+    public async Task<IReadOnlyList<CampaignSummaryRecord>> GetAllSummariesForUserAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        _ = campaignSchemaReady;
+        return await dbContext.Campaigns
+            .AsNoTracking()
+            .Where(campaign => campaign.Memberships.Any(membership => membership.UserId == userId && membership.Status == "Active"))
+            .OrderByDescending(campaign => campaign.CreatedAtUtc)
+            .Select(campaign => new CampaignSummaryRecord(
+                campaign.Id,
+                campaign.Name,
+                campaign.Setting,
+                campaign.Tone,
+                campaign.LevelStart,
+                campaign.LevelEnd,
+                campaign.Hook,
+                campaign.NextSession,
+                campaign.Summary,
+                campaign.CreatedAtUtc,
+                campaign.CharacterAssignments.Count,
+                campaign.SessionsJson,
+                campaign.NpcsJson,
+                campaign.OpenThreadsJson,
+                campaign.Memberships
+                    .Where(membership => membership.UserId == userId && membership.Status == "Active")
+                    .Select(membership => membership.Role)
+                    .FirstOrDefault() ?? "Member"
+            ))
+            .ToListAsync(cancellationToken);
+    }
 
     public async Task<IReadOnlyList<Campaign>> GetAllForUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         _ = campaignSchemaReady;
         return await dbContext.Campaigns
+            .AsNoTracking()
+            .AsSplitQuery()
             .Include(c => c.Memberships)
                 .ThenInclude(membership => membership.User)
-            .Include(c => c.Characters)
-                .ThenInclude(character => character.OwnerUser)
+            .Include(c => c.CharacterAssignments)
             .Where(c => c.Memberships.Any(membership => membership.UserId == userId && membership.Status == "Active"))
             .OrderByDescending(c => c.CreatedAtUtc)
             .ToListAsync(cancellationToken);
@@ -29,10 +60,11 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
     {
         _ = campaignSchemaReady;
         return await dbContext.Campaigns
+            .AsNoTracking()
+            .AsSplitQuery()
             .Include(c => c.Memberships)
                 .ThenInclude(membership => membership.User)
-            .Include(c => c.Characters)
-                .ThenInclude(character => character.OwnerUser)
+            .Include(c => c.CharacterAssignments)
             .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
     }
 
@@ -146,9 +178,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> AddSessionAsync(Guid campaignId, CampaignSessionDto session, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -171,9 +201,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> UpdateSessionAsync(Guid campaignId, CampaignSessionDto session, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -214,9 +242,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> RemoveSessionAsync(Guid campaignId, Guid sessionId, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -275,9 +301,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> AddThreadAsync(Guid campaignId, Guid threadId, string text, string visibility, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -297,9 +321,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> UpdateThreadAsync(Guid campaignId, Guid threadId, string text, string visibility, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -339,9 +361,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> ArchiveThreadAsync(Guid campaignId, Guid threadId, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -365,9 +385,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> AddWorldNoteAsync(Guid campaignId, CampaignWorldNoteDto note, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -388,9 +406,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> UpdateWorldNoteAsync(Guid campaignId, CampaignWorldNoteDto note, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -429,9 +445,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> RemoveWorldNoteAsync(Guid campaignId, Guid noteId, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -452,9 +466,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     public async Task<Campaign?> UpdateMapAsync(Guid campaignId, CampaignMapLibraryDto library, CancellationToken cancellationToken = default)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -472,8 +484,6 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         var campaign = await dbContext.Campaigns
             .Include(c => c.Memberships)
                 .ThenInclude(membership => membership.User)
-            .Include(c => c.Characters)
-                .ThenInclude(character => character.OwnerUser)
             .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
@@ -650,7 +660,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                     NormalizeMapLabelTone(label.Tone),
                     ClampMapCoordinate(label.X),
                     ClampMapCoordinate(label.Y),
-                    ClampMapRotation(label.Rotation)))
+                    ClampMapRotation(label.Rotation),
+                    NormalizeMapLabelStyle(label.Style, label.Tone)))
                 .ToList(),
             new CampaignMapLayersDto(
                 NormalizeMapStrokeCollection(map.Layers?.Rivers),
@@ -740,9 +751,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         Action<Campaign, string> writeJson,
         CancellationToken cancellationToken)
     {
-        var campaign = await dbContext.Campaigns
-            .Include(c => c.Characters)
-            .FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
 
         if (campaign is null)
         {
@@ -753,7 +762,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         updateAction(items);
         writeJson(campaign, JsonSerializer.Serialize(items));
         await dbContext.SaveChangesAsync(cancellationToken);
-        return campaign;
+        return await GetByIdAsync(campaignId, cancellationToken);
     }
 
     private static List<PersistedCampaignSession> ParseSessions(string json)
@@ -921,6 +930,30 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         };
     }
 
+    private static CampaignMapLabelStyleDto NormalizeMapLabelStyle(CampaignMapLabelStyleDto? style, string? tone)
+    {
+        var normalizedTone = NormalizeMapLabelTone(tone);
+        var defaults = DefaultMapLabelStyle(normalizedTone);
+
+        return new CampaignMapLabelStyleDto(
+            NormalizeMapLabelColor(style?.Color, normalizedTone),
+            NormalizeMapLabelCssColor(style?.BackgroundColor, defaults.BackgroundColor),
+            NormalizeMapLabelCssColor(style?.BorderColor, defaults.BorderColor),
+            NormalizeMapLabelFontFamily(style?.FontFamily, normalizedTone),
+            ClampMapLabelFontSize(style?.FontSize ?? defaults.FontSize, normalizedTone),
+            ClampMapLabelFontWeight(style?.FontWeight ?? defaults.FontWeight, normalizedTone),
+            ClampMapLabelLetterSpacing(style?.LetterSpacing ?? defaults.LetterSpacing, normalizedTone),
+            NormalizeMapLabelFontStyle(style?.FontStyle, defaults.FontStyle),
+            NormalizeMapLabelTextTransform(style?.TextTransform, defaults.TextTransform),
+            ClampMapLabelBorderWidth(style?.BorderWidth ?? defaults.BorderWidth, normalizedTone),
+            ClampMapLabelBorderRadius(style?.BorderRadius ?? defaults.BorderRadius, normalizedTone),
+            ClampMapLabelPaddingX(style?.PaddingX ?? defaults.PaddingX, normalizedTone),
+            ClampMapLabelPaddingY(style?.PaddingY ?? defaults.PaddingY, normalizedTone),
+            NormalizeMapLabelCssEffect(style?.TextShadow, defaults.TextShadow),
+            NormalizeMapLabelCssEffect(style?.BoxShadow, defaults.BoxShadow),
+            ClampMapLabelOpacity(style?.Opacity ?? defaults.Opacity, normalizedTone));
+    }
+
     private static string DefaultMapIconLabel(string? iconType)
     {
         return NormalizeMapIconType(iconType) switch
@@ -974,6 +1007,131 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         }
 
         return Math.Clamp(value, 0.24d, 1d);
+    }
+
+    private static CampaignMapLabelStyleDto DefaultMapLabelStyle(string tone)
+    {
+        return tone == "Feature"
+            ? new CampaignMapLabelStyleDto("#f6ead8", "transparent", "transparent", "body", 0.84d, 600, 0.08d, "italic", "none", 0d, 8d, 0d, 0d, "0 1px 0 rgba(43, 28, 19, 0.72), 0 2px 10px rgba(0, 0, 0, 0.34)", "none", 0.98d)
+            : new CampaignMapLabelStyleDto("#fff4e5", "transparent", "transparent", "display", 1d, 650, 0.18d, "normal", "uppercase", 0d, 8d, 0d, 0d, "0 1px 0 rgba(43, 28, 19, 0.78), 0 2px 12px rgba(0, 0, 0, 0.4)", "none", 1d);
+    }
+
+    private static string NormalizeMapLabelColor(string? color, string tone)
+    {
+        return NormalizeMapLabelCssColor(color, DefaultMapLabelStyle(tone).Color);
+    }
+
+    private static string NormalizeMapLabelCssColor(string? value, string fallback)
+    {
+        var trimmed = value?.Trim();
+        return !string.IsNullOrWhiteSpace(trimmed) && System.Text.RegularExpressions.Regex.IsMatch(trimmed, "^(transparent|#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\([\\d\\s.,%]+\\)|hsla?\\([\\d\\s.,%]+\\))$")
+            ? trimmed
+            : fallback;
+    }
+
+    private static string NormalizeMapLabelFontFamily(string? fontFamily, string tone)
+    {
+        return string.Equals(fontFamily?.Trim(), "body", StringComparison.OrdinalIgnoreCase)
+            ? "body"
+            : DefaultMapLabelStyle(tone).FontFamily;
+    }
+
+    private static string NormalizeMapLabelFontStyle(string? fontStyle, string fallback)
+    {
+        return string.Equals(fontStyle?.Trim(), "italic", StringComparison.OrdinalIgnoreCase) ? "italic" : fallback;
+    }
+
+    private static string NormalizeMapLabelTextTransform(string? textTransform, string fallback)
+    {
+        return string.Equals(textTransform?.Trim(), "none", StringComparison.OrdinalIgnoreCase) ? "none" : fallback;
+    }
+
+    private static double ClampMapLabelBorderWidth(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).BorderWidth;
+        }
+
+        return Math.Clamp(value, 0d, 6d);
+    }
+
+    private static double ClampMapLabelBorderRadius(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).BorderRadius;
+        }
+
+        return Math.Clamp(value, 0d, 32d);
+    }
+
+    private static double ClampMapLabelPaddingX(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).PaddingX;
+        }
+
+        return Math.Clamp(value, 0d, 24d);
+    }
+
+    private static double ClampMapLabelPaddingY(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).PaddingY;
+        }
+
+        return Math.Clamp(value, 0d, 16d);
+    }
+
+    private static string NormalizeMapLabelCssEffect(string? value, string fallback)
+    {
+        var trimmed = value?.Trim();
+        return !string.IsNullOrWhiteSpace(trimmed) && trimmed.Length <= 120 && System.Text.RegularExpressions.Regex.IsMatch(trimmed, "^(none|[a-zA-Z0-9#(),.%\\s+-]+)$")
+            ? trimmed
+            : fallback;
+    }
+
+    private static double ClampMapLabelFontSize(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).FontSize;
+        }
+
+        return Math.Clamp(value, 0.72d, 2.4d);
+    }
+
+    private static int ClampMapLabelFontWeight(int value, string tone)
+    {
+        if (value <= 0)
+        {
+            return DefaultMapLabelStyle(tone).FontWeight;
+        }
+
+        return Math.Clamp((int)Math.Round(value / 50d) * 50, 400, 800);
+    }
+
+    private static double ClampMapLabelLetterSpacing(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).LetterSpacing;
+        }
+
+        return Math.Clamp(value, -0.04d, 0.32d);
+    }
+
+    private static double ClampMapLabelOpacity(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).Opacity;
+        }
+
+        return Math.Clamp(value, 0.45d, 1d);
     }
 
     private sealed record PersistedCampaignThread(Guid Id, string Text, string Visibility);

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { CreationStudioComponent } from '../../components/creation-studio/creation-studio.component';
@@ -30,6 +30,7 @@ export class CampaignEditPageComponent {
 
         return this.store.campaigns().find((campaign) => campaign.id === id) ?? null;
     });
+    readonly campaignReady = computed(() => this.selectedCampaign()?.detailsLoaded === true);
 
     readonly canEditCampaign = computed(() => this.selectedCampaign()?.currentUserRole === 'Owner');
 
@@ -52,6 +53,29 @@ export class CampaignEditPageComponent {
     });
 
     readonly updateError = signal('');
+
+    constructor() {
+        void this.ensureCampaignDetails();
+
+        effect(() => {
+            const campaign = this.selectedCampaign();
+            if (!campaign || campaign.currentUserRole === 'Owner') {
+                return;
+            }
+
+            void this.router.navigate(['/campaigns', campaign.id], { replaceUrl: true });
+        });
+    }
+
+    private async ensureCampaignDetails(): Promise<void> {
+        const campaignId = this.campaignId();
+        if (!campaignId) {
+            return;
+        }
+
+        await this.store.ensureCampaignLoaded(campaignId);
+        this.cdr.detectChanges();
+    }
 
     async handleCampaignUpdate(draft: CampaignDraft): Promise<void> {
         const id = this.campaignId();

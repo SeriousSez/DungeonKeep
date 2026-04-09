@@ -1,5 +1,41 @@
 namespace DungeonKeep.ApplicationService.Contracts;
 
+public sealed record CampaignSummaryRecord(
+    Guid Id,
+    string Name,
+    string Setting,
+    string Tone,
+    int LevelStart,
+    int LevelEnd,
+    string Hook,
+    string NextSession,
+    string Summary,
+    DateTime CreatedAtUtc,
+    int CharacterCount,
+    string SessionsJson,
+    string NpcsJson,
+    string OpenThreadsJson,
+    string CurrentUserRole
+);
+
+public sealed record CampaignSummaryDto(
+    Guid Id,
+    string Name,
+    string Setting,
+    string Tone,
+    int LevelStart,
+    int LevelEnd,
+    string Hook,
+    string NextSession,
+    string Summary,
+    DateTime CreatedAtUtc,
+    int CharacterCount,
+    int SessionCount,
+    int NpcCount,
+    int OpenThreadCount,
+    string CurrentUserRole
+);
+
 public sealed record CampaignDto(
     Guid Id,
     string Name,
@@ -122,7 +158,27 @@ public sealed record CampaignMapLabelDto(
     string Tone,
     double X,
     double Y,
-    double Rotation
+    double Rotation,
+    CampaignMapLabelStyleDto? Style
+);
+
+public sealed record CampaignMapLabelStyleDto(
+    string Color,
+    string BackgroundColor,
+    string BorderColor,
+    string FontFamily,
+    double FontSize,
+    int FontWeight,
+    double LetterSpacing,
+    string FontStyle,
+    string TextTransform,
+    double BorderWidth,
+    double BorderRadius,
+    double PaddingX,
+    double PaddingY,
+    string TextShadow,
+    string BoxShadow,
+    double Opacity
 );
 
 public sealed record CampaignMapLayersDto(

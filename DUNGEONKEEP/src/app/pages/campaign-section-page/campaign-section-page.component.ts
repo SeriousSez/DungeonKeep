@@ -118,6 +118,7 @@ export class CampaignSectionPageComponent {
 
         return this.store.campaigns().find((campaign) => campaign.id === id) ?? null;
     });
+    readonly campaignReady = computed(() => this.selectedCampaign()?.detailsLoaded === true);
 
     readonly partyMembers = computed(() => {
         const campaign = this.selectedCampaign();
@@ -211,6 +212,20 @@ export class CampaignSectionPageComponent {
         return [...summaries.values()];
     });
     readonly totalLootWeight = computed(() => this.lootSummaries().reduce((total, item) => total + ((item.weight ?? 0) * item.count), 0));
+
+    constructor() {
+        void this.ensureCampaignDetails();
+    }
+
+    private async ensureCampaignDetails(): Promise<void> {
+        const campaignId = this.campaignId();
+        if (!campaignId) {
+            return;
+        }
+
+        await this.store.ensureCampaignLoaded(campaignId);
+        this.cdr.detectChanges();
+    }
 
     readonly pageTitle = computed(() => {
         switch (this.section()) {
@@ -320,6 +335,10 @@ export class CampaignSectionPageComponent {
     }
 
     openAddThreadModal(): void {
+        if (this.selectedCampaign()?.currentUserRole !== 'Owner') {
+            return;
+        }
+
         this.clearSectionFeedback();
         this.threadModalMode.set('add');
         this.modalThreadId.set(null);
@@ -329,6 +348,10 @@ export class CampaignSectionPageComponent {
     }
 
     openEditThreadModal(threadId: string, text: string, visibility: 'Party' | 'GMOnly'): void {
+        if (this.selectedCampaign()?.currentUserRole !== 'Owner') {
+            return;
+        }
+
         this.clearSectionFeedback();
         this.threadModalMode.set('edit');
         this.modalThreadId.set(threadId);
@@ -371,6 +394,10 @@ export class CampaignSectionPageComponent {
     }
 
     openAddSessionModal(): void {
+        if (this.selectedCampaign()?.currentUserRole !== 'Owner') {
+            return;
+        }
+
         this.clearSectionFeedback();
         this.sessionModalMode.set('add');
         this.sessionModalId.set(null);
@@ -383,6 +410,10 @@ export class CampaignSectionPageComponent {
     }
 
     openEditSessionModal(sessionId: string, title: string, date: string, location: string, objective: string, threat: ThreatLevel): void {
+        if (this.selectedCampaign()?.currentUserRole !== 'Owner') {
+            return;
+        }
+
         this.clearSectionFeedback();
         this.sessionModalMode.set('edit');
         this.sessionModalId.set(sessionId);
@@ -597,6 +628,10 @@ export class CampaignSectionPageComponent {
     }
 
     openAddWorldNoteForm(): void {
+        if (this.selectedCampaign()?.currentUserRole !== 'Owner') {
+            return;
+        }
+
         this.clearSectionFeedback();
         this.noteEditorMode.set('add');
         this.noteEditorId.set(null);
@@ -607,6 +642,10 @@ export class CampaignSectionPageComponent {
     }
 
     openEditWorldNoteForm(note: CampaignWorldNote): void {
+        if (this.selectedCampaign()?.currentUserRole !== 'Owner') {
+            return;
+        }
+
         this.clearSectionFeedback();
         this.noteEditorMode.set('edit');
         this.noteEditorId.set(note.id);

@@ -70,7 +70,8 @@
     position: absolute;
     top: calc(100% + 6px);
     left: 0;
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     z-index: 5200;
     border: 1px solid var(--panel-border);
     border-radius: 10px;
@@ -79,6 +80,16 @@
     padding: 8px;
     display: grid;
     gap: 8px;
+}
+
+.app-dropdown-menu--align-end .app-dropdown-panel {
+    left: auto;
+    right: 0;
+}
+
+.app-dropdown-menu--align-start .app-dropdown-panel {
+    left: 0;
+    right: auto;
 }
 
 .app-dropdown-search {
@@ -142,6 +153,15 @@
         font-size: 0.78rem;
         color: var(--accent-primary);
     }
+
+    >div {
+        min-width: 0;
+    }
+
+    span {
+        display: block;
+        white-space: normal;
+    }
 }
 
 .app-dropdown-option:has(.app-dropdown-description) {
@@ -184,6 +204,5 @@
 
 .app-dropdown--narrow {
     min-width: 78px;
-    max-width: 96px;
     width: 100%;
 }

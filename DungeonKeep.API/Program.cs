@@ -1,5 +1,7 @@
+using DungeonKeep.API.Data;
 using DungeonKeep.API.Hubs;
 using DungeonKeep.ApplicationService.Extensions;
+using DungeonKeep.Infrastructure.Configuration;
 using DungeonKeep.Infrastructure.Extensions;
 using DungeonKeep.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +14,8 @@ builder.Configuration.AddJsonFile(
     optional: true,
     reloadOnChange: true
 );
+
+var databaseProvider = DatabaseConfiguration.GetProvider(builder.Configuration);
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ??
 [
@@ -50,19 +54,30 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+if (args.Contains("--migrate-sqlite-to-mysql", StringComparer.OrdinalIgnoreCase))
+{
+    await SqliteToMySqlMigrator.MigrateAsync(builder.Configuration, app.Logger);
+    return;
+}
+
+await SqliteToMySqlMigrator.MigrateOnStartupIfNeededAsync(builder.Configuration, app.Logger);
+
 try
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<DungeonKeepDbContext>();
     dbContext.Database.EnsureCreated();
 
-    EnsureBaseSqliteSchema(dbContext);
-    EnsureCharactersCampaignIdIsNullable(dbContext);
-    EnsureCurrentSqliteSchema(dbContext);
+    if (databaseProvider == DatabaseProvider.Sqlite)
+    {
+        EnsureBaseSqliteSchema(dbContext);
+        EnsureCharactersCampaignIdIsNullable(dbContext);
+        EnsureCurrentSqliteSchema(dbContext);
+    }
 }
 catch (Exception exception)
 {
-    app.Logger.LogCritical(exception, "SQLite schema initialization failed during startup.");
+    app.Logger.LogCritical(exception, "{DatabaseProvider} schema initialization failed during startup.", databaseProvider);
     throw;
 }
 
@@ -86,7 +101,7 @@ app.Run();
 static void EnsureBaseSqliteSchema(DungeonKeepDbContext dbContext)
 {
     dbContext.Database.ExecuteSqlRaw(
-        "CREATE TABLE IF NOT EXISTS AppUsers (Id TEXT NOT NULL CONSTRAINT PK_AppUsers PRIMARY KEY, Email TEXT NOT NULL, DisplayName TEXT NOT NULL, PasswordHash TEXT NOT NULL, CreatedAtUtc TEXT NOT NULL);"
+        "CREATE TABLE IF NOT EXISTS AppUsers (Id TEXT NOT NULL CONSTRAINT PK_AppUsers PRIMARY KEY, Email TEXT NOT NULL, DisplayName TEXT NOT NULL, PasswordHash TEXT NOT NULL, IsEmailVerified INTEGER NOT NULL DEFAULT 0, ActivationCodeHash TEXT NOT NULL DEFAULT '', ActivationCodeExpiresAtUtc TEXT NULL, CreatedAtUtc TEXT NOT NULL);"
     );
     dbContext.Database.ExecuteSqlRaw(
         "CREATE UNIQUE INDEX IF NOT EXISTS IX_AppUsers_Email ON AppUsers (Email);"
@@ -174,6 +189,12 @@ static void EnsureCharactersCampaignIdIsNullable(DungeonKeepDbContext dbContext)
 
 static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)
 {
+    const string emptyGuid = "00000000-0000-0000-0000-000000000000";
+
+    EnsureColumnExists(dbContext, "AppUsers", "IsEmailVerified", "INTEGER NOT NULL DEFAULT 0");
+    EnsureColumnExists(dbContext, "AppUsers", "ActivationCodeHash", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "AppUsers", "ActivationCodeExpiresAtUtc", "TEXT NULL");
+
     EnsureColumnExists(dbContext, "CampaignMemberships", "UserId", "TEXT NULL");
     EnsureColumnExists(dbContext, "CampaignMemberships", "Email", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "CampaignMemberships", "Role", "TEXT NOT NULL DEFAULT 'Member'");
@@ -218,6 +239,17 @@ static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)
     EnsureColumnExists(dbContext, "Characters", "Goals", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "Characters", "Secrets", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "Characters", "SessionHistory", "TEXT NOT NULL DEFAULT ''");
+
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE TABLE IF NOT EXISTS CharacterCampaignAssignments (CharacterId TEXT NOT NULL, CampaignId TEXT NOT NULL, CONSTRAINT PK_CharacterCampaignAssignments PRIMARY KEY (CharacterId, CampaignId), CONSTRAINT FK_CharacterCampaignAssignments_Characters_CharacterId FOREIGN KEY (CharacterId) REFERENCES Characters (Id) ON DELETE CASCADE, CONSTRAINT FK_CharacterCampaignAssignments_Campaigns_CampaignId FOREIGN KEY (CampaignId) REFERENCES Campaigns (Id) ON DELETE CASCADE);"
+    );
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE INDEX IF NOT EXISTS IX_CharacterCampaignAssignments_CampaignId ON CharacterCampaignAssignments (CampaignId);"
+    );
+    dbContext.Database.ExecuteSqlRaw(
+        "INSERT OR IGNORE INTO CharacterCampaignAssignments (CharacterId, CampaignId) SELECT Id, CampaignId FROM Characters WHERE CampaignId IS NOT NULL AND CampaignId <> '' AND CampaignId <> {0};",
+        emptyGuid
+    );
 
     EnsureIndexExists(dbContext, "IX_Characters_OwnerUserId", "Characters", "OwnerUserId");
 }

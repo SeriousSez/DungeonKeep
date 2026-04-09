@@ -1,74 +1,85 @@
 <main class="page-shell">
-    @if (isHydrating()) {
-    <div class="skeleton-header panel">
-        <div class="skeleton-line skeleton-eyebrow"></div>
-        <div class="skeleton-line skeleton-title"></div>
-        <div class="skeleton-line skeleton-subheader"></div>
+    @if (!initialized()) {
+    <div class="detail-header skeleton-panel">
+        <div class="skeleton-line skeleton-back-link"></div>
+        <div class="header-content skeleton-header-content">
+            <div class="header-main skeleton-stack">
+                <div class="header-copy skeleton-stack">
+                    <div class="skeleton-line skeleton-eyebrow"></div>
+                    <div class="skeleton-line skeleton-title"></div>
+                    <div class="skeleton-line skeleton-copy"></div>
+                </div>
+                <div class="header-actions skeleton-actions">
+                    <div class="skeleton-line skeleton-pill"></div>
+                    <div class="skeleton-line skeleton-button"></div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="skeleton-panels">
-        <div class="panel skeleton-panel">
+
+    <div class="summary-panels">
+        @for (panel of [1, 2]; track panel) {
+        <section class="panel summary-panel skeleton-panel skeleton-card">
             <div class="skeleton-line skeleton-section-title"></div>
-            <div class="skeleton-abilities-strip">
-                @for (item of [1,2,3,4,5,6]; track item) {
-                <div class="skeleton-ability-card">
-                    <div class="skeleton-line skeleton-ability-abbr"></div>
-                    <div class="skeleton-line skeleton-ability-score"></div>
-                    <div class="skeleton-line skeleton-ability-mod"></div>
+            <div class="summary-strip skeleton-summary-strip">
+                @for (item of [1, 2, 3, 4]; track item) {
+                <div class="summary-item skeleton-summary-item">
+                    <div class="skeleton-line skeleton-label"></div>
+                    <div class="skeleton-line skeleton-value"></div>
                 </div>
                 }
             </div>
-        </div>
-        <div class="panel skeleton-panel">
-            <div class="skeleton-line skeleton-section-title"></div>
-            @for (row of [1,2,3,4,5,6]; track row) {
-            <div class="skeleton-stat-row">
-                <div class="skeleton-line skeleton-stat-label"></div>
-                <div class="skeleton-line skeleton-stat-value"></div>
-            </div>
-            }
-        </div>
-    </div>
-    <div class="panel skeleton-panel skeleton-combat-block">
-        <div class="skeleton-tab-strip">
-            @for (tab of [1,2,3,4,5]; track tab) {
-            <div class="skeleton-line skeleton-tab"></div>
-            }
-        </div>
-        @for (row of [1,2,3,4]; track row) {
-        <div class="skeleton-line skeleton-action-row"></div>
+        </section>
         }
+    </div>
+
+    <div class="content-grid">
+        <section class="panel skeleton-panel skeleton-card">
+            <div class="skeleton-line skeleton-section-title"></div>
+            @for (line of [1, 2, 3, 4, 5]; track line) {
+            <div class="skeleton-line skeleton-copy"></div>
+            }
+        </section>
+        <section class="panel skeleton-panel skeleton-card">
+            <div class="skeleton-line skeleton-section-title"></div>
+            @for (line of [1, 2, 3, 4]; track line) {
+            <div class="skeleton-line skeleton-copy"></div>
+            }
+        </section>
     </div>
     } @else if (character(); as char) {
     <div class="detail-header">
         <a routerLink="/characters" class="back-link">← Back to Characters</a>
         <div class="header-content">
             <div class="header-main">
-                <p class="eyebrow">Character Sheet</p>
-                <h1>{{ char.name }}</h1>
-                <p class="subheader">{{ char.race }} {{ char.className }} · Level {{ char.level }} · {{ campaignName() }}</p>
-            </div>
+                <div class="header-copy">
+                    <p class="eyebrow">Character Sheet</p>
+                    <h1>{{ char.name }}</h1>
+                    <p class="subheader">{{ char.race }} {{ char.className }} · Level {{ char.level }} · {{ campaignName() }}</p>
+                </div>
 
-            <div class="header-actions">
-                <div class="header-status-row">
-                    <span class="status-pill" [attr.data-status]="char.status">{{ char.status }}</span>
-                    <a class="edit-character-btn" [routerLink]="['/characters', char.id, 'builder', 'class']" aria-label="Open character builder" title="Open Character Builder">
-                        <i class="fa-duotone fa-thin fa-scroll"></i>
-                    </a>
-                </div>
-                @if (char.canEdit) {
-                <div class="campaign-assignment-controls">
-                    <app-dropdown [value]="selectedCampaignAssignment()" [options]="assignableCampaignOptions()" [placeholder]="'Choose campaign...'" size="compact" (changed)="onCampaignAssignmentChanged($event)"></app-dropdown>
-                    <button type="button" class="assign-btn" [disabled]="isUpdatingCampaign() || !selectedCampaignAssignment()" (click)="assignCharacterToCampaign()">
-                        {{ isUpdatingCampaign() ? 'Updating...' : 'Assign' }}
-                    </button>
-                    <button type="button" class="remove-btn" [disabled]="isUpdatingCampaign() || campaignName() === 'Unassigned'" (click)="removeCharacterFromCampaign()">
-                        Remove from Campaign
-                    </button>
-                </div>
-                @if (campaignUpdateError()) {
-                <p class="campaign-error">{{ campaignUpdateError() }}</p>
+                <div class="header-actions">
+                    <div class="header-status-row">
+                        <span class="status-pill" [attr.data-status]="char.status">{{ char.status }}</span>
+                        <a class="edit-character-btn" [routerLink]="['/characters', char.id, 'builder', 'class']" aria-label="Open character builder" title="Open Character Builder">
+                            <i class="fa-duotone fa-thin fa-scroll"></i>
+                        </a>
+                    </div>
+                    @if (char.canEdit) {
+                    <div class="campaign-assignment-controls">
+                        <app-dropdown [value]="selectedCampaignAssignment()" [options]="assignableCampaignOptions()" [placeholder]="'Choose campaign...'" size="compact" (changed)="onCampaignAssignmentChanged($event)"></app-dropdown>
+                        <button type="button" class="assign-btn" [disabled]="isUpdatingCampaign() || !selectedCampaignAssignment()" (click)="assignCharacterToCampaign()">
+                            {{ isUpdatingCampaign() ? 'Updating...' : 'Assign' }}
+                        </button>
+                        <button type="button" class="remove-btn" [disabled]="isUpdatingCampaign() || campaignName() === 'Unassigned'" (click)="removeCharacterFromCampaign()">
+                            Remove from Campaign
+                        </button>
+                    </div>
+                    @if (campaignUpdateError()) {
+                    <p class="campaign-error">{{ campaignUpdateError() }}</p>
+                    }
                 }
-                }
+                </div>
             </div>
         </div>
     </div>

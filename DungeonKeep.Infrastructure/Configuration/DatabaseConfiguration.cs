@@ -1,0 +1,91 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Configuration;
+
+namespace DungeonKeep.Infrastructure.Configuration;
+
+public enum DatabaseProvider
+{
+    Sqlite,
+    MySql
+}
+
+public static class DatabaseConfiguration
+{
+    private const string DefaultSqliteConnectionString = "Data Source=dungeonkeep.dev.db";
+
+    public static DatabaseProvider GetProvider(IConfiguration configuration)
+    {
+        var configuredProvider = configuration["Database:Provider"];
+
+        return string.Equals(configuredProvider, "mysql", StringComparison.OrdinalIgnoreCase)
+            ? DatabaseProvider.MySql
+            : DatabaseProvider.Sqlite;
+    }
+
+    public static string GetSqliteConnectionString(IConfiguration configuration)
+    {
+        return configuration.GetConnectionString("DungeonKeepSqlite")
+            ?? configuration.GetConnectionString("DungeonKeep")
+            ?? DefaultSqliteConnectionString;
+    }
+
+    public static string GetMySqlConnectionString(IConfiguration configuration)
+    {
+        return configuration.GetConnectionString("DungeonKeepMySql")
+            ?? string.Empty;
+    }
+
+    public static bool ShouldAutoMigrateSqliteToMySqlOnStartup(IConfiguration configuration)
+    {
+        return configuration.GetValue<bool>("Database:AutoMigrateSqliteToMySqlOnStartup");
+    }
+
+    public static string? TryResolveSqliteDatabasePath(string connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return null;
+        }
+
+        var builder = new SqliteConnectionStringBuilder(connectionString);
+        if (string.IsNullOrWhiteSpace(builder.DataSource) || builder.DataSource == ":memory:")
+        {
+            return null;
+        }
+
+        return Path.IsPathRooted(builder.DataSource)
+            ? builder.DataSource
+            : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, builder.DataSource));
+    }
+
+    public static string GetActiveConnectionString(IConfiguration configuration)
+    {
+        return GetProvider(configuration) switch
+        {
+            DatabaseProvider.MySql => RequireMySqlConnectionString(configuration),
+            _ => GetSqliteConnectionString(configuration)
+        };
+    }
+
+    public static void ConfigureSqlite(DbContextOptionsBuilder optionsBuilder, string connectionString)
+    {
+        optionsBuilder.UseSqlite(connectionString);
+    }
+
+    public static void ConfigureMySql(DbContextOptionsBuilder optionsBuilder, string connectionString)
+    {
+        optionsBuilder.UseMySQL(connectionString);
+    }
+
+    private static string RequireMySqlConnectionString(IConfiguration configuration)
+    {
+        var connectionString = GetMySqlConnectionString(configuration);
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException("A MySQL connection string is required when Database:Provider is set to MySql.");
+        }
+
+        return connectionString;
+    }
+}

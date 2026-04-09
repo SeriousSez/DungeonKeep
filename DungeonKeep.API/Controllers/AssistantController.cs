@@ -26,6 +26,7 @@ public sealed class AssistantController : ControllerBase
     private const string DefaultModel = "gpt-4.1-mini";
     private const string DefaultResponsesUrl = "https://api.openai.com/v1/responses";
     private const int MaxUserMessageLength = 1200;
+    private const int PromptTextLimit = 320;
     private const string OutOfScopeReply = "I can only help with Dungeons & Dragons content. Ask about D&D rules, classes, spells, monsters, encounters, lore, or D&D-themed image prompt ideas.";
     private const string InjectionBlockedReply = "I can’t follow requests to ignore or override my safety and scope rules. I can still help with D&D-related questions.";
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
@@ -237,18 +238,154 @@ public sealed class AssistantController : ControllerBase
                 $"- Name: {context.Campaign.Name}",
                 $"- Setting: {context.Campaign.Setting}",
                 $"- Tone: {context.Campaign.Tone}",
+                $"- Level Range: {context.Campaign.LevelRange}",
                 $"- Summary: {context.Campaign.Summary}",
                 $"- Hook: {context.Campaign.Hook}",
                 $"- Next Session: {context.Campaign.NextSession}",
+                $"- Current User Role: {FormatOptionalText(context.Campaign.CurrentUserRole, "unknown")}",
                 $"- Player Count: {context.Campaign.PlayerCount}",
                 $"- Party: {FormatParty(context.Campaign.Party)}",
+                $"- Sessions: {FormatSessions(context.Campaign.Sessions)}",
                 $"- Open Threads: {FormatList(context.Campaign.OpenThreads, "none recorded")}",
+                $"- World Notes: {FormatWorldNotes(context.Campaign.WorldNotes)}",
                 $"- NPCs: {FormatList(context.Campaign.Npcs, "none recorded")}",
-                $"- Loot: {FormatList(context.Campaign.Loot, "none recorded")}"
+                $"- Loot: {FormatList(context.Campaign.Loot, "none recorded")}",
+                $"- Members: {FormatMembers(context.Campaign.Members)}",
+                $"- Maps: {FormatMaps(context.Campaign.Maps, context.Campaign.ActiveMapId)}"
+            });
+        }
+
+        if (context.Session is not null)
+        {
+            lines.AddRange(
+            new[]
+            {
+                "Session Context:",
+                $"- Title: {context.Session.Title}",
+                $"- Date: {FormatOptionalText(context.Session.Date, "TBD")}",
+                $"- Location: {FormatOptionalText(context.Session.Location, "unknown")}",
+                $"- Objective: {FormatOptionalText(context.Session.Objective, "none recorded")}",
+                $"- Threat: {FormatOptionalText(context.Session.Threat, "Moderate")}",
+                $"- Summary: {FormatOptionalText(context.Session.ShortDescription, "none recorded")}",
+                $"- Estimated Length: {FormatOptionalText(context.Session.EstimatedLength, "flexible")}",
+                $"- Notes: {FormatOptionalText(context.Session.Notes, "none recorded")}",
+                $"- Scenes: {FormatList(context.Session.Scenes, "none recorded")}",
+                $"- Session NPCs: {FormatList(context.Session.Npcs, "none recorded")}",
+                $"- Monsters: {FormatList(context.Session.Monsters, "none recorded")}",
+                $"- Locations: {FormatList(context.Session.Locations, "none recorded")}",
+                $"- Planned Loot: {FormatList(context.Session.Loot, "none recorded")}",
+                $"- Skill Checks: {FormatList(context.Session.SkillChecks, "none recorded")}",
+                $"- Secrets: {FormatList(context.Session.Secrets, "none recorded")}",
+                $"- Branching Paths: {FormatList(context.Session.BranchingPaths, "none recorded")}",
+                $"- Next Session Hooks: {FormatList(context.Session.NextSessionHooks, "none recorded")}"
+            });
+        }
+
+        if (context.Npc is not null)
+        {
+            lines.AddRange(
+            new[]
+            {
+                "NPC Context:",
+                $"- Name: {context.Npc.Name}",
+                $"- Title: {FormatOptionalText(context.Npc.Title, "none recorded")}",
+                $"- Race: {FormatOptionalText(context.Npc.Race, "unknown")}",
+                $"- Class or Role: {FormatOptionalText(context.Npc.ClassOrRole, "none recorded")}",
+                $"- Faction: {FormatOptionalText(context.Npc.Faction, "independent")}",
+                $"- Occupation: {FormatOptionalText(context.Npc.Occupation, "none recorded")}",
+                $"- Alignment: {FormatOptionalText(context.Npc.Alignment, "none recorded")}",
+                $"- Current Status: {FormatOptionalText(context.Npc.CurrentStatus, context.Npc.IsAlive ? "active" : "deceased")}",
+                $"- Location: {FormatOptionalText(context.Npc.Location, "unknown")}",
+                $"- Summary: {FormatOptionalText(context.Npc.ShortDescription, "none recorded")}",
+                $"- Personality Traits: {FormatList(context.Npc.PersonalityTraits, "none recorded")}",
+                $"- Ideals: {FormatList(context.Npc.Ideals, "none recorded")}",
+                $"- Bonds: {FormatList(context.Npc.Bonds, "none recorded")}",
+                $"- Flaws: {FormatList(context.Npc.Flaws, "none recorded")}",
+                $"- Motivations: {FormatOptionalText(context.Npc.Motivations, "none recorded")}",
+                $"- Goals: {FormatOptionalText(context.Npc.Goals, "none recorded")}",
+                $"- Fears: {FormatOptionalText(context.Npc.Fears, "none recorded")}",
+                $"- Secrets: {FormatList(context.Npc.Secrets, "none recorded")}",
+                $"- Mannerisms: {FormatList(context.Npc.Mannerisms, "none recorded")}",
+                $"- Voice Notes: {FormatOptionalText(context.Npc.VoiceNotes, "none recorded")}",
+                $"- Backstory: {FormatOptionalText(context.Npc.Backstory, "none recorded")}",
+                $"- Notes: {FormatOptionalText(context.Npc.Notes, "none recorded")}",
+                $"- Combat Notes: {FormatOptionalText(context.Npc.CombatNotes, "none recorded")}",
+                $"- Tags: {FormatList(context.Npc.Tags, "none recorded")}",
+                $"- Relationships: {FormatNpcRelationships(context.Npc.Relationships)}",
+                $"- Quest Links: {FormatList(context.Npc.QuestLinks, "none recorded")}",
+                $"- Session Appearances: {FormatList(context.Npc.SessionAppearances, "none recorded")}",
+                $"- Inventory: {FormatList(context.Npc.Inventory, "none recorded")}",
+                $"- Hostility: {context.Npc.Hostility}",
+                $"- Important NPC: {(context.Npc.IsImportant ? "yes" : "no")}"
             });
         }
 
         return string.Join('\n', lines);
+    }
+
+    private static string FormatSessions(IReadOnlyList<DndChatCampaignSessionContext>? sessions)
+    {
+        if (sessions is null || sessions.Count == 0)
+        {
+            return "none recorded";
+        }
+
+        return string.Join(
+            "; ",
+            sessions.Select(session =>
+                $"{SanitizeForPrompt(session.Title)} ({FormatOptionalText(session.Date, "TBD")}; {FormatOptionalText(session.Location, "unknown")}; Threat: {FormatOptionalText(session.Threat, "Moderate")}; Objective: {FormatOptionalText(session.Objective, "none recorded")})"));
+    }
+
+    private static string FormatWorldNotes(IReadOnlyList<DndChatCampaignWorldNoteContext>? notes)
+    {
+        if (notes is null || notes.Count == 0)
+        {
+            return "none recorded";
+        }
+
+        return string.Join(
+            "; ",
+            notes.Select(note =>
+                $"{SanitizeForPrompt(note.Title)} [{SanitizeForPrompt(note.Category)}]: {FormatOptionalText(note.Content, "none recorded")}"));
+    }
+
+    private static string FormatMembers(IReadOnlyList<DndChatCampaignMemberContext>? members)
+    {
+        if (members is null || members.Count == 0)
+        {
+            return "none recorded";
+        }
+
+        return string.Join(
+            "; ",
+            members.Select(member =>
+                $"{FormatOptionalText(member.DisplayName, member.Email)} ({member.Role}, {member.Status})"));
+    }
+
+    private static string FormatMaps(IReadOnlyList<DndChatCampaignMapContext>? maps, string activeMapId)
+    {
+        if (maps is null || maps.Count == 0)
+        {
+            return "none recorded";
+        }
+
+        return string.Join(
+            "; ",
+            maps.Select(map =>
+                $"{SanitizeForPrompt(map.Name)}{(string.Equals(map.Id, activeMapId, StringComparison.Ordinal) ? " [active]" : string.Empty)} ({map.Background}; Labels: {FormatList(map.LocationLabels, "none")}; Tokens: {FormatList(map.TokenNames, "none")}; Icons: {FormatList(map.IconLabels, "none")})"));
+    }
+
+    private static string FormatNpcRelationships(IReadOnlyList<DndChatNpcRelationshipContext>? relationships)
+    {
+        if (relationships is null || relationships.Count == 0)
+        {
+            return "none recorded";
+        }
+
+        return string.Join(
+            "; ",
+            relationships.Select(relationship =>
+                $"{FormatOptionalText(relationship.Target, "unknown")} ({FormatOptionalText(relationship.Type, "relationship")}): {FormatOptionalText(relationship.Description, "none recorded")}"));
     }
 
     private static string FormatParty(IReadOnlyList<DndChatCampaignPartyMemberContext>? party)
@@ -299,7 +436,7 @@ public sealed class AssistantController : ControllerBase
             return true;
         }
 
-        if (pageContext?.Character is not null || pageContext?.Campaign is not null)
+        if (pageContext?.Character is not null || pageContext?.Campaign is not null || pageContext?.Session is not null || pageContext?.Npc is not null)
         {
             if (ContainsAny(message, new[] { "character", "campaign", "session", "party", "encounter", "portrait", "token", "map" }))
             {
@@ -332,7 +469,12 @@ public sealed class AssistantController : ControllerBase
             }
         }
 
-        return singleLine;
+        if (singleLine.Length <= PromptTextLimit)
+        {
+            return singleLine;
+        }
+
+        return $"{singleLine[..(PromptTextLimit - 1)].Trim()}…";
     }
 
     private static string ExtractResponseText(OpenAiResponsesApiResponse? payload)
@@ -371,7 +513,13 @@ public sealed class AssistantController : ControllerBase
 
     public sealed record DndChatMessage(string Role, string Content);
 
-    public sealed record DndChatPageContext(string Route, string PageType, DndChatCharacterContext? Character, DndChatCampaignContext? Campaign);
+    public sealed record DndChatPageContext(
+        string Route,
+        string PageType,
+        DndChatCharacterContext? Character,
+        DndChatCampaignContext? Campaign,
+        DndChatSessionContext? Session,
+        DndChatNpcContext? Npc);
 
     public sealed record DndChatCharacterContext(
         string Id,
@@ -402,14 +550,21 @@ public sealed class AssistantController : ControllerBase
         string Name,
         string Setting,
         string Tone,
+        string LevelRange,
         string Summary,
         string Hook,
         string NextSession,
+        string? CurrentUserRole,
         int PlayerCount,
         IReadOnlyList<DndChatCampaignPartyMemberContext> Party,
+        IReadOnlyList<DndChatCampaignSessionContext> Sessions,
         IReadOnlyList<string> OpenThreads,
+        IReadOnlyList<DndChatCampaignWorldNoteContext> WorldNotes,
         IReadOnlyList<string> Npcs,
-        IReadOnlyList<string> Loot);
+        IReadOnlyList<string> Loot,
+        IReadOnlyList<DndChatCampaignMemberContext> Members,
+        IReadOnlyList<DndChatCampaignMapContext> Maps,
+        string ActiveMapId);
 
     public sealed record DndChatCampaignPartyMemberContext(
         string Id,
@@ -426,6 +581,94 @@ public sealed class AssistantController : ControllerBase
         IReadOnlyList<string> Ideals,
         IReadOnlyList<string> Bonds,
         IReadOnlyList<string> Flaws);
+
+    public sealed record DndChatCampaignSessionContext(
+        string Id,
+        string Title,
+        string Date,
+        string Location,
+        string Objective,
+        string Threat);
+
+    public sealed record DndChatCampaignWorldNoteContext(
+        string Id,
+        string Title,
+        string Category,
+        string Content);
+
+    public sealed record DndChatCampaignMemberContext(
+        string? UserId,
+        string Email,
+        string DisplayName,
+        string Role,
+        string Status);
+
+    public sealed record DndChatCampaignMapContext(
+        string Id,
+        string Name,
+        string Background,
+        IReadOnlyList<string> LocationLabels,
+        IReadOnlyList<string> TokenNames,
+        IReadOnlyList<string> IconLabels);
+
+    public sealed record DndChatSessionContext(
+        string Id,
+        string Title,
+        string Date,
+        string Location,
+        string Objective,
+        string Threat,
+        string ShortDescription,
+        string EstimatedLength,
+        string Notes,
+        IReadOnlyList<string> Scenes,
+        IReadOnlyList<string> Npcs,
+        IReadOnlyList<string> Monsters,
+        IReadOnlyList<string> Locations,
+        IReadOnlyList<string> Loot,
+        IReadOnlyList<string> SkillChecks,
+        IReadOnlyList<string> Secrets,
+        IReadOnlyList<string> BranchingPaths,
+        IReadOnlyList<string> NextSessionHooks);
+
+    public sealed record DndChatNpcContext(
+        string Id,
+        string Name,
+        string Title,
+        string Race,
+        string ClassOrRole,
+        string Faction,
+        string Occupation,
+        string Alignment,
+        string CurrentStatus,
+        string Location,
+        string ShortDescription,
+        IReadOnlyList<string> PersonalityTraits,
+        IReadOnlyList<string> Ideals,
+        IReadOnlyList<string> Bonds,
+        IReadOnlyList<string> Flaws,
+        string Motivations,
+        string Goals,
+        string Fears,
+        IReadOnlyList<string> Secrets,
+        IReadOnlyList<string> Mannerisms,
+        string VoiceNotes,
+        string Backstory,
+        string Notes,
+        string CombatNotes,
+        IReadOnlyList<string> Tags,
+        IReadOnlyList<DndChatNpcRelationshipContext> Relationships,
+        IReadOnlyList<string> QuestLinks,
+        IReadOnlyList<string> SessionAppearances,
+        IReadOnlyList<string> Inventory,
+        string Hostility,
+        bool IsAlive,
+        bool IsImportant);
+
+    public sealed record DndChatNpcRelationshipContext(
+        string Target,
+        string Type,
+        string Description);
 
     public sealed record DndChatResponse(string Reply);
 

@@ -1,4 +1,5 @@
 using DungeonKeep.ApplicationService.Interfaces;
+using DungeonKeep.Infrastructure.Configuration;
 using DungeonKeep.Infrastructure.Backstory;
 using DungeonKeep.Infrastructure.Email;
 using DungeonKeep.Infrastructure.Persistence;
@@ -13,12 +14,21 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddDungeonKeepInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DungeonKeep")
-            ?? "Data Source=dungeonkeep.dev.db";
+        var databaseProvider = DatabaseConfiguration.GetProvider(configuration);
         var emailOptions = SmtpCampaignInviteEmailOptions.FromConfiguration(configuration);
 
         services.AddDbContext<DungeonKeepDbContext>(options =>
-            options.UseSqlite(connectionString));
+        {
+            var connectionString = DatabaseConfiguration.GetActiveConnectionString(configuration);
+
+            if (databaseProvider == DatabaseProvider.MySql)
+            {
+                DatabaseConfiguration.ConfigureMySql(options, connectionString);
+                return;
+            }
+
+            DatabaseConfiguration.ConfigureSqlite(options, connectionString);
+        });
 
         services.AddHttpClient<IBackstoryGenerator, OpenAiBackstoryGenerator>();
         services.AddSingleton(emailOptions);
@@ -28,10 +38,12 @@ public static class ServiceCollectionExtensions
 
         if (emailOptions.IsEnabled)
         {
+            services.AddScoped<IAccountActivationEmailService, SmtpAccountActivationEmailService>();
             services.AddScoped<ICampaignInviteEmailService, SmtpCampaignInviteEmailService>();
         }
         else
         {
+            services.AddScoped<IAccountActivationEmailService, NoOpAccountActivationEmailService>();
             services.AddScoped<ICampaignInviteEmailService, NoOpCampaignInviteEmailService>();
         }
 

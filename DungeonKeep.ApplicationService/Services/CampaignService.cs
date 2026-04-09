@@ -23,12 +23,32 @@ public sealed class CampaignService(
     private static readonly CampaignMapDto DefaultCampaignMap = new("Parchment", string.Empty, [], [], [], [], [], new CampaignMapLayersDto([], [], []));
     private static readonly CampaignMapBoardDto DefaultCampaignMapBoard = new(Guid.Parse("11111111-1111-1111-1111-111111111111"), "Main Map", "Parchment", string.Empty, [], [], [], [], [], new CampaignMapLayersDto([], [], []));
 
+    public async Task<IReadOnlyList<CampaignSummaryDto>> GetAllSummariesAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaigns = await campaignRepository.GetAllSummariesForUserAsync(userId, cancellationToken);
+        return campaigns
+            .Select(MapCampaignSummary)
+            .ToList();
+    }
+
     public async Task<IReadOnlyList<CampaignDto>> GetAllAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var campaigns = await campaignRepository.GetAllForUserAsync(userId, cancellationToken);
         return campaigns
             .Select(campaign => MapCampaign(campaign, userId))
             .ToList();
+    }
+
+    public async Task<CampaignDto?> GetByIdAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await campaignRepository.GetByIdAsync(campaignId, cancellationToken);
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var membership = campaign.Memberships.FirstOrDefault(member => member.UserId == userId && member.Status == "Active");
+        return membership is null ? null : MapCampaign(campaign, userId);
     }
 
     public async Task<CampaignDto> CreateAsync(CreateCampaignRequest request, AuthenticatedUser owner, CancellationToken cancellationToken = default)
@@ -510,7 +530,7 @@ public sealed class CampaignService(
             campaign.NextSession,
             campaign.Summary,
             campaign.CreatedAtUtc,
-            campaign.Characters.Count,
+            campaign.CharacterAssignments.Count,
             ParseSessions(campaign.SessionsJson),
             ParseNamedItems(campaign.NpcsJson),
             ParseNamedItems(campaign.LootJson),
@@ -533,6 +553,53 @@ public sealed class CampaignService(
                 ))
                 .ToList()
         );
+    }
+
+    private static CampaignSummaryDto MapCampaignSummary(CampaignSummaryRecord campaign)
+    {
+        var levelStart = Math.Clamp(campaign.LevelStart, 1, 20);
+        var levelEnd = Math.Clamp(campaign.LevelEnd, levelStart, 20);
+
+        return new CampaignSummaryDto(
+            campaign.Id,
+            campaign.Name,
+            campaign.Setting,
+            campaign.Tone,
+            levelStart,
+            levelEnd,
+            campaign.Hook,
+            campaign.NextSession,
+            campaign.Summary,
+            campaign.CreatedAtUtc,
+            campaign.CharacterCount,
+            CountJsonArrayItems(campaign.SessionsJson),
+            CountJsonArrayItems(campaign.NpcsJson),
+            CountJsonArrayItems(campaign.OpenThreadsJson),
+            campaign.CurrentUserRole
+        );
+    }
+
+    private static int CountJsonArrayItems(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return 0;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                return 0;
+            }
+
+            return document.RootElement.GetArrayLength();
+        }
+        catch
+        {
+            return 0;
+        }
     }
 
     private static IReadOnlyList<CampaignSessionDto> ParseSessions(string json)
@@ -804,7 +871,8 @@ public sealed class CampaignService(
                 NormalizeMapLabelTone(label.Tone),
                 ClampMapCoordinate(label.X),
                 ClampMapCoordinate(label.Y),
-                ClampMapRotation(label.Rotation)))
+                ClampMapRotation(label.Rotation),
+                NormalizeMapLabelStyle(label.Style, label.Tone)))
             .ToList();
 
         var normalizedLayers = new CampaignMapLayersDto(
@@ -976,6 +1044,30 @@ public sealed class CampaignService(
         };
     }
 
+    private static CampaignMapLabelStyleDto NormalizeMapLabelStyle(CampaignMapLabelStyleDto? style, string? tone)
+    {
+        var normalizedTone = NormalizeMapLabelTone(tone);
+        var defaults = DefaultMapLabelStyle(normalizedTone);
+
+        return new CampaignMapLabelStyleDto(
+            NormalizeMapLabelColor(style?.Color, normalizedTone),
+            NormalizeMapLabelCssColor(style?.BackgroundColor, defaults.BackgroundColor),
+            NormalizeMapLabelCssColor(style?.BorderColor, defaults.BorderColor),
+            NormalizeMapLabelFontFamily(style?.FontFamily, normalizedTone),
+            ClampMapLabelFontSize(style?.FontSize ?? defaults.FontSize, normalizedTone),
+            ClampMapLabelFontWeight(style?.FontWeight ?? defaults.FontWeight, normalizedTone),
+            ClampMapLabelLetterSpacing(style?.LetterSpacing ?? defaults.LetterSpacing, normalizedTone),
+            NormalizeMapLabelFontStyle(style?.FontStyle, defaults.FontStyle),
+            NormalizeMapLabelTextTransform(style?.TextTransform, defaults.TextTransform),
+            ClampMapLabelBorderWidth(style?.BorderWidth ?? defaults.BorderWidth, normalizedTone),
+            ClampMapLabelBorderRadius(style?.BorderRadius ?? defaults.BorderRadius, normalizedTone),
+            ClampMapLabelPaddingX(style?.PaddingX ?? defaults.PaddingX, normalizedTone),
+            ClampMapLabelPaddingY(style?.PaddingY ?? defaults.PaddingY, normalizedTone),
+            NormalizeMapLabelCssEffect(style?.TextShadow, defaults.TextShadow),
+            NormalizeMapLabelCssEffect(style?.BoxShadow, defaults.BoxShadow),
+            ClampMapLabelOpacity(style?.Opacity ?? defaults.Opacity, normalizedTone));
+    }
+
     private static string DefaultMapIconLabel(string? iconType)
     {
         return NormalizeMapIconType(iconType) switch
@@ -1022,6 +1114,131 @@ public sealed class CampaignService(
                 _ => "#8a5a2b"
             }
         };
+    }
+
+    private static CampaignMapLabelStyleDto DefaultMapLabelStyle(string tone)
+    {
+        return tone == "Feature"
+            ? new CampaignMapLabelStyleDto("#f6ead8", "transparent", "transparent", "body", 0.84d, 600, 0.08d, "italic", "none", 0d, 8d, 0d, 0d, "0 1px 0 rgba(43, 28, 19, 0.72), 0 2px 10px rgba(0, 0, 0, 0.34)", "none", 0.98d)
+            : new CampaignMapLabelStyleDto("#fff4e5", "transparent", "transparent", "display", 1d, 650, 0.18d, "normal", "uppercase", 0d, 8d, 0d, 0d, "0 1px 0 rgba(43, 28, 19, 0.78), 0 2px 12px rgba(0, 0, 0, 0.4)", "none", 1d);
+    }
+
+    private static string NormalizeMapLabelColor(string? color, string tone)
+    {
+        return NormalizeMapLabelCssColor(color, DefaultMapLabelStyle(tone).Color);
+    }
+
+    private static string NormalizeMapLabelCssColor(string? value, string fallback)
+    {
+        var trimmed = value?.Trim();
+        return !string.IsNullOrWhiteSpace(trimmed) && System.Text.RegularExpressions.Regex.IsMatch(trimmed, "^(transparent|#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\([\\d\\s.,%]+\\)|hsla?\\([\\d\\s.,%]+\\))$")
+            ? trimmed
+            : fallback;
+    }
+
+    private static string NormalizeMapLabelFontFamily(string? fontFamily, string tone)
+    {
+        return string.Equals(fontFamily?.Trim(), "body", StringComparison.OrdinalIgnoreCase)
+            ? "body"
+            : DefaultMapLabelStyle(tone).FontFamily;
+    }
+
+    private static string NormalizeMapLabelFontStyle(string? fontStyle, string fallback)
+    {
+        return string.Equals(fontStyle?.Trim(), "italic", StringComparison.OrdinalIgnoreCase) ? "italic" : fallback;
+    }
+
+    private static string NormalizeMapLabelTextTransform(string? textTransform, string fallback)
+    {
+        return string.Equals(textTransform?.Trim(), "none", StringComparison.OrdinalIgnoreCase) ? "none" : fallback;
+    }
+
+    private static double ClampMapLabelBorderWidth(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).BorderWidth;
+        }
+
+        return Math.Clamp(value, 0d, 6d);
+    }
+
+    private static double ClampMapLabelBorderRadius(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).BorderRadius;
+        }
+
+        return Math.Clamp(value, 0d, 32d);
+    }
+
+    private static double ClampMapLabelPaddingX(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).PaddingX;
+        }
+
+        return Math.Clamp(value, 0d, 24d);
+    }
+
+    private static double ClampMapLabelPaddingY(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).PaddingY;
+        }
+
+        return Math.Clamp(value, 0d, 16d);
+    }
+
+    private static string NormalizeMapLabelCssEffect(string? value, string fallback)
+    {
+        var trimmed = value?.Trim();
+        return !string.IsNullOrWhiteSpace(trimmed) && trimmed.Length <= 120 && System.Text.RegularExpressions.Regex.IsMatch(trimmed, "^(none|[a-zA-Z0-9#(),.%\\s+-]+)$")
+            ? trimmed
+            : fallback;
+    }
+
+    private static double ClampMapLabelFontSize(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).FontSize;
+        }
+
+        return Math.Clamp(value, 0.72d, 2.4d);
+    }
+
+    private static int ClampMapLabelFontWeight(int value, string tone)
+    {
+        if (value <= 0)
+        {
+            return DefaultMapLabelStyle(tone).FontWeight;
+        }
+
+        return Math.Clamp((int)Math.Round(value / 50d) * 50, 400, 800);
+    }
+
+    private static double ClampMapLabelLetterSpacing(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).LetterSpacing;
+        }
+
+        return Math.Clamp(value, -0.04d, 0.32d);
+    }
+
+    private static double ClampMapLabelOpacity(double value, string tone)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return DefaultMapLabelStyle(tone).Opacity;
+        }
+
+        return Math.Clamp(value, 0.45d, 1d);
     }
 
     private static double ClampMapScale(double value)

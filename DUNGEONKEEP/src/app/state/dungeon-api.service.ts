@@ -48,6 +48,24 @@ export interface ApiCampaignDto {
     members: ApiCampaignMemberDto[];
 }
 
+export interface ApiCampaignSummaryDto {
+    id: string;
+    name: string;
+    setting: string;
+    tone: ApiCampaignTone;
+    levelStart: number;
+    levelEnd: number;
+    hook: string;
+    nextSession: string;
+    summary: string;
+    createdAtUtc: string;
+    characterCount: number;
+    sessionCount: number;
+    npcCount: number;
+    openThreadCount: number;
+    currentUserRole: 'Owner' | 'Member';
+}
+
 export interface ApiCampaignSessionDto {
     id: string;
     title: string;
@@ -94,6 +112,7 @@ export interface ApiCampaignMapLibraryDto {
 export interface ApiGenerateCampaignMapArtRequest {
     background: ApiCampaignMapDto['background'];
     mapName: string;
+    separateLabels?: boolean;
     settlementScale?: 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis';
     parchmentLayout?: 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular';
     cavernLayout?: 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes';
@@ -107,6 +126,7 @@ export interface ApiGenerateCampaignMapArtRequest {
 
 export interface ApiGenerateCampaignMapArtResponse {
     backgroundImageUrl: string;
+    labels: ApiCampaignMapLabelDto[];
 }
 
 export interface ApiCampaignMapStrokeDto {
@@ -157,6 +177,26 @@ export interface ApiCampaignMapLabelDto {
     x: number;
     y: number;
     rotation: number;
+    style?: ApiCampaignMapLabelStyleDto;
+}
+
+export interface ApiCampaignMapLabelStyleDto {
+    color: string;
+    backgroundColor: string;
+    borderColor: string;
+    fontFamily: 'display' | 'body';
+    fontSize: number;
+    fontWeight: number;
+    letterSpacing: number;
+    fontStyle: 'normal' | 'italic';
+    textTransform: 'none' | 'uppercase';
+    borderWidth: number;
+    borderRadius: number;
+    paddingX: number;
+    paddingY: number;
+    textShadow: string;
+    boxShadow: string;
+    opacity: number;
 }
 
 export interface ApiCampaignMapLayersDto {
@@ -176,6 +216,7 @@ export interface ApiCampaignMemberDto {
 export interface ApiCharacterDto {
     id: string;
     campaignId: string;
+    campaignIds: string[];
     ownerUserId: string | null;
     ownerDisplayName: string;
     name: string;
@@ -221,6 +262,16 @@ export interface ApiAuthUserDto {
 export interface ApiAuthSessionDto {
     token: string;
     user: ApiAuthUserDto;
+}
+
+export interface ApiSignupPendingActivationDto {
+    email: string;
+    message: string;
+}
+
+export interface ApiActivationResultDto {
+    email: string;
+    message: string;
 }
 
 export interface ApiGenerateCharacterBackstoryRequest {
@@ -292,26 +343,130 @@ export interface ApiDndChatCampaignPartyMemberContext {
     flaws: string[];
 }
 
+export interface ApiDndChatCampaignSessionContext {
+    id: string;
+    title: string;
+    date: string;
+    location: string;
+    objective: string;
+    threat: string;
+}
+
+export interface ApiDndChatCampaignWorldNoteContext {
+    id: string;
+    title: string;
+    category: string;
+    content: string;
+}
+
+export interface ApiDndChatCampaignMemberContext {
+    userId?: string | null;
+    email: string;
+    displayName: string;
+    role: string;
+    status: string;
+}
+
+export interface ApiDndChatCampaignMapContext {
+    id: string;
+    name: string;
+    background: string;
+    locationLabels: string[];
+    tokenNames: string[];
+    iconLabels: string[];
+}
+
 export interface ApiDndChatCampaignContext {
     id: string;
     name: string;
     setting: string;
     tone: string;
+    levelRange: string;
     summary: string;
     hook: string;
     nextSession: string;
+    currentUserRole?: string;
     playerCount: number;
     party: ApiDndChatCampaignPartyMemberContext[];
+    sessions: ApiDndChatCampaignSessionContext[];
     openThreads: string[];
+    worldNotes: ApiDndChatCampaignWorldNoteContext[];
     npcs: string[];
     loot: string[];
+    members: ApiDndChatCampaignMemberContext[];
+    maps: ApiDndChatCampaignMapContext[];
+    activeMapId: string;
+}
+
+export interface ApiDndChatSessionContext {
+    id: string;
+    title: string;
+    date: string;
+    location: string;
+    objective: string;
+    threat: string;
+    shortDescription: string;
+    estimatedLength: string;
+    notes: string;
+    scenes: string[];
+    npcs: string[];
+    monsters: string[];
+    locations: string[];
+    loot: string[];
+    skillChecks: string[];
+    secrets: string[];
+    branchingPaths: string[];
+    nextSessionHooks: string[];
+}
+
+export interface ApiDndChatNpcRelationshipContext {
+    target: string;
+    type: string;
+    description: string;
+}
+
+export interface ApiDndChatNpcContext {
+    id: string;
+    name: string;
+    title: string;
+    race: string;
+    classOrRole: string;
+    faction: string;
+    occupation: string;
+    alignment: string;
+    currentStatus: string;
+    location: string;
+    shortDescription: string;
+    personalityTraits: string[];
+    ideals: string[];
+    bonds: string[];
+    flaws: string[];
+    motivations: string;
+    goals: string;
+    fears: string;
+    secrets: string[];
+    mannerisms: string[];
+    voiceNotes: string;
+    backstory: string;
+    notes: string;
+    combatNotes: string;
+    tags: string[];
+    relationships: ApiDndChatNpcRelationshipContext[];
+    questLinks: string[];
+    sessionAppearances: string[];
+    inventory: string[];
+    hostility: string;
+    isAlive: boolean;
+    isImportant: boolean;
 }
 
 export interface ApiDndChatPageContext {
     route: string;
-    pageType: 'character' | 'campaign' | 'sessions' | 'dashboard' | 'other';
+    pageType: string;
     character?: ApiDndChatCharacterContext;
     campaign?: ApiDndChatCampaignContext;
+    session?: ApiDndChatSessionContext;
+    npc?: ApiDndChatNpcContext;
 }
 
 export interface ApiDndChatRequest {
@@ -486,8 +641,16 @@ export class DungeonApiService {
     private readonly http = inject(HttpClient);
     private readonly baseUrl = environment.apiBaseUrl;
 
+    async getCampaignSummaries(): Promise<ApiCampaignSummaryDto[]> {
+        return await firstValueFrom(this.http.get<ApiCampaignSummaryDto[]>(`${this.baseUrl}/campaigns/summaries`));
+    }
+
     async getCampaigns(): Promise<ApiCampaignDto[]> {
         return await firstValueFrom(this.http.get<ApiCampaignDto[]>(`${this.baseUrl}/campaigns`));
+    }
+
+    async getCampaign(campaignId: string): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.get<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}`));
     }
 
     async createCampaign(payload: { name: string; setting: string; tone: ApiCampaignTone; levelStart: number; levelEnd: number; hook: string; nextSession: string; summary: string }): Promise<ApiCampaignDto> {
@@ -599,6 +762,10 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.get<ApiCharacterDto[]>(`${this.baseUrl}/characters/mine/unassigned`));
     }
 
+    async getAccessibleCharacters(): Promise<ApiCharacterDto[]> {
+        return await firstValueFrom(this.http.get<ApiCharacterDto[]>(`${this.baseUrl}/characters`));
+    }
+
 
     async createCharacter(payload: {
         name: string;
@@ -608,6 +775,7 @@ export class DungeonApiService {
         background: string;
         notes: string;
         campaignId?: string;
+        campaignIds?: string[];
         species?: string;
         alignment?: string;
         lifestyle?: string;
@@ -642,6 +810,7 @@ export class DungeonApiService {
         background: string;
         notes: string;
         campaignId?: string;
+        campaignIds?: string[];
         species?: string;
         alignment?: string;
         lifestyle?: string;
@@ -668,8 +837,11 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.put<ApiCharacterDto>(`${this.baseUrl}/characters/${characterId}`, payload));
     }
 
-    async updateCharacterCampaign(characterId: string, campaignId: string | null): Promise<ApiCharacterDto> {
-        return await firstValueFrom(this.http.put<ApiCharacterDto>(`${this.baseUrl}/characters/${characterId}/campaign`, { campaignId }));
+    async updateCharacterCampaign(characterId: string, campaignIds: string[]): Promise<ApiCharacterDto> {
+        return await firstValueFrom(this.http.put<ApiCharacterDto>(`${this.baseUrl}/characters/${characterId}/campaign`, {
+            campaignId: campaignIds[0] ?? null,
+            campaignIds
+        }));
     }
 
     async generateCharacterBackstory(payload: ApiGenerateCharacterBackstoryRequest): Promise<ApiGenerateCharacterBackstoryResponse> {
@@ -692,8 +864,16 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.post<ApiCharacterDto>(`${this.baseUrl}/characters/${characterId}/promote`, {}));
     }
 
-    async signup(payload: { displayName: string; email: string; password: string }): Promise<ApiAuthSessionDto> {
-        return await firstValueFrom(this.http.post<ApiAuthSessionDto>(`${this.baseUrl}/auth/signup`, payload));
+    async signup(payload: { displayName: string; email: string; password: string }): Promise<ApiSignupPendingActivationDto> {
+        return await firstValueFrom(this.http.post<ApiSignupPendingActivationDto>(`${this.baseUrl}/auth/signup`, payload));
+    }
+
+    async activateAccount(payload: { email: string; code: string }): Promise<ApiActivationResultDto> {
+        return await firstValueFrom(this.http.post<ApiActivationResultDto>(`${this.baseUrl}/auth/activate`, payload));
+    }
+
+    async resendActivationCode(payload: { email: string }): Promise<ApiActivationResultDto> {
+        return await firstValueFrom(this.http.post<ApiActivationResultDto>(`${this.baseUrl}/auth/resend-activation`, payload));
     }
 
     async login(payload: { email: string; password: string }): Promise<ApiAuthSessionDto> {

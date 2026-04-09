@@ -58,6 +58,52 @@
     font-size: 0.95rem;
 }
 
+.skeleton-panel {
+    overflow: hidden;
+}
+
+.skeleton-form {
+    display: grid;
+    gap: 14px;
+}
+
+.skeleton-line {
+    height: 14px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--surface-raised) 88%, transparent), color-mix(in srgb, var(--surface-raised) 60%, var(--accent-primary) 40%), color-mix(in srgb, var(--surface-raised) 88%, transparent));
+    background-size: 220% 100%;
+    animation: campaign-edit-skeleton 1.6s linear infinite;
+}
+
+.skeleton-eyebrow {
+    width: 120px;
+}
+
+.skeleton-title {
+    width: min(420px, 82%);
+    height: 30px;
+}
+
+.skeleton-copy {
+    width: min(620px, 100%);
+}
+
+.skeleton-input {
+    width: 100%;
+    height: 46px;
+    border-radius: 16px;
+}
+
+@keyframes campaign-edit-skeleton {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -20% 0;
+    }
+}
+
 @media (max-width: 720px) {
     .page-stack {
         gap: 16px;

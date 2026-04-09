@@ -1,8 +1,8 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 
 import { raceMap } from '../data/races';
-import { AbilityScores, Campaign, CampaignDraft, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecorationType, CampaignMapIconType, CampaignMapLabelTone, CampaignThreadVisibility, CampaignWorldNoteCategory, Character, CharacterDraft, CharacterStatus, SkillProficiencies, ThreatLevel } from '../models/dungeon.models';
-import { ApiCampaignDto, ApiCampaignMapBoardDto, ApiCampaignMapDecorationDto, ApiCampaignMapDto, ApiCampaignMapLabelDto, ApiCampaignMapLibraryDto, ApiCampaignWorldNoteDto, ApiCharacterDto, DungeonApiService } from './dungeon-api.service';
+import { AbilityScores, Campaign, CampaignDraft, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecorationType, CampaignMapIconType, CampaignMapLabelStyle, CampaignMapLabelTone, CampaignThreadVisibility, CampaignWorldNoteCategory, Character, CharacterDraft, CharacterStatus, SkillProficiencies, ThreatLevel } from '../models/dungeon.models';
+import { ApiCampaignDto, ApiCampaignMapBoardDto, ApiCampaignMapDecorationDto, ApiCampaignMapDto, ApiCampaignMapLabelDto, ApiCampaignMapLabelStyleDto, ApiCampaignMapLibraryDto, ApiCampaignSummaryDto, ApiCampaignWorldNoteDto, ApiCharacterDto, DungeonApiService } from './dungeon-api.service';
 import { SessionService } from './session.service';
 
 @Injectable({ providedIn: 'root' })
@@ -30,7 +30,9 @@ export class DungeonStoreService {
     readonly campaigns = signal<Campaign[]>([]);
     readonly characters = signal<Character[]>([]);
     readonly selectedCampaignId = signal('');
-    readonly isHydrating = signal(true);
+    readonly initialized = signal(false);
+    readonly isHydrating = signal(false);
+    readonly loadingCampaignDetails = signal<string[]>([]);
 
     private readonly api = inject(DungeonApiService);
     private readonly session = inject(SessionService);
@@ -56,10 +58,10 @@ export class DungeonStoreService {
     readonly campaignCount = computed(() => this.campaigns().length);
     readonly characterCount = computed(() => this.characters().length);
     readonly sessionCount = computed(() =>
-        this.campaigns().reduce((total, campaign) => total + campaign.sessions.length, 0)
+        this.campaigns().reduce((total, campaign) => total + campaign.sessionCount, 0)
     );
     readonly openThreadCount = computed(() =>
-        this.campaigns().reduce((total, campaign) => total + campaign.openThreads.length, 0)
+        this.campaigns().reduce((total, campaign) => total + campaign.openThreadCount, 0)
     );
     readonly readyCharacterCount = computed(
         () => this.characters().filter((character) => character.status === 'Ready').length
@@ -80,6 +82,8 @@ export class DungeonStoreService {
 
             if (!currentUserId) {
                 this.clearState();
+                this.isHydrating.set(false);
+                this.initialized.set(true);
                 return;
             }
 
@@ -89,6 +93,45 @@ export class DungeonStoreService {
 
     selectCampaign(campaignId: string): void {
         this.selectedCampaignId.set(campaignId);
+    }
+
+    hasCampaignDetails(campaignId: string): boolean {
+        return this.campaigns().some((campaign) => campaign.id === campaignId && campaign.detailsLoaded);
+    }
+
+    isCampaignDetailsLoading(campaignId: string): boolean {
+        return this.loadingCampaignDetails().includes(campaignId);
+    }
+
+    async ensureCampaignLoaded(campaignId: string): Promise<void> {
+        if (!campaignId || this.hasCampaignDetails(campaignId) || this.isCampaignDetailsLoading(campaignId)) {
+            return;
+        }
+
+        this.loadingCampaignDetails.update((ids) => [...ids, campaignId]);
+
+        try {
+            const campaign = await this.api.getCampaign(campaignId);
+            const partyCharacterIds = this.characters()
+                .filter((character) => character.campaignIds?.includes(campaignId) || character.campaignId === campaignId)
+                .map((character) => character.id);
+
+            this.campaigns.update((campaigns) => {
+                const mapped = this.mapCampaignFromApi(campaign, partyCharacterIds);
+                const existingIndex = campaigns.findIndex((entry) => entry.id === campaignId);
+
+                if (existingIndex === -1) {
+                    return [mapped, ...campaigns];
+                }
+
+                const next = [...campaigns];
+                next[existingIndex] = mapped;
+                return next;
+            });
+        } catch {
+        } finally {
+            this.loadingCampaignDetails.update((ids) => ids.filter((id) => id !== campaignId));
+        }
     }
 
     addCampaign(draft: CampaignDraft): void {
@@ -112,6 +155,8 @@ export class DungeonStoreService {
             return null;
         }
 
+        const campaignIds = draft.campaignIds ?? (draft.campaignId ? [draft.campaignId] : undefined);
+
         try {
             const updated = await this.api.updateCharacter(characterId, {
                 name: draft.name,
@@ -120,7 +165,8 @@ export class DungeonStoreService {
                 level: Math.max(1, draft.level),
                 background: draft.background || 'Freshly arrived adventurer',
                 notes: draft.notes || 'No field notes yet.',
-                campaignId: draft.campaignId,
+                campaignId: campaignIds?.[0],
+                campaignIds,
                 species: draft.race,
                 alignment: draft.alignment,
                 lifestyle: draft.lifestyle,
@@ -181,6 +227,10 @@ export class DungeonStoreService {
     }
 
     async addCampaignSession(campaignId: string, draft: { title: string; date: string; location: string; objective: string; threat: ThreatLevel }): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.createCampaignSession(campaignId, draft);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -191,6 +241,10 @@ export class DungeonStoreService {
     }
 
     async updateCampaignSession(campaignId: string, sessionId: string, draft: { title: string; date: string; location: string; objective: string; threat: ThreatLevel }): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.updateCampaignSession(campaignId, sessionId, draft);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -201,6 +255,10 @@ export class DungeonStoreService {
     }
 
     async deleteCampaignSession(campaignId: string, sessionId: string): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.deleteCampaignSession(campaignId, sessionId);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -211,6 +269,10 @@ export class DungeonStoreService {
     }
 
     async addCampaignNpc(campaignId: string, name: string): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.addCampaignNpc(campaignId, name);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -221,6 +283,10 @@ export class DungeonStoreService {
     }
 
     async removeCampaignNpc(campaignId: string, name: string): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.removeCampaignNpc(campaignId, name);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -231,6 +297,10 @@ export class DungeonStoreService {
     }
 
     async addCampaignLoot(campaignId: string, name: string): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.addCampaignLoot(campaignId, name);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -241,6 +311,10 @@ export class DungeonStoreService {
     }
 
     async removeCampaignLoot(campaignId: string, name: string): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.removeCampaignLoot(campaignId, name);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -261,6 +335,10 @@ export class DungeonStoreService {
     }
 
     async addCampaignWorldNote(campaignId: string, payload: { title: string; category: CampaignWorldNoteCategory; content: string }): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.createCampaignWorldNote(campaignId, payload);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -271,6 +349,10 @@ export class DungeonStoreService {
     }
 
     async updateCampaignWorldNote(campaignId: string, noteId: string, payload: { title: string; category: CampaignWorldNoteCategory; content: string }): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.updateCampaignWorldNote(campaignId, noteId, payload);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -281,6 +363,10 @@ export class DungeonStoreService {
     }
 
     async removeCampaignWorldNote(campaignId: string, noteId: string): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.deleteCampaignWorldNote(campaignId, noteId);
             this.replaceCampaignFromApi(campaignId, updated);
@@ -291,6 +377,10 @@ export class DungeonStoreService {
     }
 
     async updateCampaignMap(campaignId: string, payload: { activeMapId: string; maps: CampaignMapBoard[] }): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
         try {
             const updated = await this.api.updateCampaignMap(campaignId, this.mapCampaignMapLibraryToApi(payload));
             this.replaceCampaignFromApi(campaignId, updated);
@@ -300,11 +390,12 @@ export class DungeonStoreService {
         }
     }
 
-    async generateCampaignMapArtAi(campaignId: string, payload: { background: CampaignMapBackground; mapName: string; settlementScale?: 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis'; parchmentLayout?: 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular'; cavernLayout?: 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes'; settlementNames?: string[]; regionNames?: string[]; ruinNames?: string[]; cavernNames?: string[]; additionalDirection?: string }): Promise<string | null> {
+    async generateCampaignMapArtAi(campaignId: string, payload: { background: CampaignMapBackground; mapName: string; separateLabels?: boolean; settlementScale?: 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis'; parchmentLayout?: 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular'; cavernLayout?: 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes'; settlementNames?: string[]; regionNames?: string[]; ruinNames?: string[]; cavernNames?: string[]; additionalDirection?: string }): Promise<{ backgroundImageUrl: string; labels: Campaign['map']['labels'] } | null> {
         try {
             const generated = await this.api.generateCampaignMapArtAi(campaignId, {
                 background: this.normalizeMapBackground(payload.background),
                 mapName: payload.mapName.trim(),
+                separateLabels: payload.separateLabels,
                 settlementScale: payload.settlementScale,
                 parchmentLayout: payload.parchmentLayout,
                 cavernLayout: payload.cavernLayout,
@@ -315,13 +406,30 @@ export class DungeonStoreService {
                 additionalDirection: payload.additionalDirection?.trim() || undefined
             });
 
-            return this.normalizeMapBackgroundImageUrl(generated.backgroundImageUrl);
+            const labels = this.spreadGeneratedMapLabels((generated.labels ?? []).map((label) => ({
+                id: label.id,
+                text: label.text,
+                tone: this.normalizeMapLabelTone(label.tone),
+                x: this.normalizeMapCoordinate(label.x),
+                y: this.normalizeMapCoordinate(label.y),
+                rotation: Math.max(-180, Math.min(180, Number(label.rotation) || 0)),
+                style: this.normalizeMapLabelStyle(label.style, label.tone)
+            })));
+
+            return {
+                backgroundImageUrl: this.normalizeMapBackgroundImageUrl(generated.backgroundImageUrl),
+                labels
+            };
         } catch {
             return null;
         }
     }
 
     async updateCampaign(campaignId: string, draft: CampaignDraft): Promise<Campaign | null> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return null;
+        }
+
         const campaignData = {
             name: draft.name.trim(),
             setting: draft.setting.trim(),
@@ -363,11 +471,15 @@ export class DungeonStoreService {
         }
 
         try {
-            const updated = await this.api.updateCharacterCampaign(characterId, campaignId);
+            const updated = await this.api.updateCharacterCampaign(characterId, campaignId ? [campaignId] : []);
             this.characters.update((characters) =>
                 characters.map((character) =>
                     character.id === characterId
-                        ? { ...character, campaignId: updated.campaignId }
+                        ? {
+                            ...character,
+                            campaignId: updated.campaignId,
+                            campaignIds: updated.campaignIds
+                        }
                         : character
                 )
             );
@@ -375,7 +487,7 @@ export class DungeonStoreService {
             this.campaigns.update((campaigns) =>
                 campaigns.map((campaign) => {
                     const isCurrentCampaign = campaign.partyCharacterIds.includes(characterId);
-                    const shouldContain = campaign.id === updated.campaignId;
+                    const shouldContain = updated.campaignIds.includes(campaign.id);
 
                     if (isCurrentCampaign && !shouldContain) {
                         return {
@@ -473,6 +585,8 @@ export class DungeonStoreService {
             return null;
         }
 
+        const campaignIds = draft.campaignIds ?? (draft.campaignId ? [draft.campaignId] : undefined);
+
         try {
             const created = await this.api.createCharacter({
                 name: draft.name,
@@ -481,7 +595,8 @@ export class DungeonStoreService {
                 level: Math.max(1, draft.level),
                 background: draft.background || 'Freshly arrived adventurer',
                 notes: draft.notes || 'No field notes yet.',
-                campaignId: draft.campaignId,
+                campaignId: campaignIds?.[0],
+                campaignIds,
                 species: draft.race || '',
                 alignment: draft.alignment || '',
                 lifestyle: draft.lifestyle || '',
@@ -509,13 +624,15 @@ export class DungeonStoreService {
             const character = this.mapCharacterFromApi(created, draft);
             this.characters.update((characters) => [character, ...characters]);
 
-            if (character.campaignId && character.campaignId !== DungeonStoreService.UNASSIGNED_CAMPAIGN_ID) {
+            if ((character.campaignIds?.length ?? 0) > 0) {
                 this.campaigns.update((campaigns) =>
                     campaigns.map((campaign) =>
-                        campaign.id === character.campaignId
+                        character.campaignIds?.includes(campaign.id)
                             ? {
                                 ...campaign,
-                                partyCharacterIds: [...campaign.partyCharacterIds, character.id]
+                                partyCharacterIds: campaign.partyCharacterIds.includes(character.id)
+                                    ? campaign.partyCharacterIds
+                                    : [...campaign.partyCharacterIds, character.id]
                             }
                             : campaign
                     )
@@ -530,36 +647,61 @@ export class DungeonStoreService {
 
     private async hydrateFromApi(): Promise<void> {
         this.isHydrating.set(true);
+        this.initialized.set(false);
+
         try {
-            const campaignDtos = await this.api.getCampaigns();
+            const [campaignDtos, accessibleCharacterDtos] = await Promise.all([
+                this.api.getCampaignSummaries(),
+                this.api.getAccessibleCharacters()
+            ]);
 
-            const characterPairs = await Promise.all(
-                campaignDtos.map(async (campaign) => {
-                    const characters = await this.api.getCharacters(campaign.id);
-                    return [campaign.id, characters] as const;
-                })
-            );
+            const characterMap = new Map<string, Character>();
+            const characterLookup = new Map<string, ApiCharacterDto[]>();
 
-            const unassignedDtos = await this.api.getUnassignedCharacters();
-            const characterLookup = new Map<string, ApiCharacterDto[]>(characterPairs);
-            const allCharacters: Character[] = [];
+            for (const characterDto of accessibleCharacterDtos) {
+                const campaignIds = characterDto.campaignIds?.length
+                    ? characterDto.campaignIds
+                    : (characterDto.campaignId && characterDto.campaignId !== DungeonStoreService.UNASSIGNED_CAMPAIGN_ID
+                        ? [characterDto.campaignId]
+                        : []);
+
+                for (const campaignId of campaignIds) {
+                    const existingCharacters = characterLookup.get(campaignId) ?? [];
+                    existingCharacters.push(characterDto);
+                    characterLookup.set(campaignId, existingCharacters);
+                }
+            }
 
             const mappedCampaigns = campaignDtos.map((campaignDto) => {
                 const apiCharacters = characterLookup.get(campaignDto.id) ?? [];
                 const mappedCharacters = apiCharacters.map((characterDto) => this.mapCharacterFromApi(characterDto));
-                allCharacters.push(...mappedCharacters);
 
-                return this.mapCampaignFromApi(campaignDto, mappedCharacters.map((character) => character.id));
+                for (const mappedCharacter of mappedCharacters) {
+                    const existing = characterMap.get(mappedCharacter.id);
+                    if (!existing) {
+                        characterMap.set(mappedCharacter.id, mappedCharacter);
+                        continue;
+                    }
+
+                    const mergedCampaignIds = Array.from(new Set([...(existing.campaignIds ?? []), ...(mappedCharacter.campaignIds ?? [])]));
+                    characterMap.set(mappedCharacter.id, {
+                        ...existing,
+                        ...mappedCharacter,
+                        campaignId: mergedCampaignIds[0] ?? DungeonStoreService.UNASSIGNED_CAMPAIGN_ID,
+                        campaignIds: mergedCampaignIds
+                    });
+                }
+
+                return this.mapCampaignSummaryFromApi(campaignDto, mappedCharacters.map((character) => character.id));
             });
 
-            const knownCharacterIds = new Set(allCharacters.map((character) => character.id));
-            for (const unassignedDto of unassignedDtos) {
-                if (!knownCharacterIds.has(unassignedDto.id)) {
-                    allCharacters.push(this.mapCharacterFromApi(unassignedDto));
+            for (const accessibleCharacterDto of accessibleCharacterDtos) {
+                if (!characterMap.has(accessibleCharacterDto.id)) {
+                    characterMap.set(accessibleCharacterDto.id, this.mapCharacterFromApi(accessibleCharacterDto));
                 }
             }
 
-            this.characters.set(allCharacters);
+            this.characters.set(Array.from(characterMap.values()));
             this.campaigns.set(mappedCampaigns);
 
             const selected = this.selectedCampaignId();
@@ -570,6 +712,7 @@ export class DungeonStoreService {
             this.clearState();
         } finally {
             this.isHydrating.set(false);
+            this.initialized.set(true);
         }
     }
 
@@ -598,6 +741,11 @@ export class DungeonStoreService {
             summary: campaign.summary,
             hook: campaign.hook || 'A new adventure awaits.',
             nextSession: campaign.nextSession || 'TBD',
+            characterCount: Math.max(campaign.characterCount ?? partyCharacterIds.length, partyCharacterIds.length),
+            sessionCount: campaign.sessions?.length ?? 0,
+            npcCount: campaign.npcs?.length ?? 0,
+            openThreadCount: campaign.openThreads?.length ?? 0,
+            detailsLoaded: true,
             partyCharacterIds,
             sessions: (campaign.sessions ?? []).map((session) => ({
                 id: session.id,
@@ -631,6 +779,41 @@ export class DungeonStoreService {
                 role: member.role,
                 status: member.status
             }))
+        };
+    }
+
+    private mapCampaignSummaryFromApi(campaign: ApiCampaignSummaryDto, partyCharacterIds: string[]): Campaign {
+        const levelStart = Math.min(Math.max(Math.trunc(campaign.levelStart ?? 1), 1), 20);
+        const levelEnd = Math.min(Math.max(Math.trunc(campaign.levelEnd ?? 4), levelStart), 20);
+        const emptyMap = this.createEmptyCampaignMapBoard();
+
+        return {
+            id: campaign.id,
+            name: campaign.name,
+            setting: campaign.setting,
+            tone: campaign.tone ?? 'Heroic',
+            levelStart,
+            levelEnd,
+            levelRange: `Levels ${levelStart}-${levelEnd}`,
+            summary: campaign.summary,
+            hook: campaign.hook || 'A new adventure awaits.',
+            nextSession: campaign.nextSession || 'TBD',
+            characterCount: Math.max(campaign.characterCount ?? partyCharacterIds.length, partyCharacterIds.length),
+            sessionCount: Math.max(0, campaign.sessionCount ?? 0),
+            npcCount: Math.max(0, campaign.npcCount ?? 0),
+            openThreadCount: Math.max(0, campaign.openThreadCount ?? 0),
+            detailsLoaded: false,
+            partyCharacterIds,
+            sessions: [],
+            openThreads: [],
+            worldNotes: [],
+            map: emptyMap,
+            maps: [],
+            activeMapId: '',
+            loot: [],
+            npcs: [],
+            currentUserRole: campaign.currentUserRole,
+            members: []
         };
     }
 
@@ -697,7 +880,8 @@ export class DungeonStoreService {
                 tone: this.normalizeMapLabelTone(label.tone),
                 x: this.normalizeMapCoordinate(label.x),
                 y: this.normalizeMapCoordinate(label.y),
-                rotation: this.normalizeMapRotation(label.rotation)
+                rotation: this.normalizeMapRotation(label.rotation),
+                style: this.normalizeMapLabelStyle(label.style, label.tone)
             })),
             layers: {
                 rivers: (map?.layers?.rivers ?? []).map((stroke) => ({
@@ -786,7 +970,8 @@ export class DungeonStoreService {
                 tone: this.normalizeMapLabelTone(label.tone),
                 x: this.normalizeMapCoordinate(label.x),
                 y: this.normalizeMapCoordinate(label.y),
-                rotation: this.normalizeMapRotation(label.rotation)
+                rotation: this.normalizeMapRotation(label.rotation),
+                style: this.normalizeMapLabelStyleToApi(label.style, label.tone)
             })),
             layers: {
                 rivers: map.layers.rivers.map((stroke) => ({
@@ -882,6 +1067,11 @@ export class DungeonStoreService {
         return {
             id: character.id,
             campaignId: character.campaignId,
+            campaignIds: character.campaignIds?.length
+                ? character.campaignIds
+                : character.campaignId && character.campaignId !== DungeonStoreService.UNASSIGNED_CAMPAIGN_ID
+                    ? [character.campaignId]
+                    : [],
             ownerUserId: character.ownerUserId,
             ownerDisplayName: character.ownerDisplayName || character.playerName,
             canEdit: character.canEdit,
@@ -1111,6 +1301,53 @@ export class DungeonStoreService {
         }
     }
 
+    private normalizeMapLabelStyle(style: ApiCampaignMapLabelStyleDto | CampaignMapLabelStyle | undefined, tone: ApiCampaignMapLabelDto['tone'] | string | undefined): CampaignMapLabelStyle {
+        const normalizedTone = this.normalizeMapLabelTone(tone);
+        const defaults = this.defaultMapLabelStyle(normalizedTone);
+
+        return {
+            color: this.normalizeMapLabelColor(style?.color, normalizedTone),
+            backgroundColor: this.normalizeMapLabelBackgroundColor(style?.backgroundColor, normalizedTone),
+            borderColor: this.normalizeMapLabelBorderColor(style?.borderColor, normalizedTone),
+            fontFamily: this.normalizeMapLabelFontFamily(style?.fontFamily, normalizedTone),
+            fontSize: this.normalizeMapLabelFontSize(style?.fontSize, normalizedTone),
+            fontWeight: this.normalizeMapLabelFontWeight(style?.fontWeight, normalizedTone),
+            letterSpacing: this.normalizeMapLabelLetterSpacing(style?.letterSpacing, normalizedTone),
+            fontStyle: style?.fontStyle === 'italic' ? 'italic' : defaults.fontStyle,
+            textTransform: style?.textTransform === 'none' ? 'none' : defaults.textTransform,
+            borderWidth: this.normalizeMapLabelBorderWidth(style?.borderWidth, normalizedTone),
+            borderRadius: this.normalizeMapLabelBorderRadius(style?.borderRadius, normalizedTone),
+            paddingX: this.normalizeMapLabelPaddingX(style?.paddingX, normalizedTone),
+            paddingY: this.normalizeMapLabelPaddingY(style?.paddingY, normalizedTone),
+            textShadow: this.normalizeMapLabelTextShadow(style?.textShadow, normalizedTone),
+            boxShadow: this.normalizeMapLabelBoxShadow(style?.boxShadow, normalizedTone),
+            opacity: this.normalizeMapLabelOpacity(style?.opacity, normalizedTone)
+        };
+    }
+
+    private normalizeMapLabelStyleToApi(style: CampaignMapLabelStyle | undefined, tone: CampaignMapLabelTone): ApiCampaignMapLabelStyleDto {
+        const normalized = this.normalizeMapLabelStyle(style, tone);
+
+        return {
+            color: normalized.color,
+            backgroundColor: normalized.backgroundColor,
+            borderColor: normalized.borderColor,
+            fontFamily: normalized.fontFamily,
+            fontSize: normalized.fontSize,
+            fontWeight: normalized.fontWeight,
+            letterSpacing: normalized.letterSpacing,
+            fontStyle: normalized.fontStyle,
+            textTransform: normalized.textTransform,
+            borderWidth: normalized.borderWidth,
+            borderRadius: normalized.borderRadius,
+            paddingX: normalized.paddingX,
+            paddingY: normalized.paddingY,
+            textShadow: normalized.textShadow,
+            boxShadow: normalized.boxShadow,
+            opacity: normalized.opacity
+        };
+    }
+
     private normalizeMapDecorationColor(type: ApiCampaignMapDecorationDto['type'] | string | undefined, color: string | undefined): string {
         const normalizedType = this.normalizeMapDecorationType(type);
 
@@ -1154,12 +1391,234 @@ export class DungeonStoreService {
         }
     }
 
+    private normalizeMapLabelColor(color: string | undefined, tone: CampaignMapLabelTone): string {
+        return this.normalizeMapLabelCssColor(color, this.defaultMapLabelStyle(tone).color);
+    }
+
+    private normalizeMapLabelBackgroundColor(color: string | undefined, tone: CampaignMapLabelTone): string {
+        return this.normalizeMapLabelCssColor(color, this.defaultMapLabelStyle(tone).backgroundColor);
+    }
+
+    private normalizeMapLabelBorderColor(color: string | undefined, tone: CampaignMapLabelTone): string {
+        return this.normalizeMapLabelCssColor(color, this.defaultMapLabelStyle(tone).borderColor);
+    }
+
+    private normalizeMapLabelFontFamily(fontFamily: ApiCampaignMapLabelStyleDto['fontFamily'] | CampaignMapLabelStyle['fontFamily'] | undefined, tone: CampaignMapLabelTone): CampaignMapLabelStyle['fontFamily'] {
+        if (fontFamily === 'body' || fontFamily === 'display') {
+            return fontFamily;
+        }
+
+        return this.defaultMapLabelStyle(tone).fontFamily;
+    }
+
+    private normalizeMapLabelFontSize(value: number | undefined, tone: CampaignMapLabelTone): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return this.defaultMapLabelStyle(tone).fontSize;
+        }
+
+        return Math.max(0.72, Math.min(2.4, Number(value)));
+    }
+
+    private normalizeMapLabelFontWeight(value: number | undefined, tone: CampaignMapLabelTone): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return this.defaultMapLabelStyle(tone).fontWeight;
+        }
+
+        return Math.max(400, Math.min(800, Math.round(Number(value) / 50) * 50));
+    }
+
+    private normalizeMapLabelLetterSpacing(value: number | undefined, tone: CampaignMapLabelTone): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return this.defaultMapLabelStyle(tone).letterSpacing;
+        }
+
+        return Math.max(-0.04, Math.min(0.32, Number(value)));
+    }
+
+    private normalizeMapLabelBorderWidth(value: number | undefined, tone: CampaignMapLabelTone): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return this.defaultMapLabelStyle(tone).borderWidth;
+        }
+
+        return Math.max(0, Math.min(6, Number(value)));
+    }
+
+    private normalizeMapLabelBorderRadius(value: number | undefined, tone: CampaignMapLabelTone): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return this.defaultMapLabelStyle(tone).borderRadius;
+        }
+
+        return Math.max(0, Math.min(32, Number(value)));
+    }
+
+    private normalizeMapLabelPaddingX(value: number | undefined, tone: CampaignMapLabelTone): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return this.defaultMapLabelStyle(tone).paddingX;
+        }
+
+        return Math.max(0, Math.min(24, Number(value)));
+    }
+
+    private normalizeMapLabelPaddingY(value: number | undefined, tone: CampaignMapLabelTone): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return this.defaultMapLabelStyle(tone).paddingY;
+        }
+
+        return Math.max(0, Math.min(16, Number(value)));
+    }
+
+    private normalizeMapLabelTextShadow(value: string | undefined, tone: CampaignMapLabelTone): string {
+        return this.normalizeMapLabelCssEffect(value, this.defaultMapLabelStyle(tone).textShadow);
+    }
+
+    private normalizeMapLabelBoxShadow(value: string | undefined, tone: CampaignMapLabelTone): string {
+        return this.normalizeMapLabelCssEffect(value, this.defaultMapLabelStyle(tone).boxShadow);
+    }
+
+    private normalizeMapLabelOpacity(value: number | undefined, tone: CampaignMapLabelTone): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return this.defaultMapLabelStyle(tone).opacity;
+        }
+
+        return Math.max(0.45, Math.min(1, Number(value)));
+    }
+
+    private defaultMapLabelStyle(tone: CampaignMapLabelTone): CampaignMapLabelStyle {
+        if (tone === 'Feature') {
+            return {
+                color: '#f6ead8',
+                backgroundColor: 'transparent',
+                borderColor: 'transparent',
+                fontFamily: 'body',
+                fontSize: 0.84,
+                fontWeight: 600,
+                letterSpacing: 0.08,
+                fontStyle: 'italic',
+                textTransform: 'none',
+                borderWidth: 0,
+                borderRadius: 8,
+                paddingX: 0,
+                paddingY: 0,
+                textShadow: '0 1px 0 rgba(43, 28, 19, 0.72), 0 2px 10px rgba(0, 0, 0, 0.34)',
+                boxShadow: 'none',
+                opacity: 0.98
+            };
+        }
+
+        return {
+            color: '#fff4e5',
+            backgroundColor: 'transparent',
+            borderColor: 'transparent',
+            fontFamily: 'display',
+            fontSize: 1,
+            fontWeight: 650,
+            letterSpacing: 0.18,
+            fontStyle: 'normal',
+            textTransform: 'uppercase',
+            borderWidth: 0,
+            borderRadius: 8,
+            paddingX: 0,
+            paddingY: 0,
+            textShadow: '0 1px 0 rgba(43, 28, 19, 0.78), 0 2px 12px rgba(0, 0, 0, 0.4)',
+            boxShadow: 'none',
+            opacity: 1
+        };
+    }
+
+    private normalizeMapLabelCssColor(value: string | undefined, fallback: string): string {
+        const trimmed = value?.trim();
+        if (!trimmed) {
+            return fallback;
+        }
+
+        return /^(transparent|#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\([\d\s.,%]+\)|hsla?\([\d\s.,%]+\))$/i.test(trimmed)
+            ? trimmed
+            : fallback;
+    }
+
+    private normalizeMapLabelCssEffect(value: string | undefined, fallback: string): string {
+        const trimmed = value?.trim();
+        if (!trimmed) {
+            return fallback;
+        }
+
+        return trimmed.length <= 120 && /^(none|[a-z0-9#(),.%\s+-]+)$/i.test(trimmed)
+            ? trimmed
+            : fallback;
+    }
+
     private normalizeMapCoordinate(value: number | undefined): number {
         if (typeof value !== 'number' || !Number.isFinite(value)) {
             return 0.5;
         }
 
         return Math.max(0, Math.min(1, value));
+    }
+
+    private spreadGeneratedMapLabels(labels: Campaign['map']['labels']): Campaign['map']['labels'] {
+        if (labels.length < 2) {
+            return labels;
+        }
+
+        const spread = labels.map((label) => ({ ...label, style: { ...label.style } }));
+
+        for (let iteration = 0; iteration < 12; iteration += 1) {
+            let moved = false;
+
+            for (let index = 0; index < spread.length; index += 1) {
+                for (let compareIndex = index + 1; compareIndex < spread.length; compareIndex += 1) {
+                    const current = spread[index];
+                    const other = spread[compareIndex];
+                    const currentBox = this.estimateGeneratedMapLabelFootprint(current);
+                    const otherBox = this.estimateGeneratedMapLabelFootprint(other);
+                    const deltaX = other.x - current.x;
+                    const deltaY = other.y - current.y;
+                    const minDeltaX = (currentBox.width + otherBox.width) * 0.5;
+                    const minDeltaY = (currentBox.height + otherBox.height) * 0.5;
+
+                    if (Math.abs(deltaX) >= minDeltaX || Math.abs(deltaY) >= minDeltaY) {
+                        continue;
+                    }
+
+                    const fallbackX = index % 2 === 0 ? -1 : 1;
+                    const fallbackY = compareIndex % 2 === 0 ? -1 : 1;
+                    const directionX = Math.abs(deltaX) < 0.0001 ? fallbackX : Math.sign(deltaX);
+                    const directionY = Math.abs(deltaY) < 0.0001 ? fallbackY : Math.sign(deltaY);
+                    const pushX = ((minDeltaX - Math.abs(deltaX)) * 0.5) + 0.008;
+                    const pushY = ((minDeltaY - Math.abs(deltaY)) * 0.5) + 0.008;
+
+                    current.x = this.clampGeneratedLabelCoordinate(current.x - (directionX * pushX));
+                    other.x = this.clampGeneratedLabelCoordinate(other.x + (directionX * pushX));
+                    current.y = this.clampGeneratedLabelCoordinate(current.y - (directionY * pushY));
+                    other.y = this.clampGeneratedLabelCoordinate(other.y + (directionY * pushY));
+                    moved = true;
+                }
+            }
+
+            if (!moved) {
+                break;
+            }
+        }
+
+        return spread;
+    }
+
+    private estimateGeneratedMapLabelFootprint(label: Campaign['map']['labels'][number]): { width: number; height: number } {
+        const characterWidth = label.tone === 'Feature' ? 0.0105 : 0.0125;
+        const width = Math.min(
+            0.34,
+            0.034 + (label.text.trim().length * label.style.fontSize * characterWidth) + (label.style.paddingX * 0.0032)
+        );
+        const height = Math.min(
+            0.095,
+            0.024 + (label.style.fontSize * 0.028) + (label.style.paddingY * 0.0042) + (label.style.borderWidth * 0.002)
+        );
+
+        return { width, height };
+    }
+
+    private clampGeneratedLabelCoordinate(value: number): number {
+        return Math.max(0.08, Math.min(0.92, value));
     }
 
     private normalizeMapScale(value: number | undefined): number {
@@ -1487,5 +1946,13 @@ export class DungeonStoreService {
         this.campaigns.set([]);
         this.characters.set([]);
         this.selectedCampaignId.set('');
+    }
+
+    private canManageCampaignContent(campaignId: string): boolean {
+        if (!campaignId) {
+            return false;
+        }
+
+        return this.campaigns().some((campaign) => campaign.id === campaignId && campaign.currentUserRole === 'Owner');
     }
 }

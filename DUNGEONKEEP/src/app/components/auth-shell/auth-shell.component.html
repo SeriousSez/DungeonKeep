@@ -13,6 +13,10 @@
             <button type="button" class="auth-tab" [class.is-active]="mode() === 'signup'" (click)="setMode('signup')">Sign Up</button>
         </div>
 
+        @if (infoMessage()) {
+        <p class="info-copy">{{ infoMessage() }}</p>
+        }
+
         @if (errorMessage()) {
         <p class="error-copy">{{ errorMessage() }}</p>
         }
@@ -31,7 +35,7 @@
 
             <button type="submit" class="primary-button" [disabled]="isSubmitting()">{{ isSubmitting() ? 'Signing In...' : 'Sign In' }}</button>
         </form>
-        } @else {
+        } @else if (mode() === 'signup') {
         <form class="auth-form" [formGroup]="signupForm" (ngSubmit)="submitSignup()">
             <label class="field">
                 <span>Display Name</span>
@@ -49,6 +53,28 @@
             </label>
 
             <button type="submit" class="primary-button" [disabled]="isSubmitting()">{{ isSubmitting() ? 'Creating Account...' : 'Create Account' }}</button>
+        </form>
+        } @else {
+        <form class="auth-form" [formGroup]="activationForm" (ngSubmit)="submitActivation()">
+            <label class="field">
+                <span>Email</span>
+                <input type="email" formControlName="email" autocomplete="email" />
+            </label>
+
+            <label class="field">
+                <span>Activation Code</span>
+                <div class="activation-code-inputs">
+                    @for (slot of activationCodeSlots; track slot) {
+                    <input #activationDigitInput class="activation-code-digit" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" [value]="activationCodeDigits()[slot]" [attr.aria-label]="'Activation code digit ' + (slot + 1)"
+                        (input)="handleActivationDigitInput($event, slot)" (keydown)="handleActivationDigitKeydown($event, slot)" (paste)="handleActivationCodePaste($event, slot)" (focus)="handleActivationDigitFocus(slot)" />
+                    }
+                </div>
+            </label>
+
+            <p class="helper-copy">Use the six-digit code from your activation email. You need to activate your account before the first sign-in.</p>
+
+            <button type="submit" class="primary-button" [disabled]="isSubmitting()">{{ isSubmitting() ? 'Activating...' : 'Activate Account' }}</button>
+            <button type="button" class="secondary-button" [disabled]="isSubmitting()" (click)="resendActivationCode()">{{ isSubmitting() ? 'Sending...' : 'Resend Code' }}</button>
         </form>
         }
     </div>

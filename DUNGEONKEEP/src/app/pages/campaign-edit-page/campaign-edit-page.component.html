@@ -1,5 +1,17 @@
 <main class="page-stack">
-    @if (selectedCampaign(); as campaign) {
+    @if (!store.initialized() || (selectedCampaign() && !campaignReady())) {
+    <section class="panel page-intro skeleton-panel">
+        <div class="skeleton-line skeleton-eyebrow"></div>
+        <div class="skeleton-line skeleton-title"></div>
+        <div class="skeleton-line skeleton-copy"></div>
+    </section>
+
+    <section class="panel skeleton-panel skeleton-form">
+        @for (line of [1, 2, 3, 4, 5]; track line) {
+        <div class="skeleton-line skeleton-input"></div>
+        }
+    </section>
+    } @else if (selectedCampaign(); as campaign) {
     @if (canEditCampaign() && editDraft(); as draft) {
     <section class="panel page-intro">
         <div>

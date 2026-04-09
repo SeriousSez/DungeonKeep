@@ -179,6 +179,28 @@ export class NewCharacterStandardPageComponent {
 
     constructor() {
         effect(() => {
+            if (this.routeStep() !== null) {
+                return;
+            }
+
+            void this.router.navigate(this.getBuilderStepRoute('class'), {
+                queryParamsHandling: 'preserve',
+                replaceUrl: true
+            });
+        });
+
+        effect(() => {
+            const campaigns = this.store.campaigns();
+            const availableCampaignIds = new Set(campaigns.map((campaign) => campaign.id));
+            const currentSelection = this.selectedCampaignIdsOnCreate();
+            const filteredSelection = currentSelection.filter((campaignId) => availableCampaignIds.has(campaignId));
+
+            if (filteredSelection.length !== currentSelection.length || filteredSelection.some((campaignId, index) => campaignId !== currentSelection[index])) {
+                this.selectedCampaignIdsOnCreate.set(filteredSelection);
+            }
+        });
+
+        effect(() => {
             const characterId = this.activeBuilderCharacterId();
             if (!characterId) {
                 return;
@@ -462,9 +484,25 @@ export class NewCharacterStandardPageComponent {
     readonly selectedSpeciesTraitChoices = signal<Record<string, string[]>>({});
     readonly completionCharacterName = signal('');
     readonly completionPlayerName = signal('');
-    readonly assignToCurrentCampaignOnCreate = signal(false);
+    readonly selectedCampaignIdsOnCreate = signal<string[]>([]);
+    readonly hasTouchedCompletionCampaignSelection = signal(false);
     readonly completionError = signal('');
     readonly isCompletingCharacter = signal(false);
+    readonly completionCampaignGroups = computed<MultiSelectOptionGroup[]>(() => {
+        const campaigns = this.store.campaigns();
+
+        if (campaigns.length === 0) {
+            return [];
+        }
+
+        return [{
+            label: '',
+            options: campaigns.map((campaign) => ({
+                value: campaign.id,
+                label: campaign.name
+            }))
+        }];
+    });
 
     // Magic Initiate feat state
     readonly magicInitiateAbility = signal('');
@@ -6188,7 +6226,7 @@ export class NewCharacterStandardPageComponent {
 
         const background = this.selectedBackgroundName() || this.selectedBackground()?.name || 'Freshly arrived adventurer';
         const notes = this.buildPersistedNotes();
-        const selectedCampaignId = this.store.selectedCampaign()?.id;
+        const selectedCampaignId = this.selectedCampaignIdsOnCreate()[0] || undefined;
         const level = this.getPrimaryClassLevel();
         const maxHitPoints = this.getResolvedHitPointTotal(className, level);
 
@@ -6201,7 +6239,8 @@ export class NewCharacterStandardPageComponent {
             role: 'Striker',
             background,
             notes,
-            campaignId: this.assignToCurrentCampaignOnCreate() ? selectedCampaignId : undefined,
+            campaignId: selectedCampaignId,
+            campaignIds: this.selectedCampaignIdsOnCreate(),
             hitPoints: maxHitPoints,
             maxHitPoints
         };
@@ -6937,8 +6976,9 @@ export class NewCharacterStandardPageComponent {
             .concat(blockedBySpecies.filter((language) => language !== current));
     }
 
-    onAssignToCurrentCampaignChanged(isChecked: boolean): void {
-        this.assignToCurrentCampaignOnCreate.set(isChecked);
+    onCompletionCampaignSelectionChanged(campaignIds: string[]): void {
+        this.hasTouchedCompletionCampaignSelection.set(true);
+        this.selectedCampaignIdsOnCreate.set(campaignIds);
     }
 
     onFaithChanged(value: string, input: HTMLInputElement): void {

@@ -235,7 +235,8 @@ export class SessionEditorPageComponent {
         this.route.paramMap
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe((params) => {
-                this.campaignId.set(params.get('id') ?? '');
+                const campaignId = params.get('id') ?? '';
+                this.campaignId.set(campaignId);
                 this.sessionId.set(params.get('sessionId'));
                 this.initialized.set(false);
                 this.saveMessage.set('');
@@ -247,6 +248,10 @@ export class SessionEditorPageComponent {
                     estimatedLengthHint: '',
                     markdownNotesHint: ''
                 });
+
+                if (campaignId) {
+                    void this.store.ensureCampaignLoaded(campaignId);
+                }
             });
 
         this.editorForm.valueChanges
@@ -268,7 +273,28 @@ export class SessionEditorPageComponent {
                 return;
             }
 
+            if (!campaign?.detailsLoaded) {
+                return;
+            }
+
             this.loadInitialState(campaign);
+        });
+
+        effect(() => {
+            const campaign = this.currentCampaign();
+            const campaignId = this.campaignId();
+            const sessionId = this.sessionId();
+
+            if (!campaignId || !campaign || campaign.currentUserRole === 'Owner') {
+                return;
+            }
+
+            void this.router.navigate(
+                sessionId
+                    ? ['/campaigns', campaignId, 'sessions', sessionId]
+                    : ['/campaigns', campaignId, 'sessions'],
+                { replaceUrl: true }
+            );
         });
     }
 
@@ -368,6 +394,12 @@ export class SessionEditorPageComponent {
         const campaignId = this.campaignId();
         if (!campaignId) {
             this.saveMessage.set('Draft saved locally.');
+            this.cdr.detectChanges();
+            return;
+        }
+
+        if (this.currentCampaign()?.currentUserRole !== 'Owner') {
+            this.saveError.set('Only campaign owners can edit sessions.');
             this.cdr.detectChanges();
             return;
         }

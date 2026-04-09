@@ -10,6 +10,7 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
     public DbSet<Campaign> Campaigns => Set<Campaign>();
     public DbSet<CampaignMembership> CampaignMemberships => Set<CampaignMembership>();
     public DbSet<Character> Characters => Set<Character>();
+    public DbSet<CharacterCampaignAssignment> CharacterCampaignAssignments => Set<CharacterCampaignAssignment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -19,6 +20,9 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
             entity.Property(user => user.Email).HasMaxLength(320).IsRequired();
             entity.Property(user => user.DisplayName).HasMaxLength(120).IsRequired();
             entity.Property(user => user.PasswordHash).HasMaxLength(2048).IsRequired();
+            entity.Property(user => user.IsEmailVerified).IsRequired();
+            entity.Property(user => user.ActivationCodeHash).HasMaxLength(256).IsRequired();
+            entity.Property(user => user.ActivationCodeExpiresAtUtc);
             entity.Property(user => user.CreatedAtUtc).IsRequired();
 
             entity.HasIndex(user => user.Email).IsUnique();
@@ -50,12 +54,12 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
             entity.Property(c => c.Hook).HasMaxLength(500);
             entity.Property(c => c.NextSession).HasMaxLength(120);
             entity.Property(c => c.Summary).HasMaxLength(1000);
-            entity.Property(c => c.SessionsJson).HasMaxLength(12000).IsRequired();
-            entity.Property(c => c.NpcsJson).HasMaxLength(8000).IsRequired();
-            entity.Property(c => c.LootJson).HasMaxLength(8000).IsRequired();
-            entity.Property(c => c.OpenThreadsJson).HasMaxLength(8000).IsRequired();
-            entity.Property(c => c.WorldNotesJson).HasMaxLength(16000).IsRequired();
-            entity.Property(c => c.CampaignMapJson).HasMaxLength(48000).IsRequired();
+            entity.Property(c => c.SessionsJson).HasColumnType("longtext").IsRequired();
+            entity.Property(c => c.NpcsJson).HasColumnType("longtext").IsRequired();
+            entity.Property(c => c.LootJson).HasColumnType("longtext").IsRequired();
+            entity.Property(c => c.OpenThreadsJson).HasColumnType("longtext").IsRequired();
+            entity.Property(c => c.WorldNotesJson).HasColumnType("longtext").IsRequired();
+            entity.Property(c => c.CampaignMapJson).HasColumnType("longtext").IsRequired();
             entity.Property(c => c.CreatedAtUtc).IsRequired();
 
             entity.HasMany(c => c.Characters)
@@ -90,6 +94,22 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
+        modelBuilder.Entity<CharacterCampaignAssignment>(entity =>
+        {
+            entity.HasKey(assignment => new { assignment.CharacterId, assignment.CampaignId });
+            entity.HasIndex(assignment => assignment.CampaignId);
+
+            entity.HasOne(assignment => assignment.Character)
+                .WithMany(character => character.CampaignAssignments)
+                .HasForeignKey(assignment => assignment.CharacterId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(assignment => assignment.Campaign)
+                .WithMany(campaign => campaign.CharacterAssignments)
+                .HasForeignKey(assignment => assignment.CampaignId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<Character>(entity =>
         {
             entity.HasKey(c => c.Id);
@@ -99,33 +119,33 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
             entity.Property(c => c.Level).IsRequired();
             entity.Property(c => c.Status).HasMaxLength(32).IsRequired();
             entity.Property(c => c.Background).HasMaxLength(500);
-            entity.Property(c => c.Notes).HasMaxLength(4000);
-            entity.Property(c => c.Backstory).HasMaxLength(8000);
+            entity.Property(c => c.Notes).HasColumnType("text");
+            entity.Property(c => c.Backstory).HasColumnType("longtext");
             entity.Property(c => c.CreatedAtUtc).IsRequired();
 
             // New D&D fields
             entity.Property(c => c.Species).HasMaxLength(64);
             entity.Property(c => c.Alignment).HasMaxLength(32);
             entity.Property(c => c.Lifestyle).HasMaxLength(32);
-            entity.Property(c => c.PersonalityTraits).HasMaxLength(1000);
-            entity.Property(c => c.Ideals).HasMaxLength(1000);
-            entity.Property(c => c.Bonds).HasMaxLength(1000);
-            entity.Property(c => c.Flaws).HasMaxLength(1000);
-            entity.Property(c => c.Equipment).HasMaxLength(4000);
+            entity.Property(c => c.PersonalityTraits).HasColumnType("text");
+            entity.Property(c => c.Ideals).HasColumnType("text");
+            entity.Property(c => c.Bonds).HasColumnType("text");
+            entity.Property(c => c.Flaws).HasColumnType("text");
+            entity.Property(c => c.Equipment).HasColumnType("text");
             entity.Property(c => c.AbilityScores).HasMaxLength(500);
-            entity.Property(c => c.Skills).HasMaxLength(1000);
+            entity.Property(c => c.Skills).HasColumnType("text");
             entity.Property(c => c.SavingThrows).HasMaxLength(500);
             entity.Property(c => c.HitPoints).IsRequired();
             entity.Property(c => c.DeathSaveFailures).IsRequired();
             entity.Property(c => c.DeathSaveSuccesses).IsRequired();
             entity.Property(c => c.ArmorClass).IsRequired();
-            entity.Property(c => c.CombatStats).HasMaxLength(2000);
-            entity.Property(c => c.Spells).HasMaxLength(4000);
+            entity.Property(c => c.CombatStats).HasColumnType("text");
+            entity.Property(c => c.Spells).HasColumnType("text");
             entity.Property(c => c.ExperiencePoints).IsRequired();
             entity.Property(c => c.PortraitUrl).HasMaxLength(500);
-            entity.Property(c => c.Goals).HasMaxLength(2000);
-            entity.Property(c => c.Secrets).HasMaxLength(2000);
-            entity.Property(c => c.SessionHistory).HasMaxLength(8000);
+            entity.Property(c => c.Goals).HasColumnType("text");
+            entity.Property(c => c.Secrets).HasColumnType("text");
+            entity.Property(c => c.SessionHistory).HasColumnType("longtext");
 
             entity.HasIndex(c => c.CampaignId);
 

@@ -1,6 +1,7 @@
 using DungeonKeep.ApplicationService.Contracts;
 using DungeonKeep.ApplicationService.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Primitives;
 
 namespace DungeonKeep.API.Controllers;
 
@@ -9,12 +10,40 @@ namespace DungeonKeep.API.Controllers;
 public sealed class AuthController(IAuthService authService) : ControllerBase
 {
     [HttpPost("signup")]
-    public async Task<ActionResult<AuthSessionDto>> Signup([FromBody] SignupRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<SignupPendingActivationDto>> Signup([FromBody] SignupRequest request, CancellationToken cancellationToken)
     {
         try
         {
-            var created = await authService.SignupAsync(request, cancellationToken);
+            var created = await authService.SignupAsync(request, GetClientBaseUrl(), cancellationToken);
             return Ok(created);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+    }
+
+    [HttpPost("activate")]
+    public async Task<ActionResult<ActivationResultDto>> Activate([FromBody] ActivateAccountRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await authService.ActivateAsync(request, cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+    }
+
+    [HttpPost("resend-activation")]
+    public async Task<ActionResult<ActivationResultDto>> ResendActivation([FromBody] ResendActivationCodeRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await authService.ResendActivationCodeAsync(request, GetClientBaseUrl(), cancellationToken);
+            return Ok(result);
         }
         catch (InvalidOperationException exception)
         {
@@ -25,13 +54,20 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
     [HttpPost("login")]
     public async Task<ActionResult<AuthSessionDto>> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
     {
-        var session = await authService.LoginAsync(request, cancellationToken);
-        if (session is null)
+        try
         {
-            return Unauthorized("Email or password was invalid.");
-        }
+            var session = await authService.LoginAsync(request, cancellationToken);
+            if (session is null)
+            {
+                return Unauthorized("Email or password was invalid.");
+            }
 
-        return Ok(session);
+            return Ok(session);
+        }
+        catch (AccountActivationRequiredException)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, "Activate your account with the emailed code before signing in.");
+        }
     }
 
     [HttpGet("session")]
@@ -53,5 +89,40 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
         return authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
             ? authorization[7..].Trim()
             : string.Empty;
+    }
+
+    private string? GetClientBaseUrl()
+    {
+        if (TryGetAbsoluteHttpUrl(Request.Headers.Origin, out var originBaseUrl))
+        {
+            return originBaseUrl;
+        }
+
+        if (TryGetAbsoluteHttpUrl(Request.Headers.Referer, out var refererBaseUrl))
+        {
+            return refererBaseUrl;
+        }
+
+        return null;
+    }
+
+    private static bool TryGetAbsoluteHttpUrl(StringValues headerValues, out string? baseUrl)
+    {
+        baseUrl = null;
+        var candidate = headerValues.FirstOrDefault();
+
+        if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        baseUrl = uri.GetLeftPart(UriPartial.Authority);
+        return true;
     }
 }

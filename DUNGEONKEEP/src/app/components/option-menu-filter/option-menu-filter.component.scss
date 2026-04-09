@@ -43,7 +43,6 @@
 
 .class-sort-popover-panel {
     position: absolute;
-    right: 0;
     top: calc(100% + 8px);
     z-index: 40;
     width: min(320px, 84vw);
@@ -56,6 +55,16 @@
     gap: 4px;
     max-height: min(420px, 70vh);
     overflow-y: auto;
+}
+
+.class-sort-popover-panel--align-end {
+    right: 0;
+    left: auto;
+}
+
+.class-sort-popover-panel--align-start {
+    left: 0;
+    right: auto;
 }
 
 .class-sort-option {

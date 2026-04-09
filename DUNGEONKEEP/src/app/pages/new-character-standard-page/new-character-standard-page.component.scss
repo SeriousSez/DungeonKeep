@@ -1,5 +1,8 @@
 :host {
     display: block;
+    width: 100%;
+    min-width: 0;
+    overflow-x: clip;
 }
 
 @keyframes dk-fade-slide-in {
@@ -46,6 +49,7 @@
     min-width: 0;
     margin: 0 auto;
     padding: 20px 16px;
+    overflow-x: clip;
 }
 
 .panel {
@@ -55,18 +59,21 @@
     box-shadow: var(--panel-shadow);
     backdrop-filter: blur(18px);
     transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+    min-width: 0;
 }
 
 .page-intro {
     padding: 24px;
     display: grid;
     gap: 10px;
+    min-width: 0;
 }
 
 .page-intro h1 {
     margin: 0;
     font-family: var(--display-font);
     font-weight: 700;
+    overflow-wrap: anywhere;
 }
 
 .page-intro p {
@@ -91,6 +98,7 @@
 .standard-steps-shell {
     padding: 10px 14px;
     width: 100%;
+    min-width: 0;
     overflow-x: auto;
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
@@ -100,8 +108,10 @@
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    justify-content: space-between;
-    width: 100%;
+    justify-content: flex-start;
+    gap: 10px;
+    width: max-content;
+    min-width: 100%;
     padding: 0;
 }
 
@@ -269,9 +279,12 @@ input {
     align-items: flex-end;
     justify-content: space-between;
     gap: 14px;
+    min-width: 0;
 
     h2 {
         margin: 0;
+        min-width: 0;
+        overflow-wrap: anywhere;
     }
 }
 
@@ -279,6 +292,8 @@ input {
     display: flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
+    flex-wrap: wrap;
 }
 
 .class-hp-trigger {
@@ -293,6 +308,8 @@ input {
     letter-spacing: 0.04em;
     text-transform: uppercase;
     cursor: pointer;
+    white-space: normal;
+    text-align: center;
 
     &:hover:not(:disabled) {
         border-color: color-mix(in srgb, var(--accent-primary) 55%, var(--panel-border));
@@ -1576,7 +1593,7 @@ input {
 
     textarea {
         resize: vertical;
-        min-height: 72px;
+        min-height: 250px;
     }
 }
 
@@ -1988,16 +2005,18 @@ input {
     z-index: 3;
 }
 
-.assign-campaign-toggle {
-    display: flex;
-    align-items: center;
+.assign-campaign-field {
+    display: grid;
     gap: 8px;
     color: var(--text-main);
+}
 
-    input {
-        width: 16px;
-        height: 16px;
-    }
+.assign-campaign-label {
+    font-weight: 700;
+}
+
+.assign-campaign-empty {
+    margin: 0;
 }
 
 .background-choice-list details[open] p {
@@ -2095,6 +2114,43 @@ input {
     display: flex;
     align-items: center;
     gap: 6px;
+}
+
+.ability-method-panel {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    overflow: visible;
+}
+
+.ability-assignment-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
+    align-items: start;
+    overflow: visible;
+    min-width: 0;
+}
+
+.ability-assignment-tile {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.ability-assignment-tile app-dropdown {
+    width: 100%;
+}
+
+.ability-assignment-label {
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+}
+
+.ability-assignment-total {
+    font-size: 0.78rem;
+    font-weight: 700;
 }
 
 .ability-grid {
@@ -2757,7 +2813,7 @@ input {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         padding-bottom: 4px;
-        min-width: 0;
+        min-width: 100%;
     }
 
     .step-pill-desktop {
@@ -2772,7 +2828,7 @@ input {
         white-space: nowrap;
         flex: 0 0 auto;
         min-height: 34px;
-        padding: 0 6px;
+        padding: 0 10px;
         font-size: 0.8rem;
     }
 
@@ -2783,6 +2839,10 @@ input {
 
     .ability-grid {
         grid-template-columns: 1fr;
+    }
+
+    .ability-assignment-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .proficiencies-grid {
@@ -2844,5 +2904,83 @@ input {
         width: 52px;
         height: 52px;
         font-size: 1.4rem;
+    }
+}
+
+@media (max-width: 720px) {
+
+    .page-stack {
+        gap: 14px;
+    }
+
+    .page-intro,
+    .step-panel {
+        padding: 14px;
+    }
+
+    .page-intro h1 {
+        font-size: clamp(1.75rem, 9vw, 2.15rem);
+        line-height: 0.96;
+    }
+
+    .class-step-header-actions,
+    .species-filter-control,
+    .background-filter-control {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .class-step-header-actions {
+        align-items: stretch;
+        justify-content: flex-start;
+    }
+
+    .class-step-header-actions>*,
+    .species-filter-control>*,
+    .background-filter-control>* {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .class-step-header-actions>* {
+        width: auto;
+        max-width: 100%;
+    }
+
+    .class-sort-popover--header,
+    .class-hp-trigger {
+        align-self: flex-start;
+    }
+
+    .class-hp-trigger {
+        max-width: 100%;
+    }
+
+    .list-header,
+    .class-category-header,
+    .species-category-header,
+    .species-header-right {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .class-step-header {
+        gap: 10px;
+    }
+
+    .option-row {
+        min-height: 0;
+        padding: 10px 12px;
+        gap: 10px;
+        align-items: flex-start;
+    }
+
+    .step-pill {
+        font-size: 0.76rem;
+    }
+
+    .ability-assignment-label,
+    .ability-assignment-total {
+        font-size: 0.72rem;
     }
 }

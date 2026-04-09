@@ -19,6 +19,13 @@ public sealed class AuthRepository(DungeonKeepDbContext dbContext) : IAuthReposi
         return user;
     }
 
+    public async Task<AppUser> UpdateUserAsync(AppUser user, CancellationToken cancellationToken = default)
+    {
+        dbContext.AppUsers.Update(user);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return user;
+    }
+
     public async Task<AuthSession> AddSessionAsync(AuthSession session, CancellationToken cancellationToken = default)
     {
         dbContext.AuthSessions.Add(session);

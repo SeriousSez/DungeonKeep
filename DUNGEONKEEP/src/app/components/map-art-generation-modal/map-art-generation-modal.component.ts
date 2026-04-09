@@ -11,6 +11,7 @@ export type MapArtCavernLayout = 'TunnelNetwork' | 'GrandCavern' | 'VerticalChas
 export interface MapArtGenerationOptions {
     background: CampaignMapBackground;
     mapName: string;
+    separateLabels: boolean;
     settlementScale: MapArtSettlementScale;
     parchmentLayout: MapArtParchmentLayout;
     cavernLayout: MapArtCavernLayout;
@@ -67,6 +68,7 @@ export class MapArtGenerationModalComponent {
     readonly isSubmitting = input(false);
     readonly background = input<CampaignMapBackground>('Parchment');
     readonly mapName = input('');
+    readonly separateLabels = input(true);
     readonly settlementScale = input<MapArtSettlementScale>('City');
     readonly parchmentLayout = input<MapArtParchmentLayout>('Continent');
     readonly cavernLayout = input<MapArtCavernLayout>('TunnelNetwork');
@@ -81,6 +83,7 @@ export class MapArtGenerationModalComponent {
 
     readonly backgroundDraft = signal<CampaignMapBackground>('Parchment');
     readonly mapNameDraft = signal('');
+    readonly separateLabelsDraft = signal(true);
     readonly settlementScaleDraft = signal<MapArtSettlementScale>('City');
     readonly parchmentLayoutDraft = signal<MapArtParchmentLayout>('Continent');
     readonly cavernLayoutDraft = signal<MapArtCavernLayout>('TunnelNetwork');
@@ -105,6 +108,17 @@ export class MapArtGenerationModalComponent {
     readonly ruinNameCount = computed(() => this.parseNameList(this.ruinNamesDraft()).length);
     readonly cavernNameCount = computed(() => this.parseNameList(this.cavernNamesDraft()).length);
     readonly totalPreferredNameCount = computed(() => this.settlementNameCount() + this.regionNameCount() + this.ruinNameCount() + this.cavernNameCount());
+    readonly separateLabelsHelpText = computed(() => {
+        if (this.isSettlementMap()) {
+            return 'Generate the city, district, landmark, and street names as movable overlay labels instead of painting text into the art.';
+        }
+
+        if (this.isCavernMap()) {
+            return 'Generate the cavern, enclave, landmark, and tunnel names as movable overlay labels instead of painting text into the art.';
+        }
+
+        return 'Generate place names as movable overlay labels instead of painting text into the art.';
+    });
     readonly namesIntro = computed(() => {
         if (this.isSettlementMap()) {
             return 'Choose the map type, structure, and the specific settlement, district, landmark, or street names you want the AI to prefer.';
@@ -301,6 +315,7 @@ export class MapArtGenerationModalComponent {
 
             this.backgroundDraft.set(this.background());
             this.mapNameDraft.set(this.mapName());
+            this.separateLabelsDraft.set(this.separateLabels());
             this.settlementScaleDraft.set(this.settlementScale());
             this.parchmentLayoutDraft.set(this.parchmentLayout());
             this.cavernLayoutDraft.set(this.cavernLayout());
@@ -327,6 +342,10 @@ export class MapArtGenerationModalComponent {
 
     updateMapName(value: string): void {
         this.mapNameDraft.set(value);
+    }
+
+    updateSeparateLabels(value: boolean): void {
+        this.separateLabelsDraft.set(value);
     }
 
     updateSettlementScale(value: string | number): void {
@@ -391,6 +410,7 @@ export class MapArtGenerationModalComponent {
         this.confirmed.emit({
             background: this.backgroundDraft(),
             mapName: this.mapNameDraft().trim(),
+            separateLabels: this.separateLabelsDraft(),
             settlementScale: this.settlementScaleDraft(),
             parchmentLayout: this.parchmentLayoutDraft(),
             cavernLayout: this.cavernLayoutDraft(),

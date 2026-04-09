@@ -1,4 +1,12 @@
-@if (selectedCampaign(); as campaign) {
+@if (!store.initialized() || (selectedCampaign() && !campaignReady())) {
+<main class="page-stack">
+    <section class="panel skeleton-panel">
+        <div class="skeleton-line skeleton-eyebrow"></div>
+        <div class="skeleton-line skeleton-title"></div>
+        <div class="skeleton-line skeleton-copy"></div>
+    </section>
+</main>
+} @else if (selectedCampaign(); as campaign) {
 <main class="page-stack">
     <a [routerLink]="['/campaigns', campaign.id]" class="back-link">← Back to {{ campaign.name }}</a>
 

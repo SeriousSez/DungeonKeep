@@ -1,4 +1,4 @@
-<div class="msd-host" [class.msd-open]="isOpen()" [class.msd-open-up]="opensUpward()">
+<div class="msd-host" [class.msd-open]="isOpen()" [class.msd-open-up]="opensUpward()" [class.msd-open-align-end]="panelAlignment() === 'end'" [class.msd-open-align-start]="panelAlignment() === 'start'">
     <button type="button" class="msd-trigger" [attr.aria-expanded]="isOpen()" aria-haspopup="listbox" (click)="toggleOpen()">
         <span class="msd-trigger-copy">
             <span class="msd-trigger-label">
@@ -12,7 +12,7 @@
     </button>
 
     @if (isOpen()) {
-    <div class="msd-panel" role="listbox" [attr.aria-multiselectable]="isSingleSelect() ? null : 'true'" [style.max-height.px]="panelMaxHeight()">
+    <div class="msd-panel" role="listbox" [attr.aria-multiselectable]="isSingleSelect() ? null : 'true'" [style.max-height.px]="panelMaxHeight()" [style.max-width.px]="getPanelMaxWidth()">
         <div class="msd-panel-inner" [style.max-height.px]="panelMaxHeight()">
             @for (group of groups(); track group.label) {
             <div class="msd-group">

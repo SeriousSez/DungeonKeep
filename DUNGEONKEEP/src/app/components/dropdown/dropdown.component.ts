@@ -25,6 +25,7 @@ export interface DropdownOption {
 export class DropdownComponent {
     private readonly hostElement = inject(ElementRef<HTMLElement>);
     private readonly defaultPanelMaxHeight = 300;
+    private readonly viewportPadding = 12;
     private suppressOutsideCloseUntil = 0;
 
     readonly id = input<string>('');
@@ -44,8 +45,10 @@ export class DropdownComponent {
 
     readonly isOpen = signal(false);
     readonly opensUpward = signal(false);
+    readonly panelAlignment = signal<'start' | 'end'>('start');
     readonly searchTerm = signal('');
     readonly panelMaxHeight = signal(this.defaultPanelMaxHeight);
+    readonly panelAvailableWidth = signal<number | null>(null);
 
     readonly filteredOptions = computed(() => {
         const query = this.searchTerm().trim().toLowerCase();
@@ -96,6 +99,8 @@ export class DropdownComponent {
             if (!this.isOpen()) {
                 this.opensUpward.set(false);
                 this.panelMaxHeight.set(this.defaultPanelMaxHeight);
+                this.panelAlignment.set('start');
+                this.panelAvailableWidth.set(null);
                 return;
             }
 
@@ -112,18 +117,34 @@ export class DropdownComponent {
                     return;
                 }
 
-                const viewportPadding = 12;
                 const panelGap = 6;
                 const triggerRect = trigger.getBoundingClientRect();
+                const boundsRect = this.getAvailableBounds(trigger);
                 const desiredPanelHeight = panel.offsetHeight || panel.scrollHeight || this.defaultPanelMaxHeight;
-                const availableBelow = Math.max(0, view.innerHeight - triggerRect.bottom - viewportPadding - panelGap);
-                const availableAbove = Math.max(0, triggerRect.top - viewportPadding - panelGap);
+                const desiredPanelWidth = panel.offsetWidth || panel.scrollWidth || triggerRect.width;
+                const availableBelow = Math.max(0, boundsRect.bottom - triggerRect.bottom - panelGap);
+                const availableAbove = Math.max(0, triggerRect.top - boundsRect.top - panelGap);
+                const availableRight = Math.max(0, boundsRect.right - triggerRect.left);
+                const availableLeft = Math.max(0, triggerRect.right - boundsRect.left);
                 const shouldOpenUpward = desiredPanelHeight > availableBelow && availableAbove > availableBelow;
                 const availableSpace = shouldOpenUpward ? availableAbove : availableBelow;
+                const startOverflow = triggerRect.left + desiredPanelWidth - boundsRect.right;
+                const endOverflow = boundsRect.left - (triggerRect.right - desiredPanelWidth);
 
                 this.opensUpward.set(shouldOpenUpward);
                 // Keep the dropdown panel within available viewport space.
                 this.panelMaxHeight.set(Math.max(120, Math.min(this.defaultPanelMaxHeight, availableSpace)));
+
+                if (endOverflow > 0 && startOverflow <= 0) {
+                    this.panelAlignment.set('end');
+                } else if (startOverflow > 0 && endOverflow <= 0) {
+                    this.panelAlignment.set('start');
+                } else {
+                    this.panelAlignment.set(startOverflow < endOverflow ? 'end' : 'start');
+                }
+
+                const availableWidth = this.panelAlignment() === 'end' ? availableLeft : availableRight;
+                this.panelAvailableWidth.set(Math.max(triggerRect.width, availableWidth));
             };
 
             const frameId = view.requestAnimationFrame(() => {
@@ -149,7 +170,23 @@ export class DropdownComponent {
     }
 
     getPanelMinWidth(): number | null {
-        return this.panelMinWidth() ?? this.minWidth() ?? null;
+        const requestedWidth = this.panelMinWidth() ?? this.minWidth();
+        const availableWidth = this.panelAvailableWidth();
+
+        if (requestedWidth === null || requestedWidth === undefined) {
+            return null;
+        }
+
+        if (availableWidth === null) {
+            return requestedWidth;
+        }
+
+        return Math.min(requestedWidth, Math.max(availableWidth, 120));
+    }
+
+    getPanelMaxWidth(): number | null {
+        const availableWidth = this.panelAvailableWidth();
+        return availableWidth === null ? null : Math.max(availableWidth, 120);
     }
 
     onValueChange(newValue: string | number): void {
@@ -202,5 +239,44 @@ export class DropdownComponent {
         if (!this.hostElement.nativeElement.contains(target)) {
             this.isOpen.set(false);
         }
+    }
+
+    private getAvailableBounds(trigger: HTMLElement): DOMRect {
+        const scrollContainer = this.getNearestScrollContainer(trigger);
+        if (!scrollContainer) {
+            return new DOMRect(
+                this.viewportPadding,
+                this.viewportPadding,
+                globalThis.window.innerWidth - this.viewportPadding * 2,
+                globalThis.window.innerHeight - this.viewportPadding * 2
+            );
+        }
+
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const top = Math.max(this.viewportPadding, containerRect.top);
+        const right = Math.min(globalThis.window.innerWidth - this.viewportPadding, containerRect.right);
+        const bottom = Math.min(globalThis.window.innerHeight - this.viewportPadding, containerRect.bottom);
+        const left = Math.max(this.viewportPadding, containerRect.left);
+
+        return new DOMRect(left, top, Math.max(0, right - left), Math.max(0, bottom - top));
+    }
+
+    private getNearestScrollContainer(element: HTMLElement): HTMLElement | null {
+        let current = element.parentElement;
+
+        while (current) {
+            const style = globalThis.window.getComputedStyle(current);
+            const overflowY = style.overflowY;
+            const overflow = style.overflow;
+            const isScrollable = /(auto|scroll|overlay)/.test(`${overflowY} ${overflow}`);
+
+            if (isScrollable && current.scrollHeight > current.clientHeight) {
+                return current;
+            }
+
+            current = current.parentElement;
+        }
+
+        return null;
     }
 }

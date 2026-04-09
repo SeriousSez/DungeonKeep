@@ -1,4 +1,12 @@
-@if (selectedCampaign(); as campaign) {
+@if (!store.initialized() || (selectedCampaign() && !campaignReady())) {
+<main class="page-stack">
+    <section class="panel skeleton-panel">
+        <div class="skeleton-line skeleton-eyebrow"></div>
+        <div class="skeleton-line skeleton-title"></div>
+        <div class="skeleton-line skeleton-copy"></div>
+    </section>
+</main>
+} @else if (selectedCampaign(); as campaign) {
 <main class="page-stack" [class.page-stack--editor]="isEditorMode()">
     <a [routerLink]="backLink().route" class="back-link">← {{ backLink().label }}</a>
 
@@ -112,12 +120,19 @@
                 </div>
 
                 <div class="tool-toggle-row">
+                    <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'select'" (click)="selectSelectTool()">Select</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'draw'" (click)="selectDrawTool()">Draw Routes</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'icon'" (click)="startLandmarkTool()">Place Landmarks</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'terrain'" (click)="selectTerrainTool('Mountain')">Place Terrain</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'label'" (click)="selectLabelTool()">Place Labels</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'token'" (click)="selectTokenTool()">Place Tokens</button>
                 </div>
+
+                @if (activeTool() === 'select') {
+                <div class="mode-detail-block">
+                    <p class="sidebar-note generator-note">Select mode is the default. Click labels, landmarks, or tokens to inspect them, then drag them to reposition without placing anything new.</p>
+                </div>
+                }
 
                 @if (activeTool() === 'draw') {
                 <div class="mode-detail-block">
@@ -225,6 +240,36 @@
                     <p class="sidebar-note">Upload token art, then click the board to place it. You can keep placing the same token until you clear it.</p>
                     }
                 </div>
+                }
+            </div>
+
+            <div class="sidebar-section">
+                <div class="section-heading compact-heading">
+                    <h2>Selected Label</h2>
+                </div>
+
+                @if (selectedLabel(); as label) {
+                <div class="selected-icon-card selected-label-card">
+                    <div class="selected-icon-header">
+                        <div>
+                            <strong>{{ label.tone }}</strong>
+                            <p>{{ label.text }}</p>
+                        </div>
+                    </div>
+
+                    @if (canEdit()) {
+                    <label class="field-label" for="map-selected-label-tone">Label type</label>
+                    <app-dropdown ariaLabel="Selected label type" [value]="labelToneDraft()" [options]="labelToneOptions" [minWidth]="220" (changed)="updateLabelToneDraft($event)"></app-dropdown>
+                    <label class="field-label" for="map-selected-label-text">Label text</label>
+                    <input id="map-selected-label-text" type="text" [value]="labelTextDraft()" (input)="updateLabelTextDraft($any($event.target).value)" placeholder="Rename this label" />
+                    <button type="button" class="primary-button full-width-button" (click)="applySelectedLabel()">Apply Label Details</button>
+                    <button type="button" class="ghost-button danger-button full-width-button" (click)="requestDeleteSelectedLabel()">Delete Label</button>
+                    } @else {
+                    <p class="sidebar-note">Labels can be inspected here, but only campaign owners can move or edit them.</p>
+                    }
+                </div>
+                } @else {
+                <p class="sidebar-note">Select a label on the map to inspect, rename, retone, or remove it.</p>
                 }
             </div>
 
@@ -422,9 +467,14 @@
                     </div>
 
                     @if (showLabels()) {
-                    <div class="map-label-layer" aria-hidden="true">
+                    <div class="map-label-layer">
                         @for (label of workingMap().labels; track label.id) {
-                        <span class="map-region-label" [class.is-feature]="label.tone === 'Feature'" [style.left.%]="label.x * 100" [style.top.%]="label.y * 100" [style.transform]="'translate(-50%, -50%) rotate(' + label.rotation + 'deg)'">{{ label.text }}</span>
+                        <button type="button" class="map-region-label map-region-label--interactive" [class.is-feature]="label.tone === 'Feature'" [class.is-selected]="isSelectedLabel(label.id)" [style.left.%]="label.x * 100" [style.top.%]="label.y * 100"
+                            [style.transform]="'translate(-50%, -50%) rotate(' + label.rotation + 'deg)'" [style.color]="label.style.color" [style.font-family]="mapLabelFontFamily(label.style.fontFamily)" [style.font-size.rem]="label.style.fontSize" [style.font-weight]="label.style.fontWeight"
+                            [style.letter-spacing.em]="label.style.letterSpacing" [style.font-style]="label.style.fontStyle" [style.text-transform]="label.style.textTransform" [style.background-color]="label.style.backgroundColor" [style.border-color]="label.style.borderColor"
+                            [style.border-width.px]="label.style.borderWidth" [style.border-style]="mapLabelBorderStyle(label.style)" [style.border-radius.px]="label.style.borderRadius" [style.padding]="mapLabelPadding(label.style)" [style.text-shadow]="label.style.textShadow"
+                            [style.box-shadow]="label.style.boxShadow" [style.opacity]="label.style.opacity" (click)="$event.stopPropagation(); selectLabel(label.id)" (pointerdown)="handleLabelPointerDown($event, label.id)" (pointermove)="handleLabelPointerMove($event, label.id)"
+                            (pointerup)="handleLabelPointerUp($event, label.id)" (pointercancel)="handleLabelPointerUp($event, label.id)">{{ label.text }}</button>
                         }
                     </div>
                     }
@@ -540,7 +590,10 @@
                 @if (showLabels()) {
                 <div class="map-label-layer" aria-hidden="true">
                     @for (label of workingMap().labels; track label.id) {
-                    <span class="map-region-label" [class.is-feature]="label.tone === 'Feature'" [style.left.%]="label.x * 100" [style.top.%]="label.y * 100" [style.transform]="'translate(-50%, -50%) rotate(' + label.rotation + 'deg)'">{{ label.text }}</span>
+                    <span class="map-region-label" [class.is-feature]="label.tone === 'Feature'" [style.left.%]="label.x * 100" [style.top.%]="label.y * 100" [style.transform]="'translate(-50%, -50%) rotate(' + label.rotation + 'deg)'" [style.color]="label.style.color"
+                        [style.font-family]="mapLabelFontFamily(label.style.fontFamily)" [style.font-size.rem]="label.style.fontSize" [style.font-weight]="label.style.fontWeight" [style.letter-spacing.em]="label.style.letterSpacing" [style.font-style]="label.style.fontStyle"
+                        [style.text-transform]="label.style.textTransform" [style.background-color]="label.style.backgroundColor" [style.border-color]="label.style.borderColor" [style.border-width.px]="label.style.borderWidth" [style.border-style]="mapLabelBorderStyle(label.style)"
+                        [style.border-radius.px]="label.style.borderRadius" [style.padding]="mapLabelPadding(label.style)" [style.text-shadow]="label.style.textShadow" [style.box-shadow]="label.style.boxShadow" [style.opacity]="label.style.opacity">{{ label.text }}</span>
                     }
                 </div>
                 }
@@ -560,10 +613,11 @@
     }
 
     <app-confirm-modal [open]="confirmOpen()" [title]="confirmTitle()" [message]="confirmMessage()" [confirmText]="confirmActionText()" cancelText="Cancel" (confirmed)="handleConfirmAccepted()" (cancelled)="handleConfirmCancelled()"></app-confirm-modal>
-    <app-map-art-generation-modal [open]="mapArtModalOpen()" [isSubmitting]="isAiArtGenerating()" [background]="workingMap().background" [mapName]="mapNameDraft().trim()" [settlementScale]="settlementScale()" [parchmentLayout]="parchmentLayout()" [cavernLayout]="cavernLayout()"
-        [settlementNamesText]="settlementNamesDraft()" [regionNamesText]="regionNamesDraft()" [ruinNamesText]="ruinNamesDraft()" [cavernNamesText]="cavernNamesDraft()" [additionalDirection]="additionalArtDirectionDraft()" (closed)="closeMapArtModal()"
-        (confirmed)="submitMapArtModal($event)"></app-map-art-generation-modal>
 </main>
+
+<app-map-art-generation-modal [open]="mapArtModalOpen()" [isSubmitting]="isAiArtGenerating()" [background]="workingMap().background" [mapName]="mapNameDraft().trim()" [separateLabels]="separateLabelsDraft()" [settlementScale]="settlementScale()" [parchmentLayout]="parchmentLayout()"
+    [cavernLayout]="cavernLayout()" [settlementNamesText]="settlementNamesDraft()" [regionNamesText]="regionNamesDraft()" [ruinNamesText]="ruinNamesDraft()" [cavernNamesText]="cavernNamesDraft()" [additionalDirection]="additionalArtDirectionDraft()" (closed)="closeMapArtModal()"
+    (confirmed)="submitMapArtModal($event)"></app-map-art-generation-modal>
 } @else {
 <main class="page-stack">
     <section class="panel skeleton-panel">

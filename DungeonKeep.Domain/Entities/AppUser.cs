@@ -6,6 +6,9 @@ public sealed class AppUser
     public string Email { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
+    public bool IsEmailVerified { get; set; }
+    public string ActivationCodeHash { get; set; } = string.Empty;
+    public DateTime? ActivationCodeExpiresAtUtc { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public List<AuthSession> Sessions { get; set; } = [];
