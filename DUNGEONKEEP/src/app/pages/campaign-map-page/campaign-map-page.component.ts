@@ -276,6 +276,7 @@ export class CampaignMapPageComponent {
 
         return this.store.campaigns().find((campaign) => campaign.id === campaignId) ?? null;
     });
+    readonly campaignReady = computed(() => this.selectedCampaign()?.detailsLoaded === true);
 
     readonly canEdit = computed(() => this.selectedCampaign()?.currentUserRole === 'Owner');
     readonly isEditorMode = computed(() => this.routeMode() === 'edit');
@@ -480,6 +481,7 @@ export class CampaignMapPageComponent {
 
                 if (campaignId) {
                     this.store.selectCampaign(campaignId);
+                    void this.ensureCampaignDetails(campaignId);
                 }
             });
 
@@ -492,7 +494,7 @@ export class CampaignMapPageComponent {
         effect(() => {
             const campaign = this.selectedCampaign();
             const routeMapId = this.routeMapId();
-            if (!campaign) {
+            if (!campaign || !campaign.detailsLoaded) {
                 return;
             }
 
@@ -570,6 +572,11 @@ export class CampaignMapPageComponent {
             this.labelTextDraft.set(selectedLabel.text);
             this.labelToneDraft.set(selectedLabel.tone);
         });
+    }
+
+    private async ensureCampaignDetails(campaignId: string): Promise<void> {
+        await this.store.ensureCampaignLoaded(campaignId);
+        this.cdr.detectChanges();
     }
 
     @HostListener('document:keydown', ['$event'])

@@ -5,6 +5,7 @@ namespace DungeonKeep.ApplicationService.Interfaces;
 
 public interface ICampaignRepository
 {
+    Task<IReadOnlyList<CampaignSummaryRecord>> GetAllSummariesForUserAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Campaign>> GetAllForUserAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<Campaign?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<Campaign> AddAsync(Campaign campaign, CancellationToken cancellationToken = default);

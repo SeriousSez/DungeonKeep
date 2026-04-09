@@ -1,5 +1,5 @@
 <main class="page-stack">
-    @if (!store.initialized()) {
+    @if (!store.initialized() || (selectedCampaign() && !campaignReady())) {
     <section class="panel skeleton-panel">
         <div class="skeleton-line skeleton-eyebrow"></div>
         <div class="skeleton-line skeleton-title"></div>

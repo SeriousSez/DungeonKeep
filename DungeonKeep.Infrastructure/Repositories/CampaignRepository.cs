@@ -12,6 +12,36 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 {
     private readonly bool campaignSchemaReady = dbContext.Database.IsSqlite() ? EnsureCampaignSchema(dbContext) : true;
 
+    public async Task<IReadOnlyList<CampaignSummaryRecord>> GetAllSummariesForUserAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        _ = campaignSchemaReady;
+        return await dbContext.Campaigns
+            .AsNoTracking()
+            .Where(campaign => campaign.Memberships.Any(membership => membership.UserId == userId && membership.Status == "Active"))
+            .OrderByDescending(campaign => campaign.CreatedAtUtc)
+            .Select(campaign => new CampaignSummaryRecord(
+                campaign.Id,
+                campaign.Name,
+                campaign.Setting,
+                campaign.Tone,
+                campaign.LevelStart,
+                campaign.LevelEnd,
+                campaign.Hook,
+                campaign.NextSession,
+                campaign.Summary,
+                campaign.CreatedAtUtc,
+                campaign.CharacterAssignments.Count,
+                campaign.SessionsJson,
+                campaign.NpcsJson,
+                campaign.OpenThreadsJson,
+                campaign.Memberships
+                    .Where(membership => membership.UserId == userId && membership.Status == "Active")
+                    .Select(membership => membership.Role)
+                    .FirstOrDefault() ?? "Member"
+            ))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Campaign>> GetAllForUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         _ = campaignSchemaReady;

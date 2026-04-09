@@ -12,6 +12,11 @@ export const seedCampaigns: Campaign[] = [
         summary: 'A frontier kingdom is rebuilding after a dragon siege, but the royal line is still haunted by the pact that saved it.',
         hook: 'Recover the ember crown before three rival houses awaken the furnace beneath Redglass Keep.',
         nextSession: '2026-03-29',
+        characterCount: 3,
+        sessionCount: 2,
+        npcCount: 3,
+        openThreadCount: 2,
+        detailsLoaded: true,
         partyCharacterIds: ['seraphine', 'brakka', 'ivelios'],
         sessions: [
             {
@@ -138,6 +143,11 @@ export const seedCampaigns: Campaign[] = [
         summary: 'A magical storm has begun rewriting ship logs, debts, and family histories across the coast.',
         hook: 'Track the cursed ledger before an entire harbor city forgets who rules it.',
         nextSession: '2026-04-05',
+        characterCount: 2,
+        sessionCount: 1,
+        npcCount: 3,
+        openThreadCount: 2,
+        detailsLoaded: true,
         partyCharacterIds: ['kael', 'mira'],
         sessions: [
             {
@@ -250,6 +260,11 @@ export const seedCampaigns: Campaign[] = [
         summary: 'Ancient roots have opened a laughing underworld beneath the village orchards.',
         hook: 'Map the rootmaze before the midsummer fair turns into a fey migration.',
         nextSession: '2026-04-18',
+        characterCount: 1,
+        sessionCount: 1,
+        npcCount: 3,
+        openThreadCount: 1,
+        detailsLoaded: true,
         partyCharacterIds: ['thistle'],
         sessions: [
             {

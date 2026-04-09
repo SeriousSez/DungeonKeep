@@ -42,6 +42,7 @@ export class CampaignDetailPageComponent {
 
         return this.store.campaigns().find((campaign) => campaign.id === id) ?? null;
     });
+    readonly campaignReady = computed(() => this.selectedCampaign()?.detailsLoaded === true);
 
     readonly partyMembers = computed(() => {
         const campaign = this.selectedCampaign();
@@ -76,6 +77,20 @@ export class CampaignDetailPageComponent {
             ? 'Are you sure you want to leave this campaign? Your characters will be removed from the party and returned to your unassigned roster.'
             : 'Are you sure you want to delete this campaign? This action cannot be undone.');
     readonly confirmModalActionText = computed(() => this.confirmAction() === 'leave' ? 'Leave' : 'Delete');
+
+    constructor() {
+        void this.ensureCampaignDetails();
+    }
+
+    private async ensureCampaignDetails(): Promise<void> {
+        const campaignId = this.campaignId();
+        if (!campaignId) {
+            return;
+        }
+
+        await this.store.ensureCampaignLoaded(campaignId);
+        this.cdr.detectChanges();
+    }
 
     handleRequestDelete(): void {
         if (this.selectedCampaign()?.currentUserRole !== 'Owner') {

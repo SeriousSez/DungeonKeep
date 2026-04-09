@@ -166,6 +166,11 @@ export interface Campaign {
     summary: string;
     hook: string;
     nextSession: string;
+    characterCount: number;
+    sessionCount: number;
+    npcCount: number;
+    openThreadCount: number;
+    detailsLoaded: boolean;
     partyCharacterIds: string[];
     sessions: SessionPrep[];
     openThreads: CampaignThread[];

@@ -1,5 +1,22 @@
 <main class="page-stack">
-    @if (selectedCampaign(); as campaign) {
+    @if (!store.initialized() || (selectedCampaign() && !campaignReady())) {
+    <section class="panel page-intro skeleton-panel">
+        <div class="skeleton-line skeleton-eyebrow"></div>
+        <div class="skeleton-line skeleton-title"></div>
+        <div class="skeleton-line skeleton-copy"></div>
+    </section>
+
+    <section class="panel section-panel skeleton-panel">
+        <div class="skeleton-stack">
+            @for (row of [1, 2, 3, 4]; track row) {
+            <div class="skeleton-row">
+                <div class="skeleton-line skeleton-section-title"></div>
+                <div class="skeleton-line skeleton-copy"></div>
+            </div>
+            }
+        </div>
+    </section>
+    } @else if (selectedCampaign(); as campaign) {
     <a routerLink="/campaigns" class="back-link">← Back to Campaigns</a>
 
     <section class="panel page-intro">
@@ -405,23 +422,6 @@
     @if (activeLootItemDetailModal(); as item) {
     <app-item-detail-modal [item]="item" (closed)="closeLootItemModal()" (addRequested)="addActiveLootFromModal($event)"></app-item-detail-modal>
     }
-    } @else if (!store.initialized()) {
-    <section class="panel page-intro skeleton-panel">
-        <div class="skeleton-line skeleton-eyebrow"></div>
-        <div class="skeleton-line skeleton-title"></div>
-        <div class="skeleton-line skeleton-copy"></div>
-    </section>
-
-    <section class="panel section-panel skeleton-panel">
-        <div class="skeleton-stack">
-            @for (row of [1, 2, 3, 4]; track row) {
-            <div class="skeleton-row">
-                <div class="skeleton-line skeleton-section-title"></div>
-                <div class="skeleton-line skeleton-copy"></div>
-            </div>
-            }
-        </div>
-    </section>
     } @else {
     <section class="panel page-intro">
         <p class="eyebrow">Campaign not found</p>

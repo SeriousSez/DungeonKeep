@@ -118,6 +118,7 @@ export class CampaignSectionPageComponent {
 
         return this.store.campaigns().find((campaign) => campaign.id === id) ?? null;
     });
+    readonly campaignReady = computed(() => this.selectedCampaign()?.detailsLoaded === true);
 
     readonly partyMembers = computed(() => {
         const campaign = this.selectedCampaign();
@@ -211,6 +212,20 @@ export class CampaignSectionPageComponent {
         return [...summaries.values()];
     });
     readonly totalLootWeight = computed(() => this.lootSummaries().reduce((total, item) => total + ((item.weight ?? 0) * item.count), 0));
+
+    constructor() {
+        void this.ensureCampaignDetails();
+    }
+
+    private async ensureCampaignDetails(): Promise<void> {
+        const campaignId = this.campaignId();
+        if (!campaignId) {
+            return;
+        }
+
+        await this.store.ensureCampaignLoaded(campaignId);
+        this.cdr.detectChanges();
+    }
 
     readonly pageTitle = computed(() => {
         switch (this.section()) {

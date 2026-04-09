@@ -1,5 +1,41 @@
 namespace DungeonKeep.ApplicationService.Contracts;
 
+public sealed record CampaignSummaryRecord(
+    Guid Id,
+    string Name,
+    string Setting,
+    string Tone,
+    int LevelStart,
+    int LevelEnd,
+    string Hook,
+    string NextSession,
+    string Summary,
+    DateTime CreatedAtUtc,
+    int CharacterCount,
+    string SessionsJson,
+    string NpcsJson,
+    string OpenThreadsJson,
+    string CurrentUserRole
+);
+
+public sealed record CampaignSummaryDto(
+    Guid Id,
+    string Name,
+    string Setting,
+    string Tone,
+    int LevelStart,
+    int LevelEnd,
+    string Hook,
+    string NextSession,
+    string Summary,
+    DateTime CreatedAtUtc,
+    int CharacterCount,
+    int SessionCount,
+    int NpcCount,
+    int OpenThreadCount,
+    string CurrentUserRole
+);
+
 public sealed record CampaignDto(
     Guid Id,
     string Name,

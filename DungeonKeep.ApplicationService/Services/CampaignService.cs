@@ -23,12 +23,32 @@ public sealed class CampaignService(
     private static readonly CampaignMapDto DefaultCampaignMap = new("Parchment", string.Empty, [], [], [], [], [], new CampaignMapLayersDto([], [], []));
     private static readonly CampaignMapBoardDto DefaultCampaignMapBoard = new(Guid.Parse("11111111-1111-1111-1111-111111111111"), "Main Map", "Parchment", string.Empty, [], [], [], [], [], new CampaignMapLayersDto([], [], []));
 
+    public async Task<IReadOnlyList<CampaignSummaryDto>> GetAllSummariesAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaigns = await campaignRepository.GetAllSummariesForUserAsync(userId, cancellationToken);
+        return campaigns
+            .Select(MapCampaignSummary)
+            .ToList();
+    }
+
     public async Task<IReadOnlyList<CampaignDto>> GetAllAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var campaigns = await campaignRepository.GetAllForUserAsync(userId, cancellationToken);
         return campaigns
             .Select(campaign => MapCampaign(campaign, userId))
             .ToList();
+    }
+
+    public async Task<CampaignDto?> GetByIdAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await campaignRepository.GetByIdAsync(campaignId, cancellationToken);
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var membership = campaign.Memberships.FirstOrDefault(member => member.UserId == userId && member.Status == "Active");
+        return membership is null ? null : MapCampaign(campaign, userId);
     }
 
     public async Task<CampaignDto> CreateAsync(CreateCampaignRequest request, AuthenticatedUser owner, CancellationToken cancellationToken = default)
@@ -533,6 +553,53 @@ public sealed class CampaignService(
                 ))
                 .ToList()
         );
+    }
+
+    private static CampaignSummaryDto MapCampaignSummary(CampaignSummaryRecord campaign)
+    {
+        var levelStart = Math.Clamp(campaign.LevelStart, 1, 20);
+        var levelEnd = Math.Clamp(campaign.LevelEnd, levelStart, 20);
+
+        return new CampaignSummaryDto(
+            campaign.Id,
+            campaign.Name,
+            campaign.Setting,
+            campaign.Tone,
+            levelStart,
+            levelEnd,
+            campaign.Hook,
+            campaign.NextSession,
+            campaign.Summary,
+            campaign.CreatedAtUtc,
+            campaign.CharacterCount,
+            CountJsonArrayItems(campaign.SessionsJson),
+            CountJsonArrayItems(campaign.NpcsJson),
+            CountJsonArrayItems(campaign.OpenThreadsJson),
+            campaign.CurrentUserRole
+        );
+    }
+
+    private static int CountJsonArrayItems(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return 0;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                return 0;
+            }
+
+            return document.RootElement.GetArrayLength();
+        }
+        catch
+        {
+            return 0;
+        }
     }
 
     private static IReadOnlyList<CampaignSessionDto> ParseSessions(string json)

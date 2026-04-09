@@ -127,12 +127,16 @@ export class SessionDetailPageComponent {
         this.route.paramMap
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe((params) => {
-                this.campaignId.set(params.get('id') ?? '');
+                const campaignId = params.get('id') ?? '';
+                this.campaignId.set(campaignId);
                 this.sessionId.set(params.get('sessionId') ?? '');
                 this.initialized.set(false);
                 this.loadError.set('');
                 this.storedDraft.set(null);
                 this.renderedMarkdown.set('');
+                if (campaignId) {
+                    void this.store.ensureCampaignLoaded(campaignId);
+                }
                 this.cdr.detectChanges();
             });
 
@@ -158,6 +162,9 @@ export class SessionDetailPageComponent {
             }
 
             const summary = campaign.sessions.find((session) => session.id === sessionId) ?? null;
+            if (!campaign.detailsLoaded) {
+                return;
+            }
             const draft = readStoredSessionEditorDraft(campaignId, sessionId);
             this.storedDraft.set(draft);
 

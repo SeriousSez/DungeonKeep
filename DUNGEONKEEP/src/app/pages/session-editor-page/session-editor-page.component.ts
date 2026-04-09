@@ -235,7 +235,8 @@ export class SessionEditorPageComponent {
         this.route.paramMap
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe((params) => {
-                this.campaignId.set(params.get('id') ?? '');
+                const campaignId = params.get('id') ?? '';
+                this.campaignId.set(campaignId);
                 this.sessionId.set(params.get('sessionId'));
                 this.initialized.set(false);
                 this.saveMessage.set('');
@@ -247,6 +248,10 @@ export class SessionEditorPageComponent {
                     estimatedLengthHint: '',
                     markdownNotesHint: ''
                 });
+
+                if (campaignId) {
+                    void this.store.ensureCampaignLoaded(campaignId);
+                }
             });
 
         this.editorForm.valueChanges
@@ -265,6 +270,10 @@ export class SessionEditorPageComponent {
             const campaignId = this.campaignId();
 
             if (!campaignId || this.initialized()) {
+                return;
+            }
+
+            if (!campaign?.detailsLoaded) {
                 return;
             }
 

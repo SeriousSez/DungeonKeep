@@ -2,7 +2,7 @@ import { Injectable, computed, effect, inject, signal } from '@angular/core';
 
 import { raceMap } from '../data/races';
 import { AbilityScores, Campaign, CampaignDraft, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecorationType, CampaignMapIconType, CampaignMapLabelStyle, CampaignMapLabelTone, CampaignThreadVisibility, CampaignWorldNoteCategory, Character, CharacterDraft, CharacterStatus, SkillProficiencies, ThreatLevel } from '../models/dungeon.models';
-import { ApiCampaignDto, ApiCampaignMapBoardDto, ApiCampaignMapDecorationDto, ApiCampaignMapDto, ApiCampaignMapLabelDto, ApiCampaignMapLabelStyleDto, ApiCampaignMapLibraryDto, ApiCampaignWorldNoteDto, ApiCharacterDto, DungeonApiService } from './dungeon-api.service';
+import { ApiCampaignDto, ApiCampaignMapBoardDto, ApiCampaignMapDecorationDto, ApiCampaignMapDto, ApiCampaignMapLabelDto, ApiCampaignMapLabelStyleDto, ApiCampaignMapLibraryDto, ApiCampaignSummaryDto, ApiCampaignWorldNoteDto, ApiCharacterDto, DungeonApiService } from './dungeon-api.service';
 import { SessionService } from './session.service';
 
 @Injectable({ providedIn: 'root' })
@@ -32,6 +32,7 @@ export class DungeonStoreService {
     readonly selectedCampaignId = signal('');
     readonly initialized = signal(false);
     readonly isHydrating = signal(false);
+    readonly loadingCampaignDetails = signal<string[]>([]);
 
     private readonly api = inject(DungeonApiService);
     private readonly session = inject(SessionService);
@@ -57,10 +58,10 @@ export class DungeonStoreService {
     readonly campaignCount = computed(() => this.campaigns().length);
     readonly characterCount = computed(() => this.characters().length);
     readonly sessionCount = computed(() =>
-        this.campaigns().reduce((total, campaign) => total + campaign.sessions.length, 0)
+        this.campaigns().reduce((total, campaign) => total + campaign.sessionCount, 0)
     );
     readonly openThreadCount = computed(() =>
-        this.campaigns().reduce((total, campaign) => total + campaign.openThreads.length, 0)
+        this.campaigns().reduce((total, campaign) => total + campaign.openThreadCount, 0)
     );
     readonly readyCharacterCount = computed(
         () => this.characters().filter((character) => character.status === 'Ready').length
@@ -92,6 +93,45 @@ export class DungeonStoreService {
 
     selectCampaign(campaignId: string): void {
         this.selectedCampaignId.set(campaignId);
+    }
+
+    hasCampaignDetails(campaignId: string): boolean {
+        return this.campaigns().some((campaign) => campaign.id === campaignId && campaign.detailsLoaded);
+    }
+
+    isCampaignDetailsLoading(campaignId: string): boolean {
+        return this.loadingCampaignDetails().includes(campaignId);
+    }
+
+    async ensureCampaignLoaded(campaignId: string): Promise<void> {
+        if (!campaignId || this.hasCampaignDetails(campaignId) || this.isCampaignDetailsLoading(campaignId)) {
+            return;
+        }
+
+        this.loadingCampaignDetails.update((ids) => [...ids, campaignId]);
+
+        try {
+            const campaign = await this.api.getCampaign(campaignId);
+            const partyCharacterIds = this.characters()
+                .filter((character) => character.campaignIds?.includes(campaignId) || character.campaignId === campaignId)
+                .map((character) => character.id);
+
+            this.campaigns.update((campaigns) => {
+                const mapped = this.mapCampaignFromApi(campaign, partyCharacterIds);
+                const existingIndex = campaigns.findIndex((entry) => entry.id === campaignId);
+
+                if (existingIndex === -1) {
+                    return [mapped, ...campaigns];
+                }
+
+                const next = [...campaigns];
+                next[existingIndex] = mapped;
+                return next;
+            });
+        } catch {
+        } finally {
+            this.loadingCampaignDetails.update((ids) => ids.filter((id) => id !== campaignId));
+        }
     }
 
     addCampaign(draft: CampaignDraft): void {
@@ -611,7 +651,7 @@ export class DungeonStoreService {
 
         try {
             const [campaignDtos, accessibleCharacterDtos] = await Promise.all([
-                this.api.getCampaigns(),
+                this.api.getCampaignSummaries(),
                 this.api.getAccessibleCharacters()
             ]);
 
@@ -652,7 +692,7 @@ export class DungeonStoreService {
                     });
                 }
 
-                return this.mapCampaignFromApi(campaignDto, mappedCharacters.map((character) => character.id));
+                return this.mapCampaignSummaryFromApi(campaignDto, mappedCharacters.map((character) => character.id));
             });
 
             for (const accessibleCharacterDto of accessibleCharacterDtos) {
@@ -701,6 +741,11 @@ export class DungeonStoreService {
             summary: campaign.summary,
             hook: campaign.hook || 'A new adventure awaits.',
             nextSession: campaign.nextSession || 'TBD',
+            characterCount: Math.max(campaign.characterCount ?? partyCharacterIds.length, partyCharacterIds.length),
+            sessionCount: campaign.sessions?.length ?? 0,
+            npcCount: campaign.npcs?.length ?? 0,
+            openThreadCount: campaign.openThreads?.length ?? 0,
+            detailsLoaded: true,
             partyCharacterIds,
             sessions: (campaign.sessions ?? []).map((session) => ({
                 id: session.id,
@@ -734,6 +779,41 @@ export class DungeonStoreService {
                 role: member.role,
                 status: member.status
             }))
+        };
+    }
+
+    private mapCampaignSummaryFromApi(campaign: ApiCampaignSummaryDto, partyCharacterIds: string[]): Campaign {
+        const levelStart = Math.min(Math.max(Math.trunc(campaign.levelStart ?? 1), 1), 20);
+        const levelEnd = Math.min(Math.max(Math.trunc(campaign.levelEnd ?? 4), levelStart), 20);
+        const emptyMap = this.createEmptyCampaignMapBoard();
+
+        return {
+            id: campaign.id,
+            name: campaign.name,
+            setting: campaign.setting,
+            tone: campaign.tone ?? 'Heroic',
+            levelStart,
+            levelEnd,
+            levelRange: `Levels ${levelStart}-${levelEnd}`,
+            summary: campaign.summary,
+            hook: campaign.hook || 'A new adventure awaits.',
+            nextSession: campaign.nextSession || 'TBD',
+            characterCount: Math.max(campaign.characterCount ?? partyCharacterIds.length, partyCharacterIds.length),
+            sessionCount: Math.max(0, campaign.sessionCount ?? 0),
+            npcCount: Math.max(0, campaign.npcCount ?? 0),
+            openThreadCount: Math.max(0, campaign.openThreadCount ?? 0),
+            detailsLoaded: false,
+            partyCharacterIds,
+            sessions: [],
+            openThreads: [],
+            worldNotes: [],
+            map: emptyMap,
+            maps: [],
+            activeMapId: '',
+            loot: [],
+            npcs: [],
+            currentUserRole: campaign.currentUserRole,
+            members: []
         };
     }
 

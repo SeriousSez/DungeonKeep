@@ -23,6 +23,19 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
     private const string DefaultImagesUrl = "https://api.openai.com/v1/images/generations";
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
+    [HttpGet("summaries")]
+    public async Task<ActionResult<IReadOnlyList<CampaignSummaryDto>>> GetSummaries(CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var campaigns = await campaignService.GetAllSummariesAsync(user.Id, cancellationToken);
+        return Ok(campaigns);
+    }
+
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<CampaignDto>>> GetAll(CancellationToken cancellationToken)
     {
@@ -34,6 +47,19 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
 
         var campaigns = await campaignService.GetAllAsync(user.Id, cancellationToken);
         return Ok(campaigns);
+    }
+
+    [HttpGet("{campaignId:guid}")]
+    public async Task<ActionResult<CampaignDto>> GetById(Guid campaignId, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var campaign = await campaignService.GetByIdAsync(campaignId, user.Id, cancellationToken);
+        return campaign is null ? NotFound() : Ok(campaign);
     }
 
     [HttpPost]

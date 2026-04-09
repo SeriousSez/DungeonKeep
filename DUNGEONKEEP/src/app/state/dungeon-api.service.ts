@@ -48,6 +48,24 @@ export interface ApiCampaignDto {
     members: ApiCampaignMemberDto[];
 }
 
+export interface ApiCampaignSummaryDto {
+    id: string;
+    name: string;
+    setting: string;
+    tone: ApiCampaignTone;
+    levelStart: number;
+    levelEnd: number;
+    hook: string;
+    nextSession: string;
+    summary: string;
+    createdAtUtc: string;
+    characterCount: number;
+    sessionCount: number;
+    npcCount: number;
+    openThreadCount: number;
+    currentUserRole: 'Owner' | 'Member';
+}
+
 export interface ApiCampaignSessionDto {
     id: string;
     title: string;
@@ -623,8 +641,16 @@ export class DungeonApiService {
     private readonly http = inject(HttpClient);
     private readonly baseUrl = environment.apiBaseUrl;
 
+    async getCampaignSummaries(): Promise<ApiCampaignSummaryDto[]> {
+        return await firstValueFrom(this.http.get<ApiCampaignSummaryDto[]>(`${this.baseUrl}/campaigns/summaries`));
+    }
+
     async getCampaigns(): Promise<ApiCampaignDto[]> {
         return await firstValueFrom(this.http.get<ApiCampaignDto[]>(`${this.baseUrl}/campaigns`));
+    }
+
+    async getCampaign(campaignId: string): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.get<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}`));
     }
 
     async createCampaign(payload: { name: string; setting: string; tone: ApiCampaignTone; levelStart: number; levelEnd: number; hook: string; nextSession: string; summary: string }): Promise<ApiCampaignDto> {
