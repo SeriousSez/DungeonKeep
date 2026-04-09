@@ -222,6 +222,13 @@
     max-width: 100%;
 }
 
+.campaign-assignment-buttons {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+}
+
 .assign-btn,
 .remove-btn {
     border: 1px solid var(--panel-border);
@@ -232,6 +239,20 @@
     padding: 0 12px;
     cursor: pointer;
     white-space: nowrap;
+}
+
+.remove-btn-label-short {
+    display: none;
+}
+
+@media (max-width: 1366px) {
+    .remove-btn-label-full {
+        display: none;
+    }
+
+    .remove-btn-label-short {
+        display: inline;
+    }
 }
 
 .edit-character-btn {
@@ -1333,9 +1354,17 @@
         max-width: 100%;
     }
 
+    .campaign-assignment-buttons {
+        display: grid;
+        grid-template-columns: auto auto;
+        gap: 8px;
+        justify-content: stretch;
+        width: 100%;
+    }
+
     .assign-btn,
     .remove-btn {
-        width: 100%;
+        width: auto;
         min-height: 38px;
     }
 

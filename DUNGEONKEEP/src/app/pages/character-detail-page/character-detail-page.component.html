@@ -68,12 +68,15 @@
                     @if (char.canEdit) {
                     <div class="campaign-assignment-controls">
                         <app-dropdown [value]="selectedCampaignAssignment()" [options]="assignableCampaignOptions()" [placeholder]="'Choose campaign...'" size="compact" (changed)="onCampaignAssignmentChanged($event)"></app-dropdown>
-                        <button type="button" class="assign-btn" [disabled]="isUpdatingCampaign() || !selectedCampaignAssignment()" (click)="assignCharacterToCampaign()">
-                            {{ isUpdatingCampaign() ? 'Updating...' : 'Assign' }}
-                        </button>
-                        <button type="button" class="remove-btn" [disabled]="isUpdatingCampaign() || campaignName() === 'Unassigned'" (click)="removeCharacterFromCampaign()">
-                            Remove from Campaign
-                        </button>
+                        <div class="campaign-assignment-buttons">
+                            <button type="button" class="assign-btn" [disabled]="isUpdatingCampaign() || !selectedCampaignAssignment()" (click)="assignCharacterToCampaign()">
+                                {{ isUpdatingCampaign() ? 'Updating...' : 'Assign' }}
+                            </button>
+                            <button type="button" class="remove-btn" [disabled]="isUpdatingCampaign() || campaignName() === 'Unassigned'" (click)="removeCharacterFromCampaign()" aria-label="Remove from Campaign">
+                                <span class="remove-btn-label-full">Remove from Campaign</span>
+                                <span class="remove-btn-label-short">Remove</span>
+                            </button>
+                        </div>
                     </div>
                     @if (campaignUpdateError()) {
                     <p class="campaign-error">{{ campaignUpdateError() }}</p>
