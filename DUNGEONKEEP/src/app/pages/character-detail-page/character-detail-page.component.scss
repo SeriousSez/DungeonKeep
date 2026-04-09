@@ -98,6 +98,21 @@
         transition: none !important;
         scroll-behavior: auto !important;
     }
+
+    // Elements animated in normal mode start at opacity: 0.
+    // In reduced-motion mode, ensure they render immediately.
+    .page-shell > *,
+    .save-card,
+    .skill-row,
+    .training-block,
+    .info-row,
+    .passive-row,
+    .actions-row,
+    .inventory-row,
+    .container-item {
+        opacity: 1 !important;
+        transform: none !important;
+    }
 }
 
 .detail-header {
