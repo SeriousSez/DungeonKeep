@@ -217,6 +217,7 @@ export class NewCharacterStandardPageComponent {
 
             this.hydrateBuilderFromCharacter(character, this.navigationEditLevel() ?? Number.NaN);
             this.hydratedCharacterId.set(characterId);
+            this.cdr.detectChanges();
         });
 
         // If a premade character was selected, populate the builder with its data

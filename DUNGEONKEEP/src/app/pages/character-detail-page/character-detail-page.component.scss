@@ -1342,24 +1342,25 @@
     }
 
     .campaign-assignment-controls {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
+        display: flex;
+        flex-wrap: nowrap;
         width: 100%;
-        justify-content: stretch;
-        align-items: stretch;
+        justify-content: flex-end;
+        align-items: center;
     }
 
     .campaign-assignment-controls app-dropdown {
         min-width: 0;
-        max-width: 100%;
+        max-width: none;
+        flex: 1 1 auto;
     }
 
     .campaign-assignment-buttons {
-        display: grid;
-        grid-template-columns: auto auto;
+        display: inline-flex;
+        flex-wrap: nowrap;
         gap: 8px;
-        justify-content: stretch;
-        width: 100%;
+        justify-content: flex-end;
+        width: auto;
     }
 
     .assign-btn,
@@ -1419,6 +1420,23 @@
 
     .header-actions {
         justify-items: stretch;
+    }
+
+    .campaign-assignment-controls {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: stretch;
+    }
+
+    .campaign-assignment-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+    }
+
+    .assign-btn,
+    .remove-btn {
+        width: 100%;
     }
 
     .campaign-error {
