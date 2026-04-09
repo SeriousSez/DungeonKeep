@@ -2153,3 +2153,152 @@
     display: grid;
     gap: 8px;
 }
+
+    // ── Skeleton loader ──────────────────────────────────────────────────────────
+
+    @keyframes skeleton-shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -20% 0; }
+    }
+
+    .skeleton-line {
+        height: 14px;
+        border-radius: 999px;
+        background: linear-gradient(
+            90deg,
+            color-mix(in srgb, var(--color-surface-alt) 90%, transparent),
+            color-mix(in srgb, var(--color-surface-alt) 60%, var(--color-primary) 40%),
+            color-mix(in srgb, var(--color-surface-alt) 90%, transparent)
+        );
+        background-size: 220% 100%;
+        animation: skeleton-shimmer 1.6s linear infinite;
+
+        @media (prefers-reduced-motion: reduce) {
+            animation: none;
+            opacity: 0.5;
+        }
+    }
+
+    .skeleton-header {
+        display: grid;
+        gap: 12px;
+        padding: clamp(16px, 3vw, 28px);
+    }
+
+    .skeleton-eyebrow {
+        width: 110px;
+        height: 11px;
+    }
+
+    .skeleton-title {
+        width: min(340px, 70%);
+        height: 32px;
+    }
+
+    .skeleton-subheader {
+        width: min(480px, 90%);
+        height: 16px;
+    }
+
+    .skeleton-panels {
+        display: grid;
+        grid-template-columns: auto auto;
+        gap: 10px;
+
+        @media (max-width: 1180px) {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .skeleton-panel {
+        display: grid;
+        gap: 10px;
+        padding: 16px;
+        overflow: hidden;
+    }
+
+    .skeleton-section-title {
+        width: 160px;
+        height: 22px;
+    }
+
+    .skeleton-abilities-strip {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 8px;
+
+        @media (max-width: 600px) {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    .skeleton-ability-card {
+        display: grid;
+        gap: 8px;
+        padding: 10px 6px;
+        border: 1px solid var(--color-border);
+        border-radius: 10px;
+        justify-items: center;
+    }
+
+    .skeleton-ability-abbr {
+        width: 30px;
+        height: 11px;
+    }
+
+    .skeleton-ability-score {
+        width: 38px;
+        height: 28px;
+        border-radius: 8px;
+    }
+
+    .skeleton-ability-mod {
+        width: 24px;
+        height: 13px;
+    }
+
+    .skeleton-stat-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--color-border);
+
+        &:last-child {
+            border-bottom: none;
+        }
+    }
+
+    .skeleton-stat-label {
+        width: 90px;
+        height: 12px;
+        flex-shrink: 0;
+    }
+
+    .skeleton-stat-value {
+        flex: 1;
+        height: 14px;
+    }
+
+    .skeleton-combat-block {
+        padding: 16px;
+    }
+
+    .skeleton-tab-strip {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .skeleton-tab {
+        width: 80px;
+        height: 30px;
+        border-radius: 8px;
+    }
+
+    .skeleton-action-row {
+        width: 100%;
+        height: 44px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+    }

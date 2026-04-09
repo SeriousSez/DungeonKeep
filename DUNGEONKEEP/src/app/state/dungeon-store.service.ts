@@ -30,6 +30,7 @@ export class DungeonStoreService {
     readonly campaigns = signal<Campaign[]>([]);
     readonly characters = signal<Character[]>([]);
     readonly selectedCampaignId = signal('');
+    readonly isHydrating = signal(true);
 
     private readonly api = inject(DungeonApiService);
     private readonly session = inject(SessionService);
@@ -528,6 +529,7 @@ export class DungeonStoreService {
     }
 
     private async hydrateFromApi(): Promise<void> {
+        this.isHydrating.set(true);
         try {
             const campaignDtos = await this.api.getCampaigns();
 
@@ -566,6 +568,8 @@ export class DungeonStoreService {
             }
         } catch {
             this.clearState();
+        } finally {
+            this.isHydrating.set(false);
         }
     }
 

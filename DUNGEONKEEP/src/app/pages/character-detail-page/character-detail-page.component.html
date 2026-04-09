@@ -1,5 +1,44 @@
 <main class="page-shell">
-    @if (character(); as char) {
+    @if (isHydrating()) {
+    <div class="skeleton-header panel">
+        <div class="skeleton-line skeleton-eyebrow"></div>
+        <div class="skeleton-line skeleton-title"></div>
+        <div class="skeleton-line skeleton-subheader"></div>
+    </div>
+    <div class="skeleton-panels">
+        <div class="panel skeleton-panel">
+            <div class="skeleton-line skeleton-section-title"></div>
+            <div class="skeleton-abilities-strip">
+                @for (item of [1,2,3,4,5,6]; track item) {
+                <div class="skeleton-ability-card">
+                    <div class="skeleton-line skeleton-ability-abbr"></div>
+                    <div class="skeleton-line skeleton-ability-score"></div>
+                    <div class="skeleton-line skeleton-ability-mod"></div>
+                </div>
+                }
+            </div>
+        </div>
+        <div class="panel skeleton-panel">
+            <div class="skeleton-line skeleton-section-title"></div>
+            @for (row of [1,2,3,4,5,6]; track row) {
+            <div class="skeleton-stat-row">
+                <div class="skeleton-line skeleton-stat-label"></div>
+                <div class="skeleton-line skeleton-stat-value"></div>
+            </div>
+            }
+        </div>
+    </div>
+    <div class="panel skeleton-panel skeleton-combat-block">
+        <div class="skeleton-tab-strip">
+            @for (tab of [1,2,3,4,5]; track tab) {
+            <div class="skeleton-line skeleton-tab"></div>
+            }
+        </div>
+        @for (row of [1,2,3,4]; track row) {
+        <div class="skeleton-line skeleton-action-row"></div>
+        }
+    </div>
+    } @else if (character(); as char) {
     <div class="detail-header">
         <a routerLink="/characters" class="back-link">← Back to Characters</a>
         <div class="header-content">
