@@ -1,0 +1,279 @@
+<div class="modal-backdrop" (click)="close()">
+    <article class="npc-preview-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+        <header class="npc-preview-header">
+            <div class="npc-preview-sigil" aria-hidden="true">{{ npc().name.charAt(0) || '?' }}</div>
+            <div class="npc-preview-copy">
+                <p class="npc-preview-eyebrow">Campaign NPC</p>
+                <h3>{{ npc().name }}</h3>
+                <p>{{ summary() || 'Campaign cast record' }}</p>
+            </div>
+            <button type="button" class="close-modal" (click)="close()" aria-label="Close">
+                <i class="fa-duotone fa-thin fa-xmark"></i>
+            </button>
+        </header>
+
+        <div class="npc-preview-body">
+            <div class="npc-preview-chip-row">
+                @if (npc().isImportant) {
+                <span class="npc-preview-chip">Important</span>
+                }
+                <span class="npc-preview-chip">{{ npc().hostility }}</span>
+                @if (!npc().isAlive) {
+                <span class="npc-preview-chip npc-preview-chip-muted">Dead</span>
+                }
+            </div>
+
+            <div class="npc-preview-tabs" role="tablist" aria-label="NPC sections">
+                @for (tab of tabs; track tab.id) {
+                <button type="button" class="npc-preview-tab" [class.npc-preview-tab-active]="activeTab() === tab.id" [attr.aria-selected]="activeTab() === tab.id" (click)="selectTab(tab.id)">
+                    {{ tab.label }}
+                </button>
+                }
+            </div>
+
+            @switch (activeTab()) {
+            @case ('overview') {
+            <div class="npc-preview-grid">
+                <section class="npc-preview-panel npc-preview-panel-span">
+                    <h4>Overview</h4>
+                    <p>{{ npc().shortDescription || 'No short summary recorded yet.' }}</p>
+                </section>
+
+                <section class="npc-preview-panel npc-preview-panel-span">
+                    <h4>Core Facts</h4>
+                    <dl class="npc-preview-facts npc-preview-facts-grid">
+                        @for (fact of overviewFacts(); track fact.label) {
+                        <div>
+                            <dt>{{ fact.label }}</dt>
+                            <dd>{{ fact.value }}</dd>
+                        </div>
+                        }
+                    </dl>
+                </section>
+
+                <section class="npc-preview-panel">
+                    <h4>Appearance</h4>
+                    <p>{{ npc().appearance || 'No appearance notes recorded yet.' }}</p>
+                </section>
+
+                <section class="npc-preview-panel">
+                    <h4>Voice Notes</h4>
+                    <p>{{ npc().voiceNotes || 'No voice notes recorded yet.' }}</p>
+                </section>
+            </div>
+            }
+
+            @case ('personality') {
+            <div class="npc-preview-grid">
+                <section class="npc-preview-panel">
+                    <h4>Traits</h4>
+                    @if (npc().personalityTraits.length > 0) {
+                    <ul class="npc-preview-list">
+                        @for (item of npc().personalityTraits; track item) {
+                        <li>{{ item }}</li>
+                        }
+                    </ul>
+                    } @else {
+                    <p>No personality traits recorded yet.</p>
+                    }
+                </section>
+
+                <section class="npc-preview-panel">
+                    <h4>Ideals</h4>
+                    @if (npc().ideals.length > 0) {
+                    <ul class="npc-preview-list">
+                        @for (item of npc().ideals; track item) {
+                        <li>{{ item }}</li>
+                        }
+                    </ul>
+                    } @else {
+                    <p>No ideals recorded yet.</p>
+                    }
+                </section>
+
+                <section class="npc-preview-panel">
+                    <h4>Bonds</h4>
+                    @if (npc().bonds.length > 0) {
+                    <ul class="npc-preview-list">
+                        @for (item of npc().bonds; track item) {
+                        <li>{{ item }}</li>
+                        }
+                    </ul>
+                    } @else {
+                    <p>No bonds recorded yet.</p>
+                    }
+                </section>
+
+                <section class="npc-preview-panel">
+                    <h4>Flaws</h4>
+                    @if (npc().flaws.length > 0) {
+                    <ul class="npc-preview-list">
+                        @for (item of npc().flaws; track item) {
+                        <li>{{ item }}</li>
+                        }
+                    </ul>
+                    } @else {
+                    <p>No flaws recorded yet.</p>
+                    }
+                </section>
+
+                <section class="npc-preview-panel npc-preview-panel-span">
+                    <h4>Mannerisms</h4>
+                    @if (npc().mannerisms.length > 0) {
+                    <ul class="npc-preview-list">
+                        @for (item of npc().mannerisms; track item) {
+                        <li>{{ item }}</li>
+                        }
+                    </ul>
+                    } @else {
+                    <p>No mannerisms recorded yet.</p>
+                    }
+                </section>
+            </div>
+            }
+
+            @case ('hooks') {
+            <div class="npc-preview-grid">
+                <section class="npc-preview-panel">
+                    <h4>Motivations</h4>
+                    <p>{{ npc().motivations || 'No motivations recorded yet.' }}</p>
+                </section>
+
+                <section class="npc-preview-panel">
+                    <h4>Goals</h4>
+                    <p>{{ npc().goals || 'No goals recorded yet.' }}</p>
+                </section>
+
+                <section class="npc-preview-panel">
+                    <h4>Fears</h4>
+                    <p>{{ npc().fears || 'No fears recorded yet.' }}</p>
+                </section>
+
+                <section class="npc-preview-panel">
+                    <h4>Secrets</h4>
+                    @if (npc().secrets.length > 0) {
+                    <ul class="npc-preview-list">
+                        @for (item of npc().secrets; track item) {
+                        <li>{{ item }}</li>
+                        }
+                    </ul>
+                    } @else {
+                    <p>No secrets recorded yet.</p>
+                    }
+                </section>
+            </div>
+            }
+
+            @case ('history') {
+            <div class="npc-preview-grid">
+                <section class="npc-preview-panel npc-preview-panel-span">
+                    <h4>Backstory</h4>
+                    <p>{{ npc().backstory || 'No backstory recorded yet.' }}</p>
+                </section>
+
+                <section class="npc-preview-panel npc-preview-panel-span">
+                    <h4>GM Notes</h4>
+                    <p>{{ npc().notes || 'No GM notes recorded yet.' }}</p>
+                </section>
+            </div>
+            }
+
+            @case ('connections') {
+            <div class="npc-preview-grid">
+                <section class="npc-preview-panel npc-preview-panel-span">
+                    <h4>Relationships</h4>
+                    @if (relationshipRows().length > 0) {
+                    <div class="npc-preview-relationship-list">
+                        @for (relationship of relationshipRows(); track relationship.id) {
+                        <article class="npc-preview-relationship-card">
+                            <div class="npc-preview-relationship-header">
+                                <strong>{{ relationship.target }}</strong>
+                                <span class="npc-preview-chip npc-preview-chip-muted">{{ relationship.type }}</span>
+                            </div>
+                            <p>{{ relationship.description }}</p>
+                        </article>
+                        }
+                    </div>
+                    } @else {
+                    <p>No relationships recorded yet.</p>
+                    }
+                </section>
+
+                <section class="npc-preview-panel">
+                    <h4>Tags</h4>
+                    @if (npc().tags.length > 0) {
+                    <div class="npc-preview-tag-row">
+                        @for (tag of npc().tags; track tag) {
+                        <span class="npc-preview-chip">{{ tag }}</span>
+                        }
+                    </div>
+                    } @else {
+                    <p>No tags recorded yet.</p>
+                    }
+                </section>
+
+                <section class="npc-preview-panel">
+                    <h4>Quest Links</h4>
+                    @if (npc().questLinks.length > 0) {
+                    <ul class="npc-preview-list">
+                        @for (item of npc().questLinks; track item) {
+                        <li>{{ item }}</li>
+                        }
+                    </ul>
+                    } @else {
+                    <p>No quest links recorded yet.</p>
+                    }
+                </section>
+
+                <section class="npc-preview-panel npc-preview-panel-span">
+                    <h4>Session Appearances</h4>
+                    @if (npc().sessionAppearances.length > 0) {
+                    <ul class="npc-preview-list">
+                        @for (item of npc().sessionAppearances; track item) {
+                        <li>{{ item }}</li>
+                        }
+                    </ul>
+                    } @else {
+                    <p>No session appearances recorded yet.</p>
+                    }
+                </section>
+            </div>
+            }
+
+            @case ('combat') {
+            <div class="npc-preview-grid">
+                <section class="npc-preview-panel">
+                    <h4>Combat Notes</h4>
+                    <p>{{ npc().combatNotes || 'No combat notes recorded yet.' }}</p>
+                </section>
+
+                <section class="npc-preview-panel">
+                    <h4>Stat Block Reference</h4>
+                    <p>{{ npc().statBlockReference || 'No stat block reference recorded yet.' }}</p>
+                </section>
+
+                <section class="npc-preview-panel npc-preview-panel-span">
+                    <h4>Inventory</h4>
+                    @if (npc().inventory.length > 0) {
+                    <ul class="npc-preview-list">
+                        @for (item of npc().inventory; track item) {
+                        <li>{{ item }}</li>
+                        }
+                    </ul>
+                    } @else {
+                    <p>No inventory recorded yet.</p>
+                    }
+                </section>
+            </div>
+            }
+            }
+
+            <footer class="npc-preview-actions">
+                <button type="button" class="ghost-button" (click)="openFullNpc()">Open Full NPC</button>
+                @if (canEdit()) {
+                <button type="button" class="primary-button" (click)="editNpc()">Edit NPC</button>
+                }
+            </footer>
+        </div>
+    </article>
+</div>

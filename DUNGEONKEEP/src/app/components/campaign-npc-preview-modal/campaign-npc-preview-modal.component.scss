@@ -1,0 +1,218 @@
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: rgba(15, 12, 8, 0.58);
+    z-index: 30000;
+}
+
+.npc-preview-modal {
+    width: min(100%, 820px);
+    max-height: 90vh;
+    overflow-y: auto;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 20px;
+    box-shadow: var(--panel-shadow);
+}
+
+.npc-preview-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.85rem;
+    align-items: center;
+    padding: 1rem 1.1rem;
+    border-bottom: 1px solid var(--panel-border);
+}
+
+.npc-preview-sigil {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--surface-raised-solid);
+    background: var(--gradient-primary);
+}
+
+.npc-preview-copy h3,
+.npc-preview-panel h4 {
+    margin: 0;
+    font-family: var(--display-font);
+    color: var(--text-main);
+}
+
+.npc-preview-copy p,
+.npc-preview-panel p,
+.npc-preview-list,
+.npc-preview-facts dd {
+    margin: 0;
+    color: var(--text-main);
+    line-height: 1.65;
+}
+
+.npc-preview-eyebrow,
+.npc-preview-facts dt {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 0.72rem;
+    color: var(--text-soft);
+}
+
+.close-modal {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-main);
+    cursor: pointer;
+}
+
+.close-modal:hover {
+    border-color: var(--panel-border);
+    background: var(--surface-raised);
+}
+
+.npc-preview-body {
+    display: grid;
+    gap: 18px;
+    padding: 1.1rem;
+}
+
+.npc-preview-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.npc-preview-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+    background: transparent;
+    color: var(--text-main);
+    cursor: pointer;
+    font: inherit;
+}
+
+.npc-preview-tab-active {
+    background: color-mix(in srgb, var(--surface-raised) 78%, var(--accent-primary) 22%);
+    font-weight: 700;
+}
+
+.npc-preview-chip-row,
+.npc-preview-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.npc-preview-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+    background: color-mix(in srgb, var(--surface-raised) 80%, var(--accent-primary) 20%);
+    color: var(--text-main);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.npc-preview-chip-muted {
+    background: color-mix(in srgb, var(--surface-raised) 92%, transparent);
+}
+
+.npc-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.npc-preview-panel {
+    display: grid;
+    gap: 10px;
+    padding: 16px;
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    background: var(--surface-raised);
+}
+
+.npc-preview-panel-span {
+    grid-column: 1 / -1;
+}
+
+.npc-preview-facts {
+    margin: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.npc-preview-facts-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.npc-preview-facts div {
+    display: grid;
+    gap: 4px;
+}
+
+.npc-preview-list {
+    padding-left: 20px;
+    display: grid;
+    gap: 8px;
+}
+
+.npc-preview-relationship-list {
+    display: grid;
+    gap: 10px;
+}
+
+.npc-preview-relationship-card {
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid var(--panel-border);
+    background: color-mix(in srgb, var(--surface-raised) 88%, transparent);
+}
+
+.npc-preview-relationship-header,
+.npc-preview-tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+@media (max-width: 720px) {
+    .npc-preview-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .npc-preview-facts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .npc-preview-panel-span {
+        grid-column: auto;
+    }
+
+    .npc-preview-actions .ghost-button,
+    .npc-preview-actions .primary-button {
+        width: 100%;
+    }
+}

@@ -5,6 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { marked } from 'marked';
 
+import { CampaignNpcPreviewModalComponent } from '../../components/campaign-npc-preview-modal/campaign-npc-preview-modal.component';
 import { MonsterStatBlockModalComponent } from '../../components/monster-stat-block-modal/monster-stat-block-modal.component';
 import { createDefaultNpc, sanitizeNpc, touchNpc } from '../../data/campaign-npc.helpers';
 import { loadCampaignNpcDrafts, saveCampaignNpcDrafts } from '../../data/campaign-npc.storage';
@@ -58,7 +59,7 @@ for (const entry of monsterCatalog) {
 @Component({
     selector: 'app-session-detail-page',
     standalone: true,
-    imports: [CommonModule, RouterLink, MonsterStatBlockModalComponent],
+    imports: [CommonModule, RouterLink, MonsterStatBlockModalComponent, CampaignNpcPreviewModalComponent],
     templateUrl: './session-detail-page.component.html',
     styleUrl: './session-detail-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -81,6 +82,7 @@ export class SessionDetailPageComponent {
     readonly interactionMessage = signal('');
     readonly interactionError = signal('');
     readonly activeMonster = signal<MonsterCatalogEntry | null>(null);
+    readonly activeCampaignNpc = signal<CampaignNpc | null>(null);
     readonly npcDraftVersion = signal(0);
     readonly activeNpcCreationName = signal('');
 
@@ -178,6 +180,7 @@ export class SessionDetailPageComponent {
                 this.interactionMessage.set('');
                 this.interactionError.set('');
                 this.activeMonster.set(null);
+                this.activeCampaignNpc.set(null);
                 this.cdr.detectChanges();
             });
 
@@ -257,6 +260,25 @@ export class SessionDetailPageComponent {
         return normalizeLookupValue(this.activeNpcCreationName()) === normalizeLookupValue(name);
     }
 
+    resolveStoredCampaignNpc(name: string): CampaignNpc | null {
+        return this.storedCampaignNpcDraftMap().get(normalizeLookupValue(name)) ?? null;
+    }
+
+    openStoredCampaignNpcModal(name: string): void {
+        const npc = this.resolveStoredCampaignNpc(name);
+        if (!npc) {
+            return;
+        }
+
+        this.activeCampaignNpc.set(npc);
+        this.cdr.detectChanges();
+    }
+
+    closeCampaignNpcModal(): void {
+        this.activeCampaignNpc.set(null);
+        this.cdr.detectChanges();
+    }
+
     openStoredCampaignNpc(name: string): void {
         const npc = this.storedCampaignNpcDraftMap().get(normalizeLookupValue(name));
         if (!npc) {
@@ -264,6 +286,15 @@ export class SessionDetailPageComponent {
         }
 
         void this.router.navigate(['/campaigns', this.campaignId(), 'npcs', npc.id]);
+    }
+
+    editStoredCampaignNpc(name: string): void {
+        const npc = this.resolveStoredCampaignNpc(name);
+        if (!npc) {
+            return;
+        }
+
+        void this.router.navigate(['/campaigns', this.campaignId(), 'npcs', npc.id, 'edit']);
     }
 
     async addNpcToCampaign(sessionNpc: SessionNpc): Promise<void> {

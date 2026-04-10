@@ -157,7 +157,9 @@
                 @if (session.npcs.length > 0) {
                 <div class="detail-stack">
                     @for (npc of session.npcs; track npc.id) {
-                    <article class="detail-card">
+                    <article class="detail-card" [class.detail-card-interactive]="hasStoredCampaignNpcDraft(npc.name)" [attr.tabindex]="hasStoredCampaignNpcDraft(npc.name) ? '0' : null" [attr.role]="hasStoredCampaignNpcDraft(npc.name) ? 'button' : null"
+                        (click)="hasStoredCampaignNpcDraft(npc.name) && openStoredCampaignNpcModal(npc.name)" (keydown.enter)="hasStoredCampaignNpcDraft(npc.name) && openStoredCampaignNpcModal(npc.name)"
+                        (keydown.space)="hasStoredCampaignNpcDraft(npc.name) && openStoredCampaignNpcModal(npc.name); hasStoredCampaignNpcDraft(npc.name) && $event.preventDefault()">
                         <h3>{{ npc.name }}</h3>
                         <p class="detail-meta">{{ npc.role || 'Unassigned role' }}</p>
                         @if (npc.personality) {
@@ -173,7 +175,7 @@
                             @if (canEdit() && !hasStoredCampaignNpcDraft(npc.name)) {
                             <button type="button" class="ghost-button detail-action-button" [disabled]="isCreatingCampaignNpc(npc.name)" (click)="addNpcToCampaign(npc)">{{ isCreatingCampaignNpc(npc.name) ? 'Creating...' : 'Create Campaign NPC' }}</button>
                             } @else if (hasStoredCampaignNpcDraft(npc.name)) {
-                            <button type="button" class="ghost-button detail-action-button" (click)="openStoredCampaignNpc(npc.name)">Open Campaign NPC</button>
+                            <span class="detail-inline-status">Click to open NPC preview</span>
                             } @else if (isCampaignNpc(npc.name)) {
                             <span class="detail-inline-status">In campaign NPC roster</span>
                             }
@@ -328,6 +330,10 @@
         </section>
         }
     </div>
+
+    @if (activeCampaignNpc(); as npc) {
+    <app-campaign-npc-preview-modal [npc]="npc" [canEdit]="canEdit()" (closed)="closeCampaignNpcModal()" (openRequested)="openStoredCampaignNpc(npc.name)" (editRequested)="editStoredCampaignNpc(npc.name)"></app-campaign-npc-preview-modal>
+    }
 
     @if (activeMonster(); as monster) {
     <app-monster-stat-block-modal [monster]="monster" (closed)="closeMonsterModal()"></app-monster-stat-block-modal>
