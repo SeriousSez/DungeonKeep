@@ -210,6 +210,18 @@
     min-height: 38px;
 }
 
+.monster-quick-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.monster-quick-stat {
+    min-height: 34px;
+    padding: 0 12px;
+    font-size: 0.8rem;
+}
+
 .detail-inline-status {
     display: inline-flex;
     align-items: center;

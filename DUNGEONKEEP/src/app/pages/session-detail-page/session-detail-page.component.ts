@@ -382,6 +382,19 @@ export class SessionDetailPageComponent {
         return this.findFuzzyMonsterCatalogEntry(monster);
     }
 
+    describeMonsterArmorClass(monster: SessionMonster): string {
+        const armorClass = this.resolveMonsterCatalogEntry(monster)?.armorClass;
+        return typeof armorClass === 'number' ? `AC ${armorClass}` : '';
+    }
+
+    describeMonsterSavingThrows(monster: SessionMonster): string {
+        return this.resolveMonsterCatalogEntry(monster)?.savingThrows?.trim() ?? '';
+    }
+
+    describeMonsterSenses(monster: SessionMonster): string {
+        return this.resolveMonsterCatalogEntry(monster)?.senses?.trim() ?? '';
+    }
+
     private findFuzzyMonsterCatalogEntry(monster: SessionMonster): MonsterCatalogEntry | null {
         const normalizedName = normalizeLookupValue(monster.name);
         const nameTokens = tokenizeLookupValue(monster.name);

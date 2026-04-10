@@ -188,8 +188,34 @@
                 @if (session.monsters.length > 0) {
                 <div class="detail-stack">
                     @for (monster of session.monsters; track monster.id) {
-                    <article class="detail-card" [class.detail-card-interactive]="resolveMonsterCatalogEntry(monster) !== null" [attr.tabindex]="resolveMonsterCatalogEntry(monster) !== null ? '0' : null" [attr.role]="resolveMonsterCatalogEntry(monster) !== null ? 'button' : null"
-                        (click)="openMonsterStatBlockBySessionMonster(monster)" (keydown.enter)="openMonsterStatBlockBySessionMonster(monster)" (keydown.space)="openMonsterStatBlockBySessionMonster(monster); $event.preventDefault()">
+                    @if (resolveMonsterCatalogEntry(monster); as monsterMatch) {
+                    <article class="detail-card detail-card-interactive" tabindex="0" role="button" (click)="openMonsterStatBlockBySessionMonster(monster)" (keydown.enter)="openMonsterStatBlockBySessionMonster(monster)"
+                        (keydown.space)="openMonsterStatBlockBySessionMonster(monster); $event.preventDefault()">
+                        <h3>{{ monster.name }}</h3>
+                        <p class="detail-meta">{{ monster.type || 'Creature' }} · CR {{ monster.challengeRating || '?' }} · {{ monster.hp }} HP</p>
+                        <div class="monster-quick-stats">
+                            @if (describeMonsterArmorClass(monster)) {
+                            <span class="detail-pill monster-quick-stat">{{ describeMonsterArmorClass(monster) }}</span>
+                            }
+                            @if (describeMonsterSavingThrows(monster)) {
+                            <span class="detail-pill monster-quick-stat">Saves: {{ describeMonsterSavingThrows(monster) }}</span>
+                            }
+                        </div>
+                        @if (monster.keyAbilities) {
+                        <p><strong>Key abilities:</strong> {{ monster.keyAbilities }}</p>
+                        }
+                        @if (describeMonsterSenses(monster)) {
+                        <p><strong>Senses:</strong> {{ describeMonsterSenses(monster) }}</p>
+                        }
+                        @if (monster.notes) {
+                        <p><strong>Notes:</strong> {{ monster.notes }}</p>
+                        }
+                        <div class="detail-actions">
+                            <span class="detail-inline-status">Click to open stat block</span>
+                        </div>
+                    </article>
+                    } @else {
+                    <article class="detail-card">
                         <h3>{{ monster.name }}</h3>
                         <p class="detail-meta">{{ monster.type || 'Creature' }} · CR {{ monster.challengeRating || '?' }} · {{ monster.hp }} HP</p>
                         @if (monster.keyAbilities) {
@@ -199,13 +225,10 @@
                         <p><strong>Notes:</strong> {{ monster.notes }}</p>
                         }
                         <div class="detail-actions">
-                            @if (resolveMonsterCatalogEntry(monster)) {
-                            <span class="detail-inline-status">Click to open stat block</span>
-                            } @else {
                             <span class="detail-inline-status detail-inline-status-muted">No local stat block match</span>
-                            }
                         </div>
                     </article>
+                    }
                     }
                 </div>
                 }
