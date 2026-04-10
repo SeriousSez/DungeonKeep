@@ -99,6 +99,8 @@
     display: grid;
     position: relative;
     gap: 10px;
+    height: 100%;
+    align-content: start;
     min-width: 0;
     padding: 16px;
     overflow: visible;

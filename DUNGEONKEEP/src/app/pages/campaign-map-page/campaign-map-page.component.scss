@@ -203,6 +203,66 @@
     grid-auto-rows: max-content;
 }
 
+.map-guide-panel {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 4px;
+    padding: 16px 18px;
+    border-radius: 20px;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 82%, var(--accent-primary) 18%);
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--surface-raised-solid) 96%, var(--accent-primary) 4%), color-mix(in srgb, var(--surface-raised) 88%, transparent)),
+        radial-gradient(circle at top right, color-mix(in srgb, var(--accent-primary) 12%, transparent), transparent 36%);
+}
+
+.map-guide-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.map-guide-grid--dense {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.map-guide-card {
+    display: grid;
+    gap: 6px;
+    height: 100%;
+    align-content: start;
+    padding: 12px;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 94%, transparent);
+    border: 1px solid color-mix(in srgb, var(--panel-border) 84%, transparent);
+    box-shadow: 0 10px 22px rgba(54, 36, 24, 0.08);
+}
+
+.map-guide-card h3,
+.map-guide-card p {
+    margin: 0;
+}
+
+.map-guide-card p:not(.eyebrow) {
+    color: var(--text-soft);
+    line-height: 1.55;
+}
+
+.map-guide-list {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding-left: 16px;
+    color: var(--text-soft);
+}
+
+.map-guide-list li {
+    line-height: 1.45;
+}
+
+.map-guide-list strong {
+    color: var(--text-main);
+}
+
 .map-stage-panel--editor {
     grid-area: stage;
     min-width: 0;
@@ -310,6 +370,7 @@ app-dropdown {
 
 .grid-controls-note {
     margin-top: 0;
+    margin-bottom: 12px;
 }
 
 .nested-heading {
@@ -816,6 +877,14 @@ app-dropdown {
         overflow: visible;
         scrollbar-gutter: auto;
     }
+
+    .map-guide-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .map-guide-grid--dense {
+        grid-template-columns: 1fr;
+    }
 }
 
 .map-board-texture,
@@ -1316,6 +1385,24 @@ app-dropdown {
     text-transform: none;
     font-style: italic;
     color: var(--text-soft);
+}
+
+.map-stroke-selection {
+    stroke: color-mix(in srgb, var(--accent-primary) 78%, white 22%);
+    stroke-opacity: 0.42;
+}
+
+.selected-route-mark {
+    --selected-route-color: var(--accent-primary);
+}
+
+.selected-route-mark span {
+    display: block;
+    width: 2.5rem;
+    height: 0.3rem;
+    border-radius: 999px;
+    background: var(--selected-route-color);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--selected-route-color) 28%, transparent);
 }
 
 .map-icon-token {

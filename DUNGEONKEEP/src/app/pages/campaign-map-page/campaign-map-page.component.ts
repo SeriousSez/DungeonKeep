@@ -11,8 +11,8 @@ import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 import { SessionService } from '../../state/session.service';
 
-type MapTool = 'select' | 'draw' | 'icon' | 'terrain' | 'label' | 'token';
-type MapConfirmAction = 'clear-map' | 'delete-icon' | 'delete-token' | 'delete-label' | 'delete-map' | null;
+type MapTool = 'select' | 'draw' | 'erase' | 'icon' | 'terrain' | 'label' | 'token';
+type MapConfirmAction = 'clear-map' | 'delete-icon' | 'delete-token' | 'delete-label' | 'delete-stroke' | 'delete-map' | null;
 type MapAnchorProminence = 'major' | 'minor';
 type SettlementScale = 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis';
 type ParchmentLayout = 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular';
@@ -85,15 +85,15 @@ const MAP_GRID_VISIBILITY_STORAGE_KEY = 'dungeonkeep.campaign-map.show-grid';
 const MAP_GRID_CONTROLS_EXPANDED_STORAGE_KEY = 'dungeonkeep.campaign-map.grid-controls-expanded';
 
 const MAP_BACKGROUND_OPTIONS: DropdownOption[] = [
-    { value: 'Parchment', label: 'Parchment', description: 'Warm paper tones for hand-drawn routes and lore maps.' },
+    { value: 'Parchment', label: 'Parchment', description: 'Warm paper tones for hand-drawn lines, sketches, and lore maps.' },
     { value: 'City', label: 'Settlement', description: 'Sharper streets, walls, and district lines for towns and cities.' },
-    { value: 'Coast', label: 'Coast', description: 'Sea-washed tones for harbors, islands, and shore routes.' },
+    { value: 'Coast', label: 'Coast', description: 'Sea-washed tones for harbors, islands, shoreline marks, and nautical details.' },
     { value: 'Cavern', label: 'Cavern', description: 'Deep mineral tones for tunnels, roots, and underworld spaces.' },
     { value: 'Battlemap', label: 'Encounter Map', description: 'Top-down encounter board for streets, interiors, woods, roads, cliffs, and other tactical scenes.' }
 ];
 
 const BRUSH_COLOR_OPTIONS: DropdownOption[] = [
-    { value: '#8a5a2b', label: 'Amber Ink', description: 'Default route color for roads and trade lines.' },
+    { value: '#8a5a2b', label: 'Amber Ink', description: 'Default ink for roads, notes, and hand-drawn lines.' },
     { value: '#4b3a2a', label: 'Walnut Ink', description: 'Strong dark line for walls, borders, and keeps.' },
     { value: '#507255', label: 'Moss Ink', description: 'Great for forests, roots, and hidden trails.' },
     { value: '#385f7a', label: 'Tide Ink', description: 'Useful for rivers, coasts, and magical wards.' },
@@ -102,7 +102,7 @@ const BRUSH_COLOR_OPTIONS: DropdownOption[] = [
 
 const BRUSH_SIZE_OPTIONS: DropdownOption[] = [
     { value: 3, label: 'Fine', description: 'Thin detail lines and footpaths.' },
-    { value: 5, label: 'Standard', description: 'General-purpose route marking.' },
+    { value: 5, label: 'Standard', description: 'General-purpose line work.' },
     { value: 8, label: 'Bold', description: 'Strong roads, coastlines, and region borders.' },
     { value: 12, label: 'Heavy', description: 'Chunky marker for major territory blocks.' }
 ];
@@ -244,6 +244,7 @@ export class CampaignMapPageComponent {
     readonly selectedDecorationId = signal<string | null>(null);
     readonly selectedIconId = signal<string | null>(null);
     readonly selectedLabelId = signal<string | null>(null);
+    readonly selectedStrokeId = signal<string | null>(null);
     readonly selectedTokenId = signal<string | null>(null);
     readonly iconLabelDraft = signal('');
     readonly tokenNameDraft = signal('');
@@ -285,6 +286,7 @@ export class CampaignMapPageComponent {
     readonly undoStack = signal<MapEditorHistoryEntry[]>([]);
     readonly redoStack = signal<MapEditorHistoryEntry[]>([]);
     readonly isFullscreen = signal(false);
+    readonly showGuide = signal(false);
 
     readonly backgroundOptions = MAP_BACKGROUND_OPTIONS;
     readonly brushColorOptions = BRUSH_COLOR_OPTIONS;
@@ -371,6 +373,14 @@ export class CampaignMapPageComponent {
         }
 
         return this.workingMap().labels.find((label) => label.id === labelId) ?? null;
+    });
+    readonly selectedStroke = computed(() => {
+        const strokeId = this.selectedStrokeId();
+        if (!strokeId) {
+            return null;
+        }
+
+        return this.workingMap().strokes.find((stroke) => stroke.id === strokeId) ?? null;
     });
     readonly selectedDecoration = computed(() => {
         const decorationId = this.selectedDecorationId();
@@ -498,6 +508,8 @@ export class CampaignMapPageComponent {
                 return 'Delete Token?';
             case 'delete-label':
                 return 'Delete Label?';
+            case 'delete-stroke':
+                return 'Delete Drawing?';
             case 'delete-map':
                 return 'Delete Map?';
             default:
@@ -506,13 +518,13 @@ export class CampaignMapPageComponent {
     });
     readonly confirmMessage = computed(() => {
         if (this.confirmAction() === 'clear-map') {
-            return 'Remove every route and landmark from this campaign map? The current background style will stay in place.';
+            return 'Remove every drawn line, landmark, token, terrain piece, and label from this campaign map? The current background style will stay in place.';
         }
 
         if (this.confirmAction() === 'delete-map') {
             const board = this.currentMapBoard();
             return board
-                ? `Delete ${board.name}? Its routes, terrain, and landmarks will be removed for everyone in the campaign.`
+                ? `Delete ${board.name}? Its drawn lines, terrain, landmarks, and labels will be removed for everyone in the campaign.`
                 : 'Delete this map from the campaign library?';
         }
 
@@ -526,6 +538,10 @@ export class CampaignMapPageComponent {
             return label ? `Remove ${label.text}? This label will disappear for everyone viewing the map.` : 'Remove this label from the campaign map?';
         }
 
+        if (this.confirmAction() === 'delete-stroke') {
+            return 'Remove this drawing from the campaign map?';
+        }
+
         const icon = this.selectedIcon();
         return icon ? `Remove ${icon.label}? This landmark marker will disappear for everyone in the campaign.` : 'Remove this landmark from the campaign map?';
     });
@@ -537,6 +553,8 @@ export class CampaignMapPageComponent {
                 return 'Delete Token';
             case 'delete-label':
                 return 'Delete Label';
+            case 'delete-stroke':
+                return 'Delete Drawing';
             case 'delete-map':
                 return 'Delete Map';
             default:
@@ -557,8 +575,18 @@ export class CampaignMapPageComponent {
     private lastLoadedMapSignature = '';
     private lastLoadedRouteMapId = '';
     private activeStrokePointerId: number | null = null;
+    private activeErasePointerId: number | null = null;
     private draggingDecorationId: string | null = null;
     private draggingDecorationPointerId: number | null = null;
+    private pendingStrokeId: string | null = null;
+    private pendingStrokePointerId: number | null = null;
+    private pendingStrokeClientX = 0;
+    private pendingStrokeClientY = 0;
+    private pendingStrokePoint: CampaignMapPoint | null = null;
+    private draggingStrokeId: string | null = null;
+    private draggingStrokePointerId: number | null = null;
+    private draggingStrokeLastPoint: CampaignMapPoint | null = null;
+    private strokeMoved = false;
     private pendingIconId: string | null = null;
     private pendingIconPointerId: number | null = null;
     private pendingIconClientX = 0;
@@ -571,6 +599,7 @@ export class CampaignMapPageComponent {
     private draggingTokenPointerId: number | null = null;
     private draggingTokenMode: 'editor' | 'viewer' | null = null;
     private draggingTokenOrigin: CampaignMapPoint | null = null;
+    private eraseChanged = false;
     private pendingDragHistory: MapEditorHistoryEntry | null = null;
     private persistInFlight = false;
     private creatingRouteMap = false;
@@ -739,6 +768,11 @@ export class CampaignMapPageComponent {
             return true;
         }
 
+        if (this.selectedStroke()) {
+            this.requestDeleteSelectedStroke();
+            return true;
+        }
+
         if (this.selectedIcon()) {
             this.requestDeleteSelectedIcon();
             return true;
@@ -763,6 +797,16 @@ export class CampaignMapPageComponent {
         }
 
         this.activeTool.set('draw');
+        this.pendingIconType.set(null);
+        this.pendingTerrainType.set(null);
+    }
+
+    selectEraseTool(): void {
+        if (!this.canModify()) {
+            return;
+        }
+
+        this.activeTool.set('erase');
         this.pendingIconType.set(null);
         this.pendingTerrainType.set(null);
     }
@@ -834,6 +878,7 @@ export class CampaignMapPageComponent {
         this.selectedLabelId.set(labelId);
         this.selectedDecorationId.set(null);
         this.selectedIconId.set(null);
+        this.selectedStrokeId.set(null);
         this.selectedTokenId.set(null);
     }
 
@@ -1049,6 +1094,10 @@ export class CampaignMapPageComponent {
         } catch {
             this.isFullscreen.set(false);
         }
+    }
+
+    toggleGuide(): void {
+        this.showGuide.update((visible) => !visible);
     }
 
     private readStoredGridVisibility(): boolean {
@@ -1284,11 +1333,21 @@ export class CampaignMapPageComponent {
         this.selectedIconId.set(iconId);
         this.selectedDecorationId.set(null);
         this.selectedLabelId.set(null);
+        this.selectedStrokeId.set(null);
         this.selectedTokenId.set(null);
     }
 
     selectDecoration(decorationId: string): void {
         this.selectedDecorationId.set(decorationId);
+        this.selectedIconId.set(null);
+        this.selectedLabelId.set(null);
+        this.selectedStrokeId.set(null);
+        this.selectedTokenId.set(null);
+    }
+
+    selectStroke(strokeId: string): void {
+        this.selectedStrokeId.set(strokeId);
+        this.selectedDecorationId.set(null);
         this.selectedIconId.set(null);
         this.selectedLabelId.set(null);
         this.selectedTokenId.set(null);
@@ -1369,6 +1428,14 @@ export class CampaignMapPageComponent {
         this.confirmAction.set('delete-label');
     }
 
+    requestDeleteSelectedStroke(): void {
+        if (!this.selectedStroke() || !this.canModify()) {
+            return;
+        }
+
+        this.confirmAction.set('delete-stroke');
+    }
+
     requestClearMap(): void {
         if (!this.canModify() || (!this.workingMap().strokes.length && !this.workingMap().icons.length && !this.workingMap().tokens.length && !this.workingMap().decorations.length && !this.workingMap().labels.length && !this.workingMap().layers.rivers.length && !this.workingMap().layers.mountainChains.length && !this.workingMap().layers.forestBelts.length)) {
             return;
@@ -1426,6 +1493,16 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        if (action === 'delete-stroke') {
+            const strokeId = this.selectedStrokeId();
+            if (!strokeId) {
+                return;
+            }
+
+            this.deleteStrokeById(strokeId, 'Drawing removed.');
+            return;
+        }
+
         if (action === 'clear-map') {
             const background = this.workingMap().background;
             this.captureHistorySnapshot();
@@ -1433,6 +1510,7 @@ export class CampaignMapPageComponent {
             this.selectedDecorationId.set(null);
             this.selectedIconId.set(null);
             this.selectedLabelId.set(null);
+            this.selectedStrokeId.set(null);
             this.selectedTokenId.set(null);
             this.markDirty('Map cleared.');
             return;
@@ -1627,8 +1705,8 @@ export class CampaignMapPageComponent {
                 };
             });
             dirtyMessage = options.separateLabels
-                ? 'Map art generated with separate movable labels. Existing routes were cleared and landmarks were kept. Save to keep it.'
-                : 'Map art generated. Existing routes were cleared and landmarks were kept. Save to keep it.';
+                ? 'Map art generated with separate movable labels. Existing drawings were cleared and landmarks were kept. Save to keep it.'
+                : 'Map art generated. Existing drawings were cleared and landmarks were kept. Save to keep it.';
         } finally {
             this.isAiArtGenerating.set(false);
 
@@ -1645,6 +1723,14 @@ export class CampaignMapPageComponent {
     private lockEditorForAiGeneration(): void {
         this.isDrawing.set(false);
         this.activeStrokePointerId = null;
+        this.activeErasePointerId = null;
+        this.pendingStrokeId = null;
+        this.pendingStrokePointerId = null;
+        this.pendingStrokePoint = null;
+        this.draggingStrokeId = null;
+        this.draggingStrokePointerId = null;
+        this.draggingStrokeLastPoint = null;
+        this.strokeMoved = false;
         this.pendingIconType.set(null);
         this.pendingTerrainType.set(null);
         this.activeTool.set('select');
@@ -1673,6 +1759,7 @@ export class CampaignMapPageComponent {
         });
         this.selectedDecorationId.set(null);
         this.selectedIconId.set(null);
+        this.selectedStrokeId.set(null);
         this.markDirty('Landmarks cleared.');
     }
 
@@ -1687,6 +1774,7 @@ export class CampaignMapPageComponent {
         });
         this.selectedDecorationId.set(null);
         this.selectedLabelId.set(null);
+        this.selectedStrokeId.set(null);
         this.markDirty('Labels cleared.');
     }
 
@@ -1700,6 +1788,7 @@ export class CampaignMapPageComponent {
             map.tokens = [];
         });
         this.selectedDecorationId.set(null);
+        this.selectedStrokeId.set(null);
         this.selectedTokenId.set(null);
         this.markDirty('Tokens cleared.');
     }
@@ -1719,6 +1808,7 @@ export class CampaignMapPageComponent {
             };
         });
         this.selectedDecorationId.set(null);
+        this.selectedStrokeId.set(null);
         this.markDirty('Terrain layers cleared.');
     }
 
@@ -1763,6 +1853,7 @@ export class CampaignMapPageComponent {
             this.selectedDecorationId.set(null);
             this.selectedIconId.set(null);
             this.selectedLabelId.set(null);
+            this.selectedStrokeId.set(null);
             this.selectedTokenId.set(token.id);
             this.markDirty('Token placed.');
             return;
@@ -1785,6 +1876,7 @@ export class CampaignMapPageComponent {
             this.selectedDecorationId.set(null);
             this.selectedIconId.set(icon.id);
             this.selectedLabelId.set(null);
+            this.selectedStrokeId.set(null);
             this.selectedTokenId.set(null);
             this.markDirty('Landmark added.');
             return;
@@ -1820,6 +1912,7 @@ export class CampaignMapPageComponent {
             this.selectedDecorationId.set(null);
             this.selectedIconId.set(null);
             this.selectedLabelId.set(label.id);
+            this.selectedStrokeId.set(null);
             this.selectedTokenId.set(null);
             this.markDirty('Map label added.');
             return;
@@ -1843,11 +1936,23 @@ export class CampaignMapPageComponent {
                 this.selectDecoration(clickedDecoration.id);
                 return;
             }
+
+            const clickedStroke = this.findNearestStrokeAtPoint(point.x, point.y);
+            if (clickedStroke) {
+                if (event.ctrlKey || event.metaKey) {
+                    this.deleteStrokeById(clickedStroke.id, 'Drawing removed.');
+                    return;
+                }
+
+                this.selectStroke(clickedStroke.id);
+                return;
+            }
         }
 
         this.selectedDecorationId.set(null);
         this.selectedIconId.set(null);
         this.selectedLabelId.set(null);
+        this.selectedStrokeId.set(null);
         this.selectedTokenId.set(null);
     }
 
@@ -1890,6 +1995,27 @@ export class CampaignMapPageComponent {
                 return;
             }
 
+            const clickedStroke = this.findNearestStrokeAtPoint(point.x, point.y);
+            if (clickedStroke) {
+                this.armStrokeInteraction(clickedStroke.id, point, event);
+                return;
+            }
+
+            return;
+        }
+
+        if (this.activeTool() === 'erase') {
+            this.selectedDecorationId.set(null);
+            this.selectedIconId.set(null);
+            this.selectedLabelId.set(null);
+            this.selectedStrokeId.set(null);
+            this.selectedTokenId.set(null);
+            this.pendingDragHistory = this.createHistoryEntry();
+            this.activeErasePointerId = event.pointerId;
+            this.eraseChanged = false;
+            (event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId);
+            this.eraseChanged = this.eraseRoutesAtPoint(point) || this.eraseChanged;
+            event.preventDefault();
             return;
         }
 
@@ -1897,9 +2023,12 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        const drawPoint = event.shiftKey ? this.snapRoutePointToGridIntersection(point) : point;
+
         this.selectedDecorationId.set(null);
         this.selectedIconId.set(null);
         this.selectedLabelId.set(null);
+        this.selectedStrokeId.set(null);
         this.isDrawing.set(true);
         this.captureHistorySnapshot();
         this.activeStrokePointerId = event.pointerId;
@@ -1912,7 +2041,7 @@ export class CampaignMapPageComponent {
                     id: this.createId(),
                     color: this.brushColor(),
                     width: this.brushWidth(),
-                    points: [point]
+                    points: [drawPoint]
                 }
             ];
         });
@@ -1922,6 +2051,10 @@ export class CampaignMapPageComponent {
 
     handleBoardPointerMove(event: PointerEvent): void {
         if (this.handlePendingOrActiveIconMove(event)) {
+            return;
+        }
+
+        if (this.handlePendingOrActiveStrokeMove(event)) {
             return;
         }
 
@@ -1953,6 +2086,17 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        if (this.activeErasePointerId === event.pointerId) {
+            const point = this.getRelativePoint(event.clientX, event.clientY);
+            if (!point) {
+                return;
+            }
+
+            this.eraseChanged = this.eraseRoutesAtPoint(point) || this.eraseChanged;
+            event.preventDefault();
+            return;
+        }
+
         if (!this.isDrawing() || this.activeStrokePointerId !== event.pointerId) {
             return;
         }
@@ -1962,6 +2106,8 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        const drawPoint = event.shiftKey ? this.snapRoutePointToGridIntersection(point) : point;
+
         this.mutateMap((map) => {
             const lastStroke = map.strokes.at(-1);
             if (!lastStroke) {
@@ -1969,11 +2115,11 @@ export class CampaignMapPageComponent {
             }
 
             const previousPoint = lastStroke.points.at(-1);
-            if (previousPoint && Math.hypot(previousPoint.x - point.x, previousPoint.y - point.y) < 0.005) {
+            if (previousPoint && Math.hypot(previousPoint.x - drawPoint.x, previousPoint.y - drawPoint.y) < 0.005) {
                 return;
             }
 
-            lastStroke.points = [...lastStroke.points, point];
+            lastStroke.points = [...lastStroke.points, drawPoint];
         });
 
         event.preventDefault();
@@ -1981,6 +2127,10 @@ export class CampaignMapPageComponent {
 
     handleBoardPointerUp(event: PointerEvent): void {
         if (this.finishIconInteraction(event)) {
+            return;
+        }
+
+        if (this.finishStrokeInteraction(event)) {
             return;
         }
 
@@ -2022,6 +2172,28 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        if (this.activeErasePointerId === event.pointerId) {
+            this.activeErasePointerId = null;
+            (event.currentTarget as HTMLElement | null)?.releasePointerCapture(event.pointerId);
+
+            if (this.pendingDragHistory) {
+                const beforeErase = this.historyEntrySignature(this.pendingDragHistory);
+                const afterErase = this.historyEntrySignature(this.createHistoryEntry());
+                if (beforeErase !== afterErase) {
+                    this.pushHistoryEntry(this.pendingDragHistory, 'undo');
+                    this.redoStack.set([]);
+                }
+            }
+
+            this.pendingDragHistory = null;
+            if (this.eraseChanged) {
+                this.markDirty('Drawing erased.');
+            }
+
+            this.eraseChanged = false;
+            return;
+        }
+
         if (!this.isDrawing() || this.activeStrokePointerId !== event.pointerId) {
             return;
         }
@@ -2039,7 +2211,7 @@ export class CampaignMapPageComponent {
             lastStroke.points = [...lastStroke.points, lastStroke.points[0]];
         });
 
-        this.markDirty('Route stroke added.');
+        this.markDirty('Drawing added.');
     }
 
     handleIconPointerDown(event: PointerEvent, iconId: string): void {
@@ -2123,6 +2295,101 @@ export class CampaignMapPageComponent {
         return true;
     }
 
+    private armStrokeInteraction(strokeId: string, point: CampaignMapPoint, event: PointerEvent): void {
+        this.selectStroke(strokeId);
+
+        if (!this.canModify() || event.button !== 0) {
+            return;
+        }
+
+        this.pendingStrokeId = strokeId;
+        this.pendingStrokePointerId = event.pointerId;
+        this.pendingStrokeClientX = event.clientX;
+        this.pendingStrokeClientY = event.clientY;
+        this.pendingStrokePoint = point;
+        (event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId);
+        event.preventDefault();
+    }
+
+    private handlePendingOrActiveStrokeMove(event: PointerEvent): boolean {
+        if (this.draggingStrokePointerId === event.pointerId && this.draggingStrokeId) {
+            const point = this.getRelativePoint(event.clientX, event.clientY);
+            if (!point) {
+                return true;
+            }
+
+            const previousPoint = this.draggingStrokeLastPoint ?? point;
+            this.draggingStrokeLastPoint = point;
+            this.strokeMoved = this.translateStrokeById(this.draggingStrokeId, point.x - previousPoint.x, point.y - previousPoint.y) || this.strokeMoved;
+            event.preventDefault();
+            return true;
+        }
+
+        if (this.pendingStrokePointerId !== event.pointerId || !this.pendingStrokeId) {
+            return false;
+        }
+
+        if (Math.hypot(event.clientX - this.pendingStrokeClientX, event.clientY - this.pendingStrokeClientY) < 6) {
+            return true;
+        }
+
+        this.draggingStrokeId = this.pendingStrokeId;
+        this.draggingStrokePointerId = event.pointerId;
+        this.draggingStrokeLastPoint = this.pendingStrokePoint;
+        this.pendingStrokeId = null;
+        this.pendingStrokePointerId = null;
+        this.pendingStrokePoint = null;
+        this.pendingDragHistory = this.createHistoryEntry();
+        this.strokeMoved = false;
+
+        const point = this.getRelativePoint(event.clientX, event.clientY);
+        if (!point) {
+            return true;
+        }
+
+        const previousPoint = this.draggingStrokeLastPoint ?? point;
+        this.draggingStrokeLastPoint = point;
+        this.strokeMoved = this.translateStrokeById(this.draggingStrokeId, point.x - previousPoint.x, point.y - previousPoint.y) || this.strokeMoved;
+        event.preventDefault();
+        return true;
+    }
+
+    private finishStrokeInteraction(event: PointerEvent): boolean {
+        if (this.draggingStrokePointerId === event.pointerId && this.draggingStrokeId) {
+            this.draggingStrokeId = null;
+            this.draggingStrokePointerId = null;
+            this.draggingStrokeLastPoint = null;
+            (event.currentTarget as HTMLElement | null)?.releasePointerCapture(event.pointerId);
+
+            if (this.pendingDragHistory) {
+                const beforeDrag = this.historyEntrySignature(this.pendingDragHistory);
+                const afterDrag = this.historyEntrySignature(this.createHistoryEntry());
+                if (beforeDrag !== afterDrag) {
+                    this.pushHistoryEntry(this.pendingDragHistory, 'undo');
+                    this.redoStack.set([]);
+                }
+            }
+
+            this.pendingDragHistory = null;
+            if (this.strokeMoved) {
+                this.markDirty('Drawing moved.');
+            }
+
+            this.strokeMoved = false;
+            return true;
+        }
+
+        if (this.pendingStrokePointerId !== event.pointerId || !this.pendingStrokeId) {
+            return false;
+        }
+
+        this.pendingStrokeId = null;
+        this.pendingStrokePointerId = null;
+        this.pendingStrokePoint = null;
+        (event.currentTarget as HTMLElement | null)?.releasePointerCapture(event.pointerId);
+        return true;
+    }
+
     private finishIconInteraction(event: PointerEvent): boolean {
         if (this.draggingPointerId === event.pointerId && this.draggingIconId) {
             this.draggingIconId = null;
@@ -2158,6 +2425,7 @@ export class CampaignMapPageComponent {
         this.selectedDecorationId.set(null);
         this.selectedIconId.set(null);
         this.selectedLabelId.set(null);
+        this.selectedStrokeId.set(null);
     }
 
     handleLabelPointerDown(event: PointerEvent, labelId: string): void {
@@ -2395,6 +2663,10 @@ export class CampaignMapPageComponent {
         return this.selectedLabelId() === labelId;
     }
 
+    isSelectedStroke(strokeId: string): boolean {
+        return this.selectedStrokeId() === strokeId;
+    }
+
     private markDirty(message = 'Unsaved changes.'): void {
         if (!this.canModify()) {
             return;
@@ -2481,6 +2753,7 @@ export class CampaignMapPageComponent {
             this.loadMapBoard(activeMap);
             this.selectedIconId.set(null);
             this.selectedLabelId.set(null);
+            this.selectedStrokeId.set(null);
             this.selectedTokenId.set(null);
             this.pendingIconType.set(null);
             this.activeTool.set('select');
@@ -2509,7 +2782,7 @@ export class CampaignMapPageComponent {
             const saved = await this.store.updateCampaignMap(campaign.id, { activeMapId, maps });
             this.saveState.set(saved ? 'saved' : 'error');
             this.saveMessage.set(saved
-                ? `Saved ${maps.length} maps with ${snapshot.strokes.length} routes, ${snapshot.icons.length} landmarks, and ${snapshot.tokens.length} tokens on ${this.mapNameDraft().trim() || currentMap.name}.`
+                ? `Saved ${maps.length} maps with ${snapshot.strokes.length} drawings, ${snapshot.icons.length} landmarks, and ${snapshot.tokens.length} tokens on ${this.mapNameDraft().trim() || currentMap.name}.`
                 : 'Could not save your latest map change.');
 
             if (saved) {
@@ -2695,9 +2968,17 @@ export class CampaignMapPageComponent {
         this.activeTool.set('select');
         this.pendingIconType.set(null);
         this.pendingTerrainType.set(null);
+        this.pendingStrokeId = null;
+        this.pendingStrokePointerId = null;
+        this.pendingStrokePoint = null;
+        this.draggingStrokeId = null;
+        this.draggingStrokePointerId = null;
+        this.draggingStrokeLastPoint = null;
+        this.strokeMoved = false;
         this.selectedDecorationId.set(null);
         this.selectedIconId.set(null);
         this.selectedLabelId.set(null);
+        this.selectedStrokeId.set(null);
         this.selectedTokenId.set(null);
         this.iconLabelDraft.set('');
         this.tokenNameDraft.set('');
@@ -2896,6 +3177,215 @@ export class CampaignMapPageComponent {
             ...(this.showMountainChains() ? this.workingMap().layers.mountainChains : []),
             ...(this.showForestBelts() ? this.workingMap().layers.forestBelts : [])
         ];
+    }
+
+    private deleteStrokeById(strokeId: string, message: string): void {
+        if (!this.canModify()) {
+            return;
+        }
+
+        const existingStroke = this.workingMap().strokes.find((stroke) => stroke.id === strokeId);
+        if (!existingStroke) {
+            return;
+        }
+
+        this.captureHistorySnapshot();
+        this.mutateMap((map) => {
+            map.strokes = map.strokes.filter((stroke) => stroke.id !== strokeId);
+        });
+        this.selectedStrokeId.set(null);
+        this.markDirty(message);
+    }
+
+    private findNearestStrokeAtPoint(x: number, y: number): CampaignMap['strokes'][number] | null {
+        let closestStroke: CampaignMap['strokes'][number] | null = null;
+        let closestDistance = Number.POSITIVE_INFINITY;
+
+        for (const stroke of this.workingMap().strokes) {
+            const distance = this.distanceToStroke(stroke, x, y);
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestStroke = stroke;
+            }
+        }
+
+        return closestStroke && closestDistance <= this.strokeSelectionThreshold(closestStroke.width)
+            ? closestStroke
+            : null;
+    }
+
+    private distanceToStroke(stroke: CampaignMap['strokes'][number], x: number, y: number): number {
+        if (stroke.points.length === 0) {
+            return Number.POSITIVE_INFINITY;
+        }
+
+        if (stroke.points.length === 1) {
+            const anchor = stroke.points[0];
+            return Math.hypot(anchor.x - x, (anchor.y - y) * (10 / 7));
+        }
+
+        let closestDistance = Number.POSITIVE_INFINITY;
+        for (let index = 1; index < stroke.points.length; index++) {
+            const previous = stroke.points[index - 1];
+            const current = stroke.points[index];
+            const distance = this.distanceToSegment(previous, current, { x, y });
+            if (distance < closestDistance) {
+                closestDistance = distance;
+            }
+        }
+
+        return closestDistance;
+    }
+
+    private distanceToSegment(start: CampaignMapPoint, end: CampaignMapPoint, point: CampaignMapPoint): number {
+        const scaledStart = { x: start.x, y: start.y * (10 / 7) };
+        const scaledEnd = { x: end.x, y: end.y * (10 / 7) };
+        const scaledPoint = { x: point.x, y: point.y * (10 / 7) };
+        const deltaX = scaledEnd.x - scaledStart.x;
+        const deltaY = scaledEnd.y - scaledStart.y;
+        const segmentLengthSquared = (deltaX * deltaX) + (deltaY * deltaY);
+
+        if (segmentLengthSquared === 0) {
+            return Math.hypot(scaledPoint.x - scaledStart.x, scaledPoint.y - scaledStart.y);
+        }
+
+        const projection = ((scaledPoint.x - scaledStart.x) * deltaX + (scaledPoint.y - scaledStart.y) * deltaY) / segmentLengthSquared;
+        const clampedProjection = Math.max(0, Math.min(1, projection));
+        const projectedX = scaledStart.x + (deltaX * clampedProjection);
+        const projectedY = scaledStart.y + (deltaY * clampedProjection);
+        return Math.hypot(scaledPoint.x - projectedX, scaledPoint.y - projectedY);
+    }
+
+    private strokeSelectionThreshold(width: number): number {
+        return 0.018 + (Math.max(2, width) / 1000);
+    }
+
+    private translateStrokeById(strokeId: string, deltaX: number, deltaY: number): boolean {
+        if (!deltaX && !deltaY) {
+            return false;
+        }
+
+        let changed = false;
+        this.mutateMap((map) => {
+            map.strokes = map.strokes.map((stroke) => {
+                if (stroke.id !== strokeId) {
+                    return stroke;
+                }
+
+                const translated = this.translateStrokePoints(stroke.points, deltaX, deltaY);
+                if (translated === stroke.points) {
+                    return stroke;
+                }
+
+                changed = true;
+                return {
+                    ...stroke,
+                    points: translated
+                };
+            });
+        });
+
+        return changed;
+    }
+
+    private translateStrokePoints(points: CampaignMapPoint[], deltaX: number, deltaY: number): CampaignMapPoint[] {
+        if (points.length === 0) {
+            return points;
+        }
+
+        const minX = Math.min(...points.map((point) => point.x));
+        const maxX = Math.max(...points.map((point) => point.x));
+        const minY = Math.min(...points.map((point) => point.y));
+        const maxY = Math.max(...points.map((point) => point.y));
+        const boundedDeltaX = Math.max(-minX, Math.min(1 - maxX, deltaX));
+        const boundedDeltaY = Math.max(-minY, Math.min(1 - maxY, deltaY));
+
+        if (!boundedDeltaX && !boundedDeltaY) {
+            return points;
+        }
+
+        return points.map((point) => ({
+            x: this.clampCoordinate(point.x + boundedDeltaX),
+            y: this.clampCoordinate(point.y + boundedDeltaY)
+        }));
+    }
+
+    private eraseRoutesAtPoint(point: CampaignMapPoint): boolean {
+        const eraseRadius = 0.02;
+        let changed = false;
+
+        this.mutateMap((map) => {
+            const nextStrokes: CampaignMap['strokes'] = [];
+
+            for (const stroke of map.strokes) {
+                const remainingSegments = this.removeStrokeSegmentsAtPoint(stroke, point, eraseRadius);
+                const unchanged = remainingSegments.length === 1
+                    && remainingSegments[0].id === stroke.id
+                    && remainingSegments[0].points.length === stroke.points.length;
+
+                if (!unchanged) {
+                    changed = true;
+                }
+
+                nextStrokes.push(...remainingSegments);
+            }
+
+            map.strokes = nextStrokes;
+        });
+
+        if (changed && this.selectedStrokeId() && !this.workingMap().strokes.some((stroke) => stroke.id === this.selectedStrokeId())) {
+            this.selectedStrokeId.set(null);
+        }
+
+        return changed;
+    }
+
+    private removeStrokeSegmentsAtPoint(
+        stroke: CampaignMap['strokes'][number],
+        point: CampaignMapPoint,
+        eraseRadius: number
+    ): CampaignMap['strokes'] {
+        if (stroke.points.length < 2) {
+            return this.distanceToStroke(stroke, point.x, point.y) <= eraseRadius ? [] : [stroke];
+        }
+
+        const segments: CampaignMap['strokes'] = [];
+        let currentPoints: CampaignMapPoint[] = [];
+
+        for (let index = 1; index < stroke.points.length; index++) {
+            const start = stroke.points[index - 1];
+            const end = stroke.points[index];
+            const shouldEraseSegment = this.distanceToSegment(start, end, point) <= eraseRadius;
+
+            if (shouldEraseSegment) {
+                if (currentPoints.length > 1) {
+                    segments.push({
+                        ...stroke,
+                        id: this.createId(),
+                        points: currentPoints
+                    });
+                }
+
+                currentPoints = [];
+                continue;
+            }
+
+            if (currentPoints.length === 0) {
+                currentPoints = [{ ...start }];
+            }
+
+            currentPoints = [...currentPoints, { ...end }];
+        }
+
+        if (currentPoints.length > 1) {
+            segments.push({
+                ...stroke,
+                id: segments.length === 0 && currentPoints.length === stroke.points.length ? stroke.id : this.createId(),
+                points: currentPoints
+            });
+        }
+
+        return segments;
     }
 
     private findNearestIconAtPoint(x: number, y: number): CampaignMapIcon | null {
@@ -3846,6 +4336,19 @@ export class CampaignMapPageComponent {
             )
         );
         return this.clampCoordinate((startIndex + offset + (span / 2)) / gridCount);
+    }
+
+    private snapRoutePointToGridIntersection(point: CampaignMapPoint): CampaignMapPoint {
+        return {
+            x: this.snapRouteAxisToGridIntersection(point.x, this.gridColumns(), this.gridOffsetX()),
+            y: this.snapRouteAxisToGridIntersection(point.y, this.gridRows(), this.gridOffsetY())
+        };
+    }
+
+    private snapRouteAxisToGridIntersection(value: number, gridCount: number, offset: number): number {
+        const boundedValue = this.clampCoordinate(value);
+        const lineIndex = Math.max(0, Math.min(gridCount, Math.round((boundedValue * gridCount) - offset)));
+        return this.clampCoordinate((lineIndex + offset) / gridCount);
     }
 
     private clampCoordinate(value: number): number {

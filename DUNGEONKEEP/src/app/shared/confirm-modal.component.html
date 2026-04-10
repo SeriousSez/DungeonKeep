@@ -1,5 +1,5 @@
 <div class="modal-backdrop" *ngIf="open">
-    <div class="modal-card">
+    <div class="modal-card" role="dialog" aria-modal="true" [attr.aria-label]="title">
         <h2>{{ title }}</h2>
         <p>{{ message }}</p>
         <div class="modal-actions">

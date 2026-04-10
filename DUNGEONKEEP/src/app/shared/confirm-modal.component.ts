@@ -1,5 +1,5 @@
 import { CommonModule, DOCUMENT } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, EventEmitter, Input, OnDestroy, Output, Renderer2, inject } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, HostListener, Input, OnDestroy, Output, Renderer2, inject } from '@angular/core';
 
 @Component({
     selector: 'app-confirm-modal',
@@ -39,5 +39,25 @@ export class ConfirmModalComponent implements AfterViewInit, OnDestroy {
 
     cancel() {
         this.cancelled.emit();
+    }
+
+    @HostListener('document:keydown', ['$event'])
+    handleDocumentKeydown(event: KeyboardEvent): void {
+        if (!this.open) {
+            return;
+        }
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            this.cancel();
+            return;
+        }
+
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            event.stopPropagation();
+            this.confirm();
+        }
     }
 }
