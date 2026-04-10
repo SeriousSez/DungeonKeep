@@ -7,6 +7,8 @@ import { CampaignMapBackground } from '../../models/dungeon.models';
 export type MapArtSettlementScale = 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis';
 export type MapArtParchmentLayout = 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular';
 export type MapArtCavernLayout = 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes';
+export type MapArtBattlemapLocale = 'TownStreet' | 'BuildingInterior' | 'ForestClearing' | 'Roadside' | 'Cliffside' | 'Riverside' | 'Ruins' | 'DungeonRoom' | 'Tavern';
+export type MapArtLighting = 'Day' | 'Dusk' | 'Night';
 
 export interface MapArtGenerationOptions {
     background: CampaignMapBackground;
@@ -15,6 +17,8 @@ export interface MapArtGenerationOptions {
     settlementScale: MapArtSettlementScale;
     parchmentLayout: MapArtParchmentLayout;
     cavernLayout: MapArtCavernLayout;
+    battlemapLocale: MapArtBattlemapLocale;
+    lighting: MapArtLighting;
     settlementNamesText: string;
     regionNamesText: string;
     ruinNamesText: string;
@@ -26,7 +30,8 @@ const BACKGROUND_OPTIONS: DropdownOption[] = [
     { value: 'Parchment', label: 'Parchment', description: 'Warm paper tones for hand-drawn routes and lore maps.' },
     { value: 'City', label: 'Settlement', description: 'Sharper streets, walls, and district lines for towns and cities.' },
     { value: 'Coast', label: 'Coast', description: 'Sea-washed tones for harbors, islands, and shore routes.' },
-    { value: 'Cavern', label: 'Cavern', description: 'Deep mineral tones for tunnels, roots, and underworld spaces.' }
+    { value: 'Cavern', label: 'Cavern', description: 'Deep mineral tones for tunnels, roots, and underworld spaces.' },
+    { value: 'Battlemap', label: 'Encounter Map', description: 'Top-down encounter map art for streets, rooms, forests, roads, cliffs, and other tactical spaces.' }
 ];
 
 const SETTLEMENT_SCALE_OPTIONS: DropdownOption[] = [
@@ -55,6 +60,24 @@ const CAVERN_LAYOUT_OPTIONS: DropdownOption[] = [
     { value: 'LavaTubes', label: 'Lava Tubes' }
 ];
 
+const BATTLEMAP_LOCALE_OPTIONS: DropdownOption[] = [
+    { value: 'TownStreet', label: 'Town Street', description: 'Alleys, plazas, market lanes, and urban choke points.', group: 'Urban' },
+    { value: 'BuildingInterior', label: 'Building Interior', description: 'Rooms, halls, furniture, doors, and interior cover.', group: 'Urban' },
+    { value: 'Tavern', label: 'Tavern', description: 'Tables, bar space, stair corners, and tight movement lanes.', group: 'Urban' },
+    { value: 'ForestClearing', label: 'Forest Clearing', description: 'Tree lines, roots, brush, rocks, and ambush space.', group: 'Wilds' },
+    { value: 'Roadside', label: 'Roadside', description: 'A travel route with ditches, carts, shrubs, and flanking terrain.', group: 'Wilds' },
+    { value: 'Cliffside', label: 'Cliffside', description: 'Ledges, drops, broken stone, and exposed elevation edges.', group: 'Wilds' },
+    { value: 'Riverside', label: 'Riverside', description: 'Banks, shallows, bridges, mud, and water-adjacent hazards.', group: 'Wilds' },
+    { value: 'Ruins', label: 'Ruins', description: 'Collapsed walls, fractured floors, debris, and ancient cover.', group: 'Ancient Sites' },
+    { value: 'DungeonRoom', label: 'Dungeon Room', description: 'Chambers, pillars, doorways, and classic encounter geometry.', group: 'Ancient Sites' }
+];
+
+const LIGHTING_OPTIONS: DropdownOption[] = [
+    { value: 'Day', label: 'Daylight', description: 'Bright, readable daytime lighting with clean terrain separation.' },
+    { value: 'Dusk', label: 'Dusk', description: 'Warm late-day light with longer shadows, but still readable.' },
+    { value: 'Night', label: 'Night', description: 'Moonlit or lantern-lit atmosphere with preserved gameplay readability.' }
+];
+
 @Component({
     selector: 'app-map-art-generation-modal',
     standalone: true,
@@ -72,6 +95,8 @@ export class MapArtGenerationModalComponent {
     readonly settlementScale = input<MapArtSettlementScale>('City');
     readonly parchmentLayout = input<MapArtParchmentLayout>('Continent');
     readonly cavernLayout = input<MapArtCavernLayout>('TunnelNetwork');
+    readonly battlemapLocale = input<MapArtBattlemapLocale>('ForestClearing');
+    readonly lighting = input<MapArtLighting>('Day');
     readonly settlementNamesText = input('');
     readonly regionNamesText = input('');
     readonly ruinNamesText = input('');
@@ -87,6 +112,8 @@ export class MapArtGenerationModalComponent {
     readonly settlementScaleDraft = signal<MapArtSettlementScale>('City');
     readonly parchmentLayoutDraft = signal<MapArtParchmentLayout>('Continent');
     readonly cavernLayoutDraft = signal<MapArtCavernLayout>('TunnelNetwork');
+    readonly battlemapLocaleDraft = signal<MapArtBattlemapLocale>('ForestClearing');
+    readonly lightingDraft = signal<MapArtLighting>('Day');
     readonly settlementNamesDraft = signal('');
     readonly regionNamesDraft = signal('');
     readonly ruinNamesDraft = signal('');
@@ -97,12 +124,42 @@ export class MapArtGenerationModalComponent {
     readonly settlementScaleOptions = SETTLEMENT_SCALE_OPTIONS;
     readonly parchmentLayoutOptions = PARCHMENT_LAYOUT_OPTIONS;
     readonly cavernLayoutOptions = CAVERN_LAYOUT_OPTIONS;
+    readonly battlemapLocaleOptions = BATTLEMAP_LOCALE_OPTIONS;
+    readonly lightingOptions = LIGHTING_OPTIONS;
+    readonly selectedBattlemapLocaleOption = computed(() => {
+        return this.battlemapLocaleOptions.find((option) => option.value === this.battlemapLocaleDraft()) ?? this.battlemapLocaleOptions[0];
+    });
+    readonly battlemapLocaleTags = computed(() => {
+        switch (this.battlemapLocaleDraft()) {
+            case 'TownStreet':
+                return ['Chokepoints', 'Street cover', 'Civic clutter'];
+            case 'BuildingInterior':
+                return ['Doors', 'Furniture', 'Room-to-room flow'];
+            case 'Roadside':
+                return ['Flanks', 'Wagons', 'Low cover'];
+            case 'Cliffside':
+                return ['Elevation', 'Hazards', 'Narrow footing'];
+            case 'Riverside':
+                return ['Water edge', 'Bridge play', 'Mud and banks'];
+            case 'Ruins':
+                return ['Broken walls', 'Debris', 'Sightline breaks'];
+            case 'DungeonRoom':
+                return ['Chambers', 'Pillars', 'Corridor entries'];
+            case 'Tavern':
+                return ['Crowded lanes', 'Tables', 'Bar focal point'];
+            default:
+                return ['Tree cover', 'Open center', 'Ambush angles'];
+        }
+    });
 
     readonly showSettlementScale = computed(() => this.backgroundDraft() === 'City');
     readonly showParchmentLayout = computed(() => this.backgroundDraft() === 'Parchment');
     readonly showCavernLayout = computed(() => this.backgroundDraft() === 'Cavern');
+    readonly showBattlemapLocale = computed(() => this.backgroundDraft() === 'Battlemap');
+    readonly showSeparateLabelsToggle = computed(() => this.backgroundDraft() !== 'Battlemap');
     readonly isSettlementMap = computed(() => this.backgroundDraft() === 'City');
     readonly isCavernMap = computed(() => this.backgroundDraft() === 'Cavern');
+    readonly isBattlemap = computed(() => this.backgroundDraft() === 'Battlemap');
     readonly settlementNameCount = computed(() => this.parseNameList(this.settlementNamesDraft()).length);
     readonly regionNameCount = computed(() => this.parseNameList(this.regionNamesDraft()).length);
     readonly ruinNameCount = computed(() => this.parseNameList(this.ruinNamesDraft()).length);
@@ -117,6 +174,10 @@ export class MapArtGenerationModalComponent {
             return 'Generate the cavern, enclave, landmark, and tunnel names as movable overlay labels instead of painting text into the art.';
         }
 
+        if (this.isBattlemap()) {
+            return 'Generate movable overlay labels only if you want encounter areas or named features tagged on top of the encounter map.';
+        }
+
         return 'Generate place names as movable overlay labels instead of painting text into the art.';
     });
     readonly namesIntro = computed(() => {
@@ -126,6 +187,10 @@ export class MapArtGenerationModalComponent {
 
         if (this.isCavernMap()) {
             return 'Choose the map type, structure, and the specific enclave, chamber, landmark, or tunnel names you want the AI to prefer.';
+        }
+
+        if (this.isBattlemap()) {
+            return 'Choose the encounter map style, encounter locale, and any specific area, feature, or set-piece names you want the AI to lean on.';
         }
 
         return 'Choose the map type, structure, and the specific settlement, region, ruin, or cavern names you want the AI to prefer.';
@@ -139,6 +204,10 @@ export class MapArtGenerationModalComponent {
             return 'Enclave or outpost names';
         }
 
+        if (this.isBattlemap()) {
+            return 'Encounter or site names';
+        }
+
         return 'Settlement names';
     });
     readonly settlementFieldPlaceholder = computed(() => {
@@ -148,6 +217,10 @@ export class MapArtGenerationModalComponent {
 
         if (this.isCavernMap()) {
             return 'One per line:\nGlowmarket\nLantern Burrow\nDelvers\' Rest';
+        }
+
+        if (this.isBattlemap()) {
+            return 'One per line:\nBroken Causeway\nThe Hook & Lantern\nCliffwatch Approach';
         }
 
         return 'One per line:\nTharandor\nStormhaven\nValdren';
@@ -161,6 +234,10 @@ export class MapArtGenerationModalComponent {
             return 'Use these for underdark settlements, mining camps, fungal hamlets, buried districts, or delver outposts.';
         }
 
+        if (this.isBattlemap()) {
+            return 'Use these for the encounter site itself: a crossroads, tavern, shrine, gatehouse, watchtower, courtyard, or other battle location.';
+        }
+
         return 'Use these for towns, cities, villages, ports, or other settlement labels.';
     });
     readonly settlementCountLabel = computed(() => {
@@ -170,6 +247,10 @@ export class MapArtGenerationModalComponent {
 
         if (this.isCavernMap()) {
             return 'enclave or outpost names ready.';
+        }
+
+        if (this.isBattlemap()) {
+            return 'encounter or site names ready.';
         }
 
         return 'settlement names ready.';
@@ -183,6 +264,10 @@ export class MapArtGenerationModalComponent {
             return 'Chamber or zone names';
         }
 
+        if (this.isBattlemap()) {
+            return 'Area or zone names';
+        }
+
         return 'Region names';
     });
     readonly regionFieldPlaceholder = computed(() => {
@@ -192,6 +277,10 @@ export class MapArtGenerationModalComponent {
 
         if (this.isCavernMap()) {
             return 'One per line:\nThe Glow Hollows\nSpore Basin\nRootfall Depths';
+        }
+
+        if (this.isBattlemap()) {
+            return 'One per line:\nUpper Walk\nCollapsed Yard\nEast Barricade';
         }
 
         return 'One per line:\nThe Ashen March\nCrownwild\nThe Sapphire Coast';
@@ -205,6 +294,10 @@ export class MapArtGenerationModalComponent {
             return 'Use these for major chambers, fungus forests, undercity sectors, lava fields, or broad underground zones.';
         }
 
+        if (this.isBattlemap()) {
+            return 'Use these for tactical sub-areas such as courtyards, balconies, lanes, chambers, clearings, ridges, or choke points.';
+        }
+
         return 'Use these for realms, forests, coasts, seas, provinces, or major territories.';
     });
     readonly regionCountLabel = computed(() => {
@@ -214,6 +307,10 @@ export class MapArtGenerationModalComponent {
 
         if (this.isCavernMap()) {
             return 'chamber or zone names ready.';
+        }
+
+        if (this.isBattlemap()) {
+            return 'area or zone names ready.';
         }
 
         return 'region names ready.';
@@ -227,6 +324,10 @@ export class MapArtGenerationModalComponent {
             return 'Vault or landmark names';
         }
 
+        if (this.isBattlemap()) {
+            return 'Feature or set-piece names';
+        }
+
         return 'Ruin names';
     });
     readonly ruinFieldPlaceholder = computed(() => {
@@ -236,6 +337,10 @@ export class MapArtGenerationModalComponent {
 
         if (this.isCavernMap()) {
             return 'One per line:\nCrystal Reliquary\nThe Fallen Shrine\nBasalt Throne';
+        }
+
+        if (this.isBattlemap()) {
+            return 'One per line:\nOverturned Wagon\nSignal Bonfire\nShattered Idol';
         }
 
         return 'One per line:\nBroken Archive\nSaint Ember Barrow\nThe Sunken Vault';
@@ -249,6 +354,10 @@ export class MapArtGenerationModalComponent {
             return 'Use these for ancient vaults, shrines, crystal halls, monster dens, drowned ruins, or other named cavern landmarks.';
         }
 
+        if (this.isBattlemap()) {
+            return 'Use these for tactical features such as wagons, altars, towers, bridges, statues, stairwells, barricades, or major pieces of cover.';
+        }
+
         return 'Use these for ruins, keeps, towers, dungeons, shrines, or landmark sites.';
     });
     readonly ruinCountLabel = computed(() => {
@@ -258,6 +367,10 @@ export class MapArtGenerationModalComponent {
 
         if (this.isCavernMap()) {
             return 'vault or landmark names ready.';
+        }
+
+        if (this.isBattlemap()) {
+            return 'feature or set-piece names ready.';
         }
 
         return 'ruin names ready.';
@@ -271,6 +384,10 @@ export class MapArtGenerationModalComponent {
             return 'Tunnel or chasm names';
         }
 
+        if (this.isBattlemap()) {
+            return 'Paths or access routes';
+        }
+
         return 'Cavern names';
     });
     readonly cavernFieldPlaceholder = computed(() => {
@@ -280,6 +397,10 @@ export class MapArtGenerationModalComponent {
 
         if (this.isCavernMap()) {
             return 'One per line:\nWhisper Chasm\nThe Ember Vein\nEcho Run';
+        }
+
+        if (this.isBattlemap()) {
+            return 'One per line:\nNorth Gate\nService Stairs\nRiver Path';
         }
 
         return 'One per line:\nGlowdeep\nWhisper Chasm\nCrystal Maw';
@@ -293,6 +414,10 @@ export class MapArtGenerationModalComponent {
             return 'Use these for tunnel routes, chasms, fissures, bridge spans, lava channels, or other connective cavern features.';
         }
 
+        if (this.isBattlemap()) {
+            return 'Use these for roads, alleys, bridges, stairs, ledges, doors, trails, or other movement routes through the encounter space.';
+        }
+
         return 'Use these for caves, grottoes, chasms, undercities, or subterranean spaces.';
     });
     readonly cavernCountLabel = computed(() => {
@@ -302,6 +427,10 @@ export class MapArtGenerationModalComponent {
 
         if (this.isCavernMap()) {
             return 'tunnel or chasm names ready.';
+        }
+
+        if (this.isBattlemap()) {
+            return 'paths or access routes ready.';
         }
 
         return 'cavern names ready.';
@@ -315,10 +444,12 @@ export class MapArtGenerationModalComponent {
 
             this.backgroundDraft.set(this.background());
             this.mapNameDraft.set(this.mapName());
-            this.separateLabelsDraft.set(this.separateLabels());
+            this.separateLabelsDraft.set(this.background() === 'Battlemap' ? false : this.separateLabels());
             this.settlementScaleDraft.set(this.settlementScale());
             this.parchmentLayoutDraft.set(this.parchmentLayout());
             this.cavernLayoutDraft.set(this.cavernLayout());
+            this.battlemapLocaleDraft.set(this.battlemapLocale());
+            this.lightingDraft.set(this.lighting());
             this.settlementNamesDraft.set(this.settlementNamesText());
             this.regionNamesDraft.set(this.regionNamesText());
             this.ruinNamesDraft.set(this.ruinNamesText());
@@ -332,7 +463,11 @@ export class MapArtGenerationModalComponent {
             case 'City':
             case 'Coast':
             case 'Cavern':
+            case 'Battlemap':
                 this.backgroundDraft.set(value);
+                if (value === 'Battlemap') {
+                    this.separateLabelsDraft.set(false);
+                }
                 break;
             default:
                 this.backgroundDraft.set('Parchment');
@@ -382,6 +517,36 @@ export class MapArtGenerationModalComponent {
         }
     }
 
+    updateBattlemapLocale(value: string | number): void {
+        switch (value) {
+            case 'TownStreet':
+            case 'BuildingInterior':
+            case 'Roadside':
+            case 'Cliffside':
+            case 'Riverside':
+            case 'Ruins':
+            case 'DungeonRoom':
+            case 'Tavern':
+                this.battlemapLocaleDraft.set(value);
+                break;
+            default:
+                this.battlemapLocaleDraft.set('ForestClearing');
+                break;
+        }
+    }
+
+    updateLighting(value: string | number): void {
+        switch (value) {
+            case 'Dusk':
+            case 'Night':
+                this.lightingDraft.set(value);
+                break;
+            default:
+                this.lightingDraft.set('Day');
+                break;
+        }
+    }
+
     updateSettlementNames(value: string): void {
         this.settlementNamesDraft.set(value);
     }
@@ -407,13 +572,16 @@ export class MapArtGenerationModalComponent {
     }
 
     submit(): void {
+        const background = this.backgroundDraft();
         this.confirmed.emit({
-            background: this.backgroundDraft(),
+            background,
             mapName: this.mapNameDraft().trim(),
-            separateLabels: this.separateLabelsDraft(),
+            separateLabels: background === 'Battlemap' ? false : this.separateLabelsDraft(),
             settlementScale: this.settlementScaleDraft(),
             parchmentLayout: this.parchmentLayoutDraft(),
             cavernLayout: this.cavernLayoutDraft(),
+            battlemapLocale: this.battlemapLocaleDraft(),
+            lighting: this.lightingDraft(),
             settlementNamesText: this.settlementNamesDraft(),
             regionNamesText: this.regionNamesDraft(),
             ruinNamesText: this.ruinNamesDraft(),

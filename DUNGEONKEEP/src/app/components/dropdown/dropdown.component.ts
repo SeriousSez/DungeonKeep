@@ -14,7 +14,6 @@ export interface DropdownOption {
     standalone: true,
     imports: [CommonModule],
     host: {
-        '(document:click)': 'onDocumentClick($event)',
         '[class.app-dropdown-host--open]': 'isOpen()',
         '[class.app-dropdown-host--dense-options]': "optionDensity() === 'dense'"
     },
@@ -26,7 +25,9 @@ export class DropdownComponent {
     private readonly hostElement = inject(ElementRef<HTMLElement>);
     private readonly defaultPanelMaxHeight = 300;
     private readonly viewportPadding = 12;
-    private suppressOutsideCloseUntil = 0;
+    private readonly handleDocumentPointerDown = (event: Event) => {
+        this.onDocumentPointerDown(event);
+    };
 
     readonly id = input<string>('');
     readonly ariaLabel = input<string>('');
@@ -154,11 +155,13 @@ export class DropdownComponent {
             });
 
             view.addEventListener('resize', updatePanelPosition);
+            globalThis.document.addEventListener('pointerdown', this.handleDocumentPointerDown, true);
             globalThis.document.addEventListener('scroll', updatePanelPosition, true);
 
             onCleanup(() => {
                 view.cancelAnimationFrame(frameId);
                 view.removeEventListener('resize', updatePanelPosition);
+                globalThis.document.removeEventListener('pointerdown', this.handleDocumentPointerDown, true);
                 globalThis.document.removeEventListener('scroll', updatePanelPosition, true);
             });
         });
@@ -199,14 +202,7 @@ export class DropdownComponent {
             return;
         }
 
-        this.isOpen.update((open) => {
-            const nextOpen = !open;
-            if (nextOpen) {
-                this.suppressOutsideCloseUntil = Date.now() + 150;
-            }
-
-            return nextOpen;
-        });
+        this.isOpen.update((open) => !open);
     }
 
     onSearchInput(value: string): void {
@@ -223,12 +219,8 @@ export class DropdownComponent {
         return String(option.value) === String(this.value());
     }
 
-    onDocumentClick(event: MouseEvent): void {
+    private onDocumentPointerDown(event: Event): void {
         if (!this.isOpen()) {
-            return;
-        }
-
-        if (Date.now() < this.suppressOutsideCloseUntil) {
             return;
         }
 

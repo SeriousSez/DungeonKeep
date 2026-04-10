@@ -89,7 +89,7 @@ export interface ApiCampaignWorldNoteDto {
 }
 
 export interface ApiCampaignMapDto {
-    background: 'Parchment' | 'Cavern' | 'Coast' | 'City';
+    background: 'Parchment' | 'Cavern' | 'Coast' | 'City' | 'Battlemap';
     backgroundImageUrl: string;
     strokes: ApiCampaignMapStrokeDto[];
     icons: ApiCampaignMapIconDto[];
@@ -116,6 +116,8 @@ export interface ApiGenerateCampaignMapArtRequest {
     settlementScale?: 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis';
     parchmentLayout?: 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular';
     cavernLayout?: 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes';
+    battlemapLocale?: 'TownStreet' | 'BuildingInterior' | 'ForestClearing' | 'Roadside' | 'Cliffside' | 'Riverside' | 'Ruins' | 'DungeonRoom' | 'Tavern';
+    lighting?: 'Day' | 'Dusk' | 'Night';
     preferredPlaceNames?: string[];
     settlementNames?: string[];
     regionNames?: string[];

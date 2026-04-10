@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, Elem
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
-import { MapArtGenerationModalComponent, MapArtGenerationOptions } from '../../components/map-art-generation-modal/map-art-generation-modal.component';
+import { MapArtBattlemapLocale, MapArtGenerationModalComponent, MapArtGenerationOptions, MapArtLighting } from '../../components/map-art-generation-modal/map-art-generation-modal.component';
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
 import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelFontFamily, CampaignMapLabelTone, CampaignMapPoint, CampaignMapToken, CampaignTone } from '../../models/dungeon.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
@@ -71,17 +71,20 @@ interface MapEditorHistoryEntry {
 type MapLabelCatalog = Record<CampaignMapIconType, readonly string[]>;
 
 const TOKEN_SIZE_OPTIONS: DropdownOption[] = [
-    { value: 0.08, label: 'Small', description: 'Tight footprint for minions, familiars, and markers.' },
-    { value: 0.12, label: 'Medium', description: 'Default tabletop size for characters and creatures.' },
-    { value: 0.16, label: 'Large', description: 'More presence for mounts, ogres, and bosses.' },
-    { value: 0.22, label: 'Huge', description: 'Big centerpiece token for dragons and siege monsters.' }
+    { value: 1, label: '1 Grid', description: 'Fits within a single map grid square.' },
+    { value: 4, label: '4 Grids', description: 'Expands the token to span four grid squares across.' },
+    { value: 8, label: '8 Grids', description: 'Large footprint for major pieces on the board.' }
 ];
+
+const MAP_TOKEN_GRID_COLUMNS = 25;
+const MAP_TOKEN_GRID_SPANS = [1, 4, 8] as const;
 
 const MAP_BACKGROUND_OPTIONS: DropdownOption[] = [
     { value: 'Parchment', label: 'Parchment', description: 'Warm paper tones for hand-drawn routes and lore maps.' },
     { value: 'City', label: 'Settlement', description: 'Sharper streets, walls, and district lines for towns and cities.' },
     { value: 'Coast', label: 'Coast', description: 'Sea-washed tones for harbors, islands, and shore routes.' },
-    { value: 'Cavern', label: 'Cavern', description: 'Deep mineral tones for tunnels, roots, and underworld spaces.' }
+    { value: 'Cavern', label: 'Cavern', description: 'Deep mineral tones for tunnels, roots, and underworld spaces.' },
+    { value: 'Battlemap', label: 'Encounter Map', description: 'Top-down encounter board for streets, interiors, woods, roads, cliffs, and other tactical scenes.' }
 ];
 
 const BRUSH_COLOR_OPTIONS: DropdownOption[] = [
@@ -190,6 +193,16 @@ const MAP_LABELS_BY_BACKGROUND: Record<CampaignMapBackground, MapLabelCatalog> =
         Treasure: ['Gem Nest', 'Buried Reliquary', 'Ore Cache'],
         Portal: ['Echo Gate', 'Crystal Rift', 'Root Door'],
         Tower: ['Stalag Spire', 'Glow Tower', 'Rune Needle']
+    },
+    Battlemap: {
+        Keep: ['Gatehouse', 'Barricade Hold', 'Watch Post'],
+        Town: ['Market Lane', 'Bridge Crossing', 'Courtyard'],
+        Camp: ['Supply Wagons', 'Fire Ring', 'War Camp'],
+        Dungeon: ['Collapsed Hall', 'Crypt Entrance', 'Ritual Chamber'],
+        Danger: ['Kill Zone', 'Arrow Nest', 'Cracked Edge'],
+        Treasure: ['Locked Chest', 'Spoils Crate', 'Relic Pedestal'],
+        Portal: ['Rune Circle', 'Shadow Gate', 'Blink Arch'],
+        Tower: ['Bell Loft', 'Sniper Roost', 'Mage Perch']
     }
 };
 
@@ -230,7 +243,7 @@ export class CampaignMapPageComponent {
     readonly tokenPlacementNameDraft = signal('Token');
     readonly tokenPlacementNoteDraft = signal('');
     readonly tokenPlacementImageUrl = signal('');
-    readonly tokenPlacementSize = signal(0.12);
+    readonly tokenPlacementSize = signal(1);
     readonly tokenUploadFeedback = signal('');
     readonly labelTextDraft = signal('New Region');
     readonly labelToneDraft = signal<CampaignMapLabelTone>('Region');
@@ -244,6 +257,8 @@ export class CampaignMapPageComponent {
     readonly settlementScale = signal<SettlementScale>('City');
     readonly parchmentLayout = signal<ParchmentLayout>('Continent');
     readonly cavernLayout = signal<CavernLayout>('TunnelNetwork');
+    readonly battlemapLocale = signal<MapArtBattlemapLocale>('ForestClearing');
+    readonly lighting = signal<MapArtLighting>('Day');
     readonly brushColor = signal('#8a5a2b');
     readonly terrainColor = signal('#8a5a2b');
     readonly brushWidth = signal(5);
@@ -253,6 +268,7 @@ export class CampaignMapPageComponent {
     readonly confirmAction = signal<MapConfirmAction>(null);
     readonly isDrawing = signal(false);
     readonly isAiArtGenerating = signal(false);
+    readonly showGrid = signal(false);
     readonly undoStack = signal<MapEditorHistoryEntry[]>([]);
     readonly redoStack = signal<MapEditorHistoryEntry[]>([]);
 
@@ -280,7 +296,8 @@ export class CampaignMapPageComponent {
 
     readonly canEdit = computed(() => this.selectedCampaign()?.currentUserRole === 'Owner');
     readonly isEditorMode = computed(() => this.routeMode() === 'edit');
-    readonly canModify = computed(() => this.canEdit() && this.isEditorMode());
+    readonly isEditorLocked = computed(() => this.isAiArtGenerating());
+    readonly canModify = computed(() => this.canEdit() && this.isEditorMode() && !this.isEditorLocked());
     readonly showSettlementScale = computed(() => this.workingMap().background === 'City');
     readonly showParchmentLayout = computed(() => this.workingMap().background === 'Parchment');
     readonly showCavernLayout = computed(() => this.workingMap().background === 'Cavern');
@@ -604,42 +621,70 @@ export class CampaignMapPageComponent {
     }
 
     selectSelectTool(): void {
+        if (!this.canModify()) {
+            return;
+        }
+
         this.activeTool.set('select');
         this.pendingIconType.set(null);
         this.pendingTerrainType.set(null);
     }
 
     selectDrawTool(): void {
+        if (!this.canModify()) {
+            return;
+        }
+
         this.activeTool.set('draw');
         this.pendingIconType.set(null);
         this.pendingTerrainType.set(null);
     }
 
     selectIconTool(iconType: CampaignMapIconType): void {
+        if (!this.canModify()) {
+            return;
+        }
+
         this.activeTool.set('icon');
         this.pendingIconType.set(iconType);
         this.pendingTerrainType.set(null);
     }
 
     selectTerrainTool(terrainType: CampaignMapDecorationType): void {
+        if (!this.canModify()) {
+            return;
+        }
+
         this.activeTool.set('terrain');
         this.pendingTerrainType.set(terrainType);
         this.pendingIconType.set(null);
     }
 
     selectLabelTool(): void {
+        if (!this.canModify()) {
+            return;
+        }
+
         this.activeTool.set('label');
         this.pendingIconType.set(null);
         this.pendingTerrainType.set(null);
     }
 
     selectTokenTool(): void {
+        if (!this.canModify()) {
+            return;
+        }
+
         this.activeTool.set('token');
         this.pendingIconType.set(null);
         this.pendingTerrainType.set(null);
     }
 
     startLandmarkTool(): void {
+        if (!this.canModify()) {
+            return;
+        }
+
         if (this.pendingIconType()) {
             this.activeTool.set('icon');
             return;
@@ -649,6 +694,10 @@ export class CampaignMapPageComponent {
     }
 
     clearPlacementMode(): void {
+        if (!this.canModify()) {
+            return;
+        }
+
         this.pendingIconType.set(null);
         this.pendingTerrainType.set(null);
         this.activeTool.set('select');
@@ -670,7 +719,7 @@ export class CampaignMapPageComponent {
 
     updateTokenPlacementSize(value: string | number): void {
         const numericValue = typeof value === 'number' ? value : Number(value);
-        this.tokenPlacementSize.set(Number.isFinite(numericValue) ? Math.max(0.06, Math.min(0.28, numericValue)) : 0.12);
+        this.tokenPlacementSize.set(this.normalizeTokenGridSpan(numericValue));
     }
 
     updateTokenNameDraft(value: string): void {
@@ -708,8 +757,8 @@ export class CampaignMapPageComponent {
         }
 
         const numericValue = typeof value === 'number' ? value : Number(value);
-        const nextSize = Number.isFinite(numericValue) ? Math.max(0.06, Math.min(0.28, numericValue)) : selectedToken.size;
-        if (nextSize === selectedToken.size) {
+        const nextSize = this.normalizeTokenGridSpan(numericValue);
+        if (nextSize === this.normalizeTokenGridSpan(selectedToken.size)) {
             return;
         }
 
@@ -718,6 +767,14 @@ export class CampaignMapPageComponent {
             map.tokens = map.tokens.map((token) => token.id === selectedToken.id ? { ...token, size: nextSize } : token);
         });
         this.markDirty('Token size updated.');
+    }
+
+    tokenRenderSize(size: number): string {
+        return `calc((100% / ${MAP_TOKEN_GRID_COLUMNS}) * ${this.normalizeTokenGridSpan(size)})`;
+    }
+
+    toggleGridLayer(): void {
+        this.showGrid.update((showGrid) => !showGrid);
     }
 
     requestDeleteSelectedToken(): void {
@@ -778,10 +835,14 @@ export class CampaignMapPageComponent {
     }
 
     clearPendingTokenPlacement(): void {
+        if (this.isEditorLocked()) {
+            return;
+        }
+
         this.tokenPlacementImageUrl.set('');
         this.tokenPlacementNameDraft.set('Token');
         this.tokenPlacementNoteDraft.set('');
-        this.tokenPlacementSize.set(0.12);
+        this.tokenPlacementSize.set(1);
         this.tokenUploadFeedback.set('');
 
         if (this.activeTool() === 'token') {
@@ -1080,7 +1141,7 @@ export class CampaignMapPageComponent {
             this.saveMessage.set(`${deletedMap.name} deleted.`);
             this.hasUnsavedChanges.set(false);
             this.cdr.detectChanges();
-            await this.router.navigate(this.mapEditRoute(this.campaignId(), fallbackMap.id), { replaceUrl: true });
+            await this.router.navigate(this.mapListRoute(this.campaignId()), { replaceUrl: true });
         }
     }
 
@@ -1132,6 +1193,8 @@ export class CampaignMapPageComponent {
             settlementScale: this.settlementScale(),
             parchmentLayout: this.parchmentLayout(),
             cavernLayout: this.cavernLayout(),
+            battlemapLocale: this.battlemapLocale(),
+            lighting: this.lighting(),
             settlementNamesText: this.settlementNamesDraft(),
             regionNamesText: this.regionNamesDraft(),
             ruinNamesText: this.ruinNamesDraft(),
@@ -1154,10 +1217,12 @@ export class CampaignMapPageComponent {
 
     async submitMapArtModal(options: MapArtGenerationOptions): Promise<void> {
         this.mapArtModalOpen.set(false);
-        this.separateLabelsDraft.set(options.separateLabels);
+        this.separateLabelsDraft.set(options.background === 'Battlemap' ? false : options.separateLabels);
         this.settlementScale.set(options.settlementScale);
         this.parchmentLayout.set(options.parchmentLayout);
         this.cavernLayout.set(options.cavernLayout);
+        this.battlemapLocale.set(options.battlemapLocale);
+        this.lighting.set(options.lighting);
         this.settlementNamesDraft.set(options.settlementNamesText);
         this.regionNamesDraft.set(options.regionNamesText);
         this.ruinNamesDraft.set(options.ruinNamesText);
@@ -1179,7 +1244,9 @@ export class CampaignMapPageComponent {
         const regionNames = this.parseNameList(options.regionNamesText);
         const ruinNames = this.parseNameList(options.ruinNamesText);
         const cavernNames = this.parseNameList(options.cavernNamesText);
+        let dirtyMessage = '';
 
+        this.lockEditorForAiGeneration();
         this.isAiArtGenerating.set(true);
         this.saveMessage.set('Generating map art with OpenAI...');
         this.cdr.detectChanges();
@@ -1188,15 +1255,17 @@ export class CampaignMapPageComponent {
             const generated = await this.store.generateCampaignMapArtAi(campaign.id, {
                 background,
                 mapName,
-                separateLabels: options.separateLabels,
+                separateLabels: background === 'Battlemap' ? false : options.separateLabels,
                 settlementScale: background === 'City' ? options.settlementScale : undefined,
                 parchmentLayout: background === 'Parchment' ? options.parchmentLayout : undefined,
                 cavernLayout: background === 'Cavern' ? options.cavernLayout : undefined,
+                battlemapLocale: background === 'Battlemap' ? options.battlemapLocale : undefined,
+                lighting: options.lighting,
                 settlementNames,
                 regionNames,
                 ruinNames,
                 cavernNames,
-                additionalDirection: options.additionalDirection.trim() || undefined
+                additionalDirection: this.buildMapArtAdditionalDirection(options)
             });
 
             const backgroundImageUrl = generated?.backgroundImageUrl ?? null;
@@ -1220,14 +1289,28 @@ export class CampaignMapPageComponent {
                     forestBelts: []
                 };
             });
-            this.saveState.set('idle');
-            this.markDirty(options.separateLabels
+            dirtyMessage = options.separateLabels
                 ? 'Map art generated with separate movable labels. Existing routes were cleared and landmarks were kept. Save to keep it.'
-                : 'Map art generated. Existing routes were cleared and landmarks were kept. Save to keep it.');
+                : 'Map art generated. Existing routes were cleared and landmarks were kept. Save to keep it.';
         } finally {
             this.isAiArtGenerating.set(false);
+
+            if (dirtyMessage) {
+                this.hasUnsavedChanges.set(true);
+                this.saveState.set('idle');
+                this.saveMessage.set(dirtyMessage);
+            }
+
             this.cdr.detectChanges();
         }
+    }
+
+    private lockEditorForAiGeneration(): void {
+        this.isDrawing.set(false);
+        this.activeStrokePointerId = null;
+        this.pendingIconType.set(null);
+        this.pendingTerrainType.set(null);
+        this.activeTool.set('select');
     }
 
     clearBackgroundImage(): void {
@@ -1296,6 +1379,21 @@ export class CampaignMapPageComponent {
             };
         });
         this.markDirty('Terrain layers cleared.');
+    }
+
+    normalizeTokenGridSpan(value: number | undefined): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return 1;
+        }
+
+        // Support legacy percentage-based token sizes by mapping them to the nearest grid span.
+        const normalizedValue = value > 0 && value < 1
+            ? Math.max(1, Math.round(value * MAP_TOKEN_GRID_COLUMNS))
+            : value;
+
+        return MAP_TOKEN_GRID_SPANS.reduce((closest, span) => {
+            return Math.abs(span - normalizedValue) < Math.abs(closest - normalizedValue) ? span : closest;
+        }, MAP_TOKEN_GRID_SPANS[0]);
     }
 
     handleBoardClick(event: MouseEvent): void {
@@ -1763,6 +1861,29 @@ export class CampaignMapPageComponent {
         return `map-board--${this.workingMap().background.toLowerCase()}`;
     }
 
+    battlemapLocaleLabel(locale: MapArtBattlemapLocale): string {
+        switch (locale) {
+            case 'TownStreet':
+                return 'town street';
+            case 'BuildingInterior':
+                return 'building interior';
+            case 'Roadside':
+                return 'roadside encounter';
+            case 'Cliffside':
+                return 'cliffside approach';
+            case 'Riverside':
+                return 'riverside encounter';
+            case 'Ruins':
+                return 'ruined site';
+            case 'DungeonRoom':
+                return 'dungeon room';
+            case 'Tavern':
+                return 'tavern interior';
+            default:
+                return 'forest clearing';
+        }
+    }
+
     isSelectedIcon(iconId: string): boolean {
         return this.selectedIconId() === iconId;
     }
@@ -1779,6 +1900,38 @@ export class CampaignMapPageComponent {
         this.hasUnsavedChanges.set(true);
         this.saveState.set('idle');
         this.saveMessage.set(message);
+    }
+
+    private buildMapArtAdditionalDirection(options: MapArtGenerationOptions): string | undefined {
+        const trimmedDirection = options.additionalDirection.trim();
+        const lightingDirection = options.lighting === 'Night'
+            ? 'Set the encounter at night with moonlight, lantern light, or torchlight, but keep the battlemat readable and avoid crushed blacks or muddy shadows.'
+            : options.lighting === 'Dusk'
+                ? 'Set the encounter at dusk or golden hour with warm late-day light and longer shadows, but keep the battlemat bright enough for clear tactical readability.'
+                : 'Set the encounter in clear daylight with bright, even lighting and strong readability. Avoid dim, shadow-heavy, twilight, or near-night rendering.';
+
+        if (options.background !== 'Battlemap') {
+            return trimmedDirection || undefined;
+        }
+
+        const baseDirection = `Create a strict orthographic top-down 2D virtual tabletop encounter battlemat set in a ${this.battlemapLocaleLabel(options.battlemapLocale)}. This should read like a playable floor plan or printable battlemat, not scenic concept art, not a hand-drawn atlas, and not a parchment world map. Fill the frame with one local encounter site at battle scale, not a regional overview or distant geography. The camera must look straight down at 90 degrees with no isometric angle, no oblique view, no horizon, and no perspective scene art. All encounter maps, including outdoor scenes, must use the same flat VTT projection discipline as a roof-removed tavern battlemat. Include encounter-ready cover, obstacles, traversal features, and grounded props sized for token movement. Trees, buildings, walls, bridges, furniture, and cliffs must read as top-down shapes viewed from directly above. Do not render a baked-in grid, UI, tokens, border, cartouche, legend, parchment texture, coastline silhouette, long travel road, or labeled map features.`;
+        const localeDirection = options.battlemapLocale === 'Tavern'
+            ? 'This must be a single tavern or inn interior only, shown as a roof-removed floor plan from directly above, with tables, chairs, booths, bar counter, stools, hearth, stairs, doors, kitchen access, and side rooms. No exterior town, road network, wilderness, mountains, coastline, or world-map composition.'
+            : options.battlemapLocale === 'BuildingInterior'
+                ? 'This must be a single interior floor-plan encounter space only, shown from directly above with rooms, doors, halls, stairs, and furniture, and no exterior town or regional landscape.'
+                : options.battlemapLocale === 'Cliffside'
+                    ? 'This must be one continuous top-down playable area along a cliff edge, with ledges, switchbacks, ropes, broken stone, and exposed drops shown as map shapes from above. Do not generate floating rock islands, cutaway chasms, suspended platforms over empty white space, or any side-view cliff diorama.'
+                    : options.battlemapLocale === 'ForestClearing'
+                        ? 'This must be a flat top-down outdoor ground plan with tree canopies, roots, brush, rocks, and cover shapes seen from above, not a scenic forest scene with visible trunks and side views.'
+                        : options.battlemapLocale === 'Roadside'
+                            ? 'This must be a flat top-down roadside encounter area with the road, ditches, wagons, brush, and fences shown as gameplay shapes from above, not a cinematic travel-road scene.'
+                            : options.battlemapLocale === 'Riverside'
+                                ? 'This must be a flat top-down riverside encounter area with banks, ford or bridge, reeds, stones, and water edges shown as map shapes from above, not a scenic river landscape.'
+                                : options.battlemapLocale === 'Ruins'
+                                    ? 'This must be a flat top-down ruined site plan, with walls, rubble, pillars, and fractured floors shown as footprints and outlines from above, not a 3D ruin illustration.'
+                                    : '';
+
+        return [baseDirection, lightingDirection, localeDirection, trimmedDirection].filter(Boolean).join(' ');
     }
 
     private captureHistorySnapshot(): void {
@@ -2046,6 +2199,9 @@ export class CampaignMapPageComponent {
             : [this.createEmptyMapBoard('Main Map', campaign.map.background)];
         const nextBoard = this.createEmptyMapBoard(`Map ${existingMaps.length + 1}`, existingMaps[0]?.background ?? campaign.map.background);
         const nextMaps = [...existingMaps, nextBoard];
+        const activeMapId = existingMaps.some((map) => map.id === campaign.activeMapId)
+            ? campaign.activeMapId
+            : existingMaps[0]?.id ?? nextBoard.id;
 
         this.mapBoards.set(nextMaps);
         this.loadMapBoard(nextBoard);
@@ -2057,7 +2213,7 @@ export class CampaignMapPageComponent {
         this.cdr.detectChanges();
 
         try {
-            const saved = await this.store.updateCampaignMap(campaign.id, { activeMapId: nextBoard.id, maps: nextMaps });
+            const saved = await this.store.updateCampaignMap(campaign.id, { activeMapId, maps: nextMaps });
             if (!saved) {
                 this.saveState.set('error');
                 this.saveMessage.set('Could not create a new map right now.');
@@ -2066,7 +2222,7 @@ export class CampaignMapPageComponent {
                 return;
             }
 
-            this.lastLoadedMapSignature = this.mapLibrarySignature(nextMaps, nextBoard.id);
+            this.lastLoadedMapSignature = this.mapLibrarySignature(nextMaps, activeMapId);
             this.saveState.set('saved');
             this.saveMessage.set(`Created ${nextBoard.name}.`);
             this.cdr.detectChanges();
@@ -2508,7 +2664,8 @@ export class CampaignMapPageComponent {
             Parchment: ['Keep', 'Town', 'Town', 'Camp', 'Dungeon', 'Danger', 'Treasure', 'Tower', 'Portal', 'Camp'],
             City: ['Keep', 'Town', 'Town', 'Town', 'Tower', 'Dungeon', 'Danger', 'Treasure', 'Camp', 'Portal'],
             Coast: ['Keep', 'Town', 'Town', 'Camp', 'Camp', 'Danger', 'Treasure', 'Portal', 'Tower', 'Dungeon'],
-            Cavern: ['Keep', 'Camp', 'Town', 'Dungeon', 'Dungeon', 'Danger', 'Treasure', 'Portal', 'Tower', 'Camp']
+            Cavern: ['Keep', 'Camp', 'Town', 'Dungeon', 'Dungeon', 'Danger', 'Treasure', 'Portal', 'Tower', 'Camp'],
+            Battlemap: ['Town', 'Danger', 'Keep', 'Camp', 'Dungeon', 'Danger', 'Treasure', 'Tower', 'Portal', 'Camp']
         };
 
         const baseSequence = themedSets[background];
@@ -2966,6 +3123,7 @@ export class CampaignMapPageComponent {
             case 'City':
             case 'Coast':
             case 'Cavern':
+            case 'Battlemap':
                 return value;
             default:
                 return 'Parchment';

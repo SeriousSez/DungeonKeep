@@ -30,16 +30,6 @@
                 </div>
                 }
 
-                <div class="map-art-field-block map-art-field-block--toggle">
-                    <label class="map-art-toggle" for="map-art-separate-labels">
-                        <input id="map-art-separate-labels" type="checkbox" [checked]="separateLabelsDraft()" (change)="updateSeparateLabels($any($event.target).checked)" />
-                        <span>
-                            <strong>Generate separate movable labels</strong>
-                            <small>{{ separateLabelsHelpText() }}</small>
-                        </span>
-                    </label>
-                </div>
-
                 @if (showParchmentLayout()) {
                 <div class="map-art-field-block">
                     <label class="map-art-field-label">Parchment layout</label>
@@ -53,7 +43,43 @@
                     <app-dropdown ariaLabel="Cavern layout" [value]="cavernLayoutDraft()" [options]="cavernLayoutOptions" [minWidth]="220" [panelMinWidth]="360" [showOptionDescriptions]="false" (changed)="updateCavernLayout($event)"></app-dropdown>
                 </div>
                 }
+
+                @if (showBattlemapLocale()) {
+                <div class="map-art-field-block map-art-field-block--battlemap">
+                    <label class="map-art-field-label">Encounter locale</label>
+                    <app-dropdown ariaLabel="Encounter locale" [value]="battlemapLocaleDraft()" [options]="battlemapLocaleOptions" [minWidth]="220" [panelMinWidth]="320" [optionDensity]="'dense'" [showOptionDescriptions]="false" [showSelectedDescription]="false"
+                        (changed)="updateBattlemapLocale($event)"></app-dropdown>
+                    <div class="battlemap-locale-preview">
+                        <p class="battlemap-locale-preview__eyebrow">Encounter Feel</p>
+                        <p class="battlemap-locale-preview__title">{{ selectedBattlemapLocaleOption().label }}</p>
+                        <p class="battlemap-locale-preview__description">{{ selectedBattlemapLocaleOption().description }}</p>
+                        <div class="battlemap-locale-tags">
+                            @for (tag of battlemapLocaleTags(); track tag) {
+                            <span class="battlemap-locale-tag">{{ tag }}</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+                }
+
+                <div class="map-art-field-block">
+                    <label class="map-art-field-label">Lighting</label>
+                    <app-dropdown ariaLabel="Lighting" [value]="lightingDraft()" [options]="lightingOptions" [minWidth]="220" [panelMinWidth]="320" (changed)="updateLighting($event)"></app-dropdown>
+                    <p class="map-art-help-text">Daylight is the safest choice when you want a clear, readable map instead of a dark scene.</p>
+                </div>
             </div>
+
+            @if (showSeparateLabelsToggle()) {
+            <div class="map-art-field-block map-art-field-block--toggle">
+                <label class="map-art-toggle" for="map-art-separate-labels">
+                    <input id="map-art-separate-labels" type="checkbox" [checked]="separateLabelsDraft()" (change)="updateSeparateLabels($any($event.target).checked)" />
+                    <span>
+                        <strong>Generate separate movable labels</strong>
+                        <small>{{ separateLabelsHelpText() }}</small>
+                    </span>
+                </label>
+            </div>
+            }
 
             <div class="map-art-notes-grid">
                 <div class="map-art-field-block map-art-field-block--wide">

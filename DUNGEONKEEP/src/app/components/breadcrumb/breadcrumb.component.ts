@@ -42,14 +42,43 @@ export class BreadcrumbComponent {
 
         const data = route.snapshot.data;
         const params = this.collectRouteParams(route);
+        const routePath = route.snapshot.routeConfig?.path ?? '';
         const parentCrumbs = ((data['parentCrumbs'] ?? []) as Crumb[]).map((crumb) => ({
             ...crumb,
             url: crumb.url ? this.resolveRouteTemplate(crumb.url, params) : undefined
         }));
 
+        const campaign = params['id']
+            ? this.store.campaigns().find(c => c.id === params['id'])
+            : null;
+
+        if (campaign && routePath === 'campaigns/:id/maps/new') {
+            this.crumbs.set([...parentCrumbs, { label: 'Create' }]);
+            return;
+        }
+
+        if (campaign && params['mapId']) {
+            const map = campaign.maps.find(entry => entry.id === params['mapId']);
+            if (map) {
+                const mapCrumb = {
+                    label: map.name,
+                    url: `/campaigns/${campaign.id}/maps/${map.id}`
+                };
+
+                if (routePath === 'campaigns/:id/maps/:mapId/edit') {
+                    this.crumbs.set([...parentCrumbs, mapCrumb, { label: 'Edit' }]);
+                    return;
+                }
+
+                if (routePath === 'campaigns/:id/maps/:mapId') {
+                    this.crumbs.set([...parentCrumbs, { label: map.name }]);
+                    return;
+                }
+            }
+        }
+
         let finalLabel: string = data['breadcrumb'] || '';
         if (params['id']) {
-            const campaign = this.store.campaigns().find(c => c.id === params['id']);
             if (campaign) {
                 finalLabel = campaign.name;
             }

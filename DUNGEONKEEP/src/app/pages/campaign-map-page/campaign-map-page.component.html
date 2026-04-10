@@ -120,12 +120,12 @@
                 </div>
 
                 <div class="tool-toggle-row">
-                    <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'select'" (click)="selectSelectTool()">Select</button>
-                    <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'draw'" (click)="selectDrawTool()">Draw Routes</button>
-                    <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'icon'" (click)="startLandmarkTool()">Place Landmarks</button>
-                    <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'terrain'" (click)="selectTerrainTool('Mountain')">Place Terrain</button>
-                    <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'label'" (click)="selectLabelTool()">Place Labels</button>
-                    <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'token'" (click)="selectTokenTool()">Place Tokens</button>
+                    <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'select'" [disabled]="isEditorLocked()" (click)="selectSelectTool()">Select</button>
+                    <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'draw'" [disabled]="isEditorLocked()" (click)="selectDrawTool()">Draw Routes</button>
+                    <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'icon'" [disabled]="isEditorLocked()" (click)="startLandmarkTool()">Place Landmarks</button>
+                    <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'terrain'" [disabled]="isEditorLocked()" (click)="selectTerrainTool('Mountain')">Place Terrain</button>
+                    <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'label'" [disabled]="isEditorLocked()" (click)="selectLabelTool()">Place Labels</button>
+                    <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'token'" [disabled]="isEditorLocked()" (click)="selectTokenTool()">Place Tokens</button>
                 </div>
 
                 @if (activeTool() === 'select') {
@@ -136,8 +136,8 @@
 
                 @if (activeTool() === 'draw') {
                 <div class="mode-detail-block">
-                    <app-dropdown ariaLabel="Brush color" [value]="brushColor()" [options]="brushColorOptions" [minWidth]="220" (changed)="updateBrushColor($event)"></app-dropdown>
-                    <app-dropdown ariaLabel="Brush size" [value]="brushWidth()" [options]="brushSizeOptions" [minWidth]="220" (changed)="updateBrushWidth($event)"></app-dropdown>
+                    <app-dropdown ariaLabel="Brush color" [value]="brushColor()" [options]="brushColorOptions" [minWidth]="220" [disabled]="isEditorLocked()" (changed)="updateBrushColor($event)"></app-dropdown>
+                    <app-dropdown ariaLabel="Brush size" [value]="brushWidth()" [options]="brushSizeOptions" [minWidth]="220" [disabled]="isEditorLocked()" (changed)="updateBrushWidth($event)"></app-dropdown>
                     <p class="sidebar-note generator-note">Draw mode paints route strokes directly onto the board.</p>
                 </div>
                 }
@@ -148,18 +148,18 @@
                         <h2>Terrain Palette</h2>
                         <div class="compact-heading-actions">
                             @if (workingMap().decorations.length > 0 || workingMap().layers.rivers.length > 0 || workingMap().layers.mountainChains.length > 0 || workingMap().layers.forestBelts.length > 0) {
-                            <button type="button" class="ghost-button compact-action danger-button" (click)="clearTerrainLayers()">Clear Terrain</button>
+                            <button type="button" class="ghost-button compact-action danger-button" [disabled]="isEditorLocked()" (click)="clearTerrainLayers()">Clear Terrain</button>
                             }
                             @if (activeTerrainOption()) {
-                            <button type="button" class="ghost-button compact-action" (click)="clearPlacementMode()">Stop Placing</button>
+                            <button type="button" class="ghost-button compact-action" [disabled]="isEditorLocked()" (click)="clearPlacementMode()">Stop Placing</button>
                             }
                         </div>
                     </div>
                     <label class="field-label">Terrain ink</label>
-                    <app-dropdown ariaLabel="Terrain ink" [value]="terrainColor()" [options]="terrainColorOptions" [minWidth]="220" (changed)="updateTerrainColor($event)"></app-dropdown>
+                    <app-dropdown ariaLabel="Terrain ink" [value]="terrainColor()" [options]="terrainColorOptions" [minWidth]="220" [disabled]="isEditorLocked()" (changed)="updateTerrainColor($event)"></app-dropdown>
                     <div class="icon-palette-grid terrain-palette-grid">
                         @for (option of terrainOptions; track option.type) {
-                        <button type="button" class="icon-palette-button terrain-palette-button" [class.is-active]="pendingTerrainType() === option.type" (click)="selectTerrainTool(option.type)">
+                        <button type="button" class="icon-palette-button terrain-palette-button" [class.is-active]="pendingTerrainType() === option.type" [disabled]="isEditorLocked()" (click)="selectTerrainTool(option.type)">
                             <i [class]="option.iconClass"></i>
                             <span>{{ option.label }}</span>
                         </button>
@@ -179,17 +179,17 @@
                         <h2>Map Labels</h2>
                         <div class="compact-heading-actions">
                             @if (workingMap().labels.length > 0) {
-                            <button type="button" class="ghost-button compact-action danger-button" (click)="clearLabels()">Clear Labels</button>
+                            <button type="button" class="ghost-button compact-action danger-button" [disabled]="isEditorLocked()" (click)="clearLabels()">Clear Labels</button>
                             }
-                            <button type="button" class="ghost-button compact-action" (click)="clearPlacementMode()">Stop Placing</button>
+                            <button type="button" class="ghost-button compact-action" [disabled]="isEditorLocked()" (click)="clearPlacementMode()">Stop Placing</button>
                         </div>
                     </div>
                     <label class="field-label">Label type</label>
-                    <app-dropdown ariaLabel="Label type" [value]="labelToneDraft()" [options]="labelToneOptions" [minWidth]="220" (changed)="updateLabelToneDraft($event)"></app-dropdown>
+                    <app-dropdown ariaLabel="Label type" [value]="labelToneDraft()" [options]="labelToneOptions" [minWidth]="220" [disabled]="isEditorLocked()" (changed)="updateLabelToneDraft($event)"></app-dropdown>
                     <label class="field-label" for="map-label-text">Label text</label>
                     <div class="inline-creator-row inline-creator-row--stacked">
-                        <input id="map-label-text" type="text" [value]="labelTextDraft()" (input)="updateLabelTextDraft($any($event.target).value)" placeholder="Name this place" />
-                        <button type="button" class="primary-button" (click)="selectLabelTool()">Place</button>
+                        <input id="map-label-text" type="text" [value]="labelTextDraft()" [disabled]="isEditorLocked()" (input)="updateLabelTextDraft($any($event.target).value)" placeholder="Name this place" />
+                        <button type="button" class="primary-button" [disabled]="isEditorLocked()" (click)="selectLabelTool()">Place</button>
                     </div>
                     <p class="sidebar-note">Region labels are good for countries, seas, and forests. Feature labels work well for roads, ruins, rivers, and passes.</p>
                 </div>
@@ -201,16 +201,16 @@
                         <h2>Landmarks</h2>
                         <div class="compact-heading-actions">
                             @if (workingMap().icons.length > 0) {
-                            <button type="button" class="ghost-button compact-action danger-button" (click)="clearLandmarks()">Clear Landmarks</button>
+                            <button type="button" class="ghost-button compact-action danger-button" [disabled]="isEditorLocked()" (click)="clearLandmarks()">Clear Landmarks</button>
                             }
                             @if (activeIconOption()) {
-                            <button type="button" class="ghost-button compact-action" (click)="clearPlacementMode()">Stop Placing</button>
+                            <button type="button" class="ghost-button compact-action" [disabled]="isEditorLocked()" (click)="clearPlacementMode()">Stop Placing</button>
                             }
                         </div>
                     </div>
                     <div class="icon-palette-grid">
                         @for (option of iconOptions; track option.type) {
-                        <button type="button" class="icon-palette-button" [class.is-active]="pendingIconType() === option.type" (click)="selectIconTool(option.type)">
+                        <button type="button" class="icon-palette-button" [class.is-active]="pendingIconType() === option.type" [disabled]="isEditorLocked()" (click)="selectIconTool(option.type)">
                             <i [class]="option.iconClass"></i>
                             <span>{{ option.label }}</span>
                         </button>
@@ -230,15 +230,15 @@
                         <h2>Tokens</h2>
                         <div class="compact-heading-actions">
                             @if (workingMap().tokens.length > 0) {
-                            <button type="button" class="ghost-button compact-action danger-button" (click)="clearTokens()">Clear Tokens</button>
+                            <button type="button" class="ghost-button compact-action danger-button" [disabled]="isEditorLocked()" (click)="clearTokens()">Clear Tokens</button>
                             }
                             @if (hasPendingTokenPlacement()) {
-                            <button type="button" class="ghost-button compact-action" (click)="clearPendingTokenPlacement()">Clear Token</button>
+                            <button type="button" class="ghost-button compact-action" [disabled]="isEditorLocked()" (click)="clearPendingTokenPlacement()">Clear Token</button>
                             }
                         </div>
                     </div>
                     <label class="field-label" for="map-token-upload">Token art</label>
-                    <input id="map-token-upload" class="map-file-input" type="file" accept="image/*" (change)="handleTokenUpload($event)" />
+                    <input id="map-token-upload" class="map-file-input" type="file" accept="image/*" [disabled]="isEditorLocked()" (change)="handleTokenUpload($event)" />
                     @if (tokenPlacementImageUrl()) {
                     <div class="token-upload-preview-card">
                         <img class="token-upload-preview" [src]="tokenPlacementImageUrl()" alt="Token preview" />
@@ -249,11 +249,11 @@
                     </div>
                     }
                     <label class="field-label" for="map-token-name">Token name</label>
-                    <input id="map-token-name" type="text" [value]="tokenPlacementNameDraft()" (input)="updateTokenPlacementNameDraft($any($event.target).value)" placeholder="Name this token" />
+                    <input id="map-token-name" type="text" [value]="tokenPlacementNameDraft()" [disabled]="isEditorLocked()" (input)="updateTokenPlacementNameDraft($any($event.target).value)" placeholder="Name this token" />
                     <label class="field-label" for="map-token-size">Token size</label>
-                    <app-dropdown ariaLabel="Token size" [value]="tokenPlacementSize()" [options]="tokenSizeOptions" [minWidth]="220" (changed)="updateTokenPlacementSize($event)"></app-dropdown>
+                    <app-dropdown ariaLabel="Token size" [value]="tokenPlacementSize()" [options]="tokenSizeOptions" [minWidth]="220" [disabled]="isEditorLocked()" (changed)="updateTokenPlacementSize($event)"></app-dropdown>
                     <label class="field-label" for="map-token-note">Token note</label>
-                    <input id="map-token-note" type="text" [value]="tokenPlacementNoteDraft()" (input)="updateTokenPlacementNoteDraft($any($event.target).value)" placeholder="Optional note or condition" />
+                    <input id="map-token-note" type="text" [value]="tokenPlacementNoteDraft()" [disabled]="isEditorLocked()" (input)="updateTokenPlacementNoteDraft($any($event.target).value)" placeholder="Optional note or condition" />
                     @if (tokenUploadFeedback()) {
                     <p class="sidebar-note">{{ tokenUploadFeedback() }}</p>
                     } @else {
@@ -298,6 +298,7 @@
                     <h2>Layers</h2>
                 </div>
                 <div class="layer-grid">
+                    <button type="button" class="tool-toggle-button" [class.is-active]="showGrid()" (click)="toggleGridLayer()">Grid</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="showRivers()" (click)="toggleRiverLayer()">Rivers {{ workingMap().layers.rivers.length }}</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="showMountainChains()" (click)="toggleMountainLayer()">Mountains {{ workingMap().layers.mountainChains.length }}</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="showForestBelts()" (click)="toggleForestLayer()">Forests {{ workingMap().layers.forestBelts.length }}</button>
@@ -350,7 +351,7 @@
                     <label class="field-label" for="map-selected-token-name">Token name</label>
                     <input id="map-selected-token-name" type="text" [value]="tokenNameDraft()" (input)="updateTokenNameDraft($any($event.target).value)" placeholder="Rename this token" />
                     <label class="field-label" for="map-selected-token-size">Token size</label>
-                    <app-dropdown ariaLabel="Selected token size" [value]="token.size" [options]="tokenSizeOptions" [minWidth]="220" (changed)="updateSelectedTokenSize($event)"></app-dropdown>
+                    <app-dropdown ariaLabel="Selected token size" [value]="normalizeTokenGridSpan(token.size)" [options]="tokenSizeOptions" [minWidth]="220" (changed)="updateSelectedTokenSize($event)"></app-dropdown>
                     <label class="field-label" for="map-selected-token-note">Token note</label>
                     <input id="map-selected-token-note" type="text" [value]="tokenNoteDraft()" (input)="updateTokenNoteDraft($any($event.target).value)" placeholder="Condition, HP, or reminder" />
                     <button type="button" class="primary-button full-width-button" (click)="applySelectedTokenDetails()">Apply Token Details</button>
@@ -414,14 +415,18 @@
             </div>
 
             <div class="map-board-shell">
-                <div #mapBoard class="map-board" [class.can-edit]="canEdit()" [class.is-placement-mode]="pendingIconType() !== null || pendingTerrainType() !== null || activeTool() === 'label'" [class.has-map-art]="!!workingMap().backgroundImageUrl" [ngClass]="backgroundTextureClass()"
-                    (click)="handleBoardClick($event)" (pointerdown)="handleBoardPointerDown($event)" (pointermove)="handleBoardPointerMove($event)" (pointerup)="handleBoardPointerUp($event)" (pointercancel)="handleBoardPointerUp($event)">
+                <div #mapBoard class="map-board" [class.can-edit]="canEdit()" [class.is-placement-mode]="pendingIconType() !== null || pendingTerrainType() !== null || activeTool() === 'label'" [class.has-map-art]="!!workingMap().backgroundImageUrl" [class.is-generating]="isAiArtGenerating()"
+                    [ngClass]="backgroundTextureClass()" (click)="handleBoardClick($event)" (pointerdown)="handleBoardPointerDown($event)" (pointermove)="handleBoardPointerMove($event)" (pointerup)="handleBoardPointerUp($event)" (pointercancel)="handleBoardPointerUp($event)">
                     @if (workingMap().backgroundImageUrl) {
                     <div class="map-board-art-layer" aria-hidden="true">
                         <img class="map-board-art" [src]="workingMap().backgroundImageUrl" alt="" />
                     </div>
                     }
                     <div class="map-board-texture"></div>
+
+                    @if (showGrid()) {
+                    <div class="map-grid-layer" aria-hidden="true"></div>
+                    }
 
                     <svg class="map-stroke-layer" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true">
                         @if (showRivers()) {
@@ -468,7 +473,7 @@
 
                     <div class="map-token-layer">
                         @for (token of workingMap().tokens; track token.id) {
-                        <button type="button" class="map-token" [class.is-selected]="selectedTokenId() === token.id" [style.left.%]="token.x * 100" [style.top.%]="token.y * 100" [style.width.%]="token.size * 100" [style.height.%]="token.size * 100"
+                        <button type="button" class="map-token" [class.is-selected]="selectedTokenId() === token.id" [style.left.%]="token.x * 100" [style.top.%]="token.y * 100" [style.width]="tokenRenderSize(token.size)" [style.height]="tokenRenderSize(token.size)"
                             (click)="$event.stopPropagation(); selectToken(token.id)" (pointerdown)="handleTokenPointerDown($event, token.id)" (pointermove)="handleTokenPointerMove($event, token.id)" (pointerup)="handleTokenPointerUp($event, token.id)"
                             (pointercancel)="handleTokenPointerUp($event, token.id)">
                             <img [src]="token.imageUrl" [alt]="token.name" draggable="false" />
@@ -512,6 +517,26 @@
 
                     @if (placementHint() && canEdit()) {
                     <div class="map-overlay-hint">{{ placementHint() }}</div>
+                    }
+
+                    @if (isAiArtGenerating()) {
+                    <div class="map-generation-overlay" aria-live="polite" aria-busy="true">
+                        <div class="map-generation-overlay__backdrop"></div>
+                        <div class="map-generation-overlay__content">
+                            <div class="map-generation-overlay__sigil" aria-hidden="true">
+                                <span class="map-generation-overlay__ring map-generation-overlay__ring--outer"></span>
+                                <span class="map-generation-overlay__ring map-generation-overlay__ring--middle"></span>
+                                <span class="map-generation-overlay__ring map-generation-overlay__ring--inner"></span>
+                                <span class="map-generation-overlay__spark map-generation-overlay__spark--one"></span>
+                                <span class="map-generation-overlay__spark map-generation-overlay__spark--two"></span>
+                                <span class="map-generation-overlay__spark map-generation-overlay__spark--three"></span>
+                                <i class="fa-duotone fa-thin fa-wand-sparkles"></i>
+                            </div>
+                            <p class="map-generation-overlay__eyebrow">Encounter Map In Progress</p>
+                            <h3>Sketching terrain and cover</h3>
+                            <p>The board is locked while the AI composes the new map art.</p>
+                        </div>
+                    </div>
                     }
                 </div>
             </div>
@@ -590,7 +615,7 @@
 
                 <div class="map-token-layer">
                     @for (token of workingMap().tokens; track token.id) {
-                    <button type="button" class="map-token map-token--viewer" [class.is-selected]="selectedTokenId() === token.id" [style.left.%]="token.x * 100" [style.top.%]="token.y * 100" [style.width.%]="token.size * 100" [style.height.%]="token.size * 100"
+                    <button type="button" class="map-token map-token--viewer" [class.is-selected]="selectedTokenId() === token.id" [style.left.%]="token.x * 100" [style.top.%]="token.y * 100" [style.width]="tokenRenderSize(token.size)" [style.height]="tokenRenderSize(token.size)"
                         (click)="$event.stopPropagation(); selectToken(token.id)">
                         <img [src]="token.imageUrl" [alt]="token.name" draggable="false" />
                         <span>{{ token.name }}</span>
@@ -636,8 +661,8 @@
 </main>
 
 <app-map-art-generation-modal [open]="mapArtModalOpen()" [isSubmitting]="isAiArtGenerating()" [background]="workingMap().background" [mapName]="mapNameDraft().trim()" [separateLabels]="separateLabelsDraft()" [settlementScale]="settlementScale()" [parchmentLayout]="parchmentLayout()"
-    [cavernLayout]="cavernLayout()" [settlementNamesText]="settlementNamesDraft()" [regionNamesText]="regionNamesDraft()" [ruinNamesText]="ruinNamesDraft()" [cavernNamesText]="cavernNamesDraft()" [additionalDirection]="additionalArtDirectionDraft()" (closed)="closeMapArtModal()"
-    (confirmed)="submitMapArtModal($event)"></app-map-art-generation-modal>
+    [cavernLayout]="cavernLayout()" [battlemapLocale]="battlemapLocale()" [lighting]="lighting()" [settlementNamesText]="settlementNamesDraft()" [regionNamesText]="regionNamesDraft()" [ruinNamesText]="ruinNamesDraft()" [cavernNamesText]="cavernNamesDraft()"
+    [additionalDirection]="additionalArtDirectionDraft()" (closed)="closeMapArtModal()" (confirmed)="submitMapArtModal($event)"></app-map-art-generation-modal>
 } @else {
 <main class="page-stack">
     <section class="panel skeleton-panel">

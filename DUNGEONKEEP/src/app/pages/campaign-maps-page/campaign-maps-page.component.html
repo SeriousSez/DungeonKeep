@@ -67,28 +67,43 @@
 
     <section class="atlas-grid">
         @for (map of mapBoards(); track map.id) {
-        <a class="panel map-card" [routerLink]="['/campaigns', campaign.id, 'maps', map.id]">
-            <div class="map-card-header">
-                <div>
-                    <p class="eyebrow">{{ map.background }}</p>
-                    <h2>{{ map.name }}</h2>
+        <article class="panel map-card">
+            <a class="map-card-link" [routerLink]="['/campaigns', campaign.id, 'maps', map.id]">
+                <div class="map-card-header">
+                    <div>
+                        <p class="eyebrow">{{ map.background }}</p>
+                        <h2>{{ map.name }}</h2>
+                    </div>
+                    @if (isActiveBoard(map.id)) {
+                    <span class="active-pill">Active</span>
+                    }
                 </div>
+
+                <div class="map-preview" [class.is-city]="map.background === 'City'" [class.is-coast]="map.background === 'Coast'" [class.is-cavern]="map.background === 'Cavern'" [class.is-battlemap]="map.background === 'Battlemap'" [class.has-map-art]="!!map.backgroundImageUrl">
+                    @if (map.backgroundImageUrl) {
+                    <div class="map-preview-art-layer" aria-hidden="true">
+                        <img class="map-preview-art" [src]="map.backgroundImageUrl" alt="" />
+                    </div>
+                    }
+                    <div class="map-preview-overlay"></div>
+                </div>
+
+                <p class="map-card-copy">Open this board to view the current map, then choose edit when you want to make changes.</p>
+            </a>
+
+            <div class="map-card-actions">
+                <a class="ghost-button" [routerLink]="['/campaigns', campaign.id, 'maps', map.id]">Open Map</a>
+                @if (canEdit()) {
                 @if (isActiveBoard(map.id)) {
-                <span class="active-pill">Active</span>
+                <span class="map-card-status">Current Map</span>
+                } @else {
+                <button type="button" class="primary-button" [disabled]="isUpdatingActiveBoard(map.id)" (click)="setActiveBoard(map.id)">
+                    {{ isUpdatingActiveBoard(map.id) ? 'Setting...' : 'Set Active' }}
+                </button>
+                }
                 }
             </div>
-
-            <div class="map-preview" [class.is-city]="map.background === 'City'" [class.is-coast]="map.background === 'Coast'" [class.is-cavern]="map.background === 'Cavern'" [class.has-map-art]="!!map.backgroundImageUrl">
-                @if (map.backgroundImageUrl) {
-                <div class="map-preview-art-layer" aria-hidden="true">
-                    <img class="map-preview-art" [src]="map.backgroundImageUrl" alt="" />
-                </div>
-                }
-                <div class="map-preview-overlay"></div>
-            </div>
-
-            <p class="map-card-copy">Open this board to view the current map, then choose edit when you want to make changes.</p>
-        </a>
+        </article>
         }
 
         @if (canEdit()) {

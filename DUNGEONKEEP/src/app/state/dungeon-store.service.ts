@@ -390,7 +390,7 @@ export class DungeonStoreService {
         }
     }
 
-    async generateCampaignMapArtAi(campaignId: string, payload: { background: CampaignMapBackground; mapName: string; separateLabels?: boolean; settlementScale?: 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis'; parchmentLayout?: 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular'; cavernLayout?: 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes'; settlementNames?: string[]; regionNames?: string[]; ruinNames?: string[]; cavernNames?: string[]; additionalDirection?: string }): Promise<{ backgroundImageUrl: string; labels: Campaign['map']['labels'] } | null> {
+    async generateCampaignMapArtAi(campaignId: string, payload: { background: CampaignMapBackground; mapName: string; separateLabels?: boolean; settlementScale?: 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis'; parchmentLayout?: 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular'; cavernLayout?: 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes'; battlemapLocale?: 'TownStreet' | 'BuildingInterior' | 'ForestClearing' | 'Roadside' | 'Cliffside' | 'Riverside' | 'Ruins' | 'DungeonRoom' | 'Tavern'; lighting?: 'Day' | 'Dusk' | 'Night'; settlementNames?: string[]; regionNames?: string[]; ruinNames?: string[]; cavernNames?: string[]; additionalDirection?: string }): Promise<{ backgroundImageUrl: string; labels: Campaign['map']['labels'] } | null> {
         try {
             const generated = await this.api.generateCampaignMapArtAi(campaignId, {
                 background: this.normalizeMapBackground(payload.background),
@@ -399,6 +399,8 @@ export class DungeonStoreService {
                 settlementScale: payload.settlementScale,
                 parchmentLayout: payload.parchmentLayout,
                 cavernLayout: payload.cavernLayout,
+                battlemapLocale: payload.battlemapLocale,
+                lighting: payload.lighting,
                 settlementNames: payload.settlementNames,
                 regionNames: payload.regionNames,
                 ruinNames: payload.ruinNames,
@@ -861,7 +863,7 @@ export class DungeonStoreService {
                 imageUrl: this.normalizeMapBackgroundImageUrl(token.imageUrl),
                 x: this.normalizeMapCoordinate(token.x),
                 y: this.normalizeMapCoordinate(token.y),
-                size: this.normalizeMapScale(token.size),
+                size: this.normalizeMapTokenSize(token.size),
                 note: token.note?.trim() || ''
             })).filter((token) => !!token.imageUrl),
             decorations: (map?.decorations ?? []).map((decoration) => ({
@@ -951,7 +953,7 @@ export class DungeonStoreService {
                 imageUrl: this.normalizeMapBackgroundImageUrl(token.imageUrl),
                 x: this.normalizeMapCoordinate(token.x),
                 y: this.normalizeMapCoordinate(token.y),
-                size: this.normalizeMapScale(token.size),
+                size: this.normalizeMapTokenSize(token.size),
                 note: token.note?.trim() || ''
             })).filter((token) => !!token.imageUrl),
             decorations: map.decorations.map((decoration) => ({
@@ -1233,6 +1235,7 @@ export class DungeonStoreService {
             case 'Cavern':
             case 'Coast':
             case 'City':
+            case 'Battlemap':
                 return background;
             default:
                 return 'Parchment';
@@ -1627,6 +1630,21 @@ export class DungeonStoreService {
         }
 
         return Math.max(0.55, Math.min(1.8, value));
+    }
+
+    private normalizeMapTokenSize(value: number | undefined): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return 1;
+        }
+
+        const tokenGridSpans = [1, 4, 8] as const;
+        const normalizedValue = value > 0 && value < 1
+            ? Math.max(1, Math.round(value * 25))
+            : value;
+
+        return tokenGridSpans.reduce((closest, span) => {
+            return Math.abs(span - normalizedValue) < Math.abs(closest - normalizedValue) ? span : closest;
+        }, tokenGridSpans[0]);
     }
 
     private normalizeMapRotation(value: number | undefined): number {

@@ -392,6 +392,24 @@ app-dropdown {
     cursor: pointer;
 }
 
+.tool-toggle-button:disabled,
+.icon-palette-button:disabled {
+    background: color-mix(in srgb, var(--surface-raised) 94%, var(--panel-border) 6%);
+    border-color: color-mix(in srgb, var(--panel-border) 82%, transparent);
+    color: var(--text-soft);
+    cursor: not-allowed;
+    opacity: 0.58;
+    box-shadow: none;
+    transform: none;
+}
+
+.tool-toggle-button:disabled i,
+.icon-palette-button:disabled i,
+.tool-toggle-button:disabled span,
+.icon-palette-button:disabled span {
+    color: inherit;
+}
+
 .tool-toggle-button.is-active,
 .icon-palette-button.is-active {
     background: color-mix(in srgb, var(--surface-raised) 62%, var(--accent-primary) 38%);
@@ -526,6 +544,19 @@ app-dropdown {
     background: color-mix(in srgb, var(--surface-raised-solid) 92%, var(--accent-primary) 8%);
 }
 
+.map-layout input[type='text']:disabled {
+    border-color: color-mix(in srgb, var(--panel-border) 84%, transparent);
+    background: color-mix(in srgb, var(--surface-raised-solid) 96%, var(--panel-border) 4%);
+    color: var(--text-soft);
+    cursor: not-allowed;
+    opacity: 0.68;
+    box-shadow: none;
+}
+
+.map-layout input[type='text']:disabled::placeholder {
+    color: color-mix(in srgb, var(--text-soft) 82%, transparent);
+}
+
 .map-layout input[type='text']:focus,
 .map-layout input[type='text']:focus-visible,
 .map-file-input:focus,
@@ -556,6 +587,23 @@ app-dropdown {
 .map-file-input:hover {
     border-color: color-mix(in srgb, var(--panel-border) 44%, var(--accent-primary) 56%);
     background: color-mix(in srgb, var(--surface-raised-solid) 92%, var(--accent-primary) 8%);
+}
+
+.map-file-input:disabled {
+    border-color: color-mix(in srgb, var(--panel-border) 84%, transparent);
+    background: color-mix(in srgb, var(--surface-raised-solid) 96%, var(--panel-border) 4%);
+    color: var(--text-soft);
+    cursor: not-allowed;
+    opacity: 0.68;
+    box-shadow: none;
+}
+
+.map-file-input:disabled::file-selector-button,
+.map-file-input:disabled::-webkit-file-upload-button {
+    border-color: color-mix(in srgb, var(--panel-border) 82%, transparent);
+    background: color-mix(in srgb, var(--surface-raised-solid) 92%, var(--panel-border) 8%);
+    color: var(--text-soft);
+    cursor: not-allowed;
 }
 
 .map-file-input::file-selector-button {
@@ -665,6 +713,15 @@ app-dropdown {
     cursor: crosshair;
 }
 
+.map-board.is-generating {
+    cursor: progress;
+}
+
+.map-board.is-generating> :not(.map-generation-overlay) {
+    pointer-events: none;
+    user-select: none;
+}
+
 .map-board.can-edit.is-placement-mode {
     cursor: copy;
 }
@@ -707,47 +764,268 @@ app-dropdown {
 
 .map-board-texture,
 .map-board-art-layer,
+.map-grid-layer,
 .map-stroke-layer,
 .map-decoration-layer,
 .map-icon-layer,
 .map-token-layer,
 .map-label-layer,
+.map-generation-overlay,
 .map-empty-state,
 .map-overlay-hint {
     position: absolute;
     inset: 0;
 }
 
+.map-generation-overlay {
+    z-index: 8;
+    display: grid;
+    place-items: center;
+    pointer-events: auto;
+    overflow: hidden;
+}
+
+.map-generation-overlay__backdrop {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at 20% 18%, rgba(255, 248, 236, 0.26), transparent 24%),
+        radial-gradient(circle at 82% 22%, rgba(210, 154, 90, 0.18), transparent 28%),
+        linear-gradient(180deg, rgba(42, 27, 16, 0.16), rgba(42, 27, 16, 0.34));
+    backdrop-filter: blur(5px) saturate(0.92);
+}
+
+.map-generation-overlay__content {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    width: min(420px, calc(100% - 48px));
+    padding: 26px 24px 22px;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 58%, var(--accent-primary) 42%);
+    border-radius: 28px;
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--surface-raised-solid) 88%, rgba(255, 248, 236, 0.32) 12%), color-mix(in srgb, var(--surface-raised-solid) 94%, rgba(116, 83, 56, 0.08) 6%));
+    box-shadow:
+        0 24px 50px rgba(31, 19, 11, 0.24),
+        inset 0 1px 0 rgba(255, 250, 242, 0.78);
+    text-align: center;
+}
+
+.map-generation-overlay__content h3,
+.map-generation-overlay__content p {
+    margin: 0;
+}
+
+.map-generation-overlay__content h3 {
+    font-family: var(--display-font);
+    font-size: clamp(1.3rem, 2.4vw, 1.9rem);
+    line-height: 1.05;
+    color: var(--text-main);
+}
+
+.map-generation-overlay__content p {
+    max-width: 28rem;
+    color: var(--text-muted);
+    line-height: 1.45;
+}
+
+.map-generation-overlay__eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+}
+
+.map-generation-overlay__sigil {
+    position: relative;
+    width: 124px;
+    height: 124px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 4px;
+}
+
+.map-generation-overlay__sigil i {
+    position: relative;
+    z-index: 1;
+    font-size: 2rem;
+    color: color-mix(in srgb, var(--accent-primary) 70%, var(--text-main) 30%);
+    animation: map-loader-pulse 1.8s ease-in-out infinite;
+}
+
+.map-generation-overlay__ring,
+.map-generation-overlay__spark {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+}
+
+.map-generation-overlay__ring {
+    border: 1px solid transparent;
+    animation: map-loader-spin 10s linear infinite;
+}
+
+.map-generation-overlay__ring--outer {
+    border-top-color: color-mix(in srgb, var(--accent-primary) 62%, transparent);
+    border-bottom-color: color-mix(in srgb, var(--accent-primary) 24%, transparent);
+}
+
+.map-generation-overlay__ring--middle {
+    inset: 14px;
+    border-left-color: color-mix(in srgb, var(--text-main) 34%, transparent);
+    border-right-color: color-mix(in srgb, var(--accent-primary) 42%, transparent);
+    animation-direction: reverse;
+    animation-duration: 7.5s;
+}
+
+.map-generation-overlay__ring--inner {
+    inset: 30px;
+    border-top-color: color-mix(in srgb, rgba(255, 248, 236, 0.9) 65%, transparent);
+    border-left-color: color-mix(in srgb, var(--accent-primary) 38%, transparent);
+    animation-duration: 4.8s;
+}
+
+.map-generation-overlay__spark {
+    animation: map-loader-drift 2.6s ease-in-out infinite;
+}
+
+.map-generation-overlay__spark::before {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, rgba(255, 248, 236, 0.92) 74%, var(--accent-primary) 26%);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--accent-primary) 26%, transparent);
+}
+
+.map-generation-overlay__spark--one::before {
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.map-generation-overlay__spark--two {
+    animation-delay: -0.8s;
+}
+
+.map-generation-overlay__spark--two::before {
+    right: 10px;
+    top: 30px;
+}
+
+.map-generation-overlay__spark--three {
+    animation-delay: -1.4s;
+}
+
+.map-generation-overlay__spark--three::before {
+    left: 14px;
+    bottom: 24px;
+}
+
+@keyframes map-loader-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes map-loader-pulse {
+
+    0%,
+    100% {
+        transform: scale(0.96);
+        opacity: 0.82;
+    }
+
+    50% {
+        transform: scale(1.04);
+        opacity: 1;
+    }
+}
+
+@keyframes map-loader-drift {
+
+    0%,
+    100% {
+        transform: scale(0.92);
+        opacity: 0.36;
+    }
+
+    50% {
+        transform: scale(1.08);
+        opacity: 1;
+    }
+}
+
 .map-board-texture {
     background-image:
         radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.24), transparent 24%),
-        radial-gradient(circle at 76% 28%, rgba(255, 255, 255, 0.14), transparent 18%),
-        repeating-linear-gradient(0deg, transparent 0 39px, rgba(116, 83, 56, 0.08) 39px 40px),
-        repeating-linear-gradient(90deg, transparent 0 39px, rgba(116, 83, 56, 0.08) 39px 40px);
+        radial-gradient(circle at 76% 28%, rgba(255, 255, 255, 0.14), transparent 18%);
     opacity: 0.82;
 }
 
 .map-board--city .map-board-texture {
     background-image:
-        linear-gradient(135deg, rgba(89, 69, 50, 0.08), transparent 42%),
-        repeating-linear-gradient(0deg, transparent 0 55px, rgba(89, 69, 50, 0.14) 55px 57px),
-        repeating-linear-gradient(90deg, transparent 0 55px, rgba(89, 69, 50, 0.14) 55px 57px);
+        linear-gradient(135deg, rgba(89, 69, 50, 0.08), transparent 42%);
 }
 
 .map-board--coast .map-board-texture {
     background-image:
         radial-gradient(circle at 80% 16%, rgba(124, 170, 204, 0.32), transparent 22%),
-        linear-gradient(180deg, rgba(194, 220, 229, 0.24), transparent 44%),
-        repeating-linear-gradient(0deg, transparent 0 44px, rgba(63, 102, 126, 0.08) 44px 45px),
-        repeating-linear-gradient(90deg, transparent 0 44px, rgba(63, 102, 126, 0.08) 44px 45px);
+        linear-gradient(180deg, rgba(194, 220, 229, 0.24), transparent 44%);
 }
 
 .map-board--cavern .map-board-texture {
     background-image:
         radial-gradient(circle at 22% 24%, rgba(113, 147, 112, 0.18), transparent 20%),
-        radial-gradient(circle at 74% 72%, rgba(67, 89, 63, 0.24), transparent 24%),
-        repeating-linear-gradient(0deg, transparent 0 48px, rgba(74, 95, 62, 0.1) 48px 49px),
-        repeating-linear-gradient(90deg, transparent 0 48px, rgba(74, 95, 62, 0.1) 48px 49px);
+        radial-gradient(circle at 74% 72%, rgba(67, 89, 63, 0.24), transparent 24%);
+}
+
+.map-board--battlemap .map-board-texture {
+    background-image:
+        radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.12), transparent 20%),
+        linear-gradient(180deg, rgba(70, 64, 57, 0.18), transparent 42%);
+}
+
+.map-grid-layer {
+    z-index: 1;
+    pointer-events: none;
+    background-image:
+        linear-gradient(to right, rgba(116, 83, 56, 0.18) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(116, 83, 56, 0.18) 1px, transparent 1px);
+    background-size: calc(100% / 25) calc(100% / 17.5);
+    opacity: 0.9;
+}
+
+.map-board--coast .map-grid-layer {
+    background-image:
+        linear-gradient(to right, rgba(63, 102, 126, 0.22) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(63, 102, 126, 0.22) 1px, transparent 1px);
+}
+
+.map-board--city .map-grid-layer {
+    background-image:
+        linear-gradient(to right, rgba(89, 69, 50, 0.24) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(89, 69, 50, 0.24) 1px, transparent 1px);
+}
+
+.map-board--cavern .map-grid-layer {
+    background-image:
+        linear-gradient(to right, rgba(74, 95, 62, 0.22) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(74, 95, 62, 0.22) 1px, transparent 1px);
+}
+
+.map-board--battlemap .map-grid-layer {
+    background-image:
+        linear-gradient(to right, rgba(88, 79, 67, 0.26) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(88, 79, 67, 0.26) 1px, transparent 1px);
 }
 
 .map-stroke-layer,
@@ -1057,4 +1335,8 @@ app-dropdown {
     object-fit: cover;
     display: block;
     filter: saturate(0.96) contrast(1.02);
+}
+
+.map-board--battlemap .map-board-art {
+    filter: saturate(0.98) contrast(1.01) brightness(1.08);
 }

@@ -941,22 +941,15 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             return Problem(title: "Map art generation unavailable.", detail: "OpenAI API key is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable);
         }
 
+        var background = NormalizeRequestedMapBackground(request.Background);
+
         try
         {
-            var labels = new List<CampaignMapLabelDto>();
-            var backgroundImageUrl = await SendOpenAiImagePromptAsync(
-                apiKey,
-                imagesUrl,
-                model,
-                BuildCampaignMapArtPrompt(campaign, request),
-                cancellationToken);
+            var response = background == "Battlemap"
+                ? await GenerateBattlemapArtResponseAsync(campaign, request, apiKey, imagesUrl, model, cancellationToken)
+                : await GenerateStandardCampaignMapArtResponseAsync(campaign, request, apiKey, imagesUrl, model, cancellationToken);
 
-            if (request.SeparateLabels is true)
-            {
-                labels = await GenerateCampaignMapArtLabelsAsync(campaign, request, cancellationToken);
-            }
-
-            return Ok(new GenerateCampaignMapArtResponse(backgroundImageUrl, labels));
+            return Ok(response);
         }
         catch (HttpRequestException exception)
         {
@@ -966,6 +959,43 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         {
             return Problem(title: "Map art generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
         }
+    }
+
+    private async Task<GenerateCampaignMapArtResponse> GenerateStandardCampaignMapArtResponseAsync(CampaignDto campaign, GenerateCampaignMapArtRequest request, string apiKey, string imagesUrl, string model, CancellationToken cancellationToken)
+    {
+        var labels = new List<CampaignMapLabelDto>();
+        var backgroundImageUrl = await SendOpenAiImagePromptAsync(
+            apiKey,
+            imagesUrl,
+            model,
+            BuildCampaignMapArtPrompt(campaign, request),
+            cancellationToken);
+
+        if (request.SeparateLabels is true)
+        {
+            labels = await GenerateStandardCampaignMapArtLabelsAsync(campaign, request, cancellationToken);
+        }
+
+        return new GenerateCampaignMapArtResponse(backgroundImageUrl, labels);
+    }
+
+    private async Task<GenerateCampaignMapArtResponse> GenerateBattlemapArtResponseAsync(CampaignDto campaign, GenerateCampaignMapArtRequest request, string apiKey, string imagesUrl, string model, CancellationToken cancellationToken)
+    {
+        var labels = new List<CampaignMapLabelDto>();
+        var backgroundImageUrl = await SendOpenAiImagePromptAsync(
+            apiKey,
+            imagesUrl,
+            model,
+            BuildBattlemapArtPrompt(
+                campaign,
+                string.IsNullOrWhiteSpace(request.MapName) ? null : request.MapName.Trim(),
+                NormalizeRequestedBattlemapLocale(request.BattlemapLocale),
+                NormalizeRequestedMapLighting(request.Lighting),
+                string.IsNullOrWhiteSpace(request.AdditionalDirection) ? null : request.AdditionalDirection.Trim(),
+                separateLabels: false),
+            cancellationToken);
+
+        return new GenerateCampaignMapArtResponse(backgroundImageUrl, labels);
     }
 
     private static bool IsValidThreadVisibility(string? visibility)
@@ -1571,7 +1601,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                 ["required"] = new[] { "background", "strokes", "icons", "decorations", "labels", "layers" },
                 ["properties"] = new Dictionary<string, object?>
                 {
-                    ["background"] = BuildJsonSchemaStringProperty("One of: Parchment, City, Coast, Cavern."),
+                    ["background"] = BuildJsonSchemaStringProperty("One of: Parchment, City, Coast, Cavern, Battlemap."),
                     ["strokes"] = BuildJsonSchemaArrayProperty(strokeSchema),
                     ["icons"] = BuildJsonSchemaArrayProperty(iconSchema),
                     ["decorations"] = BuildJsonSchemaArrayProperty(decorationSchema),
@@ -1762,6 +1792,16 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
     {
         var background = NormalizeRequestedMapBackground(request.Background);
         var mapName = string.IsNullOrWhiteSpace(request.MapName) ? null : request.MapName.Trim();
+        var battlemapLocale = NormalizeRequestedBattlemapLocale(request.BattlemapLocale);
+        var lighting = NormalizeRequestedMapLighting(request.Lighting);
+        var additionalDirection = string.IsNullOrWhiteSpace(request.AdditionalDirection) ? null : request.AdditionalDirection.Trim();
+        var separateLabels = request.SeparateLabels is true;
+
+        if (background == "Battlemap")
+        {
+            return BuildBattlemapArtPrompt(campaign, mapName, battlemapLocale, lighting, additionalDirection, separateLabels);
+        }
+
         var settlementScale = NormalizeRequestedSettlementScale(request.SettlementScale);
         var parchmentLayout = NormalizeRequestedParchmentLayout(request.ParchmentLayout);
         var cavernLayout = NormalizeRequestedCavernLayout(request.CavernLayout);
@@ -1770,17 +1810,25 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         var regionNames = request.RegionNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToArray() ?? [];
         var ruinNames = request.RuinNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToArray() ?? [];
         var cavernNames = request.CavernNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToArray() ?? [];
-        var additionalDirection = string.IsNullOrWhiteSpace(request.AdditionalDirection) ? null : request.AdditionalDirection.Trim();
-        var separateLabels = request.SeparateLabels is true;
 
         var promptLines = new List<string>
         {
-            "Create a detailed fantasy cartography illustration for a tabletop campaign manager.",
-            separateLabels
-                ? "The result should look like a professionally drawn regional map with hand-inked terrain, watercolor shading, roads, settlements, forests, mountains, and coastlines, but no visible text or lettering."
-                : "The result should look like a professionally drawn regional map with hand-inked terrain, watercolor shading, roads, settlements, forests, mountains, coastlines, and fantasy labels.",
-            "Do not create a battlemap, token layout, grid, character portrait, or UI screenshot.",
-            "Compose the image as a wide map background suitable for overlaying interactive routes and landmarks.",
+            background == "Battlemap"
+                ? "Create a detailed orthographic top-down 2D virtual tabletop encounter map illustration for a tabletop encounter."
+                : "Create a detailed fantasy cartography illustration for a tabletop campaign manager.",
+            background == "Battlemap"
+                ? (separateLabels
+                    ? "The result should look like a polished 2D VTT encounter map with readable terrain, cover, traversal, and encounter geometry, but no visible text or lettering."
+                    : "The result should look like a polished 2D VTT encounter map with readable terrain, cover, traversal, encounter geometry, and restrained fantasy labels.")
+                : (separateLabels
+                    ? "The result should look like a professionally drawn regional map with hand-inked terrain, watercolor shading, roads, settlements, forests, mountains, and coastlines, but no visible text or lettering."
+                    : "The result should look like a professionally drawn regional map with hand-inked terrain, watercolor shading, roads, settlements, forests, mountains, coastlines, and fantasy labels."),
+            background == "Battlemap"
+                ? "Do not create a visible grid, token layout, character portrait, UI screenshot, perspective scene illustration, isometric view, oblique angle, or side-on scenery."
+                : "Do not create a battlemap, token layout, grid, character portrait, or UI screenshot.",
+            background == "Battlemap"
+                ? "Compose the image as a true orthographic top-down 2D virtual tabletop encounter board suitable for tactical play and overlaying interactive tokens. The camera must be perpendicular to the ground plane, looking straight down at 90 degrees."
+                : "Compose the image as a wide map background suitable for overlaying interactive routes and landmarks.",
             $"Requested map type: {background}.",
             "Treat the requested map type and any provided settlement-size or layout option as a hard composition requirement."
         };
@@ -1800,27 +1848,52 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             promptLines.Add($"Cavern layout: {cavernLayout}.");
         }
 
+        if (background == "Battlemap")
+        {
+            promptLines.Add($"Battlemap locale: {battlemapLocale}.");
+            promptLines.Add("Use the campaign setting, tone, summary, and notes only for mood, faction flavor, and encounter dressing. Do not expand them into a regional or world map.");
+        }
+
         promptLines.AddRange(
         [
             $"Campaign name: {campaign.Name}.",
             $"Setting: {campaign.Setting}.",
             $"Tone: {campaign.Tone}.",
-            $"Summary: {campaign.Summary}.",
-            $"Hook: {campaign.Hook}.",
-            $"Next session: {campaign.NextSession}.",
-            $"World notes: {(campaign.WorldNotes.Count == 0 ? "None provided." : string.Join(" | ", campaign.WorldNotes.Take(8).Select(note => $"{note.Category}: {note.Title} - {note.Content}")))}",
             "Art direction:",
-            "- High-detail atlas quality.",
-            "- Readable geography and terrain masses.",
+            background == "Battlemap" ? "- High-detail 2D virtual tabletop battlemat quality with a playable floor-plan feel." : "- High-detail atlas quality.",
+            background == "Battlemap" ? "- Readable local terrain, props, cover, hazards, and encounter lanes." : "- Readable geography and terrain masses.",
+            background == "Battlemap" ? "- Everything must be seen from directly above: tree canopies, walls, furniture, rocks, bridges, and buildings should read as top-down shapes, footprints, and silhouettes rather than side views." : "- Readable landforms and terrain silhouettes.",
+            background == "Battlemap" ? "- This is a 2D VTT battlemat, not an atlas, not scenic concept art, not a parchment map, and not an isometric environment render." : "- Maintain a readable atlas-style composition.",
+            lighting switch
+            {
+                "Night" => "- Render the map at night with moonlight, lantern light, or torchlight, but preserve strong readability and avoid crushed blacks or muddy shadows.",
+                "Dusk" => "- Render the map at dusk or golden hour with warm late-day light and longer shadows, but keep landforms and features clear.",
+                _ => "- Render the map in bright daylight with clear, readable values. Avoid an overly dark, twilight, or near-night result unless explicitly requested."
+            },
             separateLabels ? "- Do not render any text, labels, legends, street names, title cartouches, or lettering into the image." : "- Elegant but not oversized labels.",
             "- Leave clear shapes and negative space so UI overlays remain readable.",
-            "- Avoid giant decorative borders, giant legends, character figures, or scene illustration framing.",
-            $"Preferred settlement names: {(settlementNames.Length == 0 ? "None provided." : string.Join(", ", settlementNames))}",
-            $"Preferred region names: {(regionNames.Length == 0 ? "None provided." : string.Join(", ", regionNames))}",
-            $"Preferred ruin names: {(ruinNames.Length == 0 ? "None provided." : string.Join(", ", ruinNames))}",
-            $"Preferred cavern names: {(cavernNames.Length == 0 ? "None provided." : string.Join(", ", cavernNames))}",
-            $"Uncategorized preferred place names: {(preferredPlaceNames.Length == 0 ? "None provided." : string.Join(", ", preferredPlaceNames))}"
+            "- Avoid giant decorative borders, giant legends, character figures, or scene illustration framing."
         ]);
+
+        if (background == "Battlemap")
+        {
+            promptLines.Add("- Use the campaign details only as light flavor for materials, mood, and dressing. Do not depict story summary, travel geography, kingdoms, regions, or world events.");
+        }
+        else
+        {
+            promptLines.AddRange(
+            [
+                $"Summary: {campaign.Summary}.",
+                $"Hook: {campaign.Hook}.",
+                $"Next session: {campaign.NextSession}.",
+                $"World notes: {(campaign.WorldNotes.Count == 0 ? "None provided." : string.Join(" | ", campaign.WorldNotes.Take(8).Select(note => $"{note.Category}: {note.Title} - {note.Content}")))}",
+                $"Preferred settlement names: {(settlementNames.Length == 0 ? "None provided." : string.Join(", ", settlementNames))}",
+                $"Preferred region names: {(regionNames.Length == 0 ? "None provided." : string.Join(", ", regionNames))}",
+                $"Preferred ruin names: {(ruinNames.Length == 0 ? "None provided." : string.Join(", ", ruinNames))}",
+                $"Preferred cavern names: {(cavernNames.Length == 0 ? "None provided." : string.Join(", ", cavernNames))}",
+                $"Uncategorized preferred place names: {(preferredPlaceNames.Length == 0 ? "None provided." : string.Join(", ", preferredPlaceNames))}"
+            ]);
+        }
 
         if (mapName is not null && !separateLabels)
         {
@@ -1845,6 +1918,11 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         {
             promptLines.Add("- For cavern maps, interpret the provided categories as follows: settlement names are enclave, camp, outpost, buried district, or undercity names; region names are names for major chambers, fungal groves, lava fields, sink basins, or broad underground zones; ruin names are names for vaults, shrines, crystal halls, dens, and other named subterranean landmarks; cavern names are names for tunnels, chasms, fissures, bridge runs, and connective passages.");
             promptLines.Add("- Prefer these subterranean naming categories over inventing generic chamber or tunnel labels.");
+        }
+        else if (background == "Battlemap" && (settlementNames.Length > 0 || regionNames.Length > 0 || ruinNames.Length > 0 || cavernNames.Length > 0))
+        {
+            promptLines.Add("- For encounter maps, interpret the provided categories as follows: settlement names are encounter-site names such as courtyards, shrines, streets, outposts, taverns, or rooms; region names are tactical zones such as alleys, balconies, clearings, platforms, and choke points; ruin names are set pieces and hard-cover features such as wagons, statues, altars, bridges, or collapsed walls; cavern names are movement routes such as doors, stairs, paths, ledges, gates, and escape lanes.");
+            promptLines.Add("- Prefer these encounter-map naming categories over inventing generic terrain labels.");
         }
         else if (settlementNames.Length > 0 || regionNames.Length > 0 || ruinNames.Length > 0 || cavernNames.Length > 0)
         {
@@ -1903,13 +1981,100 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             promptLines.Add("- The cavern layout must control the primary underground structure and traversal pattern. Do not mix in a conflicting cave arrangement.");
         }
 
+        if (background == "Battlemap")
+        {
+            promptLines.Add("- The image must depict one local encounter area only, not a region, kingdom, continent, travel map, parchment chart, or zoomed-out landscape.");
+            promptLines.Add("- Fill the frame with the encounter site itself. Do not leave parchment margins, decorative empty map background, or large off-site geography around the playable area.");
+            promptLines.Add("- Frame the composition like a playable encounter board covering a small site at battle scale, with ground details and props sized for token movement.");
+            promptLines.Add("- Treat this as a 2D virtual tabletop battlemat used in a VTT, with gameplay readability prioritized over scenic illustration.");
+            promptLines.Add("- Do not show a compass rose, map border, cartouche, legend, route network, strategic overview, or named macro geography.");
+            promptLines.Add("- Do not show coastline silhouettes, continent edges, long winding roads between distant places, mountain ranges spanning the frame, or any other world-map composition cues.");
+            promptLines.Add("- Avoid painterly world-map coastlines, mountain ranges, or distant scenic vistas unless they exist only as immediate local terrain inside the encounter space.");
+            promptLines.Add("- Do not render town names, road names, region names, or map titles directly into the artwork.");
+            promptLines.Add("- Never use isometric, three-quarter, oblique, cinematic, side-view, elevated-perspective, or horizon-view composition.");
+            promptLines.Add("- Buildings must read as roof plans or room footprints from directly above. Trees must read as canopies from above. Cliffs, walls, stairs, and rocks must read as top-down terrain shapes rather than side elevations.");
+            promptLines.Add("- Locale choice is a hard requirement. Do not mix the selected locale with a different scene type.");
+            promptLines.Add(battlemapLocale switch
+            {
+                "TownStreet" => "- Favor a dense town-street skirmish board with alleys, carts, stalls, corners, fences, doors, and street obstacles at encounter scale.",
+                "BuildingInterior" => "- Favor a tight indoor encounter map only: adjacent rooms, doors, hallways, furniture, stairs, and close-quarters cover at local scale. Do not show the outside town, surrounding region, mountain backdrop, or exterior landscape.",
+                "Roadside" => "- Favor a roadside ambush board with a short stretch of road, ditches, wagons, brush, rocks, fences, and flanking cover rather than a long travel route.",
+                "Cliffside" => "- Favor a dangerous local cliff encounter with ledges, sharp drops, narrow footing, switchbacks, ropes, and elevated edges close enough for tactical movement.",
+                "Riverside" => "- Favor a riverbank skirmish board with shallows, a small bridge or crossing, mud, stones, reeds, and water-side hazards in a compact local scene.",
+                "Ruins" => "- Favor a ruined site battlemap with broken walls, collapsed chambers, rubble, fractured floors, and ancient cover inside one playable encounter space.",
+                "DungeonRoom" => "- Favor a chamber-based dungeon encounter with pillars, doors, side passages, adjoining rooms, and classic dungeon geometry in a tight tactical footprint.",
+                "Tavern" => "- Favor a tavern or inn brawl map only: one contained interior scene with tables, bar counters, kitchen access, stairs, side rooms, booths, hearth space, and crowded movement lanes. Do not show a kingdom map, town overview, road network, mountain range, coastline, or exterior landscape.",
+                _ => "- Favor a forest clearing battlemap with clustered trees, roots, brush, rocks, stumps, and mixed natural cover around a single playable clearing."
+            });
+            promptLines.Add("- The battlemap must be strictly top-down and designed for encounter play, with clear traversal lanes, hard cover, soft cover, and tactically readable terrain.");
+            promptLines.Add("- Think in encounter-scale assets like bridges, camps, trees, ruins, wagons, doors, pillars, rocks, fences, and choke points rather than regional geography.");
+        }
+
         promptLines.Add(background switch
         {
             "City" => "- Emphasize districts, walls, canals, plazas, bridges, towers, and strongholds.",
             "Coast" => "- Emphasize shoreline drama, harbors, islands, reefs, headlands, sea lanes, and coves.",
             "Cavern" => "- Emphasize subterranean chambers, tunnels, chasms, fungal groves, crystals, and buried ruins.",
+            "Battlemap" => "- Emphasize top-down encounter geometry, cover placement, obstacles, entry points, movement lanes, and environmental hazards.",
             _ => "- Emphasize broad overland geography, roads, rivers, forests, mountains, borders, and settlements."
         });
+
+        return string.Join('\n', promptLines);
+    }
+
+    private static string BuildBattlemapArtPrompt(CampaignDto campaign, string? mapName, string battlemapLocale, string lighting, string? additionalDirection, bool separateLabels)
+    {
+        var localePrompt = battlemapLocale switch
+        {
+            "TownStreet" => "Create a compact street-fight battlemat as a flat top-down street plan with alley junctions, market stalls, wagons, low walls, doors, fences, and choke points. Show only the immediate skirmish block, not the surrounding town, and do not use perspective buildings or side-on walls.",
+            "BuildingInterior" => "Create a roof-removed interior floor plan battlemat with connected rooms, halls, doors, stairs, furniture, and close-quarters cover. The entire image must be the inside of the building only.",
+            "Roadside" => "Create a roadside ambush battlemat as a flat top-down ground plan with a short road segment, ditches, brush, rocks, broken fencing, wagons, and flanking cover. Keep the scene local and tactical, with no cinematic road perspective or visible terrain sidewalls.",
+            "Cliffside" => "Create a cliffside battlemat as a continuous top-down ground surface running along a dangerous cliff edge. Show narrow paths, exposed ledges, switchbacks, ropes, broken stone, sparse cover, and tactical high ground inside one compact encounter area. Do not create floating rock islands, cutaway chasms with visible side walls, suspended platforms over a white void, or a 3D diorama view.",
+            "Riverside" => "Create a riverside battlemat as a flat top-down encounter board with a shallow crossing, muddy banks, reeds, stones, a small bridge or ford, and water hazards inside one compact encounter area. Show the river edge and banks as map shapes from above, not as scenic side views.",
+            "Ruins" => "Create a ruined-site battlemat as a flat top-down site plan with collapsed walls, broken chambers, rubble, cracked floors, scattered pillars, and ancient hard cover within one playable site. Ruins must read as footprints and broken outlines from directly above.",
+            "DungeonRoom" => "Create a dungeon floor-plan battlemat with chambers, side passages, pillars, doors, stairs, and classic tactical room geometry. Keep the image tightly focused on the playable rooms.",
+            "Tavern" => "Create a tavern brawl battlemat as a roof-removed interior floor plan. Show a single tavern or inn interior only, filled by wooden plank floors, tables, chairs, booths, a bar counter, stools, a hearth, stairs, doors, side rooms, and kitchen access. The whole image must read as an indoor playable tavern layout from directly above. Keep the room warmly lit and readable, with brighter plank floors, clearer table separation, and visible room features instead of a dim or shadow-crushed interior.",
+            _ => "Create a forest-clearing battlemat as a flat top-down outdoor ground plan with trees seen as canopies, roots, stumps, brush, rocks, and natural cover surrounding one compact playable clearing. Do not create scenic forest perspective or visible terrain sidewalls."
+        };
+
+        var promptLines = new List<string>
+        {
+            "Generate ONLY a top-down 2D virtual tabletop battlemat for a fantasy RPG encounter.",
+            "This must be a playable battle-scale encounter board, not a regional map, atlas, parchment chart, scenic illustration, or concept painting.",
+            "The camera is perfectly orthographic and looks straight down at 90 degrees.",
+            "Fill the frame with the encounter site itself so nearly the entire image is usable play space.",
+            "No parchment paper texture, no antique paper background, no inked atlas style, no compass rose, no cartouche, no coastline silhouette, no continent edge, no route network, no long-distance roads, and no mountain-range overview.",
+            "No isometric angle, no perspective, no horizon, no side view, no scenic vista, and no zoomed-out geography.",
+            "Show terrain, props, obstacles, cover, doors, stairs, furniture, and hazards as top-down gameplay shapes sized for token movement.",
+            "Use readable midtone lighting and clear value separation so floors, walls, doors, furniture, and hazards stay easy to distinguish at a glance. Avoid an overly dark, muddy, or near-black result.",
+            "Every encounter map, including outdoor scenes, must use the same flat top-down VTT projection discipline as a roof-removed tavern battlemat. Outdoor maps are ground plans from above, not scenic terrain renders.",
+            "Buildings must read as roof-removed floor plans or room footprints from directly above. Trees must read as canopies from above. Cliffs and walls must read as top-down terrain edges, not side elevations.",
+            "Do not create floating terrain chunks, cutaway dungeon tiles, board-game dioramas, exposed side-on cliff faces, or isolated platforms surrounded by empty void.",
+            "Do not render any text, labels, names, legends, road names, room names, tavern names, or title lettering into the image.",
+            lighting switch
+            {
+                "Night" => "Set the encounter at night with moonlight, lantern light, or torchlight, but keep the battlemat readable with preserved midtones and visible gameplay features.",
+                "Dusk" => "Set the encounter at dusk or golden hour with warm late-day light and longer shadows, but keep the battlemat bright enough for tactical readability.",
+                _ => "Set the encounter in clear daylight with bright, even lighting and strong readability. Avoid dim, shadow-heavy, twilight, or near-night rendering."
+            },
+            $"Encounter locale: {battlemapLocale}.",
+            localePrompt,
+            $"Setting flavor: {campaign.Setting}.",
+            $"Tone flavor: {campaign.Tone}.",
+            "Use the setting and tone only for surface dressing, materials, and atmosphere inside the local encounter site. Do not depict the campaign world, kingdom, regional geography, or story summary."
+        };
+
+        if (!string.IsNullOrWhiteSpace(mapName) && !separateLabels)
+        {
+            promptLines.Add($"Visible title if needed: {mapName}.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(additionalDirection))
+        {
+            promptLines.Add($"Additional direction: {additionalDirection}");
+        }
+
+        promptLines.Add("If the result resembles a parchment world map, regional travel map, coastal atlas, or scenic fantasy landscape, it is incorrect. The correct result resembles a printable battlemat or VTT encounter floor plan.");
 
         return string.Join('\n', promptLines);
     }
@@ -1917,6 +2082,11 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
     private static string BuildCampaignMapArtLabelsPrompt(CampaignDto campaign, GenerateCampaignMapArtRequest request)
     {
         var background = NormalizeRequestedMapBackground(request.Background);
+        if (background == "Battlemap")
+        {
+            return BuildBattlemapArtLabelsPrompt(campaign, request);
+        }
+
         var mapName = string.IsNullOrWhiteSpace(request.MapName) ? campaign.Name.Trim() : request.MapName.Trim();
         var settlementNames = request.SettlementNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(12).ToArray() ?? [];
         var regionNames = request.RegionNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(12).ToArray() ?? [];
@@ -1955,6 +2125,40 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             $"Preferred region names: {(regionNames.Length == 0 ? "None provided." : string.Join(", ", regionNames))}",
             $"Preferred ruin names: {(ruinNames.Length == 0 ? "None provided." : string.Join(", ", ruinNames))}",
             $"Preferred cavern names: {(cavernNames.Length == 0 ? "None provided." : string.Join(", ", cavernNames))}"
+        ]);
+    }
+
+    private static string BuildBattlemapArtLabelsPrompt(CampaignDto campaign, GenerateCampaignMapArtRequest request)
+    {
+        var mapName = string.IsNullOrWhiteSpace(request.MapName) ? campaign.Name.Trim() : request.MapName.Trim();
+        var battlemapLocale = NormalizeRequestedBattlemapLocale(request.BattlemapLocale);
+        var settlementNames = request.SettlementNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(12).ToArray() ?? [];
+        var regionNames = request.RegionNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(12).ToArray() ?? [];
+        var ruinNames = request.RuinNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(12).ToArray() ?? [];
+        var cavernNames = request.CavernNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(12).ToArray() ?? [];
+
+        return string.Join('\n',
+        [
+            "Generate overlay labels for a top-down encounter battlemat in DungeonKeep.",
+            "Return only valid JSON matching the provided schema.",
+            "Create 3 to 8 movable overlay labels for tactical areas and features on the battlemat.",
+            "Use coordinates normalized between 0.08 and 0.92.",
+            "Spread labels across the encounter area and avoid stacking them directly on top of one another.",
+            "Use tone Region for large tactical zones such as main room, balcony, courtyard, clearing, or riverbank.",
+            "Use tone Feature for doors, stairs, bar counters, choke points, bridges, wagons, hearths, altars, pillars, or escape routes.",
+            "Each label must include a full style object that visually fits the art: text color, backgroundColor, borderColor, fontFamily, fontSize in rem, fontWeight, letterSpacing in em, fontStyle, textTransform, borderWidth, borderRadius, paddingX, paddingY, textShadow, boxShadow, and opacity.",
+            "Keep generated labels background-free. Prefer readable text color plus shadow or glow over plaques, banners, or cartouches.",
+            "These labels sit on a battlemat, not an atlas. Do not generate region names, road names, kingdom names, or world-map style labeling.",
+            string.Empty,
+            $"Encounter locale: {battlemapLocale}",
+            $"Map title or focal name: {mapName}",
+            $"Campaign name: {campaign.Name}",
+            $"Setting: {campaign.Setting}",
+            $"Tone: {campaign.Tone}",
+            $"Preferred encounter-site names: {(settlementNames.Length == 0 ? "None provided." : string.Join(", ", settlementNames))}",
+            $"Preferred tactical zone names: {(regionNames.Length == 0 ? "None provided." : string.Join(", ", regionNames))}",
+            $"Preferred set-piece names: {(ruinNames.Length == 0 ? "None provided." : string.Join(", ", ruinNames))}",
+            $"Preferred route or access names: {(cavernNames.Length == 0 ? "None provided." : string.Join(", ", cavernNames))}"
         ]);
     }
 
@@ -2908,7 +3112,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             NormalizeGeneratedLabelStyle(payload.Style, tone));
     }
 
-    private async Task<List<CampaignMapLabelDto>> GenerateCampaignMapArtLabelsAsync(CampaignDto campaign, GenerateCampaignMapArtRequest request, CancellationToken cancellationToken)
+    private async Task<List<CampaignMapLabelDto>> GenerateStandardCampaignMapArtLabelsAsync(CampaignDto campaign, GenerateCampaignMapArtRequest request, CancellationToken cancellationToken)
     {
         if (!TryGetOpenAiConfiguration(out var apiKey, out var responsesUrl, out var model))
         {
@@ -2922,6 +3126,55 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                 responsesUrl,
                 model,
                 BuildCampaignMapArtLabelsPrompt(campaign, request),
+                referenceImageUrl: null,
+                temperature: 0.35,
+                maxOutputTokens: 900,
+                textFormat: BuildCampaignMapLabelsJsonSchemaFormat(),
+                fallbackToPlainTextOnBadRequest: false,
+                cancellationToken: cancellationToken);
+
+            var parsed = TryParseGeneratedCampaignMapLabelsPayload(text);
+            if (parsed is null)
+            {
+                var repaired = await RepairJsonAsync(
+                    apiKey,
+                    responsesUrl,
+                    model,
+                    BuildCampaignMapArtLabelsRepairPrompt(text),
+                    900,
+                    cancellationToken);
+                parsed = TryParseGeneratedCampaignMapLabelsPayload(repaired);
+            }
+
+            var normalized = (parsed?.Labels ?? [])
+                .Select(NormalizeGeneratedCampaignMapLabel)
+                .Where(label => label is not null)
+                .Cast<CampaignMapLabelDto>()
+                .Take(8)
+                .ToList();
+
+            return normalized.Count > 0 ? normalized : BuildFallbackCampaignMapArtLabels(request);
+        }
+        catch
+        {
+            return BuildFallbackCampaignMapArtLabels(request);
+        }
+    }
+
+    private async Task<List<CampaignMapLabelDto>> GenerateBattlemapArtLabelsAsync(CampaignDto campaign, GenerateCampaignMapArtRequest request, CancellationToken cancellationToken)
+    {
+        if (!TryGetOpenAiConfiguration(out var apiKey, out var responsesUrl, out var model))
+        {
+            return BuildFallbackCampaignMapArtLabels(request);
+        }
+
+        try
+        {
+            var text = await SendOpenAiPromptAsync(
+                apiKey,
+                responsesUrl,
+                model,
+                BuildBattlemapArtLabelsPrompt(campaign, request),
                 referenceImageUrl: null,
                 temperature: 0.35,
                 maxOutputTokens: 900,
@@ -3007,6 +3260,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             "city" => "City",
             "coast" => "Coast",
             "cavern" => "Cavern",
+            "battlemap" => "Battlemap",
             _ => "Parchment"
         };
     }
@@ -3798,7 +4052,33 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
 
     public sealed record GenerateCampaignMapRequest(string? Background, string? MapName, IReadOnlyList<string>? ExistingLandmarkLabels, string? ReferenceImageUrl);
 
-    public sealed record GenerateCampaignMapArtRequest(string? Background, string? MapName, string? SettlementScale, string? ParchmentLayout, string? CavernLayout, IReadOnlyList<string>? PreferredPlaceNames, IReadOnlyList<string>? SettlementNames, IReadOnlyList<string>? RegionNames, IReadOnlyList<string>? RuinNames, IReadOnlyList<string>? CavernNames, string? AdditionalDirection, bool? SeparateLabels);
+    private static string NormalizeRequestedBattlemapLocale(string? value)
+    {
+        return value?.Trim() switch
+        {
+            "TownStreet" => "TownStreet",
+            "BuildingInterior" => "BuildingInterior",
+            "Roadside" => "Roadside",
+            "Cliffside" => "Cliffside",
+            "Riverside" => "Riverside",
+            "Ruins" => "Ruins",
+            "DungeonRoom" => "DungeonRoom",
+            "Tavern" => "Tavern",
+            _ => "ForestClearing"
+        };
+    }
+
+    private static string NormalizeRequestedMapLighting(string? value)
+    {
+        return value?.Trim() switch
+        {
+            "Dusk" => "Dusk",
+            "Night" => "Night",
+            _ => "Day"
+        };
+    }
+
+    public sealed record GenerateCampaignMapArtRequest(string? Background, string? MapName, string? SettlementScale, string? ParchmentLayout, string? CavernLayout, string? BattlemapLocale, string? Lighting, IReadOnlyList<string>? PreferredPlaceNames, IReadOnlyList<string>? SettlementNames, IReadOnlyList<string>? RegionNames, IReadOnlyList<string>? RuinNames, IReadOnlyList<string>? CavernNames, string? AdditionalDirection, bool? SeparateLabels);
 
     public sealed record GenerateCampaignMapArtResponse(string BackgroundImageUrl, IReadOnlyList<CampaignMapLabelDto> Labels);
 

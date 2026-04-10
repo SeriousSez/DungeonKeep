@@ -998,6 +998,7 @@ public sealed class CampaignService(
             "Cavern" => "Cavern",
             "Coast" => "Coast",
             "City" => "City",
+            "Battlemap" => "Battlemap",
             _ => "Parchment"
         };
     }

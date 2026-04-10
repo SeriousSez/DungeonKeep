@@ -44,7 +44,7 @@
 }
 
 .back-link:hover,
-.map-card:hover {
+.map-card-link:hover {
     opacity: 0.88;
     transform: translateY(-2px);
 }
@@ -106,7 +106,7 @@
 }
 
 .campaign-nav-link:hover,
-.map-card:hover {
+.map-card-link:hover {
     border-color: color-mix(in srgb, var(--panel-border) 55%, var(--accent-primary) 45%);
 }
 
@@ -127,16 +127,42 @@
 
 .atlas-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
     gap: clamp(14px, 3vw, 20px);
 }
 
 .map-card {
     display: grid;
     gap: 16px;
+}
+
+.map-card-link {
+    display: grid;
+    gap: 16px;
     text-decoration: none;
     color: var(--text-main);
     transition: transform 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+}
+
+.map-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.map-card-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 35%, var(--accent-primary) 65%);
+    background: color-mix(in srgb, var(--surface-raised) 62%, var(--accent-primary) 38%);
+    color: var(--text-main);
+    font-size: 0.84rem;
+    font-weight: 700;
 }
 
 .active-pill {
@@ -194,6 +220,15 @@
         linear-gradient(180deg, rgba(232, 236, 228, 0.96), rgba(202, 208, 196, 0.92));
 }
 
+.map-preview.is-battlemap {
+    background:
+        radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.14), transparent 20%),
+        linear-gradient(180deg, rgba(70, 64, 57, 0.18), transparent 42%),
+        repeating-linear-gradient(0deg, transparent 0 28px, rgba(88, 79, 67, 0.18) 28px 29px),
+        repeating-linear-gradient(90deg, transparent 0 28px, rgba(88, 79, 67, 0.18) 28px 29px),
+        linear-gradient(180deg, rgba(226, 218, 204, 0.96), rgba(191, 178, 159, 0.92));
+}
+
 .map-preview-overlay {
     position: absolute;
     inset: 0;
@@ -234,9 +269,23 @@
 .map-card--create {
     align-content: center;
     justify-items: start;
+    text-decoration: none;
+    color: var(--text-main);
     background:
         radial-gradient(circle at top left, color-mix(in srgb, var(--accent-primary) 14%, transparent), transparent 38%),
         var(--panel-bg);
+}
+
+.map-card--create:visited,
+.map-card--create:hover,
+.map-card--create:active {
+    color: var(--text-main);
+}
+
+.map-card--create .map-card-copy,
+.map-card--create .eyebrow,
+.map-card--create h2 {
+    color: inherit;
 }
 
 .create-card-icon {

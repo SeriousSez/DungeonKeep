@@ -21,6 +21,7 @@ export class CampaignMapsPageComponent {
     private readonly cdr = inject(ChangeDetectorRef);
 
     readonly campaignId = signal('');
+    readonly activeMapUpdateId = signal('');
 
     readonly selectedCampaign = computed(() => {
         const campaignId = this.campaignId();
@@ -56,6 +57,27 @@ export class CampaignMapsPageComponent {
 
     isActiveBoard(mapId: string): boolean {
         return this.selectedCampaign()?.activeMapId === mapId;
+    }
+
+    isUpdatingActiveBoard(mapId: string): boolean {
+        return this.activeMapUpdateId() === mapId;
+    }
+
+    async setActiveBoard(mapId: string): Promise<void> {
+        const campaign = this.selectedCampaign();
+        if (!campaign || !this.canEdit() || this.isActiveBoard(mapId) || this.activeMapUpdateId()) {
+            return;
+        }
+
+        const maps = this.mapBoards().map((map) => structuredClone(map));
+        this.activeMapUpdateId.set(mapId);
+
+        try {
+            await this.store.updateCampaignMap(campaign.id, { activeMapId: mapId, maps });
+        } finally {
+            this.activeMapUpdateId.set('');
+            this.cdr.detectChanges();
+        }
     }
 
     totalRouteCount(map: CampaignMapBoard): number {

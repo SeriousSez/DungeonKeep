@@ -118,7 +118,7 @@
     max-height: min(300px, 50vh);
     overflow-y: auto;
     display: grid;
-    gap: 4px;
+    gap: 6px;
 }
 
 .app-dropdown-option {
@@ -127,13 +127,15 @@
     border-radius: 8px;
     background: transparent;
     color: var(--text-main);
-    padding: 6px 8px;
+    padding: 8px 10px;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
+    gap: 10px;
     text-align: left;
     cursor: pointer;
     font-size: 0.9rem;
+    line-height: 1.25;
 
     &:hover:not(:disabled) {
         background: color-mix(in srgb, var(--surface-raised) 72%, var(--accent-primary) 28%);
@@ -152,24 +154,38 @@
     i {
         font-size: 0.78rem;
         color: var(--accent-primary);
+        flex: 0 0 auto;
+        margin-top: 2px;
     }
 
     >div {
         min-width: 0;
+        flex: 1 1 auto;
     }
 
     span {
         display: block;
         white-space: normal;
+        line-height: 1.25;
     }
 }
 
 .app-dropdown-option:has(.app-dropdown-description) {
-    padding: 20px 8px;
+    padding: 10px 10px;
+    min-height: 0;
+}
+
+.app-dropdown-menu,
+:host {
+    position: relative;
 }
 
 :host(.app-dropdown-host--dense-options) .app-dropdown-option:has(.app-dropdown-description) {
-    padding: 10px 8px;
+    padding: 8px 10px;
+}
+
+:host(.app-dropdown-host--open) {
+    z-index: 5400;
 }
 
 .app-dropdown-empty {
@@ -179,7 +195,7 @@
 }
 
 .app-dropdown-group {
-    margin: 8px 4px 2px;
+    margin: 10px 4px 0;
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -187,10 +203,14 @@
     color: var(--text-muted);
 }
 
+.app-dropdown-group:first-child {
+    margin-top: 2px;
+}
+
 .app-dropdown-description {
-    margin: 2px 0 0;
+    margin: 4px 0 0;
     font-size: 0.8rem;
-    line-height: 1.3;
+    line-height: 1.4;
     color: var(--text-muted);
 }
 

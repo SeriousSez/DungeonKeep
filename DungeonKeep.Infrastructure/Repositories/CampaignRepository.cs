@@ -856,6 +856,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             "Cavern" => "Cavern",
             "Coast" => "Coast",
             "City" => "City",
+            "Battlemap" => "Battlemap",
             _ => "Parchment"
         };
     }
