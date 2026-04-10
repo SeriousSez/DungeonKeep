@@ -72,16 +72,24 @@
 }
 
 .method-media {
-    min-height: 170px;
+    display: block;
+    width: 100%;
+    height: 250px;
+    object-fit: cover;
+    object-position: center;
+    flex: 0 0 auto;
     border-bottom: 1px solid var(--panel-border);
 }
 
 .method-media.standard {
+    object-position: center 40%;
     background: linear-gradient(120deg, rgba(31, 42, 58, 0.92), rgba(92, 39, 97, 0.72));
+    border-radius: 14px 14px 0 0;
 }
 
 .method-media.premade {
     background: linear-gradient(120deg, rgba(49, 87, 130, 0.88), rgba(90, 135, 191, 0.68));
+    border-radius: 14px 14px 0 0;
 }
 
 .method-body {

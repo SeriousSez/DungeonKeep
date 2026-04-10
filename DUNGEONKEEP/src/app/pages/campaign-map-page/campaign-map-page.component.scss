@@ -261,6 +261,13 @@ app-dropdown {
     gap: 10px;
 }
 
+.compact-heading-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
 .map-stage-meta--viewer {
     flex-wrap: wrap;
     justify-content: flex-end;

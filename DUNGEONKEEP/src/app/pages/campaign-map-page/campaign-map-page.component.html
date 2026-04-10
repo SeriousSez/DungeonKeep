@@ -146,9 +146,14 @@
                 <div class="mode-detail-block">
                     <div class="section-heading compact-heading nested-heading">
                         <h2>Terrain Palette</h2>
-                        @if (activeTerrainOption()) {
-                        <button type="button" class="ghost-button compact-action" (click)="clearPlacementMode()">Stop Placing</button>
-                        }
+                        <div class="compact-heading-actions">
+                            @if (workingMap().decorations.length > 0 || workingMap().layers.rivers.length > 0 || workingMap().layers.mountainChains.length > 0 || workingMap().layers.forestBelts.length > 0) {
+                            <button type="button" class="ghost-button compact-action danger-button" (click)="clearTerrainLayers()">Clear Terrain</button>
+                            }
+                            @if (activeTerrainOption()) {
+                            <button type="button" class="ghost-button compact-action" (click)="clearPlacementMode()">Stop Placing</button>
+                            }
+                        </div>
                     </div>
                     <label class="field-label">Terrain ink</label>
                     <app-dropdown ariaLabel="Terrain ink" [value]="terrainColor()" [options]="terrainColorOptions" [minWidth]="220" (changed)="updateTerrainColor($event)"></app-dropdown>
@@ -172,7 +177,12 @@
                 <div class="mode-detail-block">
                     <div class="section-heading compact-heading nested-heading">
                         <h2>Map Labels</h2>
-                        <button type="button" class="ghost-button compact-action" (click)="clearPlacementMode()">Stop Placing</button>
+                        <div class="compact-heading-actions">
+                            @if (workingMap().labels.length > 0) {
+                            <button type="button" class="ghost-button compact-action danger-button" (click)="clearLabels()">Clear Labels</button>
+                            }
+                            <button type="button" class="ghost-button compact-action" (click)="clearPlacementMode()">Stop Placing</button>
+                        </div>
                     </div>
                     <label class="field-label">Label type</label>
                     <app-dropdown ariaLabel="Label type" [value]="labelToneDraft()" [options]="labelToneOptions" [minWidth]="220" (changed)="updateLabelToneDraft($event)"></app-dropdown>
@@ -189,9 +199,14 @@
                 <div class="mode-detail-block">
                     <div class="section-heading compact-heading nested-heading">
                         <h2>Landmarks</h2>
-                        @if (activeIconOption()) {
-                        <button type="button" class="ghost-button compact-action" (click)="clearPlacementMode()">Stop Placing</button>
-                        }
+                        <div class="compact-heading-actions">
+                            @if (workingMap().icons.length > 0) {
+                            <button type="button" class="ghost-button compact-action danger-button" (click)="clearLandmarks()">Clear Landmarks</button>
+                            }
+                            @if (activeIconOption()) {
+                            <button type="button" class="ghost-button compact-action" (click)="clearPlacementMode()">Stop Placing</button>
+                            }
+                        </div>
                     </div>
                     <div class="icon-palette-grid">
                         @for (option of iconOptions; track option.type) {
@@ -213,9 +228,14 @@
                 <div class="mode-detail-block">
                     <div class="section-heading compact-heading nested-heading">
                         <h2>Tokens</h2>
-                        @if (hasPendingTokenPlacement()) {
-                        <button type="button" class="ghost-button compact-action" (click)="clearPendingTokenPlacement()">Clear Token</button>
-                        }
+                        <div class="compact-heading-actions">
+                            @if (workingMap().tokens.length > 0) {
+                            <button type="button" class="ghost-button compact-action danger-button" (click)="clearTokens()">Clear Tokens</button>
+                            }
+                            @if (hasPendingTokenPlacement()) {
+                            <button type="button" class="ghost-button compact-action" (click)="clearPendingTokenPlacement()">Clear Token</button>
+                            }
+                        </div>
                     </div>
                     <label class="field-label" for="map-token-upload">Token art</label>
                     <input id="map-token-upload" class="map-file-input" type="file" accept="image/*" (change)="handleTokenUpload($event)" />
@@ -283,7 +303,7 @@
                     <button type="button" class="tool-toggle-button" [class.is-active]="showForestBelts()" (click)="toggleForestLayer()">Forests {{ workingMap().layers.forestBelts.length }}</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="showLabels()" (click)="toggleLabelLayer()">Labels {{ workingMap().labels.length }}</button>
                 </div>
-                <button type="button" class="ghost-button" [disabled]="workingMap().layers.rivers.length === 0 && workingMap().layers.mountainChains.length === 0 && workingMap().layers.forestBelts.length === 0 && workingMap().labels.length === 0" (click)="clearTerrainLayers()">Clear Terrain
+                <button type="button" class="ghost-button" [disabled]="workingMap().decorations.length === 0 && workingMap().layers.rivers.length === 0 && workingMap().layers.mountainChains.length === 0 && workingMap().layers.forestBelts.length === 0" (click)="clearTerrainLayers()">Clear Terrain
                     Layers</button>
             </div>
 

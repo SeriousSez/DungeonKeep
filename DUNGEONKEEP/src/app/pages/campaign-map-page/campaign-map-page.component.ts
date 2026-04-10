@@ -1242,15 +1242,53 @@ export class CampaignMapPageComponent {
         this.markDirty('Map art cleared.');
     }
 
+    clearLandmarks(): void {
+        if (!this.canModify() || this.workingMap().icons.length === 0) {
+            return;
+        }
+
+        this.captureHistorySnapshot();
+        this.mutateMap((map) => {
+            map.icons = [];
+        });
+        this.selectedIconId.set(null);
+        this.markDirty('Landmarks cleared.');
+    }
+
+    clearLabels(): void {
+        if (!this.canModify() || this.workingMap().labels.length === 0) {
+            return;
+        }
+
+        this.captureHistorySnapshot();
+        this.mutateMap((map) => {
+            map.labels = [];
+        });
+        this.selectedLabelId.set(null);
+        this.markDirty('Labels cleared.');
+    }
+
+    clearTokens(): void {
+        if (!this.canModify() || this.workingMap().tokens.length === 0) {
+            return;
+        }
+
+        this.captureHistorySnapshot();
+        this.mutateMap((map) => {
+            map.tokens = [];
+        });
+        this.selectedTokenId.set(null);
+        this.markDirty('Tokens cleared.');
+    }
+
     clearTerrainLayers(): void {
-        if (!this.canModify()) {
+        if (!this.canModify() || (!this.workingMap().decorations.length && !this.workingMap().layers.rivers.length && !this.workingMap().layers.mountainChains.length && !this.workingMap().layers.forestBelts.length)) {
             return;
         }
 
         this.captureHistorySnapshot();
         this.mutateMap((map) => {
             map.decorations = [];
-            map.labels = [];
             map.layers = {
                 rivers: [],
                 mountainChains: [],
