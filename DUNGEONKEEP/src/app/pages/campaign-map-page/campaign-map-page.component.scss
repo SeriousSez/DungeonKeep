@@ -72,6 +72,10 @@
     letter-spacing: 0.02em;
 }
 
+.sidebar-note {
+    margin-bottom: 0;
+}
+
 .page-intro p,
 .sidebar-note,
 .selected-icon-card p,
@@ -285,6 +289,27 @@ app-dropdown {
 .mode-detail-block {
     display: grid;
     gap: 12px;
+}
+
+.map-disclosure {
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--surface-raised) 88%, transparent);
+    padding: 12px 14px;
+}
+
+.map-disclosure summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.map-disclosure[open]>.map-disclosure-body {
+    margin-top: 12px;
+}
+
+.grid-controls-note {
+    margin-top: 0;
 }
 
 .nested-heading {
@@ -701,6 +726,8 @@ app-dropdown {
     border-radius: 24px;
     background: color-mix(in srgb, var(--surface-raised) 88%, transparent);
     border: 1px solid var(--panel-border);
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .map-board-shell:fullscreen {
@@ -738,6 +765,8 @@ app-dropdown {
     border: 1px solid color-mix(in srgb, var(--panel-border) 70%, transparent);
     background: linear-gradient(180deg, rgba(255, 248, 236, 0.92), rgba(231, 217, 198, 0.9));
     cursor: crosshair;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .map-board.is-generating {
@@ -1200,8 +1229,31 @@ app-dropdown {
 }
 
 .map-decoration-token {
+    position: absolute;
     color: color-mix(in srgb, var(--accent-primary) 42%, var(--text-main) 58%);
     filter: drop-shadow(0 8px 18px rgba(54, 36, 24, 0.12));
+}
+
+.map-decoration-token.is-selected {
+    filter: drop-shadow(0 12px 26px rgba(54, 36, 24, 0.3));
+}
+
+.map-decoration-token.is-selected::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 999px;
+    transform: translate(-50%, -50%);
+    background: color-mix(in srgb, var(--accent-primary) 24%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-primary) 44%, transparent);
+    z-index: -1;
+}
+
+.map-decoration-token.is-selected i {
+    color: color-mix(in srgb, var(--accent-primary) 62%, white 38%);
 }
 
 .map-decoration-token.is-mountain {
@@ -1279,6 +1331,8 @@ app-dropdown {
     cursor: pointer;
     box-shadow: 0 10px 24px rgba(54, 36, 24, 0.16);
     z-index: 2;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .map-icon-token.is-selected {
@@ -1293,6 +1347,8 @@ app-dropdown {
     white-space: nowrap;
     font-size: 0.85rem;
     font-weight: 700;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .map-token {

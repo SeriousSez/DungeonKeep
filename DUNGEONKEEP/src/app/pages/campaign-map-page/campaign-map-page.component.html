@@ -147,9 +147,6 @@
                     <div class="section-heading compact-heading nested-heading">
                         <h2>Terrain Palette</h2>
                         <div class="compact-heading-actions">
-                            @if (workingMap().decorations.length > 0 || workingMap().layers.rivers.length > 0 || workingMap().layers.mountainChains.length > 0 || workingMap().layers.forestBelts.length > 0) {
-                            <button type="button" class="ghost-button compact-action danger-button" [disabled]="isEditorLocked()" (click)="clearTerrainLayers()">Clear Terrain</button>
-                            }
                             @if (activeTerrainOption()) {
                             <button type="button" class="ghost-button compact-action" [disabled]="isEditorLocked()" (click)="clearPlacementMode()">Stop Placing</button>
                             }
@@ -169,6 +166,9 @@
                     <p class="sidebar-note">Click the board to place {{ option.label.toLowerCase() }} and build out the terrain by hand.</p>
                     } @else {
                     <p class="sidebar-note">Use terrain tokens to sketch forests, mountains, reefs, caves, hills, and magical sites.</p>
+                    }
+                    @if (workingMap().decorations.length > 0 || workingMap().layers.rivers.length > 0 || workingMap().layers.mountainChains.length > 0 || workingMap().layers.forestBelts.length > 0) {
+                    <button type="button" class="ghost-button" (click)="clearTerrainLayers()">Clear Terrain Layers</button>
                     }
                 </div>
                 }
@@ -200,9 +200,6 @@
                     <div class="section-heading compact-heading nested-heading">
                         <h2>Landmarks</h2>
                         <div class="compact-heading-actions">
-                            @if (workingMap().icons.length > 0) {
-                            <button type="button" class="ghost-button compact-action danger-button" [disabled]="isEditorLocked()" (click)="clearLandmarks()">Clear Landmarks</button>
-                            }
                             @if (activeIconOption()) {
                             <button type="button" class="ghost-button compact-action" [disabled]="isEditorLocked()" (click)="clearPlacementMode()">Stop Placing</button>
                             }
@@ -216,6 +213,9 @@
                         </button>
                         }
                     </div>
+                    @if (workingMap().icons.length > 0 || workingMap().layers.rivers.length > 0 || workingMap().layers.mountainChains.length > 0 || workingMap().layers.forestBelts.length > 0) {
+                    <button type="button" class="ghost-button" [disabled]="isEditorLocked()" (click)="clearLandmarks()">Clear Landmarks</button>
+                    }
                     @if (activeIconOption(); as option) {
                     <p class="sidebar-note">Click the map to place a {{ option.label.toLowerCase() }} marker. You can drag it after placing it.</p>
                     } @else {
@@ -263,12 +263,12 @@
                 }
             </div>
 
+            @if (selectedLabel(); as label) {
             <div class="sidebar-section">
                 <div class="section-heading compact-heading">
                     <h2>Selected Label</h2>
                 </div>
 
-                @if (selectedLabel(); as label) {
                 <div class="selected-icon-card selected-label-card">
                     <div class="selected-icon-header">
                         <div>
@@ -288,83 +288,15 @@
                     <p class="sidebar-note">Labels can be inspected here, but only campaign owners can move or edit them.</p>
                     }
                 </div>
-                } @else {
-                <p class="sidebar-note">Select a label on the map to inspect, rename, retone, or remove it.</p>
-                }
-            </div>
-
-            <div class="sidebar-section">
-                <div class="section-heading compact-heading">
-                    <h2>Layers</h2>
-                </div>
-                <div class="layer-grid">
-                    <button type="button" class="tool-toggle-button" [class.is-active]="showGrid()" (click)="toggleGridLayer()">Grid</button>
-                    <button type="button" class="tool-toggle-button" [class.is-active]="showRivers()" (click)="toggleRiverLayer()">Rivers {{ workingMap().layers.rivers.length }}</button>
-                    <button type="button" class="tool-toggle-button" [class.is-active]="showMountainChains()" (click)="toggleMountainLayer()">Mountains {{ workingMap().layers.mountainChains.length }}</button>
-                    <button type="button" class="tool-toggle-button" [class.is-active]="showForestBelts()" (click)="toggleForestLayer()">Forests {{ workingMap().layers.forestBelts.length }}</button>
-                    <button type="button" class="tool-toggle-button" [class.is-active]="showLabels()" (click)="toggleLabelLayer()">Labels {{ workingMap().labels.length }}</button>
-                </div>
-                <div class="grid-settings-row">
-                    <label class="grid-setting-field" for="map-grid-columns">
-                        <span class="field-label">Columns</span>
-                        <input id="map-grid-columns" type="number" min="8" max="60" step="0.5" [value]="gridColumns()" [disabled]="!canModify()" (change)="updateGridColumns($any($event.target).value)" />
-                    </label>
-                    <label class="grid-setting-field" for="map-grid-rows">
-                        <span class="field-label">Rows</span>
-                        <input id="map-grid-rows" type="number" min="8" max="60" step="0.5" [value]="gridRows()" [disabled]="!canModify()" (change)="updateGridRows($any($event.target).value)" />
-                    </label>
-                    <label class="grid-setting-field grid-setting-field--wide" for="map-grid-color">
-                        <span class="field-label">Grid Color</span>
-                        <div class="grid-color-picker-row">
-                            <input id="map-grid-color" class="grid-color-input" type="color" [value]="gridColor()" [disabled]="!canModify()" (input)="updateGridColor($any($event.target).value)" />
-                            <button type="button" class="ghost-button compact-action" [disabled]="!canModify()" (click)="resetGridColor()">Reset</button>
-                        </div>
-                    </label>
-                    <label class="grid-setting-field" for="map-grid-offset-x">
-                        <span class="field-label">Offset X</span>
-                        <input id="map-grid-offset-x" type="number" min="-1" max="1" step="0.05" [value]="gridOffsetX()" [disabled]="!canModify()" (change)="updateGridOffsetX($any($event.target).value)" />
-                    </label>
-                    <label class="grid-setting-field" for="map-grid-offset-y">
-                        <span class="field-label">Offset Y</span>
-                        <input id="map-grid-offset-y" type="number" min="-1" max="1" step="0.05" [value]="gridOffsetY()" [disabled]="!canModify()" (change)="updateGridOffsetY($any($event.target).value)" />
-                    </label>
-                    <div class="grid-offset-actions">
-                        <button type="button" class="ghost-button compact-action" [disabled]="!canModify()" (click)="resetGridOffset()">Reset Offset</button>
-                    </div>
-                </div>
-                <p class="sidebar-note">Adjust columns, rows, color, and offset to line the tactical grid up with the map art. Offset values move the grid by fractions of a cell.</p>
-                <button type="button" class="ghost-button" [disabled]="workingMap().decorations.length === 0 && workingMap().layers.rivers.length === 0 && workingMap().layers.mountainChains.length === 0 && workingMap().layers.forestBelts.length === 0" (click)="clearTerrainLayers()">Clear Terrain
-                    Layers</button>
-            </div>
-
-            <div class="sidebar-section">
-                <div class="section-heading compact-heading">
-                    <h2>History & Cleanup</h2>
-                </div>
-                <div class="tool-actions tool-actions--stacked">
-                    <button type="button" class="ghost-button" [disabled]="!canUndo()" (click)="handleUndo()">Undo</button>
-                    <button type="button" class="ghost-button" [disabled]="!canRedo()" (click)="handleRedo()">Redo</button>
-                    <button type="button" class="ghost-button danger-button"
-                        [disabled]="workingMap().strokes.length === 0 && workingMap().icons.length === 0 && workingMap().tokens.length === 0 && workingMap().layers.rivers.length === 0 && workingMap().layers.mountainChains.length === 0 && workingMap().layers.forestBelts.length === 0"
-                        (click)="requestClearMap()">Clear Entire Map</button>
-                </div>
-            </div>
-
-            } @else {
-            <div class="sidebar-section">
-                <div class="section-heading compact-heading">
-                    <h2>Read-only</h2>
-                </div>
-                <p class="sidebar-note">You can inspect the current routes and landmarks here, but only campaign owners can redraw or place new markers.</p>
             </div>
             }
 
+            @if (selectedToken(); as token) {
             <div class="sidebar-section">
                 <div class="section-heading compact-heading">
                     <h2>Selected Token</h2>
                 </div>
 
-                @if (selectedToken(); as token) {
                 <div class="selected-icon-card selected-token-card">
                     <div class="selected-icon-header">
                         <div class="selected-token-mark">
@@ -393,17 +325,37 @@
                     <p class="sidebar-note">{{ canControlToken(token) ? 'You can drag this token on the active map.' : 'You can inspect this token here, but only its assigned player or character owner can move it.' }}</p>
                     }
                 </div>
-                } @else {
-                <p class="sidebar-note">Select a token on the map to inspect or edit it.</p>
-                }
             </div>
+            }
 
+            @if (selectedDecoration(); as decoration) {
+            <div class="sidebar-section">
+                <div class="section-heading compact-heading">
+                    <h2>Selected Terrain</h2>
+                </div>
+
+                <div class="selected-icon-card">
+                    <div class="selected-icon-header">
+                        <div class="selected-icon-mark">
+                            <i [class]="decorationClass(decoration.type)"></i>
+                        </div>
+                        <div>
+                            <strong>{{ terrainLabel(decoration.type) }}</strong>
+                            <p>Drag to reposition this terrain marker on the board.</p>
+                        </div>
+                    </div>
+
+                    <p class="sidebar-note">This terrain piece uses the current terrain palette styling and can be moved in Select mode.</p>
+                </div>
+            </div>
+            }
+
+            @if (selectedIcon(); as icon) {
             <div class="sidebar-section">
                 <div class="section-heading compact-heading">
                     <h2>Selected Landmark</h2>
                 </div>
 
-                @if (selectedIcon(); as icon) {
                 <div class="selected-icon-card">
                     <div class="selected-icon-header">
                         <div class="selected-icon-mark">
@@ -424,9 +376,78 @@
                     <button type="button" class="ghost-button danger-button full-width-button" (click)="requestDeleteSelectedIcon()">Delete Landmark</button>
                     }
                 </div>
-                } @else {
-                <p class="sidebar-note">Select a placed landmark to rename or remove it.</p>
+            </div>
+            }
+
+            <div class="sidebar-section">
+                <div class="section-heading compact-heading">
+                    <h2>Layers</h2>
+                </div>
+                <div class="layer-grid">
+                    <button type="button" class="tool-toggle-button" [class.is-active]="showGrid()" (click)="toggleGridLayer()">Grid</button>
+                    <button type="button" class="tool-toggle-button" [class.is-active]="showRivers()" (click)="toggleRiverLayer()">Rivers {{ workingMap().layers.rivers.length }}</button>
+                    <button type="button" class="tool-toggle-button" [class.is-active]="showMountainChains()" (click)="toggleMountainLayer()">Mountains {{ workingMap().layers.mountainChains.length }}</button>
+                    <button type="button" class="tool-toggle-button" [class.is-active]="showForestBelts()" (click)="toggleForestLayer()">Forests {{ workingMap().layers.forestBelts.length }}</button>
+                    <button type="button" class="tool-toggle-button" [class.is-active]="showLabels()" (click)="toggleLabelLayer()">Labels {{ workingMap().labels.length }}</button>
+                </div>
+                @if (showGrid()) {
+                <details class="map-disclosure" [attr.open]="gridControlsExpanded() ? '' : null" (toggle)="syncGridControlsDisclosure($event)">
+                    <summary>Grid Controls</summary>
+                    <div class="map-disclosure-body">
+                        <p class="sidebar-note grid-controls-note">Adjust columns, rows, color, and offset to line the tactical grid up with the map art. Offset values move the grid by fractions of a cell.</p>
+                        <div class="grid-settings-row">
+                            <label class="grid-setting-field" for="map-grid-columns">
+                                <span class="field-label">Columns</span>
+                                <input id="map-grid-columns" type="number" min="8" max="60" step="0.5" [value]="gridColumns()" [disabled]="!canModify()" (change)="updateGridColumns($any($event.target).value)" />
+                            </label>
+                            <label class="grid-setting-field" for="map-grid-rows">
+                                <span class="field-label">Rows</span>
+                                <input id="map-grid-rows" type="number" min="8" max="60" step="0.5" [value]="gridRows()" [disabled]="!canModify()" (change)="updateGridRows($any($event.target).value)" />
+                            </label>
+                            <label class="grid-setting-field grid-setting-field--wide" for="map-grid-color">
+                                <span class="field-label">Grid Color</span>
+                                <div class="grid-color-picker-row">
+                                    <input id="map-grid-color" class="grid-color-input" type="color" [value]="gridColor()" [disabled]="!canModify()" (input)="updateGridColor($any($event.target).value)" />
+                                    <button type="button" class="ghost-button compact-action" [disabled]="!canModify()" (click)="resetGridColor()">Reset</button>
+                                </div>
+                            </label>
+                            <label class="grid-setting-field" for="map-grid-offset-x">
+                                <span class="field-label">Offset X</span>
+                                <input id="map-grid-offset-x" type="number" min="-1" max="1" step="0.05" [value]="gridOffsetX()" [disabled]="!canModify()" (change)="updateGridOffsetX($any($event.target).value)" />
+                            </label>
+                            <label class="grid-setting-field" for="map-grid-offset-y">
+                                <span class="field-label">Offset Y</span>
+                                <input id="map-grid-offset-y" type="number" min="-1" max="1" step="0.05" [value]="gridOffsetY()" [disabled]="!canModify()" (change)="updateGridOffsetY($any($event.target).value)" />
+                            </label>
+                            <div class="grid-offset-actions">
+                                <button type="button" class="ghost-button compact-action" [disabled]="!canModify()" (click)="resetGridOffset()">Reset Offset</button>
+                            </div>
+                        </div>
+                    </div>
+                </details>
                 }
+            </div>
+
+            } @else {
+            <div class="sidebar-section">
+                <div class="section-heading compact-heading">
+                    <h2>Read-only</h2>
+                </div>
+                <p class="sidebar-note">You can inspect the current routes and landmarks here, but only campaign owners can redraw or place new markers.</p>
+            </div>
+            }
+
+            <div class="sidebar-section">
+                <div class="section-heading compact-heading">
+                    <h2>History & Cleanup</h2>
+                </div>
+                <div class="tool-actions tool-actions--stacked">
+                    <button type="button" class="ghost-button" [disabled]="!canUndo()" (click)="handleUndo()">Undo</button>
+                    <button type="button" class="ghost-button" [disabled]="!canRedo()" (click)="handleRedo()">Redo</button>
+                    <button type="button" class="ghost-button danger-button"
+                        [disabled]="workingMap().strokes.length === 0 && workingMap().icons.length === 0 && workingMap().tokens.length === 0 && workingMap().layers.rivers.length === 0 && workingMap().layers.mountainChains.length === 0 && workingMap().layers.forestBelts.length === 0"
+                        (click)="requestClearMap()">Clear Entire Map</button>
+                </div>
             </div>
         </aside>
 
@@ -477,7 +498,7 @@
                     @if (showMountainChains()) {
                     <div class="map-decoration-layer map-terrain-layer" aria-hidden="true">
                         @for (mountain of workingMap().layers.mountainChains; track mountain.id) {
-                        <span class="map-decoration-token is-mountain" [style.left.%]="mountain.x * 100" [style.top.%]="mountain.y * 100" [style.opacity]="mountain.opacity" [style.color]="decorationColor(mountain)"
+                        <span class="map-decoration-token is-mountain" [class.is-selected]="isSelectedDecoration(mountain.id)" [style.left.%]="mountain.x * 100" [style.top.%]="mountain.y * 100" [style.opacity]="mountain.opacity" [style.color]="decorationColor(mountain)"
                             [style.transform]="'translate(-50%, -50%) rotate(' + mountain.rotation + 'deg) scale(' + mountain.scale + ')'">
                             <i [class]="decorationClass(mountain.type)"></i>
                         </span>
@@ -488,7 +509,7 @@
                     @if (showForestBelts()) {
                     <div class="map-decoration-layer map-terrain-layer" aria-hidden="true">
                         @for (forest of workingMap().layers.forestBelts; track forest.id) {
-                        <span class="map-decoration-token is-forest" [style.left.%]="forest.x * 100" [style.top.%]="forest.y * 100" [style.opacity]="forest.opacity" [style.color]="decorationColor(forest)"
+                        <span class="map-decoration-token is-forest" [class.is-selected]="isSelectedDecoration(forest.id)" [style.left.%]="forest.x * 100" [style.top.%]="forest.y * 100" [style.opacity]="forest.opacity" [style.color]="decorationColor(forest)"
                             [style.transform]="'translate(-50%, -50%) rotate(' + forest.rotation + 'deg) scale(' + forest.scale + ')'">
                             <i [class]="decorationClass(forest.type)"></i>
                         </span>
@@ -520,7 +541,7 @@
 
                     <div class="map-decoration-layer" aria-hidden="true">
                         @for (decoration of workingMap().decorations; track decoration.id) {
-                        <span class="map-decoration-token" [style.left.%]="decoration.x * 100" [style.top.%]="decoration.y * 100" [style.opacity]="decoration.opacity" [style.color]="decorationColor(decoration)"
+                        <span class="map-decoration-token" [class.is-selected]="isSelectedDecoration(decoration.id)" [style.left.%]="decoration.x * 100" [style.top.%]="decoration.y * 100" [style.opacity]="decoration.opacity" [style.color]="decorationColor(decoration)"
                             [style.transform]="'translate(-50%, -50%) rotate(' + decoration.rotation + 'deg) scale(' + decoration.scale + ')'">
                             <i [class]="decorationClass(decoration.type)"></i>
                         </span>

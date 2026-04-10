@@ -82,6 +82,7 @@ const TOKEN_SIZE_OPTIONS: DropdownOption[] = [
 const MAP_BOARD_HEIGHT_RATIO = 0.7;
 const MAP_TOKEN_GRID_SPANS = [0.5, 1, 2, 4] as const;
 const MAP_GRID_VISIBILITY_STORAGE_KEY = 'dungeonkeep.campaign-map.show-grid';
+const MAP_GRID_CONTROLS_EXPANDED_STORAGE_KEY = 'dungeonkeep.campaign-map.grid-controls-expanded';
 
 const MAP_BACKGROUND_OPTIONS: DropdownOption[] = [
     { value: 'Parchment', label: 'Parchment', description: 'Warm paper tones for hand-drawn routes and lore maps.' },
@@ -240,6 +241,7 @@ export class CampaignMapPageComponent {
     readonly activeTool = signal<MapTool>('select');
     readonly pendingIconType = signal<CampaignMapIconType | null>(null);
     readonly pendingTerrainType = signal<CampaignMapDecorationType | null>(null);
+    readonly selectedDecorationId = signal<string | null>(null);
     readonly selectedIconId = signal<string | null>(null);
     readonly selectedLabelId = signal<string | null>(null);
     readonly selectedTokenId = signal<string | null>(null);
@@ -279,6 +281,7 @@ export class CampaignMapPageComponent {
     readonly isDrawing = signal(false);
     readonly isAiArtGenerating = signal(false);
     readonly showGrid = signal(this.readStoredGridVisibility());
+    readonly gridControlsExpanded = signal(this.readStoredGridControlsExpanded());
     readonly undoStack = signal<MapEditorHistoryEntry[]>([]);
     readonly redoStack = signal<MapEditorHistoryEntry[]>([]);
     readonly isFullscreen = signal(false);
@@ -368,6 +371,14 @@ export class CampaignMapPageComponent {
         }
 
         return this.workingMap().labels.find((label) => label.id === labelId) ?? null;
+    });
+    readonly selectedDecoration = computed(() => {
+        const decorationId = this.selectedDecorationId();
+        if (!decorationId) {
+            return null;
+        }
+
+        return this.allDecorations().find((decoration) => decoration.id === decorationId) ?? null;
     });
     readonly campaignCharacters = computed(() => {
         const campaignId = this.campaignId();
@@ -546,6 +557,12 @@ export class CampaignMapPageComponent {
     private lastLoadedMapSignature = '';
     private lastLoadedRouteMapId = '';
     private activeStrokePointerId: number | null = null;
+    private draggingDecorationId: string | null = null;
+    private draggingDecorationPointerId: number | null = null;
+    private pendingIconId: string | null = null;
+    private pendingIconPointerId: number | null = null;
+    private pendingIconClientX = 0;
+    private pendingIconClientY = 0;
     private draggingIconId: string | null = null;
     private draggingPointerId: number | null = null;
     private draggingLabelId: string | null = null;
@@ -815,6 +832,7 @@ export class CampaignMapPageComponent {
 
     selectLabel(labelId: string): void {
         this.selectedLabelId.set(labelId);
+        this.selectedDecorationId.set(null);
         this.selectedIconId.set(null);
         this.selectedTokenId.set(null);
     }
@@ -1004,6 +1022,17 @@ export class CampaignMapPageComponent {
         this.storeGridVisibility(nextValue);
     }
 
+    syncGridControlsDisclosure(event: Event): void {
+        const disclosure = event.target as HTMLDetailsElement | null;
+        const isOpen = disclosure?.open === true;
+        if (this.gridControlsExpanded() === isOpen) {
+            return;
+        }
+
+        this.gridControlsExpanded.set(isOpen);
+        this.storeGridControlsExpanded(isOpen);
+    }
+
     async toggleMapFullscreen(): Promise<void> {
         const shell = this.mapBoardShell()?.nativeElement;
         if (!shell) {
@@ -1030,9 +1059,25 @@ export class CampaignMapPageComponent {
         }
     }
 
+    private readStoredGridControlsExpanded(): boolean {
+        try {
+            return globalThis.localStorage?.getItem(MAP_GRID_CONTROLS_EXPANDED_STORAGE_KEY) === 'true';
+        } catch {
+            return false;
+        }
+    }
+
     private storeGridVisibility(value: boolean): void {
         try {
             globalThis.localStorage?.setItem(MAP_GRID_VISIBILITY_STORAGE_KEY, String(value));
+        } catch {
+            // Ignore storage failures and keep the in-memory toggle working.
+        }
+    }
+
+    private storeGridControlsExpanded(value: boolean): void {
+        try {
+            globalThis.localStorage?.setItem(MAP_GRID_CONTROLS_EXPANDED_STORAGE_KEY, String(value));
         } catch {
             // Ignore storage failures and keep the in-memory toggle working.
         }
@@ -1123,6 +1168,7 @@ export class CampaignMapPageComponent {
         this.tokenCropSourceImageUrl.set('');
         this.tokenUploadFeedback.set(`Token art loaded: ${tokenName}. Click the board to place it.`);
         this.selectTokenTool();
+        this.selectedDecorationId.set(null);
         this.selectedIconId.set(null);
         this.selectedTokenId.set(null);
         this.selectedLabelId.set(null);
@@ -1236,6 +1282,16 @@ export class CampaignMapPageComponent {
 
     selectIcon(iconId: string): void {
         this.selectedIconId.set(iconId);
+        this.selectedDecorationId.set(null);
+        this.selectedLabelId.set(null);
+        this.selectedTokenId.set(null);
+    }
+
+    selectDecoration(decorationId: string): void {
+        this.selectedDecorationId.set(decorationId);
+        this.selectedIconId.set(null);
+        this.selectedLabelId.set(null);
+        this.selectedTokenId.set(null);
     }
 
     updateIconLabelDraft(value: string): void {
@@ -1374,6 +1430,7 @@ export class CampaignMapPageComponent {
             const background = this.workingMap().background;
             this.captureHistorySnapshot();
             this.setWorkingMap(this.createEmptyMap(background));
+            this.selectedDecorationId.set(null);
             this.selectedIconId.set(null);
             this.selectedLabelId.set(null);
             this.selectedTokenId.set(null);
@@ -1614,6 +1671,7 @@ export class CampaignMapPageComponent {
         this.mutateMap((map) => {
             map.icons = [];
         });
+        this.selectedDecorationId.set(null);
         this.selectedIconId.set(null);
         this.markDirty('Landmarks cleared.');
     }
@@ -1627,6 +1685,7 @@ export class CampaignMapPageComponent {
         this.mutateMap((map) => {
             map.labels = [];
         });
+        this.selectedDecorationId.set(null);
         this.selectedLabelId.set(null);
         this.markDirty('Labels cleared.');
     }
@@ -1640,6 +1699,7 @@ export class CampaignMapPageComponent {
         this.mutateMap((map) => {
             map.tokens = [];
         });
+        this.selectedDecorationId.set(null);
         this.selectedTokenId.set(null);
         this.markDirty('Tokens cleared.');
     }
@@ -1658,6 +1718,7 @@ export class CampaignMapPageComponent {
                 forestBelts: []
             };
         });
+        this.selectedDecorationId.set(null);
         this.markDirty('Terrain layers cleared.');
     }
 
@@ -1699,6 +1760,7 @@ export class CampaignMapPageComponent {
             this.mutateMap((map) => {
                 map.tokens = [...map.tokens, token];
             });
+            this.selectedDecorationId.set(null);
             this.selectedIconId.set(null);
             this.selectedLabelId.set(null);
             this.selectedTokenId.set(token.id);
@@ -1720,6 +1782,7 @@ export class CampaignMapPageComponent {
             this.mutateMap((map) => {
                 map.icons = [...map.icons, icon];
             });
+            this.selectedDecorationId.set(null);
             this.selectedIconId.set(icon.id);
             this.selectedLabelId.set(null);
             this.selectedTokenId.set(null);
@@ -1734,9 +1797,7 @@ export class CampaignMapPageComponent {
             this.mutateMap((map) => {
                 this.appendTerrainDecoration(map, decoration);
             });
-            this.selectedIconId.set(null);
-            this.selectedLabelId.set(null);
-            this.selectedTokenId.set(null);
+            this.selectDecoration(decoration.id);
             this.markDirty(`${this.terrainLabel(pendingTerrainType)} added.`);
             return;
         }
@@ -1756,6 +1817,7 @@ export class CampaignMapPageComponent {
             this.mutateMap((map) => {
                 map.labels = [...map.labels, label];
             });
+            this.selectedDecorationId.set(null);
             this.selectedIconId.set(null);
             this.selectedLabelId.set(label.id);
             this.selectedTokenId.set(null);
@@ -1764,13 +1826,26 @@ export class CampaignMapPageComponent {
         }
 
         if (this.activeTool() === 'select') {
+            const clickedIcon = this.findNearestIconAtPoint(point.x, point.y);
+            if (clickedIcon) {
+                this.selectIcon(clickedIcon.id);
+                return;
+            }
+
             const clickedLabel = this.findNearestLabelAtPoint(point.x, point.y);
             if (clickedLabel) {
                 this.selectLabel(clickedLabel.id);
                 return;
             }
+
+            const clickedDecoration = this.findNearestDecorationAtPoint(point.x, point.y);
+            if (clickedDecoration) {
+                this.selectDecoration(clickedDecoration.id);
+                return;
+            }
         }
 
+        this.selectedDecorationId.set(null);
         this.selectedIconId.set(null);
         this.selectedLabelId.set(null);
         this.selectedTokenId.set(null);
@@ -1787,11 +1862,28 @@ export class CampaignMapPageComponent {
         }
 
         if (this.activeTool() === 'select') {
+            const clickedIcon = this.findNearestIconAtPoint(point.x, point.y);
+            if (clickedIcon) {
+                this.armIconInteraction(clickedIcon.id, event);
+                return;
+            }
+
             const clickedLabel = this.findNearestLabelAtPoint(point.x, point.y);
             if (clickedLabel) {
                 this.selectLabel(clickedLabel.id);
                 this.draggingLabelId = clickedLabel.id;
                 this.draggingLabelPointerId = event.pointerId;
+                this.pendingDragHistory = this.createHistoryEntry();
+                (event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId);
+                event.preventDefault();
+                return;
+            }
+
+            const clickedDecoration = this.findNearestDecorationAtPoint(point.x, point.y);
+            if (clickedDecoration) {
+                this.selectDecoration(clickedDecoration.id);
+                this.draggingDecorationId = clickedDecoration.id;
+                this.draggingDecorationPointerId = event.pointerId;
                 this.pendingDragHistory = this.createHistoryEntry();
                 (event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId);
                 event.preventDefault();
@@ -1805,6 +1897,7 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.selectedDecorationId.set(null);
         this.selectedIconId.set(null);
         this.selectedLabelId.set(null);
         this.isDrawing.set(true);
@@ -1828,6 +1921,24 @@ export class CampaignMapPageComponent {
     }
 
     handleBoardPointerMove(event: PointerEvent): void {
+        if (this.handlePendingOrActiveIconMove(event)) {
+            return;
+        }
+
+        if (this.draggingDecorationPointerId === event.pointerId && this.draggingDecorationId) {
+            const point = this.getRelativePoint(event.clientX, event.clientY);
+            if (!point) {
+                return;
+            }
+
+            this.mutateMap((map) => {
+                this.moveDecorationById(map, this.draggingDecorationId!, point);
+            });
+
+            event.preventDefault();
+            return;
+        }
+
         if (this.draggingLabelPointerId === event.pointerId && this.draggingLabelId) {
             const point = this.getRelativePoint(event.clientX, event.clientY);
             if (!point) {
@@ -1869,6 +1980,29 @@ export class CampaignMapPageComponent {
     }
 
     handleBoardPointerUp(event: PointerEvent): void {
+        if (this.finishIconInteraction(event)) {
+            return;
+        }
+
+        if (this.draggingDecorationPointerId === event.pointerId && this.draggingDecorationId) {
+            this.draggingDecorationId = null;
+            this.draggingDecorationPointerId = null;
+            (event.currentTarget as HTMLElement | null)?.releasePointerCapture(event.pointerId);
+
+            if (this.pendingDragHistory) {
+                const beforeDrag = this.historyEntrySignature(this.pendingDragHistory);
+                const afterDrag = this.historyEntrySignature(this.createHistoryEntry());
+                if (beforeDrag !== afterDrag) {
+                    this.pushHistoryEntry(this.pendingDragHistory, 'undo');
+                    this.redoStack.set([]);
+                }
+            }
+
+            this.pendingDragHistory = null;
+            this.markDirty('Terrain moved.');
+            return;
+        }
+
         if (this.draggingLabelPointerId === event.pointerId && this.draggingLabelId) {
             this.draggingLabelId = null;
             this.draggingLabelPointerId = null;
@@ -1909,65 +2043,119 @@ export class CampaignMapPageComponent {
     }
 
     handleIconPointerDown(event: PointerEvent, iconId: string): void {
-        this.selectedIconId.set(iconId);
-        this.selectedLabelId.set(null);
-        this.selectedTokenId.set(null);
-
-        if (!this.canModify() || event.button !== 0) {
-            event.stopPropagation();
-            return;
-        }
-
-        this.draggingIconId = iconId;
-        this.draggingPointerId = event.pointerId;
-        this.pendingDragHistory = this.createHistoryEntry();
-        (event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId);
+        this.armIconInteraction(iconId, event);
         event.stopPropagation();
     }
 
     handleIconPointerMove(event: PointerEvent, iconId: string): void {
-        if (this.draggingIconId !== iconId || this.draggingPointerId !== event.pointerId) {
+        if (this.draggingIconId !== iconId && this.pendingIconId !== iconId) {
             return;
         }
 
-        const point = this.getRelativePoint(event.clientX, event.clientY);
-        if (!point) {
-            return;
+        if (this.handlePendingOrActiveIconMove(event)) {
+            event.stopPropagation();
         }
-
-        this.mutateMap((map) => {
-            map.icons = map.icons.map((icon) => icon.id === iconId ? { ...icon, x: point.x, y: point.y } : icon);
-        });
-
-        event.preventDefault();
-        event.stopPropagation();
     }
 
     handleIconPointerUp(event: PointerEvent, iconId: string): void {
-        if (this.draggingIconId !== iconId || this.draggingPointerId !== event.pointerId) {
+        if (this.draggingIconId !== iconId && this.pendingIconId !== iconId) {
             return;
         }
 
-        this.draggingIconId = null;
-        this.draggingPointerId = null;
-        (event.currentTarget as HTMLElement | null)?.releasePointerCapture(event.pointerId);
-        event.stopPropagation();
+        if (this.finishIconInteraction(event)) {
+            event.stopPropagation();
+        }
+    }
 
-        if (this.pendingDragHistory) {
-            const beforeDrag = this.historyEntrySignature(this.pendingDragHistory);
-            const afterDrag = this.historyEntrySignature(this.createHistoryEntry());
-            if (beforeDrag !== afterDrag) {
-                this.pushHistoryEntry(this.pendingDragHistory, 'undo');
-                this.redoStack.set([]);
-            }
+    private armIconInteraction(iconId: string, event: PointerEvent): void {
+        this.selectIcon(iconId);
+
+        if (!this.canModify() || event.button !== 0) {
+            return;
         }
 
-        this.pendingDragHistory = null;
-        this.markDirty('Landmark moved.');
+        this.pendingIconId = iconId;
+        this.pendingIconPointerId = event.pointerId;
+        this.pendingIconClientX = event.clientX;
+        this.pendingIconClientY = event.clientY;
+        (event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId);
+    }
+
+    private handlePendingOrActiveIconMove(event: PointerEvent): boolean {
+        if (this.draggingPointerId === event.pointerId && this.draggingIconId) {
+            const point = this.getRelativePoint(event.clientX, event.clientY);
+            if (!point) {
+                return true;
+            }
+
+            this.mutateMap((map) => {
+                map.icons = map.icons.map((icon) => icon.id === this.draggingIconId ? { ...icon, x: point.x, y: point.y } : icon);
+            });
+
+            event.preventDefault();
+            return true;
+        }
+
+        if (this.pendingIconPointerId !== event.pointerId || !this.pendingIconId) {
+            return false;
+        }
+
+        if (Math.hypot(event.clientX - this.pendingIconClientX, event.clientY - this.pendingIconClientY) < 6) {
+            return true;
+        }
+
+        this.draggingIconId = this.pendingIconId;
+        this.draggingPointerId = event.pointerId;
+        this.pendingIconId = null;
+        this.pendingIconPointerId = null;
+        this.pendingDragHistory = this.createHistoryEntry();
+
+        const point = this.getRelativePoint(event.clientX, event.clientY);
+        if (!point) {
+            return true;
+        }
+
+        this.mutateMap((map) => {
+            map.icons = map.icons.map((icon) => icon.id === this.draggingIconId ? { ...icon, x: point.x, y: point.y } : icon);
+        });
+
+        event.preventDefault();
+        return true;
+    }
+
+    private finishIconInteraction(event: PointerEvent): boolean {
+        if (this.draggingPointerId === event.pointerId && this.draggingIconId) {
+            this.draggingIconId = null;
+            this.draggingPointerId = null;
+            (event.currentTarget as HTMLElement | null)?.releasePointerCapture(event.pointerId);
+
+            if (this.pendingDragHistory) {
+                const beforeDrag = this.historyEntrySignature(this.pendingDragHistory);
+                const afterDrag = this.historyEntrySignature(this.createHistoryEntry());
+                if (beforeDrag !== afterDrag) {
+                    this.pushHistoryEntry(this.pendingDragHistory, 'undo');
+                    this.redoStack.set([]);
+                }
+            }
+
+            this.pendingDragHistory = null;
+            this.markDirty('Landmark moved.');
+            return true;
+        }
+
+        if (this.pendingIconPointerId !== event.pointerId || !this.pendingIconId) {
+            return false;
+        }
+
+        this.pendingIconId = null;
+        this.pendingIconPointerId = null;
+        (event.currentTarget as HTMLElement | null)?.releasePointerCapture(event.pointerId);
+        return true;
     }
 
     selectToken(tokenId: string): void {
         this.selectedTokenId.set(tokenId);
+        this.selectedDecorationId.set(null);
         this.selectedIconId.set(null);
         this.selectedLabelId.set(null);
     }
@@ -2197,6 +2385,10 @@ export class CampaignMapPageComponent {
 
     isSelectedIcon(iconId: string): boolean {
         return this.selectedIconId() === iconId;
+    }
+
+    isSelectedDecoration(decorationId: string): boolean {
+        return this.selectedDecorationId() === decorationId;
     }
 
     isSelectedLabel(labelId: string): boolean {
@@ -2503,6 +2695,7 @@ export class CampaignMapPageComponent {
         this.activeTool.set('select');
         this.pendingIconType.set(null);
         this.pendingTerrainType.set(null);
+        this.selectedDecorationId.set(null);
         this.selectedIconId.set(null);
         this.selectedLabelId.set(null);
         this.selectedTokenId.set(null);
@@ -2697,6 +2890,50 @@ export class CampaignMapPageComponent {
         return tone === 'Feature' ? 'New Feature' : 'New Region';
     }
 
+    private allDecorations(): CampaignMapDecoration[] {
+        return [
+            ...this.workingMap().decorations,
+            ...(this.showMountainChains() ? this.workingMap().layers.mountainChains : []),
+            ...(this.showForestBelts() ? this.workingMap().layers.forestBelts : [])
+        ];
+    }
+
+    private findNearestIconAtPoint(x: number, y: number): CampaignMapIcon | null {
+        const icons = this.workingMap().icons;
+        let closestIcon: CampaignMapIcon | null = null;
+        let closestDistance = Number.POSITIVE_INFINITY;
+
+        for (const icon of icons) {
+            const dx = icon.x - x;
+            const dy = icon.y - y;
+            const distance = Math.hypot(dx, dy * (10 / 7));
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestIcon = icon;
+            }
+        }
+
+        return closestDistance <= 0.04 ? closestIcon : null;
+    }
+
+    private findNearestDecorationAtPoint(x: number, y: number): CampaignMapDecoration | null {
+        const decorations = this.allDecorations();
+        let closestDecoration: CampaignMapDecoration | null = null;
+        let closestDistance = Number.POSITIVE_INFINITY;
+
+        for (const decoration of decorations) {
+            const dx = decoration.x - x;
+            const dy = decoration.y - y;
+            const distance = Math.hypot(dx, dy * (10 / 7));
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestDecoration = decoration;
+            }
+        }
+
+        return closestDistance <= 0.045 ? closestDecoration : null;
+    }
+
     private findNearestLabelAtPoint(x: number, y: number): CampaignMapLabel | null {
         const labels = this.workingMap().labels;
         let closestLabel: CampaignMapLabel | null = null;
@@ -2786,7 +3023,7 @@ export class CampaignMapPageComponent {
         this.cdr.detectChanges();
     }
 
-    private terrainLabel(type: CampaignMapDecorationType): string {
+    terrainLabel(type: CampaignMapDecorationType): string {
         return this.terrainOptions.find((option) => option.type === type)?.label ?? 'Terrain';
     }
 
@@ -2858,6 +3095,15 @@ export class CampaignMapPageComponent {
                 map.decorations = [...map.decorations, decoration];
                 break;
         }
+    }
+
+    private moveDecorationById(map: CampaignMap, decorationId: string, point: CampaignMapPoint): void {
+        map.decorations = map.decorations.map((decoration) => decoration.id === decorationId ? { ...decoration, x: point.x, y: point.y } : decoration);
+        map.layers = {
+            ...map.layers,
+            mountainChains: map.layers.mountainChains.map((decoration) => decoration.id === decorationId ? { ...decoration, x: point.x, y: point.y } : decoration),
+            forestBelts: map.layers.forestBelts.map((decoration) => decoration.id === decorationId ? { ...decoration, x: point.x, y: point.y } : decoration)
+        };
     }
 
     private createRandomMap(background: CampaignMapBackground): CampaignMap {
