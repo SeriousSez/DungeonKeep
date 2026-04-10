@@ -56,6 +56,7 @@ export class SessionDetailPageComponent {
     readonly loadError = signal('');
     readonly storedDraft = signal<SessionEditorDraft | null>(null);
     readonly renderedMarkdown = signal('');
+    readonly detailsLoadRequested = signal(false);
 
     readonly currentCampaign = computed(() =>
         this.store.campaigns().find((campaign) => campaign.id === this.campaignId()) ?? null
@@ -134,16 +135,29 @@ export class SessionDetailPageComponent {
                 this.loadError.set('');
                 this.storedDraft.set(null);
                 this.renderedMarkdown.set('');
-                if (campaignId) {
-                    void this.store.ensureCampaignLoaded(campaignId);
-                }
+                this.detailsLoadRequested.set(false);
                 this.cdr.detectChanges();
             });
 
         effect(() => {
             const campaignId = this.campaignId();
+            const storeInitialized = this.store.initialized();
+            const detailsLoadRequested = this.detailsLoadRequested();
+            const detailsLoaded = this.currentCampaign()?.detailsLoaded === true;
+            const detailsLoading = campaignId ? this.store.isCampaignDetailsLoading(campaignId) : false;
+
+            if (!campaignId || !storeInitialized || detailsLoadRequested || detailsLoaded || detailsLoading) {
+                return;
+            }
+
+            this.detailsLoadRequested.set(true);
+            void this.store.ensureCampaignLoaded(campaignId);
+        });
+
+        effect(() => {
+            const campaignId = this.campaignId();
             const sessionId = this.sessionId();
-            const campaigns = this.store.campaigns();
+            const storeInitialized = this.store.initialized();
 
             if (!campaignId || !sessionId) {
                 return;
@@ -151,7 +165,7 @@ export class SessionDetailPageComponent {
 
             const campaign = this.currentCampaign();
             if (!campaign) {
-                if (campaigns.length === 0) {
+                if (!storeInitialized) {
                     return;
                 }
 
@@ -163,8 +177,14 @@ export class SessionDetailPageComponent {
 
             const summary = campaign.sessions.find((session) => session.id === sessionId) ?? null;
             if (!campaign.detailsLoaded) {
+                if (this.detailsLoadRequested() && !this.store.isCampaignDetailsLoading(campaignId)) {
+                    this.loadError.set('The requested session details could not be loaded.');
+                    this.initialized.set(true);
+                    this.cdr.detectChanges();
+                }
                 return;
             }
+
             const draft = readStoredSessionEditorDraft(campaignId, sessionId);
             this.storedDraft.set(draft);
 

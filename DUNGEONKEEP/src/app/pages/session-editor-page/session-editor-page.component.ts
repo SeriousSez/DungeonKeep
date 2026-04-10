@@ -190,6 +190,7 @@ export class SessionEditorPageComponent {
     readonly lastAutosavedAt = signal<string>('');
     readonly markdownPreview = signal('');
     readonly pendingDelete = signal<PendingDelete | null>(null);
+    readonly detailsLoadRequested = signal(false);
 
     readonly threatOptions: DropdownOption[] = [
         { value: '', label: 'Auto', description: 'Infer threat from the session summary and notes when saving.' },
@@ -321,10 +322,7 @@ export class SessionEditorPageComponent {
                     sessionFocus: '',
                     additionalConstraints: ''
                 });
-
-                if (campaignId) {
-                    void this.store.ensureCampaignLoaded(campaignId);
-                }
+                this.detailsLoadRequested.set(false);
             });
 
         this.editorForm.valueChanges
@@ -337,6 +335,21 @@ export class SessionEditorPageComponent {
                 this.autosaveDraft();
                 this.updateMarkdownPreview(this.notesControl.value);
             });
+
+        effect(() => {
+            const campaignId = this.campaignId();
+            const storeInitialized = this.store.initialized();
+            const detailsLoadRequested = this.detailsLoadRequested();
+            const detailsLoaded = this.currentCampaign()?.detailsLoaded === true;
+            const detailsLoading = campaignId ? this.store.isCampaignDetailsLoading(campaignId) : false;
+
+            if (!campaignId || !storeInitialized || detailsLoadRequested || detailsLoaded || detailsLoading) {
+                return;
+            }
+
+            this.detailsLoadRequested.set(true);
+            void this.store.ensureCampaignLoaded(campaignId);
+        });
 
         effect(() => {
             const campaign = this.currentCampaign();
