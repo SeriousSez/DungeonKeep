@@ -83,6 +83,7 @@ const MAP_BOARD_HEIGHT_RATIO = 0.7;
 const MAP_TOKEN_GRID_SPANS = [0.5, 1, 2, 4] as const;
 const MAP_GRID_VISIBILITY_STORAGE_KEY = 'dungeonkeep.campaign-map.show-grid';
 const MAP_GRID_CONTROLS_EXPANDED_STORAGE_KEY = 'dungeonkeep.campaign-map.grid-controls-expanded';
+const MAP_AUTOSAVE_DELAY_MS = 450;
 
 const MAP_BACKGROUND_OPTIONS: DropdownOption[] = [
     { value: 'Parchment', label: 'Parchment', description: 'Warm paper tones for hand-drawn lines, sketches, and lore maps.' },
@@ -602,12 +603,18 @@ export class CampaignMapPageComponent {
     private eraseChanged = false;
     private pendingDragHistory: MapEditorHistoryEntry | null = null;
     private persistInFlight = false;
+    private autosaveTimerId: ReturnType<typeof setTimeout> | null = null;
+    private autosaveQueuedWhileSaving = false;
     private creatingRouteMap = false;
     private generationVariant = 0;
     private historySuppressed = false;
     private randomSource: () => number = () => Math.random();
 
     constructor() {
+        this.destroyRef.onDestroy(() => {
+            this.clearAutosaveTimer();
+        });
+
         this.route.paramMap
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe((params) => {
@@ -642,6 +649,7 @@ export class CampaignMapPageComponent {
             }
 
             if (this.canModify() && this.hasUnsavedChanges() && !this.persistInFlight) {
+                this.mergeRealtimeTokenState(campaign, routeMapId);
                 return;
             }
 
@@ -2559,17 +2567,13 @@ export class CampaignMapPageComponent {
             }
         }
 
-        this.pendingDragHistory = null;
-        if (dragMode === 'editor') {
-            this.markDirty('Token moved.');
-            return;
-        }
-
         const movedToken = this.workingMap().tokens.find((entry) => entry.id === tokenId) ?? null;
         if (!movedToken || !origin || (movedToken.x === origin.x && movedToken.y === origin.y)) {
+            this.pendingDragHistory = null;
             return;
         }
 
+        this.pendingDragHistory = null;
         void this.persistControlledTokenMove(tokenId, movedToken, origin);
     }
 
@@ -2675,6 +2679,38 @@ export class CampaignMapPageComponent {
         this.hasUnsavedChanges.set(true);
         this.saveState.set('idle');
         this.saveMessage.set(message);
+        this.queueAutosave();
+    }
+
+    private queueAutosave(): void {
+        if (!this.canModify()) {
+            return;
+        }
+
+        if (this.persistInFlight) {
+            this.autosaveQueuedWhileSaving = true;
+            return;
+        }
+
+        this.clearAutosaveTimer();
+        this.autosaveTimerId = globalThis.setTimeout(() => {
+            this.autosaveTimerId = null;
+
+            if (!this.canModify() || !this.hasUnsavedChanges() || this.persistInFlight) {
+                return;
+            }
+
+            void this.persistWorkingMap();
+        }, MAP_AUTOSAVE_DELAY_MS);
+    }
+
+    private clearAutosaveTimer(): void {
+        if (this.autosaveTimerId === null) {
+            return;
+        }
+
+        globalThis.clearTimeout(this.autosaveTimerId);
+        this.autosaveTimerId = null;
     }
 
     private buildMapArtAdditionalDirection(options: MapArtGenerationOptions): string | undefined {
@@ -2771,6 +2807,8 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.clearAutosaveTimer();
+        this.autosaveQueuedWhileSaving = false;
         this.persistInFlight = true;
         const snapshot = this.cloneMap(this.workingMap());
         const maps = this.mapBoards().map((map) => map.id === currentMap.id ? { ...map, name: this.mapNameDraft().trim() || map.name, ...snapshot } : this.cloneMapBoard(map));
@@ -2792,6 +2830,11 @@ export class CampaignMapPageComponent {
         } finally {
             this.persistInFlight = false;
             this.cdr.detectChanges();
+
+            if (this.autosaveQueuedWhileSaving && this.hasUnsavedChanges() && this.canModify()) {
+                this.autosaveQueuedWhileSaving = false;
+                this.queueAutosave();
+            }
         }
     }
 
@@ -2818,6 +2861,82 @@ export class CampaignMapPageComponent {
         }
 
         this.mapBoards.update((maps) => maps.map((entry) => entry.id === currentMapId ? { ...entry, ...this.cloneMap(map) } : entry));
+    }
+
+    private mergeRealtimeTokenState(campaign: Campaign, routeMapId: string): void {
+        const realtimeMaps = campaign.maps.length > 0
+            ? campaign.maps.map((map) => this.cloneMapBoard(map))
+            : [this.createEmptyMapBoard('Main Map', campaign.map.background)];
+        const realtimeMapLookup = new Map(realtimeMaps.map((map) => [map.id, map]));
+
+        this.mapBoards.update((maps) => maps.map((map) => {
+            const realtimeMap = realtimeMapLookup.get(map.id);
+            return realtimeMap ? this.mergeTokenStateIntoBoard(map, realtimeMap) : map;
+        }));
+
+        const currentMapId = this.currentMapId();
+        const activeRealtimeMap = realtimeMapLookup.get(currentMapId)
+            ?? realtimeMapLookup.get(routeMapId)
+            ?? realtimeMapLookup.get(campaign.activeMapId)
+            ?? realtimeMaps[0]
+            ?? null;
+
+        if (!activeRealtimeMap) {
+            return;
+        }
+
+        this.workingMap.update((map) => this.mergeTokenStateIntoMap(map, activeRealtimeMap));
+        this.cdr.detectChanges();
+    }
+
+    private mergeTokenStateIntoBoard(localMap: CampaignMapBoard, realtimeMap: CampaignMapBoard): CampaignMapBoard {
+        return {
+            ...localMap,
+            tokens: this.mergeTokens(localMap.tokens, realtimeMap.tokens)
+        };
+    }
+
+    private mergeTokenStateIntoMap(localMap: CampaignMap, realtimeMap: CampaignMapBoard): CampaignMap {
+        return {
+            ...this.cloneMap(localMap),
+            tokens: this.mergeTokens(localMap.tokens, realtimeMap.tokens)
+        };
+    }
+
+    private mergeTokens(localTokens: CampaignMapToken[], realtimeTokens: CampaignMapToken[]): CampaignMapToken[] {
+        const normalizedRealtimeTokens = realtimeTokens.map((token) => ({ ...token }));
+        const realtimeTokenLookup = new Map(normalizedRealtimeTokens.map((token) => [token.id, token]));
+        const draggingTokenId = this.draggingTokenId;
+        const localTokenIds = new Set(localTokens.map((token) => token.id));
+
+        return [
+            ...localTokens.map((token) => {
+                if (token.id === draggingTokenId) {
+                    return token;
+                }
+
+                const realtimeToken = realtimeTokenLookup.get(token.id);
+                if (!realtimeToken) {
+                    return token;
+                }
+
+                return {
+                    ...token,
+                    x: realtimeToken.x,
+                    y: realtimeToken.y,
+                    size: realtimeToken.size,
+                    assignedUserId: realtimeToken.assignedUserId ?? null,
+                    assignedCharacterId: realtimeToken.assignedCharacterId ?? null
+                };
+            }),
+            ...normalizedRealtimeTokens
+                .filter((token) => token.id !== draggingTokenId && !localTokenIds.has(token.id))
+                .map((token) => ({
+                    ...token,
+                    assignedUserId: token.assignedUserId ?? null,
+                    assignedCharacterId: token.assignedCharacterId ?? null
+                }))
+        ];
     }
 
     private cloneMap(map: CampaignMap | null | undefined): CampaignMap {
