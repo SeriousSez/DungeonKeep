@@ -4,9 +4,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { marked } from 'marked';
 
+import { MonsterStatBlockModalComponent } from '../../components/monster-stat-block-modal/monster-stat-block-modal.component';
+import { monsterCatalog } from '../../data/monster-catalog.generated';
 import { readStoredSessionEditorDraft } from '../../data/session-editor.storage';
 import { SessionPrep, ThreatLevel } from '../../models/dungeon.models';
-import { SessionEditorDraft } from '../../models/session-editor.models';
+import { MonsterCatalogEntry } from '../../models/monster-reference.models';
+import { SessionEditorDraft, SessionMonster } from '../../models/session-editor.models';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
 interface SessionDetailFact {
@@ -36,10 +39,20 @@ interface SessionDetailView {
     nextSessionHooks: SessionEditorDraft['nextSessionHooks'];
 }
 
+const monsterCatalogByLookupKey = new Map<string, MonsterCatalogEntry>();
+
+for (const entry of monsterCatalog) {
+    for (const key of buildMonsterLookupKeys(entry.name)) {
+        if (!monsterCatalogByLookupKey.has(key)) {
+            monsterCatalogByLookupKey.set(key, entry);
+        }
+    }
+}
+
 @Component({
     selector: 'app-session-detail-page',
     standalone: true,
-    imports: [CommonModule, RouterLink],
+    imports: [CommonModule, RouterLink, MonsterStatBlockModalComponent],
     templateUrl: './session-detail-page.component.html',
     styleUrl: './session-detail-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -57,6 +70,13 @@ export class SessionDetailPageComponent {
     readonly storedDraft = signal<SessionEditorDraft | null>(null);
     readonly renderedMarkdown = signal('');
     readonly detailsLoadRequested = signal(false);
+    readonly interactionMessage = signal('');
+    readonly interactionError = signal('');
+    readonly activeMonster = signal<MonsterCatalogEntry | null>(null);
+
+    readonly campaignNpcLookup = computed(() =>
+        new Set((this.currentCampaign()?.npcs ?? []).map((name) => normalizeLookupValue(name)))
+    );
 
     readonly currentCampaign = computed(() =>
         this.store.campaigns().find((campaign) => campaign.id === this.campaignId()) ?? null
@@ -136,6 +156,9 @@ export class SessionDetailPageComponent {
                 this.storedDraft.set(null);
                 this.renderedMarkdown.set('');
                 this.detailsLoadRequested.set(false);
+                this.interactionMessage.set('');
+                this.interactionError.set('');
+                this.activeMonster.set(null);
                 this.cdr.detectChanges();
             });
 
@@ -203,6 +226,73 @@ export class SessionDetailPageComponent {
         });
     }
 
+    isCampaignNpc(name: string): boolean {
+        return this.campaignNpcLookup().has(normalizeLookupValue(name));
+    }
+
+    async addNpcToCampaign(name: string): Promise<void> {
+        const campaignId = this.campaignId();
+        const trimmedName = name.trim();
+
+        if (!campaignId || !trimmedName || !this.canEdit()) {
+            return;
+        }
+
+        this.interactionMessage.set('');
+        this.interactionError.set('');
+
+        if (this.isCampaignNpc(trimmedName)) {
+            this.interactionMessage.set(`${trimmedName} is already in the campaign NPC roster.`);
+            this.cdr.detectChanges();
+            return;
+        }
+
+        const added = await this.store.addCampaignNpc(campaignId, trimmedName);
+        if (added) {
+            this.interactionMessage.set(`${trimmedName} added to the campaign NPC roster.`);
+        } else {
+            this.interactionError.set('Could not add that NPC to the campaign right now.');
+        }
+
+        this.cdr.detectChanges();
+    }
+
+    resolveMonsterCatalogEntry(name: string): MonsterCatalogEntry | null {
+        for (const key of buildMonsterLookupKeys(name)) {
+            const match = monsterCatalogByLookupKey.get(key);
+            if (match) {
+                return match;
+            }
+        }
+
+        return null;
+    }
+
+    openMonsterStatBlock(monster: MonsterCatalogEntry): void {
+        this.interactionMessage.set('');
+        this.interactionError.set('');
+        this.activeMonster.set(monster);
+        this.cdr.detectChanges();
+    }
+
+    closeMonsterModal(): void {
+        this.activeMonster.set(null);
+        this.cdr.detectChanges();
+    }
+
+    openMonsterStatBlockBySessionMonster(monster: SessionMonster): void {
+        const entry = this.resolveMonsterCatalogEntry(monster.name);
+
+        if (!entry) {
+            this.interactionMessage.set('');
+            this.interactionError.set(`No local stat block match was found for ${monster.name}.`);
+            this.cdr.detectChanges();
+            return;
+        }
+
+        this.openMonsterStatBlock(entry);
+    }
+
     private resolveSessionNumber(summary: SessionPrep | null): number {
         const campaign = this.currentCampaign();
         if (!campaign || !summary) {
@@ -242,4 +332,21 @@ export class SessionDetailPageComponent {
 
         return '';
     }
+}
+
+function buildMonsterLookupKeys(value: string): string[] {
+    const normalized = normalizeLookupValue(value);
+    const withoutParentheticals = normalizeLookupValue(value.replace(/\([^)]*\)/g, ' '));
+    const withoutLeadingArticle = normalized.replace(/^the\s+/, '');
+
+    return Array.from(new Set([normalized, withoutParentheticals, withoutLeadingArticle].filter(Boolean)));
+}
+
+function normalizeLookupValue(value: string): string {
+    return value
+        .toLowerCase()
+        .replace(/[’']/g, '')
+        .replace(/[^a-z0-9/\s-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 }
