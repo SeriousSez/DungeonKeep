@@ -477,7 +477,9 @@
                             (click)="$event.stopPropagation(); selectToken(token.id)" (pointerdown)="handleTokenPointerDown($event, token.id)" (pointermove)="handleTokenPointerMove($event, token.id)" (pointerup)="handleTokenPointerUp($event, token.id)"
                             (pointercancel)="handleTokenPointerUp($event, token.id)">
                             <img [src]="token.imageUrl" [alt]="token.name" draggable="false" />
+                            @if (selectedTokenId() === token.id) {
                             <span>{{ token.name }}</span>
+                            }
                         </button>
                         }
                     </div>
@@ -618,7 +620,9 @@
                     <button type="button" class="map-token map-token--viewer" [class.is-selected]="selectedTokenId() === token.id" [style.left.%]="token.x * 100" [style.top.%]="token.y * 100" [style.width]="tokenRenderSize(token.size)" [style.height]="tokenRenderSize(token.size)"
                         (click)="$event.stopPropagation(); selectToken(token.id)">
                         <img [src]="token.imageUrl" [alt]="token.name" draggable="false" />
+                        @if (selectedTokenId() === token.id) {
                         <span>{{ token.name }}</span>
+                        }
                     </button>
                     }
                 </div>
@@ -663,6 +667,7 @@
 <app-map-art-generation-modal [open]="mapArtModalOpen()" [isSubmitting]="isAiArtGenerating()" [background]="workingMap().background" [mapName]="mapNameDraft().trim()" [separateLabels]="separateLabelsDraft()" [settlementScale]="settlementScale()" [parchmentLayout]="parchmentLayout()"
     [cavernLayout]="cavernLayout()" [battlemapLocale]="battlemapLocale()" [lighting]="lighting()" [settlementNamesText]="settlementNamesDraft()" [regionNamesText]="regionNamesDraft()" [ruinNamesText]="ruinNamesDraft()" [cavernNamesText]="cavernNamesDraft()"
     [additionalDirection]="additionalArtDirectionDraft()" (closed)="closeMapArtModal()" (confirmed)="submitMapArtModal($event)"></app-map-art-generation-modal>
+<app-token-image-crop-modal [open]="tokenCropModalOpen()" [imageUrl]="tokenCropSourceImageUrl()" [tokenName]="tokenCropSourceName()" (closed)="closeTokenCropModal()" (applied)="applyTokenCrop($event)"></app-token-image-crop-modal>
 } @else {
 <main class="page-stack">
     <section class="panel skeleton-panel">

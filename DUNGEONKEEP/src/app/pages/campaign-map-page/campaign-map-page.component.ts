@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { MapArtBattlemapLocale, MapArtGenerationModalComponent, MapArtGenerationOptions, MapArtLighting } from '../../components/map-art-generation-modal/map-art-generation-modal.component';
+import { TokenImageCropModalComponent } from '../../components/token-image-crop-modal/token-image-crop-modal.component';
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
 import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelFontFamily, CampaignMapLabelTone, CampaignMapPoint, CampaignMapToken, CampaignTone } from '../../models/dungeon.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
@@ -77,6 +78,7 @@ const TOKEN_SIZE_OPTIONS: DropdownOption[] = [
 ];
 
 const MAP_TOKEN_GRID_COLUMNS = 25;
+const MAP_TOKEN_GRID_ROWS = 17.5;
 const MAP_TOKEN_GRID_SPANS = [1, 4, 8] as const;
 
 const MAP_BACKGROUND_OPTIONS: DropdownOption[] = [
@@ -209,7 +211,7 @@ const MAP_LABELS_BY_BACKGROUND: Record<CampaignMapBackground, MapLabelCatalog> =
 @Component({
     selector: 'app-campaign-map-page',
     standalone: true,
-    imports: [CommonModule, RouterLink, DropdownComponent, ConfirmModalComponent, MapArtGenerationModalComponent],
+    imports: [CommonModule, RouterLink, DropdownComponent, ConfirmModalComponent, MapArtGenerationModalComponent, TokenImageCropModalComponent],
     templateUrl: './campaign-map-page.component.html',
     styleUrl: './campaign-map-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -245,6 +247,9 @@ export class CampaignMapPageComponent {
     readonly tokenPlacementImageUrl = signal('');
     readonly tokenPlacementSize = signal(1);
     readonly tokenUploadFeedback = signal('');
+    readonly tokenCropModalOpen = signal(false);
+    readonly tokenCropSourceImageUrl = signal('');
+    readonly tokenCropSourceName = signal('Token');
     readonly labelTextDraft = signal('New Region');
     readonly labelToneDraft = signal<CampaignMapLabelTone>('Region');
     readonly mapArtModalOpen = signal(false);
@@ -764,7 +769,19 @@ export class CampaignMapPageComponent {
 
         this.captureHistorySnapshot();
         this.mutateMap((map) => {
-            map.tokens = map.tokens.map((token) => token.id === selectedToken.id ? { ...token, size: nextSize } : token);
+            map.tokens = map.tokens.map((token) => {
+                if (token.id !== selectedToken.id) {
+                    return token;
+                }
+
+                const snappedPoint = this.snapTokenPointToGrid({ x: token.x, y: token.y }, nextSize);
+                return {
+                    ...token,
+                    x: snappedPoint.x,
+                    y: snappedPoint.y,
+                    size: nextSize
+                };
+            });
         });
         this.markDirty('Token size updated.');
     }
@@ -813,14 +830,11 @@ export class CampaignMapPageComponent {
                 return;
             }
 
-            this.tokenPlacementImageUrl.set(imageUrl);
-            this.tokenPlacementNameDraft.set(this.sanitizeTokenName(file.name));
-            this.tokenPlacementNoteDraft.set('');
-            this.tokenPlacementSize.set(0.12);
-            this.tokenUploadFeedback.set(`Token art loaded: ${this.sanitizeTokenName(file.name)}.`);
-            this.selectTokenTool();
-            this.selectedIconId.set(null);
-            this.selectedTokenId.set(null);
+            const tokenName = this.sanitizeTokenName(file.name);
+            this.tokenCropSourceImageUrl.set(imageUrl);
+            this.tokenCropSourceName.set(tokenName);
+            this.tokenCropModalOpen.set(true);
+            this.tokenUploadFeedback.set(`Token art loaded: ${tokenName}. Adjust the crop, then place it on the board.`);
             this.cdr.detectChanges();
         };
         reader.onerror = () => {
@@ -848,6 +862,27 @@ export class CampaignMapPageComponent {
         if (this.activeTool() === 'token') {
             this.clearPlacementMode();
         }
+    }
+
+    closeTokenCropModal(): void {
+        this.tokenCropModalOpen.set(false);
+        this.tokenCropSourceImageUrl.set('');
+    }
+
+    applyTokenCrop(croppedImageUrl: string): void {
+        const tokenName = this.tokenCropSourceName().trim() || 'Token';
+        this.tokenPlacementImageUrl.set(croppedImageUrl);
+        this.tokenPlacementNameDraft.set(tokenName);
+        this.tokenPlacementNoteDraft.set('');
+        this.tokenPlacementSize.set(1);
+        this.tokenCropModalOpen.set(false);
+        this.tokenCropSourceImageUrl.set('');
+        this.tokenUploadFeedback.set(`Token art loaded: ${tokenName}. Click the board to place it.`);
+        this.selectTokenTool();
+        this.selectedIconId.set(null);
+        this.selectedTokenId.set(null);
+        this.selectedLabelId.set(null);
+        this.cdr.detectChanges();
     }
 
     updateBackground(value: string | number): void {
@@ -1407,12 +1442,13 @@ export class CampaignMapPageComponent {
         }
 
         if (this.hasPendingTokenPlacement()) {
+            const snappedPoint = this.snapTokenPointToGrid(point, this.tokenPlacementSize());
             const token: CampaignMapToken = {
                 id: this.createId(),
                 name: this.tokenPlacementNameDraft().trim() || 'Token',
                 imageUrl: this.tokenPlacementImageUrl(),
-                x: point.x,
-                y: point.y,
+                x: snappedPoint.x,
+                y: snappedPoint.y,
                 size: this.tokenPlacementSize(),
                 note: this.tokenPlacementNoteDraft().trim()
             };
@@ -1776,7 +1812,18 @@ export class CampaignMapPageComponent {
         }
 
         this.mutateMap((map) => {
-            map.tokens = map.tokens.map((token) => token.id === tokenId ? { ...token, x: point.x, y: point.y } : token);
+            map.tokens = map.tokens.map((token) => {
+                if (token.id !== tokenId) {
+                    return token;
+                }
+
+                const snappedPoint = this.snapTokenPointToGrid(point, token.size);
+                return {
+                    ...token,
+                    x: snappedPoint.x,
+                    y: snappedPoint.y
+                };
+            });
         });
 
         event.preventDefault();
@@ -2168,8 +2215,11 @@ export class CampaignMapPageComponent {
         this.tokenPlacementNameDraft.set('Token');
         this.tokenPlacementNoteDraft.set('');
         this.tokenPlacementImageUrl.set('');
-        this.tokenPlacementSize.set(0.12);
+        this.tokenPlacementSize.set(1);
         this.tokenUploadFeedback.set('');
+        this.tokenCropModalOpen.set(false);
+        this.tokenCropSourceImageUrl.set('');
+        this.tokenCropSourceName.set('Token');
         this.labelToneDraft.set('Region');
         this.labelTextDraft.set(this.defaultLabelText('Region'));
         this.mapArtModalOpen.set(false);
@@ -3096,6 +3146,22 @@ export class CampaignMapPageComponent {
             x: this.clampCoordinate((clientX - rect.left) / rect.width),
             y: this.clampCoordinate((clientY - rect.top) / rect.height)
         };
+    }
+
+    private snapTokenPointToGrid(point: CampaignMapPoint, size: number): CampaignMapPoint {
+        const span = this.normalizeTokenGridSpan(size);
+        return {
+            x: this.snapTokenAxisToGrid(point.x, span, MAP_TOKEN_GRID_COLUMNS),
+            y: this.snapTokenAxisToGrid(point.y, span, MAP_TOKEN_GRID_ROWS)
+        };
+    }
+
+    private snapTokenAxisToGrid(value: number, span: number, gridCount: number): number {
+        const boundedValue = this.clampCoordinate(value);
+        const centerIndex = boundedValue * gridCount;
+        const maxStart = Math.max(0, gridCount - span);
+        const startIndex = Math.max(0, Math.min(maxStart, Math.round(centerIndex - (span / 2))));
+        return this.clampCoordinate((startIndex + (span / 2)) / gridCount);
     }
 
     private clampCoordinate(value: number): number {

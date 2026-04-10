@@ -485,7 +485,7 @@ app-dropdown {
 .selected-token-mark {
     width: 52px;
     height: 52px;
-    border-radius: 14px;
+    border-radius: 50%;
     overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--panel-border) 60%, var(--accent-primary) 40%);
     background: color-mix(in srgb, var(--surface-raised) 84%, var(--accent-primary) 16%);
@@ -651,7 +651,7 @@ app-dropdown {
 .token-upload-preview {
     width: 52px;
     height: 52px;
-    border-radius: 14px;
+    border-radius: 50%;
     object-fit: cover;
     border: 1px solid color-mix(in srgb, var(--panel-border) 62%, var(--accent-primary) 38%);
 }
@@ -1154,7 +1154,7 @@ app-dropdown {
     display: grid;
     place-items: center;
     padding: 0;
-    border-radius: 18px;
+    border-radius: 50%;
     overflow: visible;
     background: transparent;
     border: 2px solid transparent;
@@ -1168,7 +1168,7 @@ app-dropdown {
     height: 100%;
     object-fit: cover;
     display: block;
-    border-radius: 18px;
+    border-radius: 50%;
     border: 2px solid color-mix(in srgb, var(--surface-raised-solid) 64%, var(--accent-primary) 36%);
     box-shadow: 0 14px 32px rgba(39, 25, 16, 0.28);
     user-select: none;
@@ -1178,20 +1178,23 @@ app-dropdown {
 .map-token span {
     position: absolute;
     left: 50%;
-    bottom: -22px;
+    top: calc(100% + 15px);
+    bottom: auto;
     transform: translateX(-50%);
-    max-width: 180px;
-    padding: 4px 8px;
+    max-width: 140px;
+    padding: 2px 6px;
     border-radius: 999px;
     background: color-mix(in srgb, var(--surface-raised-solid) 90%, var(--accent-primary) 10%);
     border: 1px solid var(--panel-border);
     color: var(--text-main);
-    font-size: 0.74rem;
+    font-size: 0.68rem;
     font-weight: 700;
+    line-height: 1.15;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     pointer-events: none;
+    z-index: 1;
 }
 
 .map-token.is-selected img {
@@ -1320,7 +1323,8 @@ app-dropdown {
 
     .map-token span {
         max-width: 110px;
-        bottom: -20px;
+        top: calc(100% + 15px);
+        bottom: auto;
     }
 }
 

@@ -1,0 +1,43 @@
+@if (open()) {
+<div class="token-crop-backdrop" (click)="close()">
+    <section class="token-crop-modal panel" role="dialog" aria-modal="true" aria-label="Crop token image" (click)="$event.stopPropagation()">
+        <header class="token-crop-header">
+            <div>
+                <p class="token-crop-eyebrow">Token Upload</p>
+                <h2>Crop Token Art</h2>
+                <p>Drag and zoom the image so the subject sits inside the circular token frame.</p>
+            </div>
+            <button type="button" class="ghost-button" (click)="close()">Cancel</button>
+        </header>
+
+        <div class="token-crop-body">
+            <div class="token-crop-stage">
+                <div class="token-crop-viewport" (pointerdown)="handleViewportPointerDown($event)" (pointermove)="handleViewportPointerMove($event)" (pointerup)="handleViewportPointerUp($event)" (pointercancel)="handleViewportPointerUp($event)">
+                    @if (imageReady()) {
+                    <img class="token-crop-image" [src]="imageUrl()" [alt]="tokenName()" [style.width.px]="naturalWidth()" [style.height.px]="naturalHeight()" [style.transform]="previewTransform()" draggable="false" />
+                    }
+                    <div class="token-crop-shade"></div>
+                    <div class="token-crop-ring"></div>
+                </div>
+                <p class="token-crop-caption">{{ tokenName() || 'Token' }}</p>
+            </div>
+
+            <div class="token-crop-controls">
+                <label class="token-crop-label" for="token-crop-zoom">Zoom</label>
+                <input id="token-crop-zoom" class="token-crop-range" type="range" min="1" max="4" step="0.01" [value]="zoom()" (input)="updateZoom($any($event.target).value)" />
+                <div class="token-crop-scale-row">
+                    <span>Fit</span>
+                    <strong>{{ zoom().toFixed(2) }}x</strong>
+                    <span>Close</span>
+                </div>
+                <p class="token-crop-help">The crop is exported as a circular PNG so tokens stay perfectly round on the board.</p>
+            </div>
+        </div>
+
+        <footer class="token-crop-actions">
+            <button type="button" class="ghost-button" (click)="close()">Cancel</button>
+            <button type="button" class="primary-button" [disabled]="!imageReady()" (click)="applyCrop()">Use Token</button>
+        </footer>
+    </section>
+</div>
+}

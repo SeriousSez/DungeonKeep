@@ -1,0 +1,194 @@
+:host {
+    display: block;
+}
+
+.token-crop-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 30000;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(22, 16, 11, 0.56);
+    backdrop-filter: blur(6px);
+}
+
+.token-crop-modal {
+    width: min(760px, calc(100vw - 32px));
+    max-height: min(90vh, 840px);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 22px;
+    padding: 26px;
+    border-radius: 24px;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 72%, var(--accent-primary) 28%);
+    background: var(--panel-bg-solid);
+    box-shadow:
+        0 28px 60px rgba(20, 12, 6, 0.3),
+        inset 0 1px 0 rgba(255, 248, 236, 0.55);
+}
+
+.token-crop-header,
+.token-crop-actions {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.token-crop-header {
+    padding-bottom: 18px;
+    border-bottom: 1px solid color-mix(in srgb, var(--panel-border) 78%, transparent);
+}
+
+.token-crop-header h2,
+.token-crop-header p,
+.token-crop-caption,
+.token-crop-help {
+    margin: 0;
+}
+
+.token-crop-header h2 {
+    font-family: var(--display-font);
+    font-size: 1.9rem;
+    line-height: 1;
+    color: var(--text-main);
+}
+
+.token-crop-header p,
+.token-crop-help,
+.token-crop-caption {
+    color: var(--text-muted);
+    line-height: 1.45;
+}
+
+.token-crop-eyebrow,
+.token-crop-label {
+    margin: 0 0 8px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+}
+
+.token-crop-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 22px;
+    align-items: start;
+    min-height: 0;
+}
+
+.token-crop-stage,
+.token-crop-controls {
+    display: grid;
+    gap: 12px;
+}
+
+.token-crop-viewport {
+    position: relative;
+    width: min(100%, 420px);
+    aspect-ratio: 1;
+    margin: 0 auto;
+    overflow: hidden;
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at top, color-mix(in srgb, var(--accent-primary) 16%, transparent), transparent 58%),
+        color-mix(in srgb, var(--surface-raised) 92%, var(--accent-primary) 8%);
+    border: 1px solid color-mix(in srgb, var(--panel-border) 72%, var(--accent-primary) 28%);
+    cursor: grab;
+    touch-action: none;
+}
+
+.token-crop-viewport:active {
+    cursor: grabbing;
+}
+
+.token-crop-image {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform-origin: center center;
+    user-select: none;
+    pointer-events: none;
+}
+
+.token-crop-shade,
+.token-crop-ring {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.token-crop-shade {
+    background: rgba(15, 12, 8, 0.42);
+    mask: radial-gradient(circle at center, transparent 43%, black 44%);
+}
+
+.token-crop-ring {
+    inset: 12%;
+    border-radius: 50%;
+    border: 3px solid color-mix(in srgb, var(--accent-primary) 68%, var(--paper-strong) 32%);
+    box-shadow:
+        0 0 0 200px rgba(15, 12, 8, 0.18),
+        inset 0 0 0 1px rgba(255, 248, 236, 0.55);
+}
+
+.token-crop-caption {
+    text-align: center;
+    font-size: 0.88rem;
+}
+
+.token-crop-controls {
+    padding: 16px;
+    border-radius: 18px;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 82%, transparent);
+    background: var(--surface-raised);
+    box-shadow: inset 0 1px 0 rgba(255, 248, 236, 0.45);
+}
+
+.token-crop-range {
+    width: 100%;
+}
+
+.token-crop-scale-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--text-main);
+    font-size: 0.84rem;
+}
+
+.token-crop-actions {
+    justify-content: flex-end;
+    padding-top: 18px;
+    border-top: 1px solid color-mix(in srgb, var(--panel-border) 78%, transparent);
+}
+
+@media (max-width: 760px) {
+    .token-crop-modal {
+        padding: 20px;
+    }
+
+    .token-crop-body {
+        grid-template-columns: 1fr;
+    }
+
+    .token-crop-controls {
+        order: -1;
+    }
+}
+
+@media (max-width: 640px) {
+    .token-crop-backdrop {
+        padding: 12px;
+    }
+
+    .token-crop-header,
+    .token-crop-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
