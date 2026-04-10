@@ -53,8 +53,17 @@ export class CampaignRealtimeService {
             this.store.applyCampaignRealtimeUpdate(campaign);
         });
 
+        connection.onreconnecting(() => {
+            this.joinedCampaignId = '';
+        });
+
         connection.onreconnected(async () => {
+            this.joinedCampaignId = '';
             await this.joinCurrentCampaign();
+        });
+
+        connection.onclose(() => {
+            this.joinedCampaignId = '';
         });
 
         this.connection = connection;

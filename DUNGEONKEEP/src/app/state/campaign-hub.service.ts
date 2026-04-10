@@ -38,8 +38,32 @@ export class CampaignHubService {
             this._partyCurrencyUpdated.next(event);
         });
 
+        this.connection.onreconnecting(() => {
+            this.joinedCampaignId = null;
+        });
+
+        this.connection.onreconnected(async () => {
+            const joinedCampaignId = this.joinedCampaignId ?? campaignId;
+            this.joinedCampaignId = null;
+
+            if (!joinedCampaignId) {
+                return;
+            }
+
+            try {
+                await this.connection?.invoke('JoinCampaign', joinedCampaignId, this.session.token() ?? '');
+                this.joinedCampaignId = joinedCampaignId;
+            } catch {
+                this.joinedCampaignId = null;
+            }
+        });
+
+        this.connection.onclose(() => {
+            this.joinedCampaignId = null;
+        });
+
         await this.connection.start();
-        await this.connection.invoke('JoinCampaign', campaignId);
+        await this.connection.invoke('JoinCampaign', campaignId, this.session.token() ?? '');
         this.joinedCampaignId = campaignId;
     }
 
