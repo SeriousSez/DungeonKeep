@@ -85,6 +85,11 @@ public sealed record CampaignWorldNoteDto(
 public sealed record CampaignMapDto(
     string Background,
     string BackgroundImageUrl,
+    double GridColumns,
+    double GridRows,
+    string GridColor,
+    double GridOffsetX,
+    double GridOffsetY,
     IReadOnlyList<CampaignMapStrokeDto> Strokes,
     IReadOnlyList<CampaignMapIconDto> Icons,
     IReadOnlyList<CampaignMapTokenDto> Tokens,
@@ -98,6 +103,11 @@ public sealed record CampaignMapBoardDto(
     string Name,
     string Background,
     string BackgroundImageUrl,
+    double GridColumns,
+    double GridRows,
+    string GridColor,
+    double GridOffsetX,
+    double GridOffsetY,
     IReadOnlyList<CampaignMapStrokeDto> Strokes,
     IReadOnlyList<CampaignMapIconDto> Icons,
     IReadOnlyList<CampaignMapTokenDto> Tokens,
@@ -138,7 +148,9 @@ public sealed record CampaignMapTokenDto(
     double X,
     double Y,
     double Size,
-    string Note
+    string Note,
+    Guid? AssignedUserId,
+    Guid? AssignedCharacterId
 );
 
 public sealed record CampaignMapDecorationDto(
@@ -231,6 +243,7 @@ public sealed record CreateCampaignWorldNoteRequest(string Title, string Categor
 public sealed record UpdateCampaignWorldNoteRequest(string Title, string Category, string Content);
 public sealed record DeleteCampaignWorldNoteRequest(Guid NoteId);
 public sealed record UpdateCampaignMapRequest(CampaignMapDto? Map, CampaignMapLibraryDto? Library);
+public sealed record MoveCampaignMapTokenRequest(Guid MapId, double X, double Y);
 
 public sealed record CampaignInvitationEmail(
     Guid CampaignId,

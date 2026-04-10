@@ -666,6 +666,10 @@ app-dropdown {
     color: var(--text-muted);
 }
 
+.token-assignment-summary {
+    margin: -4px 0 0;
+}
+
 .full-width-button {
     width: 100%;
 }
@@ -697,6 +701,29 @@ app-dropdown {
     border-radius: 24px;
     background: color-mix(in srgb, var(--surface-raised) 88%, transparent);
     border: 1px solid var(--panel-border);
+}
+
+.map-board-shell:fullscreen {
+    display: grid;
+    place-items: center;
+    width: 100vw;
+    height: 100vh;
+    padding: 24px;
+    border: 0;
+    border-radius: 0;
+    background:
+        radial-gradient(circle at 20% 18%, color-mix(in srgb, var(--paper-strong) 18%, transparent), transparent 24%),
+        linear-gradient(180deg, color-mix(in srgb, var(--surface-raised-solid) 86%, var(--text-main) 14%), color-mix(in srgb, var(--surface-raised-solid) 74%, var(--text-main) 26%));
+}
+
+.map-board-shell:fullscreen::backdrop {
+    background: color-mix(in srgb, var(--text-main) 80%, black 20%);
+}
+
+.map-board-shell:fullscreen .map-board {
+    width: min(calc((100vh - 48px) * 10 / 7), calc(100vw - 48px));
+    max-width: 100%;
+    max-height: calc(100vh - 48px);
 }
 
 .map-board-shell--workspace {
@@ -994,38 +1021,157 @@ app-dropdown {
         linear-gradient(180deg, rgba(70, 64, 57, 0.18), transparent 42%);
 }
 
+.map-board {
+    --map-grid-default-color: #745338;
+}
+
 .map-grid-layer {
     z-index: 1;
     pointer-events: none;
     background-image:
-        linear-gradient(to right, rgba(116, 83, 56, 0.18) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(116, 83, 56, 0.18) 1px, transparent 1px);
-    background-size: calc(100% / 25) calc(100% / 17.5);
+        linear-gradient(to right, color-mix(in srgb, var(--map-grid-color, var(--map-grid-default-color)) 24%, transparent) 1px, transparent 1px),
+        linear-gradient(to bottom, color-mix(in srgb, var(--map-grid-color, var(--map-grid-default-color)) 24%, transparent) 1px, transparent 1px);
+    background-size: calc(100% / var(--map-grid-columns, 25)) calc(100% / var(--map-grid-rows, 17.5));
+    background-position:
+        calc((100% / var(--map-grid-columns, 25)) * var(--map-grid-offset-x, 0)) calc((100% / var(--map-grid-rows, 17.5)) * var(--map-grid-offset-y, 0));
     opacity: 0.9;
 }
 
+.grid-settings-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.grid-setting-field {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 86%, transparent);
+    border-radius: 16px;
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--surface-raised-solid) 94%, var(--paper-strong) 6%), color-mix(in srgb, var(--surface-raised-solid) 98%, transparent)),
+        var(--surface-raised-solid);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper-strong) 68%, transparent);
+}
+
+.grid-setting-field input {
+    width: 100%;
+}
+
+.grid-setting-field input[type='number'] {
+    min-width: 0;
+    min-height: 46px;
+    padding: 0 14px;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 70%, var(--accent-primary) 30%);
+    background: color-mix(in srgb, var(--surface-raised-solid) 90%, var(--paper-strong) 10%);
+    color: var(--text-main);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper-strong) 70%, transparent);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+}
+
+.grid-setting-field input[type='number']:hover {
+    border-color: color-mix(in srgb, var(--panel-border) 42%, var(--accent-primary) 58%);
+    background: color-mix(in srgb, var(--surface-raised-solid) 84%, var(--accent-primary) 16%);
+}
+
+.grid-setting-field input[type='number']:focus,
+.grid-setting-field input[type='number']:focus-visible {
+    outline: none;
+    border-color: color-mix(in srgb, var(--accent-primary) 78%, var(--panel-border) 22%);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 18%, transparent);
+    background: color-mix(in srgb, var(--surface-raised-solid) 86%, var(--accent-primary) 14%);
+}
+
+.grid-setting-field input[type='number']:disabled {
+    border-color: color-mix(in srgb, var(--panel-border) 84%, transparent);
+    background: color-mix(in srgb, var(--surface-raised-solid) 96%, var(--panel-border) 4%);
+    color: var(--text-soft);
+    cursor: not-allowed;
+    opacity: 0.68;
+    box-shadow: none;
+}
+
+.grid-setting-field--wide {
+    grid-column: 1 / -1;
+}
+
+.grid-color-picker-row {
+    display: grid;
+    grid-template-columns: minmax(96px, 110px) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+}
+
+.grid-color-input {
+    width: 100%;
+    height: 40px;
+    padding: 4px;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 66%, var(--accent-primary) 34%);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 90%, var(--paper-strong) 10%);
+    cursor: pointer;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--paper-strong) 70%, transparent);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.grid-color-input:hover {
+    border-color: color-mix(in srgb, var(--panel-border) 38%, var(--accent-primary) 62%);
+    background: color-mix(in srgb, var(--surface-raised-solid) 84%, var(--accent-primary) 16%);
+}
+
+.grid-color-input:focus,
+.grid-color-input:focus-visible {
+    outline: none;
+    border-color: color-mix(in srgb, var(--accent-primary) 78%, var(--panel-border) 22%);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 18%, transparent);
+}
+
+.grid-color-input:disabled {
+    cursor: not-allowed;
+    opacity: 0.68;
+    box-shadow: none;
+}
+
+.grid-offset-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+}
+
+@media (max-width: 720px) {
+    .grid-color-picker-row {
+        grid-template-columns: 1fr;
+    }
+
+    .grid-offset-actions {
+        justify-content: stretch;
+    }
+
+    .grid-offset-actions .ghost-button {
+        width: 100%;
+    }
+}
+
 .map-board--coast .map-grid-layer {
-    background-image:
-        linear-gradient(to right, rgba(63, 102, 126, 0.22) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(63, 102, 126, 0.22) 1px, transparent 1px);
+    --map-grid-default-color: #3f667e;
 }
 
 .map-board--city .map-grid-layer {
-    background-image:
-        linear-gradient(to right, rgba(89, 69, 50, 0.24) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(89, 69, 50, 0.24) 1px, transparent 1px);
+    --map-grid-default-color: #594532;
 }
 
 .map-board--cavern .map-grid-layer {
-    background-image:
-        linear-gradient(to right, rgba(74, 95, 62, 0.22) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(74, 95, 62, 0.22) 1px, transparent 1px);
+    --map-grid-default-color: #4a5f3e;
 }
 
 .map-board--battlemap .map-grid-layer {
-    background-image:
-        linear-gradient(to right, rgba(88, 79, 67, 0.26) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(88, 79, 67, 0.26) 1px, transparent 1px);
+    --map-grid-default-color: #584f43;
 }
 
 .map-stroke-layer,
@@ -1151,26 +1297,34 @@ app-dropdown {
 
 .map-token {
     position: absolute;
-    display: grid;
-    place-items: center;
+    display: block;
     padding: 0;
+    box-sizing: border-box;
+    aspect-ratio: 1;
     border-radius: 50%;
     overflow: visible;
     background: transparent;
-    border: 2px solid transparent;
+    border: 0;
+    appearance: none;
     transform: translate(-50%, -50%);
     cursor: grab;
     z-index: 4;
 }
 
 .map-token img {
+    position: absolute;
+    inset: 0;
+    left: 50%;
+    top: 50%;
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
-    border-radius: 50%;
+    border-radius: inherit;
     border: 2px solid color-mix(in srgb, var(--surface-raised-solid) 64%, var(--accent-primary) 36%);
     box-shadow: 0 14px 32px rgba(39, 25, 16, 0.28);
+    transform: translate(-50%, -50%);
+    box-sizing: border-box;
     user-select: none;
     pointer-events: none;
 }
@@ -1208,6 +1362,14 @@ app-dropdown {
 
 .map-token--viewer {
     cursor: pointer;
+}
+
+.map-token--viewer.is-controllable {
+    cursor: grab;
+}
+
+.map-token--viewer:not(.is-controllable) img {
+    border-color: color-mix(in srgb, var(--panel-border) 82%, transparent);
 }
 
 .map-empty-state,

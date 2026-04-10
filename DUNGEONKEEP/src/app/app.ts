@@ -4,6 +4,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { DungeonStoreService } from './state/dungeon-store.service';
 import { BreadcrumbComponent } from './components/breadcrumb/breadcrumb.component';
 import { DndChatWidgetComponent } from './components/dnd-chat-widget/dnd-chat-widget.component';
+import { CampaignRealtimeService } from './state/campaign-realtime.service';
 import { SessionService } from './state/session.service';
 import { rulesBrowseLinks, rulesResourceLinks } from './data/rules-links';
 
@@ -17,6 +18,7 @@ import { rulesBrowseLinks, rulesResourceLinks } from './data/rules-links';
 export class App {
   readonly store = inject(DungeonStoreService);
   readonly session = inject(SessionService);
+  private readonly campaignRealtime = inject(CampaignRealtimeService);
   private readonly router = inject(Router);
   readonly mobileNavOpen = signal(false);
   readonly openDropdown = signal<string | null>(null);

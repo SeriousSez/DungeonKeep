@@ -304,6 +304,35 @@
                     <button type="button" class="tool-toggle-button" [class.is-active]="showForestBelts()" (click)="toggleForestLayer()">Forests {{ workingMap().layers.forestBelts.length }}</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="showLabels()" (click)="toggleLabelLayer()">Labels {{ workingMap().labels.length }}</button>
                 </div>
+                <div class="grid-settings-row">
+                    <label class="grid-setting-field" for="map-grid-columns">
+                        <span class="field-label">Columns</span>
+                        <input id="map-grid-columns" type="number" min="8" max="60" step="0.5" [value]="gridColumns()" [disabled]="!canModify()" (change)="updateGridColumns($any($event.target).value)" />
+                    </label>
+                    <label class="grid-setting-field" for="map-grid-rows">
+                        <span class="field-label">Rows</span>
+                        <input id="map-grid-rows" type="number" min="8" max="60" step="0.5" [value]="gridRows()" [disabled]="!canModify()" (change)="updateGridRows($any($event.target).value)" />
+                    </label>
+                    <label class="grid-setting-field grid-setting-field--wide" for="map-grid-color">
+                        <span class="field-label">Grid Color</span>
+                        <div class="grid-color-picker-row">
+                            <input id="map-grid-color" class="grid-color-input" type="color" [value]="gridColor()" [disabled]="!canModify()" (input)="updateGridColor($any($event.target).value)" />
+                            <button type="button" class="ghost-button compact-action" [disabled]="!canModify()" (click)="resetGridColor()">Reset</button>
+                        </div>
+                    </label>
+                    <label class="grid-setting-field" for="map-grid-offset-x">
+                        <span class="field-label">Offset X</span>
+                        <input id="map-grid-offset-x" type="number" min="-1" max="1" step="0.05" [value]="gridOffsetX()" [disabled]="!canModify()" (change)="updateGridOffsetX($any($event.target).value)" />
+                    </label>
+                    <label class="grid-setting-field" for="map-grid-offset-y">
+                        <span class="field-label">Offset Y</span>
+                        <input id="map-grid-offset-y" type="number" min="-1" max="1" step="0.05" [value]="gridOffsetY()" [disabled]="!canModify()" (change)="updateGridOffsetY($any($event.target).value)" />
+                    </label>
+                    <div class="grid-offset-actions">
+                        <button type="button" class="ghost-button compact-action" [disabled]="!canModify()" (click)="resetGridOffset()">Reset Offset</button>
+                    </div>
+                </div>
+                <p class="sidebar-note">Adjust columns, rows, color, and offset to line the tactical grid up with the map art. Offset values move the grid by fractions of a cell.</p>
                 <button type="button" class="ghost-button" [disabled]="workingMap().decorations.length === 0 && workingMap().layers.rivers.length === 0 && workingMap().layers.mountainChains.length === 0 && workingMap().layers.forestBelts.length === 0" (click)="clearTerrainLayers()">Clear Terrain
                     Layers</button>
             </div>
@@ -354,10 +383,14 @@
                     <app-dropdown ariaLabel="Selected token size" [value]="normalizeTokenGridSpan(token.size)" [options]="tokenSizeOptions" [minWidth]="220" (changed)="updateSelectedTokenSize($event)"></app-dropdown>
                     <label class="field-label" for="map-selected-token-note">Token note</label>
                     <input id="map-selected-token-note" type="text" [value]="tokenNoteDraft()" (input)="updateTokenNoteDraft($any($event.target).value)" placeholder="Condition, HP, or reminder" />
+                    <label class="field-label" for="map-selected-token-assignment">Token control</label>
+                    <app-dropdown id="map-selected-token-assignment" ariaLabel="Token control" [value]="tokenAssignmentDraft()" [options]="tokenAssignmentOptions()" [minWidth]="220" (changed)="updateTokenAssignmentDraft($event)"></app-dropdown>
+                    <p class="sidebar-note token-assignment-summary">{{ tokenAssignmentSummary(token) }}</p>
                     <button type="button" class="primary-button full-width-button" (click)="applySelectedTokenDetails()">Apply Token Details</button>
                     <button type="button" class="ghost-button danger-button full-width-button" (click)="requestDeleteSelectedToken()">Delete Token</button>
                     } @else {
-                    <p class="sidebar-note">Tokens can be inspected here, but only campaign owners can move or edit them.</p>
+                    <p class="sidebar-note token-assignment-summary">{{ tokenAssignmentSummary(token) }}</p>
+                    <p class="sidebar-note">{{ canControlToken(token) ? 'You can drag this token on the active map.' : 'You can inspect this token here, but only its assigned player or character owner can move it.' }}</p>
                     }
                 </div>
                 } @else {
@@ -405,6 +438,7 @@
                     <p class="sidebar-note">{{ campaign.name }} · {{ workingMap().background }}</p>
                 </div>
                 <div class="map-stage-meta">
+                    <button type="button" class="ghost-button compact-action" (click)="toggleMapFullscreen()">{{ isFullscreen() ? 'Exit Fullscreen' : 'Fullscreen' }}</button>
                     <span class="count-badge">{{ workingMap().strokes.length }}</span>
                     <span class="meta-copy">routes</span>
                     <span class="count-badge">{{ workingMap().icons.length }}</span>
@@ -414,9 +448,10 @@
                 </div>
             </div>
 
-            <div class="map-board-shell">
+            <div #mapBoardShell class="map-board-shell">
                 <div #mapBoard class="map-board" [class.can-edit]="canEdit()" [class.is-placement-mode]="pendingIconType() !== null || pendingTerrainType() !== null || activeTool() === 'label'" [class.has-map-art]="!!workingMap().backgroundImageUrl" [class.is-generating]="isAiArtGenerating()"
-                    [ngClass]="backgroundTextureClass()" (click)="handleBoardClick($event)" (pointerdown)="handleBoardPointerDown($event)" (pointermove)="handleBoardPointerMove($event)" (pointerup)="handleBoardPointerUp($event)" (pointercancel)="handleBoardPointerUp($event)">
+                    [style.--map-grid-columns]="gridColumns()" [style.--map-grid-rows]="gridRows()" [style.--map-grid-color]="gridColor()" [style.--map-grid-offset-x]="gridOffsetX()" [style.--map-grid-offset-y]="gridOffsetY()" [ngClass]="backgroundTextureClass()" (click)="handleBoardClick($event)"
+                    (pointerdown)="handleBoardPointerDown($event)" (pointermove)="handleBoardPointerMove($event)" (pointerup)="handleBoardPointerUp($event)" (pointercancel)="handleBoardPointerUp($event)">
                     @if (workingMap().backgroundImageUrl) {
                     <div class="map-board-art-layer" aria-hidden="true">
                         <img class="map-board-art" [src]="workingMap().backgroundImageUrl" alt="" />
@@ -473,9 +508,8 @@
 
                     <div class="map-token-layer">
                         @for (token of workingMap().tokens; track token.id) {
-                        <button type="button" class="map-token" [class.is-selected]="selectedTokenId() === token.id" [style.left.%]="token.x * 100" [style.top.%]="token.y * 100" [style.width]="tokenRenderSize(token.size)" [style.height]="tokenRenderSize(token.size)"
-                            (click)="$event.stopPropagation(); selectToken(token.id)" (pointerdown)="handleTokenPointerDown($event, token.id)" (pointermove)="handleTokenPointerMove($event, token.id)" (pointerup)="handleTokenPointerUp($event, token.id)"
-                            (pointercancel)="handleTokenPointerUp($event, token.id)">
+                        <button type="button" class="map-token" [class.is-selected]="selectedTokenId() === token.id" [style.left.%]="token.x * 100" [style.top.%]="token.y * 100" [style.width]="tokenRenderSize(token.size)" (click)="$event.stopPropagation(); selectToken(token.id)"
+                            (pointerdown)="handleTokenPointerDown($event, token.id)" (pointermove)="handleTokenPointerMove($event, token.id)" (pointerup)="handleTokenPointerUp($event, token.id)" (pointercancel)="handleTokenPointerUp($event, token.id)">
                             <img [src]="token.imageUrl" [alt]="token.name" draggable="false" />
                             @if (selectedTokenId() === token.id) {
                             <span>{{ token.name }}</span>
@@ -553,6 +587,7 @@
                 <p class="sidebar-note">{{ campaign.name }} · {{ workingMap().background }}</p>
             </div>
             <div class="map-stage-meta map-stage-meta--viewer">
+                <button type="button" class="ghost-button compact-action" (click)="toggleMapFullscreen()">{{ isFullscreen() ? 'Exit Fullscreen' : 'Fullscreen' }}</button>
                 <span class="count-badge">{{ workingMap().strokes.length + workingMap().layers.rivers.length }}</span>
                 <span class="meta-copy">routes</span>
                 <span class="count-badge">{{ workingMap().icons.length }}</span>
@@ -564,14 +599,19 @@
             </div>
         </div>
 
-        <div class="map-board-shell">
-            <div class="map-board" [class.has-map-art]="!!workingMap().backgroundImageUrl" [ngClass]="backgroundTextureClass()">
+        <div #mapBoardShell class="map-board-shell">
+            <div #mapBoard class="map-board" [class.has-map-art]="!!workingMap().backgroundImageUrl" [ngClass]="backgroundTextureClass()" [style.--map-grid-columns]="gridColumns()" [style.--map-grid-rows]="gridRows()" [style.--map-grid-color]="gridColor()" [style.--map-grid-offset-x]="gridOffsetX()"
+                [style.--map-grid-offset-y]="gridOffsetY()">
                 @if (workingMap().backgroundImageUrl) {
                 <div class="map-board-art-layer" aria-hidden="true">
                     <img class="map-board-art" [src]="workingMap().backgroundImageUrl" alt="" />
                 </div>
                 }
                 <div class="map-board-texture"></div>
+
+                @if (showGrid()) {
+                <div class="map-grid-layer" aria-hidden="true"></div>
+                }
 
                 <svg class="map-stroke-layer" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true">
                     @if (showRivers()) {
@@ -617,8 +657,9 @@
 
                 <div class="map-token-layer">
                     @for (token of workingMap().tokens; track token.id) {
-                    <button type="button" class="map-token map-token--viewer" [class.is-selected]="selectedTokenId() === token.id" [style.left.%]="token.x * 100" [style.top.%]="token.y * 100" [style.width]="tokenRenderSize(token.size)" [style.height]="tokenRenderSize(token.size)"
-                        (click)="$event.stopPropagation(); selectToken(token.id)">
+                    <button type="button" class="map-token map-token--viewer" [class.is-selected]="selectedTokenId() === token.id" [class.is-controllable]="canControlToken(token)" [style.left.%]="token.x * 100" [style.top.%]="token.y * 100" [style.width]="tokenRenderSize(token.size)"
+                        (click)="$event.stopPropagation(); selectToken(token.id)" (pointerdown)="handleTokenPointerDown($event, token.id)" (pointermove)="handleTokenPointerMove($event, token.id)" (pointerup)="handleTokenPointerUp($event, token.id)"
+                        (pointercancel)="handleTokenPointerUp($event, token.id)">
                         <img [src]="token.imageUrl" [alt]="token.name" draggable="false" />
                         @if (selectedTokenId() === token.id) {
                         <span>{{ token.name }}</span>

@@ -6,9 +6,10 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MapArtBattlemapLocale, MapArtGenerationModalComponent, MapArtGenerationOptions, MapArtLighting } from '../../components/map-art-generation-modal/map-art-generation-modal.component';
 import { TokenImageCropModalComponent } from '../../components/token-image-crop-modal/token-image-crop-modal.component';
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
-import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelFontFamily, CampaignMapLabelTone, CampaignMapPoint, CampaignMapToken, CampaignTone } from '../../models/dungeon.models';
+import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelFontFamily, CampaignMapLabelTone, CampaignMapPoint, CampaignMapToken, CampaignTone, Character, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS } from '../../models/dungeon.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
+import { SessionService } from '../../state/session.service';
 
 type MapTool = 'select' | 'draw' | 'icon' | 'terrain' | 'label' | 'token';
 type MapConfirmAction = 'clear-map' | 'delete-icon' | 'delete-token' | 'delete-label' | 'delete-map' | null;
@@ -72,14 +73,15 @@ interface MapEditorHistoryEntry {
 type MapLabelCatalog = Record<CampaignMapIconType, readonly string[]>;
 
 const TOKEN_SIZE_OPTIONS: DropdownOption[] = [
-    { value: 1, label: '1 Grid', description: 'Fits within a single map grid square.' },
-    { value: 4, label: '4 Grids', description: 'Expands the token to span four grid squares across.' },
-    { value: 8, label: '8 Grids', description: 'Large footprint for major pieces on the board.' }
+    { value: 0.5, label: 'Small', description: 'Fits within half a map grid square.' },
+    { value: 1, label: 'Medium', description: 'Fits within a single map grid square.' },
+    { value: 2, label: 'Large', description: 'Expands the token to span two grid squares across.' },
+    { value: 4, label: 'Huge', description: 'Large footprint for major pieces on the board.' }
 ];
 
-const MAP_TOKEN_GRID_COLUMNS = 25;
-const MAP_TOKEN_GRID_ROWS = 17.5;
-const MAP_TOKEN_GRID_SPANS = [1, 4, 8] as const;
+const MAP_BOARD_HEIGHT_RATIO = 0.7;
+const MAP_TOKEN_GRID_SPANS = [0.5, 1, 2, 4] as const;
+const MAP_GRID_VISIBILITY_STORAGE_KEY = 'dungeonkeep.campaign-map.show-grid';
 
 const MAP_BACKGROUND_OPTIONS: DropdownOption[] = [
     { value: 'Parchment', label: 'Parchment', description: 'Warm paper tones for hand-drawn routes and lore maps.' },
@@ -220,11 +222,13 @@ export class CampaignMapPageComponent {
     private static readonly MAX_HISTORY_ENTRIES = 80;
 
     readonly store = inject(DungeonStoreService);
+    private readonly session = inject(SessionService);
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
     private readonly destroyRef = inject(DestroyRef);
     private readonly cdr = inject(ChangeDetectorRef);
     private readonly mapBoard = viewChild<ElementRef<HTMLDivElement>>('mapBoard');
+    private readonly mapBoardShell = viewChild<ElementRef<HTMLDivElement>>('mapBoardShell');
 
     readonly campaignId = signal('');
     readonly routeMapId = signal('');
@@ -242,6 +246,7 @@ export class CampaignMapPageComponent {
     readonly iconLabelDraft = signal('');
     readonly tokenNameDraft = signal('');
     readonly tokenNoteDraft = signal('');
+    readonly tokenAssignmentDraft = signal('none');
     readonly tokenPlacementNameDraft = signal('Token');
     readonly tokenPlacementNoteDraft = signal('');
     readonly tokenPlacementImageUrl = signal('');
@@ -273,9 +278,10 @@ export class CampaignMapPageComponent {
     readonly confirmAction = signal<MapConfirmAction>(null);
     readonly isDrawing = signal(false);
     readonly isAiArtGenerating = signal(false);
-    readonly showGrid = signal(false);
+    readonly showGrid = signal(this.readStoredGridVisibility());
     readonly undoStack = signal<MapEditorHistoryEntry[]>([]);
     readonly redoStack = signal<MapEditorHistoryEntry[]>([]);
+    readonly isFullscreen = signal(false);
 
     readonly backgroundOptions = MAP_BACKGROUND_OPTIONS;
     readonly brushColorOptions = BRUSH_COLOR_OPTIONS;
@@ -315,6 +321,7 @@ export class CampaignMapPageComponent {
     ].some((value) => value.trim().length > 0));
     readonly canUndo = computed(() => this.undoStack().length > 0);
     readonly canRedo = computed(() => this.redoStack().length > 0);
+    readonly currentUserId = computed(() => this.session.currentUser()?.id ?? '');
     readonly currentMapBoard = computed(() => this.mapBoards().find((map) => map.id === this.currentMapId()) ?? this.mapBoards()[0] ?? null);
     readonly backLink = computed(() => {
         const campaign = this.selectedCampaign();
@@ -361,6 +368,67 @@ export class CampaignMapPageComponent {
         }
 
         return this.workingMap().labels.find((label) => label.id === labelId) ?? null;
+    });
+    readonly campaignCharacters = computed(() => {
+        const campaignId = this.campaignId();
+        if (!campaignId) {
+            return [];
+        }
+
+        return this.store.characters()
+            .filter((character) => this.isCharacterInCampaign(character, campaignId))
+            .sort((left, right) => left.name.localeCompare(right.name));
+    });
+    readonly tokenAssignmentOptions = computed<DropdownOption[]>(() => {
+        const options: DropdownOption[] = [
+            {
+                value: 'none',
+                label: 'Unassigned',
+                description: 'Only campaign owners can move an unassigned token.'
+            }
+        ];
+
+        const memberOptions = (this.selectedCampaign()?.members ?? [])
+            .filter((member) => member.status === 'Active' && !!member.userId)
+            .sort((left, right) => left.displayName.localeCompare(right.displayName))
+            .map((member) => ({
+                value: `user:${member.userId}`,
+                label: member.displayName,
+                description: 'This player can move the token on the active map.',
+                group: 'Players'
+            } satisfies DropdownOption));
+
+        const characterOptions = this.campaignCharacters().map((character) => ({
+            value: `character:${character.id}`,
+            label: character.name,
+            description: character.ownerDisplayName
+                ? `${character.ownerDisplayName} controls this character.`
+                : 'The owner of this character can move the token.',
+            group: 'Characters'
+        } satisfies DropdownOption));
+
+        options.push(...memberOptions, ...characterOptions);
+
+        const selectedToken = this.selectedToken();
+        if (selectedToken?.assignedCharacterId && !characterOptions.some((option) => option.value === `character:${selectedToken.assignedCharacterId}`)) {
+            options.push({
+                value: `character:${selectedToken.assignedCharacterId}`,
+                label: 'Unavailable character',
+                description: 'This token is still assigned to a character that is not currently available in the campaign.',
+                group: 'Characters'
+            });
+        }
+
+        if (selectedToken?.assignedUserId && !memberOptions.some((option) => option.value === `user:${selectedToken.assignedUserId}`)) {
+            options.push({
+                value: `user:${selectedToken.assignedUserId}`,
+                label: 'Unavailable player',
+                description: 'This token is still assigned to a player who is not currently available in the campaign.',
+                group: 'Players'
+            });
+        }
+
+        return options;
     });
     readonly activeIconOption = computed(() => this.iconOptions.find((option) => option.type === this.pendingIconType()) ?? null);
     readonly activeTerrainOption = computed(() => this.terrainOptions.find((option) => option.type === this.pendingTerrainType()) ?? null);
@@ -484,6 +552,8 @@ export class CampaignMapPageComponent {
     private draggingLabelPointerId: number | null = null;
     private draggingTokenId: string | null = null;
     private draggingTokenPointerId: number | null = null;
+    private draggingTokenMode: 'editor' | 'viewer' | null = null;
+    private draggingTokenOrigin: CampaignMapPoint | null = null;
     private pendingDragHistory: MapEditorHistoryEntry | null = null;
     private persistInFlight = false;
     private creatingRouteMap = false;
@@ -522,6 +592,10 @@ export class CampaignMapPageComponent {
 
             const signature = this.mapLibrarySignature(campaign.maps, campaign.activeMapId);
             if (campaign.id === this.lastLoadedCampaignId && signature === this.lastLoadedMapSignature && routeMapId === this.lastLoadedRouteMapId) {
+                return;
+            }
+
+            if (this.canModify() && this.hasUnsavedChanges() && !this.persistInFlight) {
                 return;
             }
 
@@ -583,6 +657,7 @@ export class CampaignMapPageComponent {
             const selectedToken = this.selectedToken();
             this.tokenNameDraft.set(selectedToken?.name ?? '');
             this.tokenNoteDraft.set(selectedToken?.note ?? '');
+            this.tokenAssignmentDraft.set(this.tokenAssignmentValue(selectedToken));
         });
 
         effect(() => {
@@ -607,6 +682,11 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        if ((event.key === 'Delete' || event.key === 'Backspace') && this.handleDeleteShortcut()) {
+            event.preventDefault();
+            return;
+        }
+
         if (!event.ctrlKey && !event.metaKey) {
             return;
         }
@@ -623,6 +703,31 @@ export class CampaignMapPageComponent {
         if (handled) {
             event.preventDefault();
         }
+    }
+
+    @HostListener('document:fullscreenchange')
+    handleFullscreenChange(): void {
+        this.isFullscreen.set(globalThis.document?.fullscreenElement === this.mapBoardShell()?.nativeElement);
+        this.cdr.detectChanges();
+    }
+
+    private handleDeleteShortcut(): boolean {
+        if (this.selectedToken()) {
+            this.requestDeleteSelectedToken();
+            return true;
+        }
+
+        if (this.selectedLabel()) {
+            this.requestDeleteSelectedLabel();
+            return true;
+        }
+
+        if (this.selectedIcon()) {
+            this.requestDeleteSelectedIcon();
+            return true;
+        }
+
+        return false;
     }
 
     selectSelectTool(): void {
@@ -735,6 +840,10 @@ export class CampaignMapPageComponent {
         this.tokenNoteDraft.set(value);
     }
 
+    updateTokenAssignmentDraft(value: string | number): void {
+        this.tokenAssignmentDraft.set(String(value));
+    }
+
     applySelectedTokenDetails(): void {
         const selectedToken = this.selectedToken();
         if (!selectedToken || !this.canModify()) {
@@ -743,14 +852,28 @@ export class CampaignMapPageComponent {
 
         const nextName = this.tokenNameDraft().trim() || 'Token';
         const nextNote = this.tokenNoteDraft().trim();
+        const nextAssignment = this.parseTokenAssignmentValue(this.tokenAssignmentDraft());
 
-        if (nextName === selectedToken.name && nextNote === selectedToken.note) {
+        if (
+            nextName === selectedToken.name
+            && nextNote === selectedToken.note
+            && nextAssignment.assignedUserId === (selectedToken.assignedUserId ?? null)
+            && nextAssignment.assignedCharacterId === (selectedToken.assignedCharacterId ?? null)
+        ) {
             return;
         }
 
         this.captureHistorySnapshot();
         this.mutateMap((map) => {
-            map.tokens = map.tokens.map((token) => token.id === selectedToken.id ? { ...token, name: nextName, note: nextNote } : token);
+            map.tokens = map.tokens.map((token) => token.id === selectedToken.id
+                ? {
+                    ...token,
+                    name: nextName,
+                    note: nextNote,
+                    assignedUserId: nextAssignment.assignedUserId,
+                    assignedCharacterId: nextAssignment.assignedCharacterId
+                }
+                : token);
         });
         this.markDirty('Token updated.');
     }
@@ -787,11 +910,132 @@ export class CampaignMapPageComponent {
     }
 
     tokenRenderSize(size: number): string {
-        return `calc((100% / ${MAP_TOKEN_GRID_COLUMNS}) * ${this.normalizeTokenGridSpan(size)})`;
+        const span = this.normalizeTokenGridSpan(size);
+        const horizontalCellPercent = 100 / this.gridColumns();
+        const verticalCellPercent = (MAP_BOARD_HEIGHT_RATIO * 100) / this.gridRows();
+
+        return `calc(min(${horizontalCellPercent}%, ${verticalCellPercent}%) * ${span})`;
+    }
+
+    gridColumns(): number {
+        return this.normalizeMapGridCount(this.workingMap().gridColumns, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS);
+    }
+
+    gridRows(): number {
+        return this.normalizeMapGridCount(this.workingMap().gridRows, DEFAULT_CAMPAIGN_MAP_GRID_ROWS);
+    }
+
+    gridColor(): string {
+        return this.normalizeMapGridColor(this.workingMap().gridColor, this.workingMap().background);
+    }
+
+    gridOffsetX(): number {
+        return this.normalizeMapGridOffset(this.workingMap().gridOffsetX, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X);
+    }
+
+    gridOffsetY(): number {
+        return this.normalizeMapGridOffset(this.workingMap().gridOffsetY, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y);
+    }
+
+    updateGridColumns(value: string): void {
+        this.updateGridCount('gridColumns', value, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS);
+    }
+
+    updateGridRows(value: string): void {
+        this.updateGridCount('gridRows', value, DEFAULT_CAMPAIGN_MAP_GRID_ROWS);
+    }
+
+    updateGridOffsetX(value: string): void {
+        this.updateGridOffset('gridOffsetX', value, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X);
+    }
+
+    updateGridOffsetY(value: string): void {
+        this.updateGridOffset('gridOffsetY', value, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y);
+    }
+
+    updateGridColor(value: string): void {
+        if (!this.canModify()) {
+            return;
+        }
+
+        const nextColor = this.normalizeMapGridColor(value, this.workingMap().background);
+        if (nextColor === this.gridColor()) {
+            return;
+        }
+
+        this.captureHistorySnapshot();
+        this.mutateMap((map) => {
+            map.gridColor = nextColor;
+        });
+        this.markDirty('Grid color updated.');
+    }
+
+    resetGridColor(): void {
+        this.updateGridColor(this.defaultGridColorForBackground(this.workingMap().background));
+    }
+
+    resetGridOffset(): void {
+        if (!this.canModify()) {
+            return;
+        }
+
+        if (this.gridOffsetX() === DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X && this.gridOffsetY() === DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y) {
+            return;
+        }
+
+        this.captureHistorySnapshot();
+        this.mutateMap((map) => {
+            map.gridOffsetX = DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X;
+            map.gridOffsetY = DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y;
+            map.tokens = this.resnapTokensToGrid(
+                map.tokens,
+                this.gridColumns(),
+                this.gridRows(),
+                DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X,
+                DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y
+            );
+        });
+        this.markDirty('Grid offset reset.');
     }
 
     toggleGridLayer(): void {
-        this.showGrid.update((showGrid) => !showGrid);
+        const nextValue = !this.showGrid();
+        this.showGrid.set(nextValue);
+        this.storeGridVisibility(nextValue);
+    }
+
+    async toggleMapFullscreen(): Promise<void> {
+        const shell = this.mapBoardShell()?.nativeElement;
+        if (!shell) {
+            return;
+        }
+
+        try {
+            if (globalThis.document?.fullscreenElement === shell) {
+                await globalThis.document.exitFullscreen();
+                return;
+            }
+
+            await shell.requestFullscreen();
+        } catch {
+            this.isFullscreen.set(false);
+        }
+    }
+
+    private readStoredGridVisibility(): boolean {
+        try {
+            return globalThis.localStorage?.getItem(MAP_GRID_VISIBILITY_STORAGE_KEY) === 'true';
+        } catch {
+            return false;
+        }
+    }
+
+    private storeGridVisibility(value: boolean): void {
+        try {
+            globalThis.localStorage?.setItem(MAP_GRID_VISIBILITY_STORAGE_KEY, String(value));
+        } catch {
+            // Ignore storage failures and keep the in-memory toggle working.
+        }
     }
 
     requestDeleteSelectedToken(): void {
@@ -889,6 +1133,7 @@ export class CampaignMapPageComponent {
         const background = this.normalizeBackground(value);
         this.mutateMap((map) => {
             map.background = background;
+            map.gridColor = this.normalizeMapGridColor(map.gridColor, background);
         });
         this.markDirty('Map background updated.');
     }
@@ -1421,13 +1666,8 @@ export class CampaignMapPageComponent {
             return 1;
         }
 
-        // Support legacy percentage-based token sizes by mapping them to the nearest grid span.
-        const normalizedValue = value > 0 && value < 1
-            ? Math.max(1, Math.round(value * MAP_TOKEN_GRID_COLUMNS))
-            : value;
-
         return MAP_TOKEN_GRID_SPANS.reduce((closest, span) => {
-            return Math.abs(span - normalizedValue) < Math.abs(closest - normalizedValue) ? span : closest;
+            return Math.abs(span - value) < Math.abs(closest - value) ? span : closest;
         }, MAP_TOKEN_GRID_SPANS[0]);
     }
 
@@ -1450,7 +1690,9 @@ export class CampaignMapPageComponent {
                 x: snappedPoint.x,
                 y: snappedPoint.y,
                 size: this.tokenPlacementSize(),
-                note: this.tokenPlacementNoteDraft().trim()
+                note: this.tokenPlacementNoteDraft().trim(),
+                assignedUserId: null,
+                assignedCharacterId: null
             };
 
             this.captureHistorySnapshot();
@@ -1789,14 +2031,22 @@ export class CampaignMapPageComponent {
     handleTokenPointerDown(event: PointerEvent, tokenId: string): void {
         this.selectToken(tokenId);
 
-        if (!this.canModify() || event.button !== 0) {
+        const token = this.workingMap().tokens.find((entry) => entry.id === tokenId) ?? null;
+        if (!token) {
+            event.stopPropagation();
+            return;
+        }
+
+        if (event.button !== 0 || (!this.canModify() && !this.canControlToken(token))) {
             event.stopPropagation();
             return;
         }
 
         this.draggingTokenId = tokenId;
         this.draggingTokenPointerId = event.pointerId;
-        this.pendingDragHistory = this.createHistoryEntry();
+        this.draggingTokenMode = this.canModify() ? 'editor' : 'viewer';
+        this.draggingTokenOrigin = { x: token.x, y: token.y };
+        this.pendingDragHistory = this.draggingTokenMode === 'editor' ? this.createHistoryEntry() : null;
         (event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId);
         event.stopPropagation();
     }
@@ -1835,12 +2085,16 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        const dragMode = this.draggingTokenMode;
+        const origin = this.draggingTokenOrigin;
         this.draggingTokenId = null;
         this.draggingTokenPointerId = null;
+        this.draggingTokenMode = null;
+        this.draggingTokenOrigin = null;
         (event.currentTarget as HTMLElement | null)?.releasePointerCapture(event.pointerId);
         event.stopPropagation();
 
-        if (this.pendingDragHistory) {
+        if (dragMode === 'editor' && this.pendingDragHistory) {
             const beforeDrag = this.historyEntrySignature(this.pendingDragHistory);
             const afterDrag = this.historyEntrySignature(this.createHistoryEntry());
             if (beforeDrag !== afterDrag) {
@@ -1850,7 +2104,17 @@ export class CampaignMapPageComponent {
         }
 
         this.pendingDragHistory = null;
-        this.markDirty('Token moved.');
+        if (dragMode === 'editor') {
+            this.markDirty('Token moved.');
+            return;
+        }
+
+        const movedToken = this.workingMap().tokens.find((entry) => entry.id === tokenId) ?? null;
+        if (!movedToken || !origin || (movedToken.x === origin.x && movedToken.y === origin.y)) {
+            return;
+        }
+
+        void this.persistControlledTokenMove(tokenId, movedToken, origin);
     }
 
     async saveMap(): Promise<void> {
@@ -2096,9 +2360,19 @@ export class CampaignMapPageComponent {
             return this.createEmptyMap();
         }
 
+        const gridColumns = this.normalizeMapGridCount(map.gridColumns, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS);
+        const gridRows = this.normalizeMapGridCount(map.gridRows, DEFAULT_CAMPAIGN_MAP_GRID_ROWS);
+        const gridOffsetX = this.normalizeMapGridOffset(map.gridOffsetX, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X);
+        const gridOffsetY = this.normalizeMapGridOffset(map.gridOffsetY, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y);
+
         return {
             background: map.background,
             backgroundImageUrl: map.backgroundImageUrl,
+            gridColumns,
+            gridRows,
+            gridColor: this.normalizeMapGridColor(map.gridColor, map.background),
+            gridOffsetX,
+            gridOffsetY,
             strokes: map.strokes.map((stroke) => ({
                 id: stroke.id,
                 color: stroke.color,
@@ -2106,7 +2380,25 @@ export class CampaignMapPageComponent {
                 points: stroke.points.map((point) => ({ ...point }))
             })),
             icons: map.icons.map((icon) => ({ ...icon })),
-            tokens: map.tokens.map((token) => ({ ...token })),
+            tokens: map.tokens.map((token) => {
+                const snappedPoint = this.snapTokenPointToGridForConfig(
+                    { x: token.x, y: token.y },
+                    token.size,
+                    gridColumns,
+                    gridRows,
+                    gridOffsetX,
+                    gridOffsetY
+                );
+
+                return {
+                    ...token,
+                    x: snappedPoint.x,
+                    y: snappedPoint.y,
+                    size: this.normalizeTokenGridSpan(token.size),
+                    assignedUserId: token.assignedUserId ?? null,
+                    assignedCharacterId: token.assignedCharacterId ?? null
+                };
+            }),
             decorations: map.decorations.map((decoration) => ({ ...decoration })),
             labels: map.labels.map((label) => ({
                 ...label,
@@ -2129,6 +2421,11 @@ export class CampaignMapPageComponent {
         return {
             background,
             backgroundImageUrl: '',
+            gridColumns: DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS,
+            gridRows: DEFAULT_CAMPAIGN_MAP_GRID_ROWS,
+            gridColor: this.defaultGridColorForBackground(background),
+            gridOffsetX: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X,
+            gridOffsetY: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y,
             strokes: [],
             icons: [],
             tokens: [],
@@ -2216,6 +2513,7 @@ export class CampaignMapPageComponent {
         this.tokenPlacementNoteDraft.set('');
         this.tokenPlacementImageUrl.set('');
         this.tokenPlacementSize.set(1);
+        this.tokenAssignmentDraft.set('none');
         this.tokenUploadFeedback.set('');
         this.tokenCropModalOpen.set(false);
         this.tokenCropSourceImageUrl.set('');
@@ -2298,6 +2596,49 @@ export class CampaignMapPageComponent {
         return this.isEditorMode() ? this.mapEditRoute(campaignId, mapId) : this.mapViewRoute(campaignId, mapId);
     }
 
+    canControlToken(token: CampaignMapToken | null): boolean {
+        if (!token) {
+            return false;
+        }
+
+        if (this.canEdit()) {
+            return true;
+        }
+
+        const currentUserId = this.currentUserId();
+        if (!currentUserId) {
+            return false;
+        }
+
+        if (token.assignedUserId === currentUserId) {
+            return true;
+        }
+
+        return !!token.assignedCharacterId && this.campaignCharacters().some((character) => character.id === token.assignedCharacterId && character.ownerUserId === currentUserId);
+    }
+
+    tokenAssignmentSummary(token: CampaignMapToken): string {
+        if (token.assignedCharacterId) {
+            const character = this.campaignCharacters().find((entry) => entry.id === token.assignedCharacterId);
+            if (character) {
+                return `${character.name} can move this token on the active map.`;
+            }
+
+            return 'Assigned to a character that is no longer available in this campaign.';
+        }
+
+        if (token.assignedUserId) {
+            const member = this.selectedCampaign()?.members?.find((entry) => entry.userId === token.assignedUserId);
+            if (member) {
+                return `${member.displayName} can move this token on the active map.`;
+            }
+
+            return 'Assigned to a player who is not currently available in this campaign.';
+        }
+
+        return 'Unassigned. Only campaign owners can move this token.';
+    }
+
     private normalizeSettlementScale(value: string | null | undefined): SettlementScale {
         switch (value?.trim().toLowerCase()) {
             case 'hamlet':
@@ -2376,6 +2717,73 @@ export class CampaignMapPageComponent {
 
     private sanitizeTokenName(fileName: string): string {
         return fileName.replace(/\.[^.]+$/, '').trim() || 'Token';
+    }
+
+    private isCharacterInCampaign(character: Character, campaignId: string): boolean {
+        const campaignIds = character.campaignIds?.length
+            ? character.campaignIds
+            : character.campaignId
+                ? [character.campaignId]
+                : [];
+
+        return campaignIds.includes(campaignId);
+    }
+
+    private tokenAssignmentValue(token: CampaignMapToken | null): string {
+        if (!token) {
+            return 'none';
+        }
+
+        if (token.assignedCharacterId) {
+            return `character:${token.assignedCharacterId}`;
+        }
+
+        if (token.assignedUserId) {
+            return `user:${token.assignedUserId}`;
+        }
+
+        return 'none';
+    }
+
+    private parseTokenAssignmentValue(value: string): { assignedUserId: string | null; assignedCharacterId: string | null } {
+        if (value.startsWith('character:')) {
+            const assignedCharacterId = value.slice('character:'.length).trim();
+            return {
+                assignedUserId: null,
+                assignedCharacterId: assignedCharacterId || null
+            };
+        }
+
+        if (value.startsWith('user:')) {
+            const assignedUserId = value.slice('user:'.length).trim();
+            return {
+                assignedUserId: assignedUserId || null,
+                assignedCharacterId: null
+            };
+        }
+
+        return {
+            assignedUserId: null,
+            assignedCharacterId: null
+        };
+    }
+
+    private async persistControlledTokenMove(tokenId: string, token: CampaignMapToken, origin: CampaignMapPoint): Promise<void> {
+        const campaign = this.selectedCampaign();
+        const mapId = this.currentMapId();
+        if (!campaign || !mapId) {
+            return;
+        }
+
+        const moved = await this.store.moveCampaignMapToken(campaign.id, mapId, tokenId, { x: token.x, y: token.y });
+        if (moved) {
+            return;
+        }
+
+        this.mutateMap((map) => {
+            map.tokens = map.tokens.map((entry) => entry.id === tokenId ? { ...entry, x: origin.x, y: origin.y } : entry);
+        });
+        this.cdr.detectChanges();
     }
 
     private terrainLabel(type: CampaignMapDecorationType): string {
@@ -2465,6 +2873,11 @@ export class CampaignMapPageComponent {
             return {
                 background,
                 backgroundImageUrl: '',
+                gridColumns: DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS,
+                gridRows: DEFAULT_CAMPAIGN_MAP_GRID_ROWS,
+                gridColor: this.defaultGridColorForBackground(background),
+                gridOffsetX: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X,
+                gridOffsetY: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y,
                 strokes: strokes.filter((stroke) => stroke.points.length > 1),
                 icons: anchors.map((anchor) => ({
                     id: anchor.id,
@@ -3149,19 +3562,44 @@ export class CampaignMapPageComponent {
     }
 
     private snapTokenPointToGrid(point: CampaignMapPoint, size: number): CampaignMapPoint {
+        return this.snapTokenPointToGridForConfig(
+            point,
+            size,
+            this.gridColumns(),
+            this.gridRows(),
+            this.gridOffsetX(),
+            this.gridOffsetY()
+        );
+    }
+
+    private snapTokenPointToGridForConfig(
+        point: CampaignMapPoint,
+        size: number,
+        gridColumns: number,
+        gridRows: number,
+        gridOffsetX: number,
+        gridOffsetY: number
+    ): CampaignMapPoint {
         const span = this.normalizeTokenGridSpan(size);
         return {
-            x: this.snapTokenAxisToGrid(point.x, span, MAP_TOKEN_GRID_COLUMNS),
-            y: this.snapTokenAxisToGrid(point.y, span, MAP_TOKEN_GRID_ROWS)
+            x: this.snapTokenAxisToGrid(point.x, span, gridColumns, gridOffsetX),
+            y: this.snapTokenAxisToGrid(point.y, span, gridRows, gridOffsetY)
         };
     }
 
-    private snapTokenAxisToGrid(value: number, span: number, gridCount: number): number {
+    private snapTokenAxisToGrid(value: number, span: number, gridCount: number, offset: number): number {
         const boundedValue = this.clampCoordinate(value);
-        const centerIndex = boundedValue * gridCount;
+        const centerIndex = (boundedValue * gridCount) - offset;
         const maxStart = Math.max(0, gridCount - span);
-        const startIndex = Math.max(0, Math.min(maxStart, Math.round(centerIndex - (span / 2))));
-        return this.clampCoordinate((startIndex + (span / 2)) / gridCount);
+        const snapIncrement = span < 1 ? span : 1;
+        const startIndex = Math.max(
+            0,
+            Math.min(
+                maxStart,
+                Math.round((centerIndex - (span / 2)) / snapIncrement) * snapIncrement
+            )
+        );
+        return this.clampCoordinate((startIndex + offset + (span / 2)) / gridCount);
     }
 
     private clampCoordinate(value: number): number {
@@ -3170,6 +3608,128 @@ export class CampaignMapPageComponent {
         }
 
         return Math.max(0, Math.min(1, value));
+    }
+
+    private updateGridCount(axis: 'gridColumns' | 'gridRows', rawValue: string, fallback: number): void {
+        if (!this.canModify()) {
+            return;
+        }
+
+        const nextValue = this.normalizeMapGridCount(Number.parseFloat(rawValue), fallback);
+        const currentValue = axis === 'gridColumns' ? this.gridColumns() : this.gridRows();
+        const nextGridColumns = axis === 'gridColumns' ? nextValue : this.gridColumns();
+        const nextGridRows = axis === 'gridRows' ? nextValue : this.gridRows();
+
+        if (nextValue === currentValue) {
+            return;
+        }
+
+        this.captureHistorySnapshot();
+        this.mutateMap((map) => {
+            map[axis] = nextValue;
+            map.tokens = this.resnapTokensToGrid(
+                map.tokens,
+                nextGridColumns,
+                nextGridRows,
+                this.gridOffsetX(),
+                this.gridOffsetY()
+            );
+        });
+        this.markDirty('Grid proportions updated.');
+    }
+
+    private updateGridOffset(axis: 'gridOffsetX' | 'gridOffsetY', rawValue: string, fallback: number): void {
+        if (!this.canModify()) {
+            return;
+        }
+
+        const nextValue = this.normalizeMapGridOffset(Number.parseFloat(rawValue), fallback);
+        const currentValue = axis === 'gridOffsetX' ? this.gridOffsetX() : this.gridOffsetY();
+        const nextGridOffsetX = axis === 'gridOffsetX' ? nextValue : this.gridOffsetX();
+        const nextGridOffsetY = axis === 'gridOffsetY' ? nextValue : this.gridOffsetY();
+
+        if (nextValue === currentValue) {
+            return;
+        }
+
+        this.captureHistorySnapshot();
+        this.mutateMap((map) => {
+            map[axis] = nextValue;
+            map.tokens = this.resnapTokensToGrid(
+                map.tokens,
+                this.gridColumns(),
+                this.gridRows(),
+                nextGridOffsetX,
+                nextGridOffsetY
+            );
+        });
+        this.markDirty('Grid offset updated.');
+    }
+
+    private resnapTokensToGrid(
+        tokens: CampaignMapToken[],
+        gridColumns: number,
+        gridRows: number,
+        gridOffsetX: number,
+        gridOffsetY: number
+    ): CampaignMapToken[] {
+        return tokens.map((token) => {
+            const snappedPoint = this.snapTokenPointToGridForConfig(
+                { x: token.x, y: token.y },
+                token.size,
+                gridColumns,
+                gridRows,
+                gridOffsetX,
+                gridOffsetY
+            );
+
+            return {
+                ...token,
+                x: snappedPoint.x,
+                y: snappedPoint.y
+            };
+        });
+    }
+
+    private normalizeMapGridCount(value: number | undefined, fallback: number): number {
+        if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+            return fallback;
+        }
+
+        return Math.max(8, Math.min(60, Math.round(value * 2) / 2));
+    }
+
+    private normalizeMapGridOffset(value: number | undefined, fallback: number): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return fallback;
+        }
+
+        return Math.max(-1, Math.min(1, Math.round(value * 20) / 20));
+    }
+
+    private normalizeMapGridColor(value: string | undefined, background: CampaignMapBackground): string {
+        const trimmed = value?.trim().toLowerCase();
+
+        if (trimmed && /^#[0-9a-f]{6}$/i.test(trimmed)) {
+            return trimmed;
+        }
+
+        return this.defaultGridColorForBackground(background);
+    }
+
+    private defaultGridColorForBackground(background: CampaignMapBackground): string {
+        switch (background) {
+            case 'Coast':
+                return '#3f667e';
+            case 'City':
+                return '#594532';
+            case 'Cavern':
+                return '#4a5f3e';
+            case 'Battlemap':
+                return '#584f43';
+            default:
+                return DEFAULT_CAMPAIGN_MAP_GRID_COLOR;
+        }
     }
 
     private mapSignature(map: CampaignMap | null | undefined): string {

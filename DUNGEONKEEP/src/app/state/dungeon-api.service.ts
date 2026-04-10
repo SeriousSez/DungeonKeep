@@ -91,6 +91,11 @@ export interface ApiCampaignWorldNoteDto {
 export interface ApiCampaignMapDto {
     background: 'Parchment' | 'Cavern' | 'Coast' | 'City' | 'Battlemap';
     backgroundImageUrl: string;
+    gridColumns: number;
+    gridRows: number;
+    gridColor: string;
+    gridOffsetX: number;
+    gridOffsetY: number;
     strokes: ApiCampaignMapStrokeDto[];
     icons: ApiCampaignMapIconDto[];
     tokens: ApiCampaignMapTokenDto[];
@@ -159,6 +164,14 @@ export interface ApiCampaignMapTokenDto {
     y: number;
     size: number;
     note: string;
+    assignedUserId?: string | null;
+    assignedCharacterId?: string | null;
+}
+
+export interface ApiMoveCampaignMapTokenRequest {
+    mapId: string;
+    x: number;
+    y: number;
 }
 
 export interface ApiCampaignMapDecorationDto {
@@ -759,6 +772,10 @@ export class DungeonApiService {
 
     async updateCampaignMap(campaignId: string, payload: ApiCampaignMapLibraryDto): Promise<ApiCampaignDto> {
         return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/map`, { library: payload }));
+    }
+
+    async moveCampaignMapToken(campaignId: string, tokenId: string, payload: ApiMoveCampaignMapTokenRequest): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/map/tokens/${tokenId}/position`, payload));
     }
 
     async generateCampaignMapArtAi(campaignId: string, payload: ApiGenerateCampaignMapArtRequest): Promise<ApiGenerateCampaignMapArtResponse> {

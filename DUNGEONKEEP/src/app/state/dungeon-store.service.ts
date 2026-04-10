@@ -1,7 +1,7 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 
 import { raceMap } from '../data/races';
-import { AbilityScores, Campaign, CampaignDraft, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecorationType, CampaignMapIconType, CampaignMapLabelStyle, CampaignMapLabelTone, CampaignThreadVisibility, CampaignWorldNoteCategory, Character, CharacterDraft, CharacterStatus, SkillProficiencies, ThreatLevel } from '../models/dungeon.models';
+import { AbilityScores, Campaign, CampaignDraft, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecorationType, CampaignMapIconType, CampaignMapLabelStyle, CampaignMapLabelTone, CampaignThreadVisibility, CampaignWorldNoteCategory, Character, CharacterDraft, CharacterStatus, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS, SkillProficiencies, ThreatLevel } from '../models/dungeon.models';
 import { ApiCampaignDto, ApiCampaignMapBoardDto, ApiCampaignMapDecorationDto, ApiCampaignMapDto, ApiCampaignMapLabelDto, ApiCampaignMapLabelStyleDto, ApiCampaignMapLibraryDto, ApiCampaignSummaryDto, ApiCampaignWorldNoteDto, ApiCharacterDto, DungeonApiService } from './dungeon-api.service';
 import { SessionService } from './session.service';
 
@@ -132,6 +132,25 @@ export class DungeonStoreService {
         } finally {
             this.loadingCampaignDetails.update((ids) => ids.filter((id) => id !== campaignId));
         }
+    }
+
+    applyCampaignRealtimeUpdate(updated: ApiCampaignDto): void {
+        const partyCharacterIds = this.characters()
+            .filter((character) => character.campaignIds?.includes(updated.id) || character.campaignId === updated.id)
+            .map((character) => character.id);
+
+        this.campaigns.update((campaigns) => {
+            const mapped = this.mapCampaignFromApi(updated, partyCharacterIds);
+            const existingIndex = campaigns.findIndex((campaign) => campaign.id === updated.id);
+
+            if (existingIndex === -1) {
+                return [mapped, ...campaigns];
+            }
+
+            const next = [...campaigns];
+            next[existingIndex] = mapped;
+            return next;
+        });
     }
 
     addCampaign(draft: CampaignDraft): void {
@@ -383,6 +402,20 @@ export class DungeonStoreService {
 
         try {
             const updated = await this.api.updateCampaignMap(campaignId, this.mapCampaignMapLibraryToApi(payload));
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async moveCampaignMapToken(campaignId: string, mapId: string, tokenId: string, position: { x: number; y: number }): Promise<boolean> {
+        try {
+            const updated = await this.api.moveCampaignMapToken(campaignId, tokenId, {
+                mapId,
+                x: position.x,
+                y: position.y
+            });
             this.replaceCampaignFromApi(campaignId, updated);
             return true;
         } catch {
@@ -841,6 +874,11 @@ export class DungeonStoreService {
         return {
             background: this.normalizeMapBackground(map?.background),
             backgroundImageUrl: this.normalizeMapBackgroundImageUrl(map?.backgroundImageUrl),
+            gridColumns: this.normalizeMapGridCount(map?.gridColumns, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS),
+            gridRows: this.normalizeMapGridCount(map?.gridRows, DEFAULT_CAMPAIGN_MAP_GRID_ROWS),
+            gridColor: this.normalizeMapGridColor(map?.gridColor, map?.background),
+            gridOffsetX: this.normalizeMapGridOffset(map?.gridOffsetX, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X),
+            gridOffsetY: this.normalizeMapGridOffset(map?.gridOffsetY, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y),
             strokes: (map?.strokes ?? []).map((stroke) => ({
                 id: stroke.id,
                 color: this.normalizeMapColor(stroke.color),
@@ -864,7 +902,9 @@ export class DungeonStoreService {
                 x: this.normalizeMapCoordinate(token.x),
                 y: this.normalizeMapCoordinate(token.y),
                 size: this.normalizeMapTokenSize(token.size),
-                note: token.note?.trim() || ''
+                note: token.note?.trim() || '',
+                assignedUserId: token.assignedUserId?.trim() || null,
+                assignedCharacterId: token.assignedCharacterId?.trim() || null
             })).filter((token) => !!token.imageUrl),
             decorations: (map?.decorations ?? []).map((decoration) => ({
                 id: decoration.id,
@@ -931,6 +971,11 @@ export class DungeonStoreService {
         return {
             background: this.normalizeMapBackground(map.background),
             backgroundImageUrl: this.normalizeMapBackgroundImageUrl(map.backgroundImageUrl),
+            gridColumns: this.normalizeMapGridCount(map.gridColumns, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS),
+            gridRows: this.normalizeMapGridCount(map.gridRows, DEFAULT_CAMPAIGN_MAP_GRID_ROWS),
+            gridColor: this.normalizeMapGridColor(map.gridColor, map.background),
+            gridOffsetX: this.normalizeMapGridOffset(map.gridOffsetX, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X),
+            gridOffsetY: this.normalizeMapGridOffset(map.gridOffsetY, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y),
             strokes: map.strokes.map((stroke) => ({
                 id: stroke.id,
                 color: this.normalizeMapColor(stroke.color),
@@ -954,7 +999,9 @@ export class DungeonStoreService {
                 x: this.normalizeMapCoordinate(token.x),
                 y: this.normalizeMapCoordinate(token.y),
                 size: this.normalizeMapTokenSize(token.size),
-                note: token.note?.trim() || ''
+                note: token.note?.trim() || '',
+                assignedUserId: token.assignedUserId?.trim() || null,
+                assignedCharacterId: token.assignedCharacterId?.trim() || null
             })).filter((token) => !!token.imageUrl),
             decorations: map.decorations.map((decoration) => ({
                 id: decoration.id,
@@ -1244,6 +1291,48 @@ export class DungeonStoreService {
 
     private normalizeMapBackgroundImageUrl(value: string | undefined): string {
         return typeof value === 'string' ? value.trim() : '';
+    }
+
+    private normalizeMapGridCount(value: number | undefined, fallback: number): number {
+        if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+            return fallback;
+        }
+
+        return Math.max(8, Math.min(60, Math.round(Number(value) * 2) / 2));
+    }
+
+    private normalizeMapGridColor(value: string | undefined, background: string | undefined): string {
+        const normalizedBackground = this.normalizeMapBackground(background);
+        const trimmed = value?.trim().toLowerCase();
+
+        if (trimmed && /^#[0-9a-f]{6}$/i.test(trimmed)) {
+            return trimmed;
+        }
+
+        return this.defaultGridColorForBackground(normalizedBackground);
+    }
+
+    private normalizeMapGridOffset(value: number | undefined, fallback: number): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return fallback;
+        }
+
+        return Math.max(-1, Math.min(1, Math.round(Number(value) * 20) / 20));
+    }
+
+    private defaultGridColorForBackground(background: CampaignMapBackground): string {
+        switch (background) {
+            case 'Coast':
+                return '#3f667e';
+            case 'City':
+                return '#594532';
+            case 'Cavern':
+                return '#4a5f3e';
+            case 'Battlemap':
+                return '#584f43';
+            default:
+                return DEFAULT_CAMPAIGN_MAP_GRID_COLOR;
+        }
     }
 
     private normalizeMapIconType(iconType: string | undefined): CampaignMapIconType {
@@ -1637,13 +1726,10 @@ export class DungeonStoreService {
             return 1;
         }
 
-        const tokenGridSpans = [1, 4, 8] as const;
-        const normalizedValue = value > 0 && value < 1
-            ? Math.max(1, Math.round(value * 25))
-            : value;
+        const tokenGridSpans = [0.5, 1, 2, 4] as const;
 
         return tokenGridSpans.reduce((closest, span) => {
-            return Math.abs(span - normalizedValue) < Math.abs(closest - normalizedValue) ? span : closest;
+            return Math.abs(span - value) < Math.abs(closest - value) ? span : closest;
         }, tokenGridSpans[0]);
     }
 

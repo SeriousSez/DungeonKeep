@@ -33,6 +33,12 @@ export type CampaignMapLabelFontFamily = 'display' | 'body';
 export type CampaignMapLabelFontStyle = 'normal' | 'italic';
 export type CampaignMapLabelTextTransform = 'none' | 'uppercase';
 
+export const DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS = 25;
+export const DEFAULT_CAMPAIGN_MAP_GRID_ROWS = 17.5;
+export const DEFAULT_CAMPAIGN_MAP_GRID_COLOR = '#745338';
+export const DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X = 0;
+export const DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y = 0;
+
 export interface SessionPrep {
     id: string;
     title: string;
@@ -91,6 +97,8 @@ export interface CampaignMapToken {
     y: number;
     size: number;
     note: string;
+    assignedUserId?: string | null;
+    assignedCharacterId?: string | null;
 }
 
 export interface CampaignMapDecoration {
@@ -142,6 +150,11 @@ export interface CampaignMapLayers {
 export interface CampaignMap {
     background: CampaignMapBackground;
     backgroundImageUrl: string;
+    gridColumns: number;
+    gridRows: number;
+    gridColor: string;
+    gridOffsetX: number;
+    gridOffsetY: number;
     strokes: CampaignMapStroke[];
     icons: CampaignMapIcon[];
     tokens: CampaignMapToken[];

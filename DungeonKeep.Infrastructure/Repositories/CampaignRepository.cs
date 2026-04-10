@@ -10,6 +10,11 @@ namespace DungeonKeep.Infrastructure.Repositories;
 
 public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampaignRepository
 {
+    private const double DefaultMapGridColumns = 25d;
+    private const double DefaultMapGridRows = 17.5d;
+    private const string DefaultMapGridColor = "#745338";
+    private const double DefaultMapGridOffsetX = 0d;
+    private const double DefaultMapGridOffsetY = 0d;
     private readonly bool campaignSchemaReady = dbContext.Database.IsSqlite() ? EnsureCampaignSchema(dbContext) : true;
 
     public async Task<IReadOnlyList<CampaignSummaryRecord>> GetAllSummariesForUserAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -610,6 +615,11 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         return new CampaignMapDto(
             NormalizeMapBackground(map.Background),
             string.IsNullOrWhiteSpace(map.BackgroundImageUrl) ? string.Empty : map.BackgroundImageUrl.Trim(),
+            NormalizeMapGridCount(map.GridColumns, DefaultMapGridColumns),
+            NormalizeMapGridCount(map.GridRows, DefaultMapGridRows),
+            NormalizeMapGridColor(map.GridColor, map.Background),
+            NormalizeMapGridOffset(map.GridOffsetX, DefaultMapGridOffsetX),
+            NormalizeMapGridOffset(map.GridOffsetY, DefaultMapGridOffsetY),
             (map.Strokes ?? [])
                 .Where(stroke => stroke.Points is { Count: > 0 })
                 .Select(stroke => new CampaignMapStrokeDto(
@@ -638,8 +648,10 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                     token.ImageUrl.Trim(),
                     ClampMapCoordinate(token.X),
                     ClampMapCoordinate(token.Y),
-                    ClampMapScale(token.Size),
-                    token.Note?.Trim() ?? string.Empty))
+                    NormalizeMapTokenSize(token.Size),
+                    token.Note?.Trim() ?? string.Empty,
+                    NormalizeMapAssignedUserId(token.AssignedUserId, token.AssignedCharacterId),
+                    NormalizeMapAssignedCharacterId(token.AssignedCharacterId)))
                 .ToList(),
             (map.Decorations ?? [])
                 .Select(decoration => new CampaignMapDecorationDto(
@@ -674,6 +686,11 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         var normalized = NormalizeCampaignMap(new CampaignMapDto(
             map.Background,
             map.BackgroundImageUrl,
+            map.GridColumns,
+            map.GridRows,
+            map.GridColor,
+            map.GridOffsetX,
+            map.GridOffsetY,
             map.Strokes,
             map.Icons,
             map.Tokens,
@@ -686,6 +703,11 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             string.IsNullOrWhiteSpace(map.Name) ? "Untitled Map" : map.Name.Trim(),
             normalized.Background,
             normalized.BackgroundImageUrl,
+            normalized.GridColumns,
+            normalized.GridRows,
+            normalized.GridColor,
+            normalized.GridOffsetX,
+            normalized.GridOffsetY,
             normalized.Strokes,
             normalized.Icons,
             normalized.Tokens,
@@ -703,7 +725,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
         if (maps.Count == 0)
         {
-            maps.Add(new CampaignMapBoardDto(Guid.NewGuid(), "Main Map", "Parchment", string.Empty, [], [], [], [], [], new CampaignMapLayersDto([], [], [])));
+            maps.Add(new CampaignMapBoardDto(Guid.NewGuid(), "Main Map", "Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], new CampaignMapLayersDto([], [], [])));
         }
 
         var activeMapId = library.ActiveMapId != Guid.Empty && maps.Any(map => map.Id == library.ActiveMapId)
@@ -711,6 +733,21 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             : maps[0].Id;
 
         return new CampaignMapLibraryDto(activeMapId, maps);
+    }
+
+    private static Guid? NormalizeMapAssignedUserId(Guid? assignedUserId, Guid? assignedCharacterId)
+    {
+        if (assignedCharacterId is Guid characterId && characterId != Guid.Empty)
+        {
+            return null;
+        }
+
+        return assignedUserId is Guid userId && userId != Guid.Empty ? userId : null;
+    }
+
+    private static Guid? NormalizeMapAssignedCharacterId(Guid? assignedCharacterId)
+    {
+        return assignedCharacterId is Guid characterId && characterId != Guid.Empty ? characterId : null;
     }
 
     private static IReadOnlyList<CampaignMapStrokeDto> NormalizeMapStrokeCollection(IReadOnlyList<CampaignMapStrokeDto>? strokes)
@@ -988,6 +1025,60 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         }
 
         return Math.Clamp(value, 0.55d, 1.8d);
+    }
+
+    private static double NormalizeMapTokenSize(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return 1d;
+        }
+
+        double[] tokenSizes = [0.5d, 1d, 2d, 4d];
+        return tokenSizes.Aggregate((closest, size) => Math.Abs(size - value) < Math.Abs(closest - value) ? size : closest);
+    }
+
+    private static double NormalizeMapGridCount(double value, double fallback)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0d)
+        {
+            return fallback;
+        }
+
+        return Math.Clamp(Math.Round(value * 2d, MidpointRounding.AwayFromZero) / 2d, 8d, 60d);
+    }
+
+    private static string NormalizeMapGridColor(string? value, string? background)
+    {
+        var trimmed = value?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(trimmed) && System.Text.RegularExpressions.Regex.IsMatch(trimmed, "^#[0-9a-f]{6}$"))
+        {
+            return trimmed;
+        }
+
+        return DefaultGridColorForBackground(background);
+    }
+
+    private static double NormalizeMapGridOffset(double value, double fallback)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return fallback;
+        }
+
+        return Math.Clamp(Math.Round(value * 20d, MidpointRounding.AwayFromZero) / 20d, -1d, 1d);
+    }
+
+    private static string DefaultGridColorForBackground(string? background)
+    {
+        return NormalizeMapBackground(background) switch
+        {
+            "Coast" => "#3f667e",
+            "City" => "#594532",
+            "Cavern" => "#4a5f3e",
+            "Battlemap" => "#584f43",
+            _ => DefaultMapGridColor
+        };
     }
 
     private static double ClampMapRotation(double value)

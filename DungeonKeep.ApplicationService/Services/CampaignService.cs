@@ -20,8 +20,13 @@ public sealed class CampaignService(
     private static readonly string[] DefaultNpcs = [];
     private static readonly string[] DefaultLoot = [];
     private static readonly CampaignWorldNoteDto[] DefaultWorldNotes = [];
-    private static readonly CampaignMapDto DefaultCampaignMap = new("Parchment", string.Empty, [], [], [], [], [], new CampaignMapLayersDto([], [], []));
-    private static readonly CampaignMapBoardDto DefaultCampaignMapBoard = new(Guid.Parse("11111111-1111-1111-1111-111111111111"), "Main Map", "Parchment", string.Empty, [], [], [], [], [], new CampaignMapLayersDto([], [], []));
+    private const double DefaultMapGridColumns = 25d;
+    private const double DefaultMapGridRows = 17.5d;
+    private const string DefaultMapGridColor = "#745338";
+    private const double DefaultMapGridOffsetX = 0d;
+    private const double DefaultMapGridOffsetY = 0d;
+    private static readonly CampaignMapDto DefaultCampaignMap = new("Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], new CampaignMapLayersDto([], [], []));
+    private static readonly CampaignMapBoardDto DefaultCampaignMapBoard = new(Guid.Parse("11111111-1111-1111-1111-111111111111"), "Main Map", "Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], new CampaignMapLayersDto([], [], []));
 
     public async Task<IReadOnlyList<CampaignSummaryDto>> GetAllSummariesAsync(Guid userId, CancellationToken cancellationToken = default)
     {
@@ -365,6 +370,11 @@ public sealed class CampaignService(
                     DefaultCampaignMapBoard.Name,
                     request.Map.Background,
                     request.Map.BackgroundImageUrl,
+                    request.Map.GridColumns,
+                    request.Map.GridRows,
+                    request.Map.GridColor,
+                    request.Map.GridOffsetX,
+                    request.Map.GridOffsetY,
                     request.Map.Strokes,
                     request.Map.Icons,
                     request.Map.Tokens,
@@ -379,6 +389,70 @@ public sealed class CampaignService(
         }
 
         var updated = await campaignRepository.UpdateMapAsync(campaignId, library, cancellationToken);
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
+    public async Task<CampaignDto?> MoveMapTokenAsync(Guid campaignId, Guid tokenId, MoveCampaignMapTokenRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        if (tokenId == Guid.Empty || request.MapId == Guid.Empty)
+        {
+            return null;
+        }
+
+        var campaign = await campaignRepository.GetByIdAsync(campaignId, cancellationToken);
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var membership = campaign.Memberships.FirstOrDefault(member => member.UserId == userId && member.Status == "Active");
+        if (membership is null)
+        {
+            throw new UnauthorizedAccessException("You are not a member of this campaign.");
+        }
+
+        var library = ParseCampaignMapLibrary(campaign.CampaignMapJson);
+        var activeMap = library.Maps.FirstOrDefault(map => map.Id == library.ActiveMapId) ?? library.Maps[0];
+        var targetMap = library.Maps.FirstOrDefault(map => map.Id == request.MapId);
+        if (targetMap is null)
+        {
+            return null;
+        }
+
+        if (membership.Role != "Owner" && targetMap.Id != activeMap.Id)
+        {
+            throw new UnauthorizedAccessException("Members can only interact with the active map.");
+        }
+
+        var token = targetMap.Tokens.FirstOrDefault(entry => entry.Id == tokenId);
+        if (token is null)
+        {
+            return null;
+        }
+
+        if (membership.Role != "Owner" && !await CanUserControlTokenAsync(token, userId, cancellationToken))
+        {
+            throw new UnauthorizedAccessException("You cannot control this token.");
+        }
+
+        var updatedMaps = library.Maps
+            .Select(map => map.Id == targetMap.Id
+                ? map with
+                {
+                    Tokens = map.Tokens
+                        .Select(entry => entry.Id == tokenId
+                            ? entry with
+                            {
+                                X = ClampMapCoordinate(request.X),
+                                Y = ClampMapCoordinate(request.Y)
+                            }
+                            : entry)
+                        .ToList()
+                }
+                : map)
+            .ToList();
+
+        var updated = await campaignRepository.UpdateMapAsync(campaignId, new CampaignMapLibraryDto(library.ActiveMapId, updatedMaps), cancellationToken);
         return updated is null ? null : MapCampaign(updated, userId);
     }
 
@@ -510,6 +584,22 @@ public sealed class CampaignService(
         return campaign;
     }
 
+    private async Task<bool> CanUserControlTokenAsync(CampaignMapTokenDto token, Guid userId, CancellationToken cancellationToken)
+    {
+        if (token.AssignedUserId == userId)
+        {
+            return true;
+        }
+
+        if (token.AssignedCharacterId is not Guid assignedCharacterId || assignedCharacterId == Guid.Empty)
+        {
+            return false;
+        }
+
+        var character = await characterRepository.GetByIdAsync(assignedCharacterId, cancellationToken);
+        return character?.OwnerUserId == userId;
+    }
+
     private static CampaignDto MapCampaign(Campaign campaign, Guid userId)
     {
         var currentUserRole = campaign.Memberships
@@ -518,6 +608,9 @@ public sealed class CampaignService(
 
         var library = ParseCampaignMapLibrary(campaign.CampaignMapJson);
         var activeMap = library.Maps.FirstOrDefault(map => map.Id == library.ActiveMapId) ?? library.Maps[0];
+        IReadOnlyList<CampaignMapBoardDto> visibleMaps = string.Equals(currentUserRole, "Owner", StringComparison.OrdinalIgnoreCase)
+            ? library.Maps
+            : [activeMap];
 
         return new CampaignDto(
             campaign.Id,
@@ -536,8 +629,8 @@ public sealed class CampaignService(
             ParseNamedItems(campaign.LootJson),
             ParseOpenThreads(campaign.OpenThreadsJson),
             ParseWorldNotes(campaign.WorldNotesJson),
-            new CampaignMapDto(activeMap.Background, activeMap.BackgroundImageUrl, activeMap.Strokes, activeMap.Icons, activeMap.Tokens, activeMap.Decorations, activeMap.Labels, activeMap.Layers),
-            library.Maps,
+            new CampaignMapDto(activeMap.Background, activeMap.BackgroundImageUrl, activeMap.GridColumns, activeMap.GridRows, activeMap.GridColor, activeMap.GridOffsetX, activeMap.GridOffsetY, activeMap.Strokes, activeMap.Icons, activeMap.Tokens, activeMap.Decorations, activeMap.Labels, activeMap.Layers),
+            visibleMaps,
             activeMap.Id,
             currentUserRole,
             campaign.Memberships
@@ -745,6 +838,11 @@ public sealed class CampaignService(
                     DefaultCampaignMapBoard.Name,
                     legacyMap.Background,
                     legacyMap.BackgroundImageUrl,
+                    legacyMap.GridColumns,
+                    legacyMap.GridRows,
+                    legacyMap.GridColor,
+                    legacyMap.GridOffsetX,
+                    legacyMap.GridOffsetY,
                     legacyMap.Strokes,
                     legacyMap.Icons,
                     legacyMap.Tokens,
@@ -847,8 +945,10 @@ public sealed class CampaignService(
                 NormalizeMapBackgroundImageUrl(token.ImageUrl),
                 ClampMapCoordinate(token.X),
                 ClampMapCoordinate(token.Y),
-                ClampMapScale(token.Size),
-                token.Note?.Trim() ?? string.Empty))
+                NormalizeMapTokenSize(token.Size),
+                token.Note?.Trim() ?? string.Empty,
+                NormalizeMapAssignedUserId(token.AssignedUserId, token.AssignedCharacterId),
+                NormalizeMapAssignedCharacterId(token.AssignedCharacterId)))
             .ToList();
 
         var normalizedDecorations = (map.Decorations ?? [])
@@ -883,6 +983,11 @@ public sealed class CampaignService(
         return new CampaignMapDto(
             NormalizeMapBackground(map.Background),
             NormalizeMapBackgroundImageUrl(map.BackgroundImageUrl),
+            NormalizeMapGridCount(map.GridColumns, DefaultMapGridColumns),
+            NormalizeMapGridCount(map.GridRows, DefaultMapGridRows),
+            NormalizeMapGridColor(map.GridColor, map.Background),
+            NormalizeMapGridOffset(map.GridOffsetX, DefaultMapGridOffsetX),
+            NormalizeMapGridOffset(map.GridOffsetY, DefaultMapGridOffsetY),
             normalizedStrokes,
             normalizedIcons,
             normalizedTokens,
@@ -896,6 +1001,11 @@ public sealed class CampaignService(
         var normalized = NormalizeCampaignMap(new CampaignMapDto(
             map.Background,
             map.BackgroundImageUrl,
+            map.GridColumns,
+            map.GridRows,
+            map.GridColor,
+            map.GridOffsetX,
+            map.GridOffsetY,
             map.Strokes,
             map.Icons,
             map.Tokens,
@@ -908,6 +1018,11 @@ public sealed class CampaignService(
             string.IsNullOrWhiteSpace(map.Name) ? "Untitled Map" : map.Name.Trim(),
             normalized.Background,
             normalized.BackgroundImageUrl,
+            normalized.GridColumns,
+            normalized.GridRows,
+            normalized.GridColor,
+            normalized.GridOffsetX,
+            normalized.GridOffsetY,
             normalized.Strokes,
             normalized.Icons,
             normalized.Tokens,
@@ -930,6 +1045,11 @@ public sealed class CampaignService(
                 DefaultCampaignMapBoard.Name,
                 DefaultCampaignMapBoard.Background,
                 DefaultCampaignMapBoard.BackgroundImageUrl,
+                DefaultCampaignMapBoard.GridColumns,
+                DefaultCampaignMapBoard.GridRows,
+                DefaultCampaignMapBoard.GridColor,
+                DefaultCampaignMapBoard.GridOffsetX,
+                DefaultCampaignMapBoard.GridOffsetY,
                 DefaultCampaignMapBoard.Strokes,
                 DefaultCampaignMapBoard.Icons,
                 DefaultCampaignMapBoard.Tokens,
@@ -943,6 +1063,21 @@ public sealed class CampaignService(
             : maps[0].Id;
 
         return new CampaignMapLibraryDto(activeMapId, maps);
+    }
+
+    private static Guid? NormalizeMapAssignedUserId(Guid? assignedUserId, Guid? assignedCharacterId)
+    {
+        if (assignedCharacterId is Guid characterId && characterId != Guid.Empty)
+        {
+            return null;
+        }
+
+        return assignedUserId is Guid userId && userId != Guid.Empty ? userId : null;
+    }
+
+    private static Guid? NormalizeMapAssignedCharacterId(Guid? assignedCharacterId)
+    {
+        return assignedCharacterId is Guid characterId && characterId != Guid.Empty ? characterId : null;
     }
 
     private static IReadOnlyList<CampaignMapPointDto> NormalizeMapPoints(IReadOnlyList<CampaignMapPointDto> points)
@@ -1006,6 +1141,49 @@ public sealed class CampaignService(
     private static string NormalizeMapBackgroundImageUrl(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+    }
+
+    private static double NormalizeMapGridCount(double value, double fallback)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0d)
+        {
+            return fallback;
+        }
+
+        return Math.Clamp(Math.Round(value * 2d, MidpointRounding.AwayFromZero) / 2d, 8d, 60d);
+    }
+
+    private static string NormalizeMapGridColor(string? value, string? background)
+    {
+        var trimmed = value?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(trimmed) && System.Text.RegularExpressions.Regex.IsMatch(trimmed, "^#[0-9a-f]{6}$"))
+        {
+            return trimmed;
+        }
+
+        return DefaultGridColorForBackground(background);
+    }
+
+    private static double NormalizeMapGridOffset(double value, double fallback)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return fallback;
+        }
+
+        return Math.Clamp(Math.Round(value * 20d, MidpointRounding.AwayFromZero) / 20d, -1d, 1d);
+    }
+
+    private static string DefaultGridColorForBackground(string? background)
+    {
+        return NormalizeMapBackground(background) switch
+        {
+            "Coast" => "#3f667e",
+            "City" => "#594532",
+            "Cavern" => "#4a5f3e",
+            "Battlemap" => "#584f43",
+            _ => DefaultMapGridColor
+        };
     }
 
     private static string NormalizeMapIconType(string? iconType)
@@ -1250,6 +1428,17 @@ public sealed class CampaignService(
         }
 
         return Math.Clamp(value, 0.55d, 1.8d);
+    }
+
+    private static double NormalizeMapTokenSize(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+        {
+            return 1d;
+        }
+
+        double[] tokenSizes = [0.5d, 1d, 2d, 4d];
+        return tokenSizes.Aggregate((closest, size) => Math.Abs(size - value) < Math.Abs(closest - value) ? size : closest);
     }
 
     private static double ClampMapRotation(double value)

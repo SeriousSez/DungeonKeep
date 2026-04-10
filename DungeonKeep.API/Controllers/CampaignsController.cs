@@ -838,7 +838,50 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         try
         {
             var updated = await campaignService.UpdateMapAsync(campaignId, request, user.Id, cancellationToken);
-            return updated is null ? NotFound("Campaign was not found.") : Ok(updated);
+            if (updated is null)
+            {
+                return NotFound("Campaign was not found.");
+            }
+
+            await campaignHub.Clients
+                .Group($"campaign-{campaignId}")
+                .SendAsync("CampaignMapUpdated", updated, cancellationToken);
+
+            return Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
+    [HttpPut("{campaignId:guid}/map/tokens/{tokenId:guid}/position")]
+    public async Task<ActionResult<CampaignDto>> MoveMapToken(Guid campaignId, Guid tokenId, [FromBody] MoveCampaignMapTokenRequest request, CancellationToken cancellationToken)
+    {
+        if (tokenId == Guid.Empty || request.MapId == Guid.Empty)
+        {
+            return BadRequest("Map id and token id are required.");
+        }
+
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var updated = await campaignService.MoveMapTokenAsync(campaignId, tokenId, request, user.Id, cancellationToken);
+            if (updated is null)
+            {
+                return NotFound("Campaign, map, or token was not found.");
+            }
+
+            await campaignHub.Clients
+                .Group($"campaign-{campaignId}")
+                .SendAsync("CampaignMapUpdated", updated, cancellationToken);
+
+            return Ok(updated);
         }
         catch (UnauthorizedAccessException)
         {
@@ -3015,6 +3058,18 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         return new CampaignMapDto(
             Background: background,
             BackgroundImageUrl: string.Empty,
+            GridColumns: 25d,
+            GridRows: 17.5d,
+            GridColor: background switch
+            {
+                "Coast" => "#3f667e",
+                "City" => "#594532",
+                "Cavern" => "#4a5f3e",
+                "Battlemap" => "#584f43",
+                _ => "#745338"
+            },
+            GridOffsetX: 0d,
+            GridOffsetY: 0d,
             Strokes: (generated.Strokes ?? []).Select(stroke => NormalizeGeneratedCampaignMapStroke(stroke, fallbackStrokeColor)).Where(stroke => stroke is not null).Cast<CampaignMapStrokeDto>().Take(16).ToList(),
             Icons: (generated.Icons ?? []).Select(NormalizeGeneratedCampaignMapIcon).Where(icon => icon is not null).Cast<CampaignMapIconDto>().Take(16).ToList(),
             Tokens: [],

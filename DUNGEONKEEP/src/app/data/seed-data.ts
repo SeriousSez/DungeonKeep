@@ -1,4 +1,4 @@
-import { Campaign, Character } from '../models/dungeon.models';
+import { Campaign, Character, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS } from '../models/dungeon.models';
 
 export const seedCampaigns: Campaign[] = [
     {
@@ -65,6 +65,11 @@ export const seedCampaigns: Campaign[] = [
         map: {
             background: 'City',
             backgroundImageUrl: '',
+            gridColumns: DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS,
+            gridRows: DEFAULT_CAMPAIGN_MAP_GRID_ROWS,
+            gridColor: DEFAULT_CAMPAIGN_MAP_GRID_COLOR,
+            gridOffsetX: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X,
+            gridOffsetY: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y,
             strokes: [
                 {
                     id: 'map-embers-stroke-1',
@@ -99,6 +104,11 @@ export const seedCampaigns: Campaign[] = [
                 name: 'Redglass Marches',
                 background: 'City',
                 backgroundImageUrl: '',
+                gridColumns: DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS,
+                gridRows: DEFAULT_CAMPAIGN_MAP_GRID_ROWS,
+                gridColor: DEFAULT_CAMPAIGN_MAP_GRID_COLOR,
+                gridOffsetX: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X,
+                gridOffsetY: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y,
                 strokes: [
                     {
                         id: 'map-embers-stroke-1',
@@ -182,6 +192,11 @@ export const seedCampaigns: Campaign[] = [
         map: {
             background: 'Coast',
             backgroundImageUrl: '',
+            gridColumns: DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS,
+            gridRows: DEFAULT_CAMPAIGN_MAP_GRID_ROWS,
+            gridColor: '#3f667e',
+            gridOffsetX: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X,
+            gridOffsetY: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y,
             strokes: [
                 {
                     id: 'map-moonwake-stroke-1',
@@ -216,6 +231,11 @@ export const seedCampaigns: Campaign[] = [
                 name: 'Moonwake Coastline',
                 background: 'Coast',
                 backgroundImageUrl: '',
+                gridColumns: DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS,
+                gridRows: DEFAULT_CAMPAIGN_MAP_GRID_ROWS,
+                gridColor: '#3f667e',
+                gridOffsetX: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X,
+                gridOffsetY: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y,
                 strokes: [
                     {
                         id: 'map-moonwake-stroke-1',
@@ -294,6 +314,11 @@ export const seedCampaigns: Campaign[] = [
         map: {
             background: 'Cavern',
             backgroundImageUrl: '',
+            gridColumns: DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS,
+            gridRows: DEFAULT_CAMPAIGN_MAP_GRID_ROWS,
+            gridColor: '#4a5f3e',
+            gridOffsetX: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X,
+            gridOffsetY: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y,
             strokes: [
                 {
                     id: 'map-wild-stroke-1',
@@ -328,6 +353,11 @@ export const seedCampaigns: Campaign[] = [
                 name: 'Rootmaze Hollow',
                 background: 'Cavern',
                 backgroundImageUrl: '',
+                gridColumns: DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS,
+                gridRows: DEFAULT_CAMPAIGN_MAP_GRID_ROWS,
+                gridColor: '#4a5f3e',
+                gridOffsetX: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X,
+                gridOffsetY: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y,
                 strokes: [
                     {
                         id: 'map-wild-stroke-1',
