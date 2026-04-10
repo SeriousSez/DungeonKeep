@@ -1,15 +1,20 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { marked } from 'marked';
 
 import { MonsterStatBlockModalComponent } from '../../components/monster-stat-block-modal/monster-stat-block-modal.component';
+import { createDefaultNpc, sanitizeNpc, touchNpc } from '../../data/campaign-npc.helpers';
+import { loadCampaignNpcDrafts, saveCampaignNpcDrafts } from '../../data/campaign-npc.storage';
 import { monsterCatalog } from '../../data/monster-catalog.generated';
 import { readStoredSessionEditorDraft } from '../../data/session-editor.storage';
+import { CampaignNpc } from '../../models/campaign-npc.models';
 import { SessionPrep, ThreatLevel } from '../../models/dungeon.models';
 import { MonsterCatalogEntry } from '../../models/monster-reference.models';
-import { SessionEditorDraft, SessionMonster } from '../../models/session-editor.models';
+import { SessionEditorDraft, SessionMonster, SessionNpc } from '../../models/session-editor.models';
+import { ApiGenerateNpcDraftResponse, DungeonApiService } from '../../state/dungeon-api.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
 interface SessionDetailFact {
@@ -40,6 +45,7 @@ interface SessionDetailView {
 }
 
 const monsterCatalogByLookupKey = new Map<string, MonsterCatalogEntry>();
+const monsterLookupStopWords = new Set(['the', 'a', 'an', 'of', 'and']);
 
 for (const entry of monsterCatalog) {
     for (const key of buildMonsterLookupKeys(entry.name)) {
@@ -59,7 +65,9 @@ for (const entry of monsterCatalog) {
 })
 export class SessionDetailPageComponent {
     private readonly store = inject(DungeonStoreService);
+    private readonly api = inject(DungeonApiService);
     private readonly route = inject(ActivatedRoute);
+    private readonly router = inject(Router);
     private readonly destroyRef = inject(DestroyRef);
     private readonly cdr = inject(ChangeDetectorRef);
 
@@ -73,10 +81,21 @@ export class SessionDetailPageComponent {
     readonly interactionMessage = signal('');
     readonly interactionError = signal('');
     readonly activeMonster = signal<MonsterCatalogEntry | null>(null);
+    readonly npcDraftVersion = signal(0);
+    readonly activeNpcCreationName = signal('');
 
     readonly campaignNpcLookup = computed(() =>
         new Set((this.currentCampaign()?.npcs ?? []).map((name) => normalizeLookupValue(name)))
     );
+    readonly storedCampaignNpcDraftMap = computed(() => {
+        this.npcDraftVersion();
+
+        return new Map(
+            (loadCampaignNpcDrafts(this.campaignId()) ?? [])
+                .map((npc) => sanitizeNpc(npc))
+                .map((npc) => [normalizeLookupValue(npc.name), npc] as const)
+        );
+    });
 
     readonly currentCampaign = computed(() =>
         this.store.campaigns().find((campaign) => campaign.id === this.campaignId()) ?? null
@@ -230,42 +249,181 @@ export class SessionDetailPageComponent {
         return this.campaignNpcLookup().has(normalizeLookupValue(name));
     }
 
-    async addNpcToCampaign(name: string): Promise<void> {
+    hasStoredCampaignNpcDraft(name: string): boolean {
+        return this.storedCampaignNpcDraftMap().has(normalizeLookupValue(name));
+    }
+
+    isCreatingCampaignNpc(name: string): boolean {
+        return normalizeLookupValue(this.activeNpcCreationName()) === normalizeLookupValue(name);
+    }
+
+    openStoredCampaignNpc(name: string): void {
+        const npc = this.storedCampaignNpcDraftMap().get(normalizeLookupValue(name));
+        if (!npc) {
+            return;
+        }
+
+        void this.router.navigate(['/campaigns', this.campaignId(), 'npcs', npc.id]);
+    }
+
+    async addNpcToCampaign(sessionNpc: SessionNpc): Promise<void> {
         const campaignId = this.campaignId();
-        const trimmedName = name.trim();
+        const trimmedName = sessionNpc.name.trim();
 
         if (!campaignId || !trimmedName || !this.canEdit()) {
             return;
         }
 
-        this.interactionMessage.set('');
-        this.interactionError.set('');
-
-        if (this.isCampaignNpc(trimmedName)) {
-            this.interactionMessage.set(`${trimmedName} is already in the campaign NPC roster.`);
-            this.cdr.detectChanges();
+        if (this.isCreatingCampaignNpc(trimmedName)) {
             return;
         }
 
-        const added = await this.store.addCampaignNpc(campaignId, trimmedName);
-        if (added) {
-            this.interactionMessage.set(`${trimmedName} added to the campaign NPC roster.`);
-        } else {
-            this.interactionError.set('Could not add that NPC to the campaign right now.');
-        }
+        this.interactionMessage.set('');
+        this.interactionError.set('');
+        this.activeNpcCreationName.set(trimmedName);
 
-        this.cdr.detectChanges();
+        try {
+            const existingDraft = this.storedCampaignNpcDraftMap().get(normalizeLookupValue(trimmedName)) ?? null;
+            if (existingDraft) {
+                await this.router.navigate(['/campaigns', campaignId, 'npcs', existingDraft.id]);
+                return;
+            }
+
+            let draft = this.buildCampaignNpcFromSessionNpc(sessionNpc);
+
+            try {
+                const generated = await this.api.generateNpcDraft(this.buildNpcGenerationRequest(sessionNpc));
+                draft = this.mergeGeneratedNpcDraft(draft, generated);
+            } catch (error) {
+                this.interactionMessage.set(`Created ${trimmedName} from the session notes. AI enrichment was unavailable, so some fields may still need editing.`);
+                this.interactionError.set('');
+                const detail = this.readApiError(error, '');
+                if (detail) {
+                    this.interactionMessage.set(`Created ${trimmedName} from the session notes. AI enrichment was unavailable: ${detail}`);
+                }
+            }
+
+            const savedNpc = this.persistCampaignNpcDraft(draft);
+            let syncMessage = '';
+
+            if (!this.isCampaignNpc(savedNpc.name)) {
+                const added = await this.store.addCampaignNpc(campaignId, savedNpc.name);
+                if (!added) {
+                    syncMessage = ' The full NPC draft was saved locally, but the campaign NPC name list could not be synced.';
+                }
+            }
+
+            if (!this.interactionMessage()) {
+                this.interactionMessage.set(`${savedNpc.name} is now a full campaign NPC.${syncMessage}`);
+            } else if (syncMessage) {
+                this.interactionMessage.set(`${this.interactionMessage()}${syncMessage}`);
+            }
+
+            await this.router.navigate(['/campaigns', campaignId, 'npcs', savedNpc.id]);
+        } finally {
+            this.activeNpcCreationName.set('');
+            this.cdr.detectChanges();
+        }
     }
 
-    resolveMonsterCatalogEntry(name: string): MonsterCatalogEntry | null {
-        for (const key of buildMonsterLookupKeys(name)) {
+    resolveMonsterCatalogEntry(monster: SessionMonster | string): MonsterCatalogEntry | null {
+        const monsterName = typeof monster === 'string' ? monster : monster.name;
+
+        for (const key of buildMonsterLookupKeys(monsterName)) {
             const match = monsterCatalogByLookupKey.get(key);
             if (match) {
                 return match;
             }
         }
 
-        return null;
+        if (typeof monster === 'string') {
+            return this.findFuzzyMonsterCatalogEntry({
+                id: 'lookup-preview',
+                name: monster,
+                type: '',
+                challengeRating: '',
+                hp: 0,
+                keyAbilities: '',
+                notes: ''
+            });
+        }
+
+        return this.findFuzzyMonsterCatalogEntry(monster);
+    }
+
+    private findFuzzyMonsterCatalogEntry(monster: SessionMonster): MonsterCatalogEntry | null {
+        const normalizedName = normalizeLookupValue(monster.name);
+        const nameTokens = tokenizeLookupValue(monster.name);
+        const normalizedType = normalizeLookupValue(monster.type);
+        const challengeRating = parseChallengeRating(monster.challengeRating);
+        let bestMatch: MonsterCatalogEntry | null = null;
+        let bestScore = 0;
+
+        for (const entry of monsterCatalog) {
+            const normalizedEntryName = normalizeLookupValue(entry.name);
+            const entryTokens = tokenizeLookupValue(entry.name);
+            let score = 0;
+
+            if (normalizedName && (normalizedEntryName.includes(normalizedName) || normalizedName.includes(normalizedEntryName))) {
+                score += 28;
+            }
+
+            const overlapCount = countSharedTokens(nameTokens, entryTokens);
+            if (overlapCount > 0) {
+                score += overlapCount * 16;
+                score += Math.round((overlapCount / Math.max(nameTokens.length, 1)) * 18);
+            }
+
+            if (normalizedType) {
+                const normalizedCreatureType = normalizeLookupValue(entry.creatureType);
+                const normalizedCreatureCategory = normalizeLookupValue(entry.creatureCategory);
+
+                if (
+                    normalizedCreatureType.includes(normalizedType)
+                    || normalizedType.includes(normalizedCreatureType)
+                    || normalizedCreatureCategory.includes(normalizedType)
+                    || normalizedType.includes(normalizedCreatureCategory)
+                ) {
+                    score += 20;
+                }
+            }
+
+            const entryChallengeRating = parseChallengeRating(entry.challengeRating);
+            if (challengeRating !== null && entryChallengeRating !== null) {
+                const difference = Math.abs(challengeRating - entryChallengeRating);
+                if (difference === 0) {
+                    score += 16;
+                } else if (difference <= 1) {
+                    score += 10;
+                } else if (difference <= 2) {
+                    score += 4;
+                }
+            }
+
+            if (monster.hp > 0 && typeof entry.hitPoints === 'number') {
+                const hpDifference = Math.abs(monster.hp - entry.hitPoints);
+                if (hpDifference <= 15) {
+                    score += 10;
+                } else if (hpDifference <= 35) {
+                    score += 5;
+                }
+            }
+
+            if (entry.sourceUrl) {
+                score += 2;
+            }
+
+            if (entry.actions.length > 0) {
+                score += 2;
+            }
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestMatch = entry;
+            }
+        }
+
+        return bestScore >= 30 ? bestMatch : null;
     }
 
     openMonsterStatBlock(monster: MonsterCatalogEntry): void {
@@ -281,7 +439,7 @@ export class SessionDetailPageComponent {
     }
 
     openMonsterStatBlockBySessionMonster(monster: SessionMonster): void {
-        const entry = this.resolveMonsterCatalogEntry(monster.name);
+        const entry = this.resolveMonsterCatalogEntry(monster);
 
         if (!entry) {
             this.interactionMessage.set('');
@@ -332,6 +490,143 @@ export class SessionDetailPageComponent {
 
         return '';
     }
+
+    private buildCampaignNpcFromSessionNpc(sessionNpc: SessionNpc): CampaignNpc {
+        const session = this.sessionDetail();
+        const baseNpc = createDefaultNpc(sessionNpc.name.trim());
+        const personalityTraits = sessionNpc.personality.trim() ? [sessionNpc.personality.trim()] : [];
+        const sessionAppearance = session?.title?.trim() ? [session.title.trim()] : [];
+        const importedNotes = [
+            sessionNpc.personality.trim() ? `Personality: ${sessionNpc.personality.trim()}` : '',
+            sessionNpc.motivation.trim() ? `Motivation: ${sessionNpc.motivation.trim()}` : '',
+            sessionNpc.voiceNotes.trim() ? `Voice notes: ${sessionNpc.voiceNotes.trim()}` : ''
+        ].filter(Boolean).join('\n');
+
+        return sanitizeNpc(touchNpc({
+            ...baseNpc,
+            title: sessionNpc.role.trim(),
+            classOrRole: sessionNpc.role.trim(),
+            location: session?.inGameLocation.trim() || '',
+            shortDescription: buildNpcShortDescription(sessionNpc),
+            personalityTraits,
+            motivations: sessionNpc.motivation.trim(),
+            voiceNotes: sessionNpc.voiceNotes.trim(),
+            notes: importedNotes,
+            tags: ['Session NPC'],
+            sessionAppearances: sessionAppearance,
+            isImportant: true
+        }));
+    }
+
+    private buildNpcGenerationRequest(sessionNpc: SessionNpc) {
+        const campaign = this.currentCampaign();
+        const session = this.sessionDetail();
+        const existingNpcNames = Array.from(new Set([
+            ...(campaign?.npcs ?? []),
+            ...Array.from(this.storedCampaignNpcDraftMap().values()).map((npc) => npc.name)
+        ]));
+
+        return {
+            campaignId: this.campaignId(),
+            nameHint: sessionNpc.name.trim(),
+            titleHint: sessionNpc.role.trim(),
+            raceHint: '',
+            roleHint: sessionNpc.role.trim(),
+            factionHint: '',
+            locationHint: session?.inGameLocation.trim() || '',
+            motivationHint: sessionNpc.motivation.trim(),
+            functionHint: 'Create a full campaign NPC record from a session prep note. Preserve provided details and fill in the missing biography, appearance, goals, secrets, and campaign hooks.',
+            toneHint: campaign?.tone ?? '',
+            campaignTieHint: [campaign?.name, campaign?.hook, campaign?.summary, session?.title, session?.shortDescription]
+                .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+                .join(' | '),
+            notesHint: [sessionNpc.personality.trim(), sessionNpc.motivation.trim(), sessionNpc.voiceNotes.trim(), session?.markdownNotes.trim() ?? '']
+                .filter(Boolean)
+                .join(' | '),
+            existingNpcNames
+        };
+    }
+
+    private mergeGeneratedNpcDraft(currentNpc: CampaignNpc, generated: ApiGenerateNpcDraftResponse): CampaignNpc {
+        return sanitizeNpc(touchNpc({
+            ...currentNpc,
+            title: currentNpc.title || generated.title,
+            race: currentNpc.race || generated.race,
+            classOrRole: currentNpc.classOrRole || generated.classOrRole,
+            faction: currentNpc.faction || generated.faction,
+            occupation: currentNpc.occupation || generated.occupation,
+            age: currentNpc.age || generated.age,
+            gender: currentNpc.gender || generated.gender,
+            alignment: currentNpc.alignment || generated.alignment,
+            currentStatus: currentNpc.currentStatus || generated.currentStatus,
+            location: currentNpc.location || generated.location,
+            shortDescription: currentNpc.shortDescription || generated.shortDescription,
+            appearance: currentNpc.appearance || generated.appearance,
+            personalityTraits: currentNpc.personalityTraits.length > 0 ? currentNpc.personalityTraits : generated.personalityTraits,
+            ideals: currentNpc.ideals.length > 0 ? currentNpc.ideals : generated.ideals,
+            bonds: currentNpc.bonds.length > 0 ? currentNpc.bonds : generated.bonds,
+            flaws: currentNpc.flaws.length > 0 ? currentNpc.flaws : generated.flaws,
+            motivations: currentNpc.motivations || generated.motivations,
+            goals: currentNpc.goals || generated.goals,
+            fears: currentNpc.fears || generated.fears,
+            secrets: currentNpc.secrets.length > 0 ? currentNpc.secrets : generated.secrets,
+            mannerisms: currentNpc.mannerisms.length > 0 ? currentNpc.mannerisms : generated.mannerisms,
+            voiceNotes: currentNpc.voiceNotes || generated.voiceNotes,
+            backstory: currentNpc.backstory || generated.backstory,
+            notes: currentNpc.notes || generated.notes,
+            combatNotes: currentNpc.combatNotes || generated.combatNotes,
+            statBlockReference: currentNpc.statBlockReference || generated.statBlockReference,
+            tags: mergeUniqueStrings(currentNpc.tags, generated.tags, ['Session NPC']),
+            questLinks: currentNpc.questLinks.length > 0 ? currentNpc.questLinks : generated.questLinks,
+            sessionAppearances: mergeUniqueStrings(currentNpc.sessionAppearances, generated.sessionAppearances),
+            inventory: currentNpc.inventory.length > 0 ? currentNpc.inventory : generated.inventory,
+            imageUrl: currentNpc.imageUrl || generated.imageUrl,
+            hostility: currentNpc.hostility !== 'Indifferent' ? currentNpc.hostility : (generated.isHostile ? 'Hostile' : 'Friendly'),
+            isAlive: generated.isAlive,
+            isImportant: currentNpc.isImportant || generated.isImportant
+        }));
+    }
+
+    private persistCampaignNpcDraft(npc: CampaignNpc): CampaignNpc {
+        const campaignId = this.campaignId();
+        const currentDrafts = (loadCampaignNpcDrafts(campaignId) ?? []).map((draft) => sanitizeNpc(draft));
+        const existingIndex = currentDrafts.findIndex((entry) => entry.id === npc.id || normalizeLookupValue(entry.name) === normalizeLookupValue(npc.name));
+        const nextDrafts = existingIndex >= 0
+            ? currentDrafts.map((entry, index) => index === existingIndex ? npc : entry)
+            : [npc, ...currentDrafts];
+
+        saveCampaignNpcDrafts(campaignId, nextDrafts);
+        this.npcDraftVersion.update((value) => value + 1);
+        return npc;
+    }
+
+    private readApiError(error: unknown, fallback: string): string {
+        if (error instanceof HttpErrorResponse) {
+            if (typeof error.error === 'string' && error.error.trim()) {
+                return error.error.trim();
+            }
+
+            if (error.error && typeof error.error === 'object') {
+                const detail = 'detail' in error.error && typeof error.error.detail === 'string' ? error.error.detail : '';
+                const title = 'title' in error.error && typeof error.error.title === 'string' ? error.error.title : '';
+                return detail || title || fallback;
+            }
+        }
+
+        return fallback;
+    }
+}
+
+function buildNpcShortDescription(sessionNpc: SessionNpc): string {
+    const fragments = [sessionNpc.role.trim(), sessionNpc.motivation.trim()]
+        .filter(Boolean)
+        .slice(0, 2);
+
+    return fragments.join(' · ');
+}
+
+function mergeUniqueStrings(...groups: string[][]): string[] {
+    return Array.from(new Set(groups.flat().map((value) => value.trim()).filter(Boolean)));
 }
 
 function buildMonsterLookupKeys(value: string): string[] {
@@ -349,4 +644,43 @@ function normalizeLookupValue(value: string): string {
         .replace(/[^a-z0-9/\s-]+/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
+}
+
+function tokenizeLookupValue(value: string): string[] {
+    return Array.from(new Set(
+        normalizeLookupValue(value)
+            .split(/[^a-z0-9/]+/)
+            .map((token) => token.trim())
+            .filter((token) => token.length >= 3 && !monsterLookupStopWords.has(token))
+    ));
+}
+
+function countSharedTokens(left: string[], right: string[]): number {
+    if (left.length === 0 || right.length === 0) {
+        return 0;
+    }
+
+    const rightSet = new Set(right);
+    return left.filter((token) => rightSet.has(token)).length;
+}
+
+function parseChallengeRating(challengeRating: string): number | null {
+    const normalized = challengeRating.trim();
+    if (!normalized) {
+        return null;
+    }
+
+    if (normalized.includes('/')) {
+        const [numeratorText, denominatorText] = normalized.split('/');
+        const numerator = Number(numeratorText);
+        const denominator = Number(denominatorText);
+        if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) {
+            return null;
+        }
+
+        return numerator / denominator;
+    }
+
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
 }

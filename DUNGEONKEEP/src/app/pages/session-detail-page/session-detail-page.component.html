@@ -170,8 +170,10 @@
                         <p><strong>Voice notes:</strong> {{ npc.voiceNotes }}</p>
                         }
                         <div class="detail-actions">
-                            @if (canEdit() && !isCampaignNpc(npc.name)) {
-                            <button type="button" class="ghost-button detail-action-button" (click)="addNpcToCampaign(npc.name)">Add to Campaign NPCs</button>
+                            @if (canEdit() && !hasStoredCampaignNpcDraft(npc.name)) {
+                            <button type="button" class="ghost-button detail-action-button" [disabled]="isCreatingCampaignNpc(npc.name)" (click)="addNpcToCampaign(npc)">{{ isCreatingCampaignNpc(npc.name) ? 'Creating...' : 'Create Campaign NPC' }}</button>
+                            } @else if (hasStoredCampaignNpcDraft(npc.name)) {
+                            <button type="button" class="ghost-button detail-action-button" (click)="openStoredCampaignNpc(npc.name)">Open Campaign NPC</button>
                             } @else if (isCampaignNpc(npc.name)) {
                             <span class="detail-inline-status">In campaign NPC roster</span>
                             }
@@ -184,7 +186,7 @@
                 @if (session.monsters.length > 0) {
                 <div class="detail-stack">
                     @for (monster of session.monsters; track monster.id) {
-                    <article class="detail-card" [class.detail-card-interactive]="resolveMonsterCatalogEntry(monster.name) !== null" [attr.tabindex]="resolveMonsterCatalogEntry(monster.name) !== null ? '0' : null" [attr.role]="resolveMonsterCatalogEntry(monster.name) !== null ? 'button' : null"
+                    <article class="detail-card" [class.detail-card-interactive]="resolveMonsterCatalogEntry(monster) !== null" [attr.tabindex]="resolveMonsterCatalogEntry(monster) !== null ? '0' : null" [attr.role]="resolveMonsterCatalogEntry(monster) !== null ? 'button' : null"
                         (click)="openMonsterStatBlockBySessionMonster(monster)" (keydown.enter)="openMonsterStatBlockBySessionMonster(monster)" (keydown.space)="openMonsterStatBlockBySessionMonster(monster); $event.preventDefault()">
                         <h3>{{ monster.name }}</h3>
                         <p class="detail-meta">{{ monster.type || 'Creature' }} · CR {{ monster.challengeRating || '?' }} · {{ monster.hp }} HP</p>
@@ -195,7 +197,7 @@
                         <p><strong>Notes:</strong> {{ monster.notes }}</p>
                         }
                         <div class="detail-actions">
-                            @if (resolveMonsterCatalogEntry(monster.name)) {
+                            @if (resolveMonsterCatalogEntry(monster)) {
                             <span class="detail-inline-status">Click to open stat block</span>
                             } @else {
                             <span class="detail-inline-status detail-inline-status-muted">No local stat block match</span>
