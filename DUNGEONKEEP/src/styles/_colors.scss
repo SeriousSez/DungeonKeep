@@ -17,6 +17,7 @@
     --color-surface: rgba(255, 250, 242, 0.84);
     --color-surface-alt: rgba(255, 252, 246, 0.92);
     --color-surface-solid: rgb(255, 252, 246);
+    --color-surface-solid-alt: rgb(247, 240, 230);
 
     --gradient-primary: linear-gradient(135deg, var(--color-primary), var(--color-primary-soft));
     --gradient-surface: linear-gradient(180deg, #f5ecdf, #e7d9c6);
@@ -25,6 +26,7 @@
     --page-bg-deep: #e7d9c6;
     --panel-bg: var(--color-surface);
     --panel-bg-solid: var(--color-surface-solid);
+    --panel-bg-solid-alt: var(--color-surface-solid-alt);
     --surface-raised: var(--color-surface-alt);
     --surface-raised-solid: var(--color-surface-solid);
     --panel-border: var(--color-border);
@@ -58,6 +60,7 @@
     --color-surface: rgba(44, 31, 23, 0.88);
     --color-surface-alt: rgba(57, 41, 30, 0.94);
     --color-surface-solid: rgb(57, 41, 30);
+    --color-surface-solid-alt: rgb(69, 50, 38);
 
     --gradient-primary: linear-gradient(135deg, var(--color-primary), var(--color-primary-soft));
     --gradient-surface: linear-gradient(180deg, #1f1611, #2b1f17);

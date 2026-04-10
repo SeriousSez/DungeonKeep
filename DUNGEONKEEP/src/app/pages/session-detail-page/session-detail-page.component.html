@@ -69,6 +69,14 @@
         </div>
     </section>
 
+    @if (sectionOptions().length > 0) {
+    <nav class="session-nav-pills" aria-label="Session section navigation">
+        @for (section of sectionOptions(); track section.id) {
+        <button type="button" class="session-nav-pill" [class.session-nav-pill-active]="selectedSection() === section.id" (click)="selectSection(section.id)">{{ section.label }}</button>
+        }
+    </nav>
+    }
+
     @if (!hasRichDraft()) {
     <section class="panel status-panel summary-panel">
         <h2>Summary-only view</h2>
@@ -89,7 +97,8 @@
     }
 
     <div class="content-grid">
-        <section class="panel notes-panel">
+        @if (isSectionVisible('session-notes')) {
+        <section id="session-notes" class="panel notes-panel section-anchor-target">
             <div class="section-header">
                 <div>
                     <p class="section-kicker">DM Prep</p>
@@ -98,9 +107,10 @@
             </div>
             <div class="markdown-preview" [innerHTML]="renderedMarkdown()"></div>
         </section>
+        }
 
-        @if (session.scenes.length > 0) {
-        <section class="panel">
+        @if (session.scenes.length > 0 && isSectionVisible('session-scenes')) {
+        <section id="session-scenes" class="panel section-anchor-target">
             <div class="section-header">
                 <div>
                     <p class="section-kicker">Flow</p>
@@ -144,8 +154,8 @@
         </section>
         }
 
-        @if (session.npcs.length > 0 || session.monsters.length > 0) {
-        <section class="panel">
+        @if ((session.npcs.length > 0 || session.monsters.length > 0) && isSectionVisible('session-cast')) {
+        <section id="session-cast" class="panel section-anchor-target">
             <div class="section-header">
                 <div>
                     <p class="section-kicker">Cast</p>
@@ -236,8 +246,8 @@
         </section>
         }
 
-        @if (session.locations.length > 0 || session.loot.length > 0) {
-        <section class="panel">
+        @if ((session.locations.length > 0 || session.loot.length > 0) && isSectionVisible('session-terrain')) {
+        <section id="session-terrain" class="panel section-anchor-target">
             <div class="section-header">
                 <div>
                     <p class="section-kicker">Terrain</p>
@@ -282,8 +292,8 @@
         </section>
         }
 
-        @if (session.skillChecks.length > 0) {
-        <section class="panel">
+        @if (session.skillChecks.length > 0 && isSectionVisible('session-skill-checks')) {
+        <section id="session-skill-checks" class="panel section-anchor-target">
             <div class="section-header">
                 <div>
                     <p class="section-kicker">Pressure Points</p>
@@ -307,8 +317,8 @@
         </section>
         }
 
-        @if (session.secrets.length > 0 || session.branchingPaths.length > 0 || session.nextSessionHooks.length > 0) {
-        <section class="panel">
+        @if ((session.secrets.length > 0 || session.branchingPaths.length > 0 || session.nextSessionHooks.length > 0) && isSectionVisible('session-loose-ends')) {
+        <section id="session-loose-ends" class="panel section-anchor-target">
             <div class="section-header">
                 <div>
                     <p class="section-kicker">Loose Ends</p>

@@ -23,6 +23,11 @@ interface SessionDetailFact {
     value: string;
 }
 
+interface SessionSectionLink {
+    id: string;
+    label: string;
+}
+
 interface SessionDetailView {
     id: string;
     title: string;
@@ -85,6 +90,7 @@ export class SessionDetailPageComponent {
     readonly activeCampaignNpc = signal<CampaignNpc | null>(null);
     readonly npcDraftVersion = signal(0);
     readonly activeNpcCreationName = signal('');
+    readonly selectedSection = signal('all');
 
     readonly campaignNpcLookup = computed(() =>
         new Set((this.currentCampaign()?.npcs ?? []).map((name) => normalizeLookupValue(name)))
@@ -132,6 +138,54 @@ export class SessionDetailPageComponent {
             { label: 'Threat Source', value: detail.threatWasSetManually ? 'Manual selection' : 'Auto derived' },
             { label: 'Source', value: this.hasRichDraft() ? 'Local draft + campaign summary' : 'Campaign summary only' }
         ];
+    });
+    readonly sectionOptions = computed<SessionSectionLink[]>(() => {
+        const detail = this.sessionDetail();
+        if (!detail) {
+            return [];
+        }
+
+        const options: SessionSectionLink[] = [
+            { id: 'all', label: 'All' },
+            { id: 'session-notes', label: 'Session Notes' }
+        ];
+
+        if (detail.scenes.length > 0) {
+            options.push({
+                id: 'session-scenes',
+                label: 'Scenes'
+            });
+        }
+
+        if (detail.npcs.length > 0 || detail.monsters.length > 0) {
+            options.push({
+                id: 'session-cast',
+                label: 'NPCs and Monsters'
+            });
+        }
+
+        if (detail.locations.length > 0 || detail.loot.length > 0) {
+            options.push({
+                id: 'session-terrain',
+                label: 'Locations and Loot'
+            });
+        }
+
+        if (detail.skillChecks.length > 0) {
+            options.push({
+                id: 'session-skill-checks',
+                label: 'Skill Checks'
+            });
+        }
+
+        if (detail.secrets.length > 0 || detail.branchingPaths.length > 0 || detail.nextSessionHooks.length > 0) {
+            options.push({
+                id: 'session-loose-ends',
+                label: 'Secrets, Branches, and Hooks'
+            });
+        }
+
+        return options;
     });
     readonly sessionDetail = computed<SessionDetailView | null>(() => {
         const summary = this.sessionSummary();
@@ -181,6 +235,7 @@ export class SessionDetailPageComponent {
                 this.interactionError.set('');
                 this.activeMonster.set(null);
                 this.activeCampaignNpc.set(null);
+                this.selectedSection.set('all');
                 this.cdr.detectChanges();
             });
 
@@ -277,6 +332,19 @@ export class SessionDetailPageComponent {
     closeCampaignNpcModal(): void {
         this.activeCampaignNpc.set(null);
         this.cdr.detectChanges();
+    }
+
+    selectSection(sectionId: string): void {
+        if (!sectionId.trim()) {
+            return;
+        }
+
+        this.selectedSection.set(sectionId);
+    }
+
+    isSectionVisible(sectionId: string): boolean {
+        const selectedSection = this.selectedSection();
+        return selectedSection === 'all' || selectedSection === sectionId;
     }
 
     openStoredCampaignNpc(name: string): void {
