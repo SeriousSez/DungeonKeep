@@ -3,7 +3,7 @@ import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } fro
 import { Subject } from 'rxjs';
 
 import { environment } from '../../environments/environment';
-import { ApiCampaignDto } from './dungeon-api.service';
+import { ApiCampaignDto, ApiCampaignMapTokenMovedDto, ApiCampaignMapVisionUpdatedDto } from './dungeon-api.service';
 import { DungeonStoreService } from './dungeon-store.service';
 import { SessionService } from './session.service';
 
@@ -14,6 +14,8 @@ export interface CampaignMapVisionResetEvent {
     summary: string;
 }
 
+export interface CampaignMapVisionUpdatedEvent extends ApiCampaignMapVisionUpdatedDto { }
+
 @Injectable({ providedIn: 'root' })
 export class CampaignRealtimeService {
     private readonly session = inject(SessionService);
@@ -22,8 +24,10 @@ export class CampaignRealtimeService {
     private joinedCampaignId = '';
     private connectionToken = '';
     private readonly _campaignMapVisionReset = new Subject<CampaignMapVisionResetEvent>();
+    private readonly _campaignMapVisionUpdated = new Subject<CampaignMapVisionUpdatedEvent>();
 
     readonly campaignMapVisionReset$ = this._campaignMapVisionReset.asObservable();
+    readonly campaignMapVisionUpdated$ = this._campaignMapVisionUpdated.asObservable();
 
     constructor() {
         effect(() => {
@@ -62,6 +66,14 @@ export class CampaignRealtimeService {
 
         connection.on('CampaignMapUpdated', (campaign: ApiCampaignDto) => {
             this.store.applyCampaignRealtimeUpdate(campaign);
+        });
+
+        connection.on('CampaignMapTokenMoved', (event: ApiCampaignMapTokenMovedDto) => {
+            this.store.applyCampaignMapTokenMoved(event);
+        });
+
+        connection.on('CampaignMapVisionUpdated', (event: ApiCampaignMapVisionUpdatedDto) => {
+            this._campaignMapVisionUpdated.next(event);
         });
 
         connection.on('CampaignMapVisionReset', (event: CampaignMapVisionResetEvent) => {

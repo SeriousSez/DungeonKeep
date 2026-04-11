@@ -8,7 +8,7 @@ import { TokenImageCropModalComponent } from '../../components/token-image-crop-
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
 import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelFontFamily, CampaignMapLabelTone, CampaignMapPoint, CampaignMapStroke, CampaignMapToken, CampaignMapWall, CampaignTone, Character, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS } from '../../models/dungeon.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
-import { CampaignRealtimeService } from '../../state/campaign-realtime.service';
+import { CampaignMapVisionUpdatedEvent, CampaignRealtimeService } from '../../state/campaign-realtime.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 import { SessionService } from '../../state/session.service';
 
@@ -25,6 +25,7 @@ interface MapVisionMemoryEntryState {
     polygons: CampaignMapPoint[][];
     lastOrigin: CampaignMapPoint | null;
     lastPolygonHash: string;
+    revision: number;
 }
 
 interface PendingMapVisionMemorySnapshot {
@@ -889,6 +890,12 @@ export class CampaignMapPageComponent {
                 }
 
                 this.cdr.detectChanges();
+            });
+
+        this.campaignRealtime.campaignMapVisionUpdated$
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe((event) => {
+                this.applyRealtimeVisionMemoryUpdate(event);
             });
 
         this.route.paramMap
@@ -2488,7 +2495,8 @@ export class CampaignMapPageComponent {
                 size: this.tokenPlacementSize(),
                 note: this.tokenPlacementNoteDraft().trim(),
                 assignedUserId: this.tokenPlacementAssignedUserId(),
-                assignedCharacterId: this.tokenPlacementAssignedCharacterId()
+                assignedCharacterId: this.tokenPlacementAssignedCharacterId(),
+                moveRevision: 0
             };
 
             this.captureHistorySnapshot();
@@ -4005,13 +4013,18 @@ export class CampaignMapPageComponent {
                     return token;
                 }
 
+                if (realtimeToken.moveRevision < (token.moveRevision ?? 0)) {
+                    return token;
+                }
+
                 return {
                     ...token,
                     x: realtimeToken.x,
                     y: realtimeToken.y,
                     size: realtimeToken.size,
                     assignedUserId: realtimeToken.assignedUserId ?? null,
-                    assignedCharacterId: realtimeToken.assignedCharacterId ?? null
+                    assignedCharacterId: realtimeToken.assignedCharacterId ?? null,
+                    moveRevision: realtimeToken.moveRevision
                 };
             }),
             ...normalizedRealtimeTokens
@@ -4019,7 +4032,8 @@ export class CampaignMapPageComponent {
                 .map((token) => ({
                     ...token,
                     assignedUserId: token.assignedUserId ?? null,
-                    assignedCharacterId: token.assignedCharacterId ?? null
+                    assignedCharacterId: token.assignedCharacterId ?? null,
+                    moveRevision: Number.isFinite(token.moveRevision) ? Math.max(0, Math.trunc(token.moveRevision)) : 0
                 }))
         ];
     }
@@ -4063,7 +4077,8 @@ export class CampaignMapPageComponent {
                 y: this.clampCoordinate(token.y),
                 size: this.normalizeTokenGridSpan(token.size),
                 assignedUserId: token.assignedUserId ?? null,
-                assignedCharacterId: token.assignedCharacterId ?? null
+                assignedCharacterId: token.assignedCharacterId ?? null,
+                moveRevision: Number.isFinite(token.moveRevision) ? Math.max(0, Math.trunc(token.moveRevision)) : 0
             })),
             decorations: map.decorations.map((decoration) => ({ ...decoration })),
             labels: map.labels.map((label) => ({
@@ -4086,7 +4101,8 @@ export class CampaignMapPageComponent {
                     points: polygon.points.map((point) => ({ ...point }))
                 })),
                 lastOrigin: entry.lastOrigin ? { ...entry.lastOrigin } : null,
-                lastPolygonHash: entry.lastPolygonHash
+                lastPolygonHash: entry.lastPolygonHash,
+                revision: Number.isFinite(entry.revision) ? Math.max(0, Math.trunc(entry.revision)) : 0
             }))
         };
     }
@@ -4792,7 +4808,8 @@ export class CampaignMapPageComponent {
                     key: existing?.key ?? this.visionMemoryScopeKey(token),
                     polygons,
                     lastOrigin: origin,
-                    lastPolygonHash: polygonHash
+                    lastPolygonHash: polygonHash,
+                    revision: Math.max(0, existing?.revision ?? 0) + 1
                 }
             };
         });
@@ -4837,7 +4854,7 @@ export class CampaignMapPageComponent {
     }
 
     private shouldPersistVisionMemory(token: CampaignMapToken): boolean {
-        return !!this.campaignId() && !!this.currentMapId() && !this.canEdit() && this.canControlToken(token);
+        return !!this.campaignId() && !!this.currentMapId() && (this.canEdit() || this.canControlToken(token));
     }
 
     private hydrateVisionExplorationFromMaps(maps: CampaignMapBoard[]): void {
@@ -4860,7 +4877,8 @@ export class CampaignMapPageComponent {
                     key: entry.key,
                     polygons: entry.polygons.map((polygon) => polygon.points.map((point) => ({ ...point }))),
                     lastOrigin: entry.lastOrigin ? { ...entry.lastOrigin } : null,
-                    lastPolygonHash: entry.lastPolygonHash
+                    lastPolygonHash: entry.lastPolygonHash,
+                    revision: Number.isFinite(entry.revision) ? Math.max(0, Math.trunc(entry.revision)) : 0
                 } satisfies MapVisionMemoryEntryState
             ])
         ));
@@ -4881,7 +4899,8 @@ export class CampaignMapPageComponent {
                 key: localEntry.key,
                 polygons: localEntry.polygons.map((polygon) => polygon.map((point) => ({ ...point }))),
                 lastOrigin: localEntry.lastOrigin ? { ...localEntry.lastOrigin } : null,
-                lastPolygonHash: localEntry.lastPolygonHash
+                lastPolygonHash: localEntry.lastPolygonHash,
+                revision: localEntry.revision
             } satisfies MapVisionMemoryEntryState;
         }
 
@@ -4895,7 +4914,8 @@ export class CampaignMapPageComponent {
                 key: localEntry.key,
                 polygons: localEntry.polygons.map((polygon) => polygon.map((point) => ({ ...point }))),
                 lastOrigin: localEntry.lastOrigin ? { ...localEntry.lastOrigin } : null,
-                lastPolygonHash: localEntry.lastPolygonHash
+                lastPolygonHash: localEntry.lastPolygonHash,
+                revision: localEntry.revision
             } satisfies MapVisionMemoryEntryState;
         }
 
@@ -4928,7 +4948,7 @@ export class CampaignMapPageComponent {
             return left === right;
         }
 
-        if (left.key !== right.key || left.lastPolygonHash !== right.lastPolygonHash) {
+        if (left.key !== right.key || left.lastPolygonHash !== right.lastPolygonHash || left.revision !== right.revision) {
             return false;
         }
 
@@ -4971,6 +4991,10 @@ export class CampaignMapPageComponent {
 
         if (!backendEntry) {
             return true;
+        }
+
+        if (localEntry.revision !== backendEntry.revision) {
+            return localEntry.revision > backendEntry.revision;
         }
 
         if (localEntry.polygons.length !== backendEntry.polygons.length) {
@@ -5038,7 +5062,8 @@ export class CampaignMapPageComponent {
                             key: entry.key,
                             polygons: entry.polygons.map((polygon) => polygon.map((point) => ({ ...point }))),
                             lastOrigin: entry.lastOrigin ? { ...entry.lastOrigin } : null,
-                            lastPolygonHash: entry.lastPolygonHash
+                            lastPolygonHash: entry.lastPolygonHash,
+                            revision: entry.revision
                         } satisfies MapVisionMemoryEntryState
                     ] as const;
                 })
@@ -5114,7 +5139,10 @@ export class CampaignMapPageComponent {
                             key: entry.key.trim(),
                             polygons,
                             lastOrigin,
-                            lastPolygonHash: typeof entry.lastPolygonHash === 'string' ? entry.lastPolygonHash : ''
+                            lastPolygonHash: typeof entry.lastPolygonHash === 'string' ? entry.lastPolygonHash : '',
+                            revision: typeof (entry as { revision?: unknown }).revision === 'number' && Number.isFinite((entry as { revision?: number }).revision)
+                                ? Math.max(0, Math.trunc((entry as { revision?: number }).revision ?? 0))
+                                : 0
                         } satisfies MapVisionMemoryEntryState
                     ]];
                 })
@@ -5184,7 +5212,8 @@ export class CampaignMapPageComponent {
                         points: polygon.map((point) => ({ ...point }))
                     })),
                     lastOrigin: entry.lastOrigin ? { ...entry.lastOrigin } : null,
-                    lastPolygonHash: entry.lastPolygonHash
+                    lastPolygonHash: entry.lastPolygonHash,
+                    revision: entry.revision
                 });
 
                 this.inFlightVisionMemoryPersistenceKeys.delete(compoundKey);
@@ -5481,8 +5510,42 @@ export class CampaignMapPageComponent {
                 points: entryPolygon.map((point) => ({ ...point }))
             })),
             lastOrigin: entry.lastOrigin ? { ...entry.lastOrigin } : null,
-            lastPolygonHash: entry.lastPolygonHash
+            lastPolygonHash: entry.lastPolygonHash,
+            revision: entry.revision
         };
+    }
+
+    private applyRealtimeVisionMemoryUpdate(event: CampaignMapVisionUpdatedEvent): void {
+        if (event.campaignId !== this.campaignId()) {
+            return;
+        }
+
+        const compoundKey = `${event.mapId}::${event.memory.key}`;
+        const currentEntry = this.visionExploration()[compoundKey];
+        const incomingEntry: MapVisionMemoryEntryState = {
+            key: event.memory.key,
+            polygons: event.memory.polygons.map((polygon) => polygon.points.map((point) => ({ ...point }))),
+            lastOrigin: event.memory.lastOrigin ? { ...event.memory.lastOrigin } : null,
+            lastPolygonHash: event.memory.lastPolygonHash,
+            revision: Number.isFinite(event.memory.revision) ? Math.max(0, Math.trunc(event.memory.revision)) : 0
+        };
+
+        if ((currentEntry?.revision ?? 0) > incomingEntry.revision) {
+            return;
+        }
+
+        this.visionExploration.update((memory) => ({
+            ...memory,
+            [compoundKey]: incomingEntry
+        }));
+
+        if ((currentEntry?.revision ?? 0) <= incomingEntry.revision) {
+            this.pendingVisionMemoryPersistenceKeys.delete(compoundKey);
+            this.inFlightVisionMemoryPersistenceKeys.delete(compoundKey);
+            this.syncPendingVisionMemorySnapshot();
+        }
+
+        this.cdr.detectChanges();
     }
 
     private updateSelectedWallFlags(wallId: string, flags: Partial<Pick<CampaignMapWall, 'blocksVision' | 'blocksMovement'>>, message: string): void {

@@ -163,7 +163,15 @@ public sealed record CampaignMapTokenDto(
     double Size,
     string Note,
     Guid? AssignedUserId,
-    Guid? AssignedCharacterId
+    Guid? AssignedCharacterId,
+    long MoveRevision
+);
+
+public sealed record CampaignMapTokenMovedDto(
+    Guid CampaignId,
+    Guid MapId,
+    Guid InitiatedByUserId,
+    CampaignMapTokenDto Token
 );
 
 public sealed record CampaignMapDecorationDto(
@@ -216,7 +224,20 @@ public sealed record CampaignMapVisionMemoryDto(
     string Key,
     IReadOnlyList<CampaignMapVisionPolygonDto> Polygons,
     CampaignMapPointDto? LastOrigin,
-    string LastPolygonHash
+    string LastPolygonHash,
+    long Revision
+);
+
+public sealed record CampaignMapVisionUpdatedDto(
+    Guid CampaignId,
+    Guid MapId,
+    Guid InitiatedByUserId,
+    CampaignMapVisionMemoryDto Memory
+);
+
+public sealed record CampaignMapTokenMoveResultDto(
+    CampaignMapTokenMovedDto TokenMoved,
+    CampaignMapVisionUpdatedDto? VisionUpdated
 );
 
 public sealed record CampaignMapVisionPolygonDto(
@@ -267,7 +288,7 @@ public sealed record CreateCampaignWorldNoteRequest(string Title, string Categor
 public sealed record UpdateCampaignWorldNoteRequest(string Title, string Category, string Content);
 public sealed record DeleteCampaignWorldNoteRequest(Guid NoteId);
 public sealed record UpdateCampaignMapRequest(CampaignMapDto? Map, CampaignMapLibraryDto? Library);
-public sealed record MoveCampaignMapTokenRequest(Guid MapId, double X, double Y, CampaignMapVisionMemoryDto? VisionMemory);
+public sealed record MoveCampaignMapTokenRequest(Guid MapId, double X, double Y, long MoveRevision, CampaignMapVisionMemoryDto? VisionMemory);
 public sealed record UpdateCampaignMapVisionRequest(Guid MapId, CampaignMapVisionMemoryDto Memory);
 
 public sealed record CampaignInvitationEmail(

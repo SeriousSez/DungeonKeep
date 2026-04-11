@@ -1,13 +1,14 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 
 import { raceMap } from '../data/races';
-import { AbilityScores, Campaign, CampaignDraft, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecorationType, CampaignMapIconType, CampaignMapLabelStyle, CampaignMapLabelTone, CampaignThreadVisibility, CampaignWorldNoteCategory, Character, CharacterDraft, CharacterStatus, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS, SkillProficiencies, ThreatLevel } from '../models/dungeon.models';
-import { ApiCampaignDto, ApiCampaignMapBoardDto, ApiCampaignMapDecorationDto, ApiCampaignMapDto, ApiCampaignMapLabelDto, ApiCampaignMapLabelStyleDto, ApiCampaignMapLibraryDto, ApiCampaignSummaryDto, ApiCampaignWorldNoteDto, ApiCharacterDto, DungeonApiService } from './dungeon-api.service';
+import { AbilityScores, Campaign, CampaignDraft, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecorationType, CampaignMapIconType, CampaignMapLabelStyle, CampaignMapLabelTone, CampaignMapToken, CampaignThreadVisibility, CampaignWorldNoteCategory, Character, CharacterDraft, CharacterStatus, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS, SkillProficiencies, ThreatLevel } from '../models/dungeon.models';
+import { ApiCampaignDto, ApiCampaignMapBoardDto, ApiCampaignMapDecorationDto, ApiCampaignMapDto, ApiCampaignMapLabelDto, ApiCampaignMapLabelStyleDto, ApiCampaignMapLibraryDto, ApiCampaignMapTokenDto, ApiCampaignMapTokenMovedDto, ApiCampaignSummaryDto, ApiCampaignWorldNoteDto, ApiCharacterDto, DungeonApiService } from './dungeon-api.service';
 import { SessionService } from './session.service';
 
 @Injectable({ providedIn: 'root' })
 export class DungeonStoreService {
     private readonly latestTokenMoveRequestSequence = new Map<string, number>();
+    private readonly latestKnownTokenMoveRevision = new Map<string, number>();
 
     async deleteCharacter(characterId: string): Promise<void> {
         try {
@@ -158,6 +159,7 @@ export class DungeonStoreService {
 
         this.campaigns.update((campaigns) => {
             const mapped = this.mapCampaignFromApi(updated, partyCharacterIds);
+            this.syncKnownTokenMoveRevisions(mapped);
             const existingIndex = campaigns.findIndex((campaign) => campaign.id === updated.id);
 
             if (existingIndex === -1) {
@@ -168,6 +170,40 @@ export class DungeonStoreService {
             next[existingIndex] = mapped;
             return next;
         });
+    }
+
+    applyCampaignMapTokenMoved(event: ApiCampaignMapTokenMovedDto): void {
+        const mappedToken = this.mapCampaignTokenFromApi(event.token);
+        const requestKey = this.tokenMoveRequestKey(event.campaignId, event.mapId, mappedToken.id);
+        this.latestKnownTokenMoveRevision.set(
+            requestKey,
+            Math.max(this.latestKnownTokenMoveRevision.get(requestKey) ?? 0, mappedToken.moveRevision)
+        );
+
+        this.campaigns.update((campaigns) => campaigns.map((campaign) => {
+            if (campaign.id !== event.campaignId) {
+                return campaign;
+            }
+
+            const maps = campaign.maps.map((map) => map.id === event.mapId
+                ? {
+                    ...map,
+                    tokens: this.upsertMapToken(map.tokens, mappedToken)
+                }
+                : map);
+            const shouldUpdatePrimaryMap = campaign.maps.length === 0 || campaign.activeMapId === event.mapId;
+
+            return {
+                ...campaign,
+                map: shouldUpdatePrimaryMap
+                    ? {
+                        ...campaign.map,
+                        tokens: this.upsertMapToken(campaign.map.tokens, mappedToken)
+                    }
+                    : campaign.map,
+                maps
+            };
+        }));
     }
 
     addCampaign(draft: CampaignDraft): void {
@@ -437,6 +473,7 @@ export class DungeonStoreService {
     ): Promise<boolean> {
         const requestKey = this.tokenMoveRequestKey(campaignId, mapId, tokenId);
         const requestSequence = (this.latestTokenMoveRequestSequence.get(requestKey) ?? 0) + 1;
+        const moveRevision = this.nextTokenMoveRevision(campaignId, mapId, tokenId);
         this.latestTokenMoveRequestSequence.set(requestKey, requestSequence);
 
         try {
@@ -444,6 +481,7 @@ export class DungeonStoreService {
                 mapId,
                 x: position.x,
                 y: position.y,
+                moveRevision,
                 visionMemory: visionMemory
                     ? {
                         key: visionMemory.key.trim(),
@@ -459,7 +497,8 @@ export class DungeonStoreService {
                                 y: this.normalizeMapCoordinate(visionMemory.lastOrigin.y)
                             }
                             : null,
-                        lastPolygonHash: visionMemory.lastPolygonHash
+                        lastPolygonHash: visionMemory.lastPolygonHash,
+                        revision: this.normalizeMapVisionRevision(visionMemory.revision)
                     }
                     : null
             });
@@ -468,7 +507,7 @@ export class DungeonStoreService {
                 return true;
             }
 
-            this.replaceCampaignFromApi(campaignId, updated);
+            this.applyCampaignMapTokenMoved(updated);
             return true;
         } catch {
             return !this.isLatestTokenMoveRequest(requestKey, requestSequence);
@@ -510,7 +549,8 @@ export class DungeonStoreService {
                             y: this.normalizeMapCoordinate(memory.lastOrigin.y)
                         }
                         : null,
-                    lastPolygonHash: memory.lastPolygonHash
+                    lastPolygonHash: memory.lastPolygonHash,
+                    revision: this.normalizeMapVisionRevision(memory.revision)
                 }
             });
             return true;
@@ -952,11 +992,15 @@ export class DungeonStoreService {
 
     private replaceCampaignFromApi(campaignId: string, updated: ApiCampaignDto): void {
         this.campaigns.update((campaigns) =>
-            campaigns.map((campaign) =>
-                campaign.id === campaignId
-                    ? this.mapCampaignFromApi(updated, campaign.partyCharacterIds)
-                    : campaign
-            )
+            campaigns.map((campaign) => {
+                if (campaign.id !== campaignId) {
+                    return campaign;
+                }
+
+                const mapped = this.mapCampaignFromApi(updated, campaign.partyCharacterIds);
+                this.syncKnownTokenMoveRevisions(mapped);
+                return mapped;
+            })
         );
     }
 
@@ -964,8 +1008,73 @@ export class DungeonStoreService {
         return `${campaignId}:${mapId}:${tokenId}`;
     }
 
+    private nextTokenMoveRevision(campaignId: string, mapId: string, tokenId: string): number {
+        const requestKey = this.tokenMoveRequestKey(campaignId, mapId, tokenId);
+        const knownRevision = Math.max(
+            this.findTokenMoveRevision(campaignId, mapId, tokenId),
+            this.latestKnownTokenMoveRevision.get(requestKey) ?? 0
+        );
+        const nextRevision = knownRevision + 1;
+        this.latestKnownTokenMoveRevision.set(requestKey, nextRevision);
+        return nextRevision;
+    }
+
+    private findTokenMoveRevision(campaignId: string, mapId: string, tokenId: string): number {
+        const campaign = this.campaigns().find((entry) => entry.id === campaignId);
+        if (!campaign) {
+            return 0;
+        }
+
+        const map = campaign.maps.find((entry) => entry.id === mapId);
+        const token = (map?.tokens ?? campaign.map.tokens).find((entry) => entry.id === tokenId);
+        return token?.moveRevision ?? 0;
+    }
+
     private isLatestTokenMoveRequest(requestKey: string, requestSequence: number): boolean {
         return this.latestTokenMoveRequestSequence.get(requestKey) === requestSequence;
+    }
+
+    private mapCampaignTokenFromApi(token: ApiCampaignMapTokenDto): CampaignMapToken {
+        return {
+            id: token.id,
+            name: token.name?.trim() || 'Token',
+            imageUrl: this.normalizeMapBackgroundImageUrl(token.imageUrl),
+            x: this.normalizeMapCoordinate(token.x),
+            y: this.normalizeMapCoordinate(token.y),
+            size: this.normalizeMapTokenSize(token.size),
+            note: token.note?.trim() || '',
+            assignedUserId: token.assignedUserId?.trim() || null,
+            assignedCharacterId: token.assignedCharacterId?.trim() || null,
+            moveRevision: this.normalizeMapTokenMoveRevision(token.moveRevision)
+        };
+    }
+
+    private upsertMapToken(tokens: CampaignMapToken[], updatedToken: CampaignMapToken): CampaignMapToken[] {
+        const existingIndex = tokens.findIndex((token) => token.id === updatedToken.id);
+        if (existingIndex === -1) {
+            return [...tokens, updatedToken];
+        }
+
+        const existingToken = tokens[existingIndex];
+        if ((existingToken.moveRevision ?? 0) > updatedToken.moveRevision) {
+            return tokens;
+        }
+
+        const next = [...tokens];
+        next[existingIndex] = updatedToken;
+        return next;
+    }
+
+    private syncKnownTokenMoveRevisions(campaign: Campaign): void {
+        for (const map of campaign.maps) {
+            for (const token of map.tokens) {
+                const requestKey = this.tokenMoveRequestKey(campaign.id, map.id, token.id);
+                this.latestKnownTokenMoveRevision.set(
+                    requestKey,
+                    Math.max(this.latestKnownTokenMoveRevision.get(requestKey) ?? 0, token.moveRevision ?? 0)
+                );
+            }
+        }
     }
 
     private createEmptyCampaignMapBoard(): CampaignMapBoard {
@@ -1021,7 +1130,8 @@ export class DungeonStoreService {
                 size: this.normalizeMapTokenSize(token.size),
                 note: token.note?.trim() || '',
                 assignedUserId: token.assignedUserId?.trim() || null,
-                assignedCharacterId: token.assignedCharacterId?.trim() || null
+                assignedCharacterId: token.assignedCharacterId?.trim() || null,
+                moveRevision: this.normalizeMapTokenMoveRevision(token.moveRevision)
             })).filter((token) => !!token.imageUrl),
             decorations: (map?.decorations ?? []).map((decoration) => ({
                 id: decoration.id,
@@ -1087,7 +1197,8 @@ export class DungeonStoreService {
                         y: this.normalizeMapCoordinate(entry.lastOrigin.y)
                     }
                     : null,
-                lastPolygonHash: entry.lastPolygonHash?.trim() || ''
+                lastPolygonHash: entry.lastPolygonHash?.trim() || '',
+                revision: this.normalizeMapVisionRevision(entry.revision)
             })).filter((entry) => !!entry.key && entry.polygons.length > 0)
         };
     }
@@ -1145,7 +1256,8 @@ export class DungeonStoreService {
                 size: this.normalizeMapTokenSize(token.size),
                 note: token.note?.trim() || '',
                 assignedUserId: token.assignedUserId?.trim() || null,
-                assignedCharacterId: token.assignedCharacterId?.trim() || null
+                assignedCharacterId: token.assignedCharacterId?.trim() || null,
+                moveRevision: this.normalizeMapTokenMoveRevision(token.moveRevision)
             })).filter((token) => !!token.imageUrl),
             decorations: map.decorations.map((decoration) => ({
                 id: decoration.id,
@@ -1211,7 +1323,8 @@ export class DungeonStoreService {
                         y: this.normalizeMapCoordinate(entry.lastOrigin.y)
                     }
                     : null,
-                lastPolygonHash: entry.lastPolygonHash
+                lastPolygonHash: entry.lastPolygonHash,
+                revision: this.normalizeMapVisionRevision(entry.revision)
             })).filter((entry) => !!entry.key && entry.polygons.length > 0)
         };
     }
@@ -1893,6 +2006,22 @@ export class DungeonStoreService {
         }, tokenGridSpans[0]);
     }
 
+    private normalizeMapTokenMoveRevision(value: number | undefined): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return 0;
+        }
+
+        return Math.max(0, Math.trunc(value));
+    }
+
+    private normalizeMapVisionRevision(value: number | undefined): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return 0;
+        }
+
+        return Math.max(0, Math.trunc(value));
+    }
+
     private normalizeMapRotation(value: number | undefined): number {
         if (typeof value !== 'number' || !Number.isFinite(value)) {
             return 0;
@@ -2207,6 +2336,8 @@ export class DungeonStoreService {
     }
 
     private clearState(): void {
+        this.latestTokenMoveRequestSequence.clear();
+        this.latestKnownTokenMoveRevision.clear();
         this.campaigns.set([]);
         this.characters.set([]);
         this.selectedCampaignId.set('');

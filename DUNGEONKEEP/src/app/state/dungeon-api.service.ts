@@ -164,6 +164,14 @@ export interface ApiCampaignMapVisionMemoryDto {
     polygons: ApiCampaignMapVisionPolygonDto[];
     lastOrigin: ApiCampaignMapPointDto | null;
     lastPolygonHash: string;
+    revision: number;
+}
+
+export interface ApiCampaignMapVisionUpdatedDto {
+    campaignId: string;
+    mapId: string;
+    initiatedByUserId: string;
+    memory: ApiCampaignMapVisionMemoryDto;
 }
 
 export interface ApiCampaignMapIconDto {
@@ -184,12 +192,21 @@ export interface ApiCampaignMapTokenDto {
     note: string;
     assignedUserId?: string | null;
     assignedCharacterId?: string | null;
+    moveRevision: number;
+}
+
+export interface ApiCampaignMapTokenMovedDto {
+    campaignId: string;
+    mapId: string;
+    initiatedByUserId: string;
+    token: ApiCampaignMapTokenDto;
 }
 
 export interface ApiMoveCampaignMapTokenRequest {
     mapId: string;
     x: number;
     y: number;
+    moveRevision: number;
     visionMemory?: ApiCampaignMapVisionMemoryDto | null;
 }
 
@@ -816,8 +833,8 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/map`, { library: payload }));
     }
 
-    async moveCampaignMapToken(campaignId: string, tokenId: string, payload: ApiMoveCampaignMapTokenRequest): Promise<ApiCampaignDto> {
-        return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/map/tokens/${tokenId}/position`, payload));
+    async moveCampaignMapToken(campaignId: string, tokenId: string, payload: ApiMoveCampaignMapTokenRequest): Promise<ApiCampaignMapTokenMovedDto> {
+        return await firstValueFrom(this.http.put<ApiCampaignMapTokenMovedDto>(`${this.baseUrl}/campaigns/${campaignId}/map/tokens/${tokenId}/position`, payload));
     }
 
     async resetCampaignMapVision(campaignId: string, payload: ApiResetCampaignMapVisionRequest): Promise<void> {

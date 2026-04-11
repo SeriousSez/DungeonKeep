@@ -652,7 +652,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                     NormalizeMapTokenSize(token.Size),
                     token.Note?.Trim() ?? string.Empty,
                     NormalizeMapAssignedUserId(token.AssignedUserId, token.AssignedCharacterId),
-                    NormalizeMapAssignedCharacterId(token.AssignedCharacterId)))
+                    NormalizeMapAssignedCharacterId(token.AssignedCharacterId),
+                    NormalizeMapTokenMoveRevision(token.MoveRevision)))
                 .ToList(),
             (map.Decorations ?? [])
                 .Select(decoration => new CampaignMapDecorationDto(
@@ -1060,6 +1061,11 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
         double[] tokenSizes = [0.5d, 1d, 2d, 4d];
         return tokenSizes.Aggregate((closest, size) => Math.Abs(size - value) < Math.Abs(closest - value) ? size : closest);
+    }
+
+    private static long NormalizeMapTokenMoveRevision(long value)
+    {
+        return Math.Max(0L, value);
     }
 
     private static double NormalizeMapGridCount(double value, double fallback)

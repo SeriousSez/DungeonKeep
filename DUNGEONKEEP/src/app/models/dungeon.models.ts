@@ -104,6 +104,7 @@ export interface CampaignMapToken {
     note: string;
     assignedUserId?: string | null;
     assignedCharacterId?: string | null;
+    moveRevision: number;
 }
 
 export interface CampaignMapDecoration {
@@ -161,6 +162,7 @@ export interface CampaignMapVisionMemoryEntry {
     polygons: CampaignMapVisionPolygon[];
     lastOrigin: CampaignMapPoint | null;
     lastPolygonHash: string;
+    revision: number;
 }
 
 export interface CampaignMap {

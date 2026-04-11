@@ -856,7 +856,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
     }
 
     [HttpPut("{campaignId:guid}/map/tokens/{tokenId:guid}/position")]
-    public async Task<ActionResult<CampaignDto>> MoveMapToken(Guid campaignId, Guid tokenId, [FromBody] MoveCampaignMapTokenRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<CampaignMapTokenMovedDto>> MoveMapToken(Guid campaignId, Guid tokenId, [FromBody] MoveCampaignMapTokenRequest request, CancellationToken cancellationToken)
     {
         if (tokenId == Guid.Empty || request.MapId == Guid.Empty)
         {
@@ -871,17 +871,24 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
 
         try
         {
-            var updated = await campaignService.MoveMapTokenAsync(campaignId, tokenId, request, user.Id, cancellationToken);
-            if (updated is null)
+            var result = await campaignService.MoveMapTokenAsync(campaignId, tokenId, request, user.Id, cancellationToken);
+            if (result is null)
             {
                 return NotFound("Campaign, map, or token was not found.");
             }
 
             await campaignHub.Clients
                 .Group($"campaign-{campaignId}")
-                .SendAsync("CampaignMapUpdated", updated, cancellationToken);
+                .SendAsync("CampaignMapTokenMoved", result.TokenMoved, cancellationToken);
 
-            return Ok(updated);
+            if (result.VisionUpdated is not null)
+            {
+                await campaignHub.Clients
+                    .Group($"campaign-{campaignId}")
+                    .SendAsync("CampaignMapVisionUpdated", result.VisionUpdated, cancellationToken);
+            }
+
+            return Ok(result.TokenMoved);
         }
         catch (UnauthorizedAccessException)
         {
@@ -911,7 +918,11 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                 return NotFound("Campaign or map was not found.");
             }
 
-            return updated.Value ? NoContent() : BadRequest("Map vision memory was invalid.");
+            await campaignHub.Clients
+                .Group($"campaign-{campaignId}")
+                .SendAsync("CampaignMapVisionUpdated", updated, cancellationToken);
+
+            return NoContent();
         }
         catch (UnauthorizedAccessException)
         {
