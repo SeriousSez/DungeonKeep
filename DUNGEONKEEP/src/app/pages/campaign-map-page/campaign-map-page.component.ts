@@ -98,6 +98,7 @@ const MAP_BOARD_HEIGHT_RATIO = 0.7;
 const MAP_TOKEN_GRID_SPANS = [0.5, 1, 2, 4] as const;
 const MAP_GRID_VISIBILITY_STORAGE_KEY = 'dungeonkeep.campaign-map.show-grid';
 const MAP_GRID_CONTROLS_EXPANDED_STORAGE_KEY = 'dungeonkeep.campaign-map.grid-controls-expanded';
+const MAP_PLACEMENT_HINT_VISIBILITY_STORAGE_KEY = 'dungeonkeep.campaign-map.show-placement-hint';
 const MAP_AUTOSAVE_DELAY_MS = 450;
 const MAP_VISION_MEMORY_LIMIT = 40;
 const MAP_VISION_MEMORY_ORIGIN_THRESHOLD = 0.02;
@@ -242,6 +243,7 @@ const MAP_LABELS_BY_BACKGROUND: Record<CampaignMapBackground, MapLabelCatalog> =
 })
 export class CampaignMapPageComponent {
     private static readonly MAX_HISTORY_ENTRIES = 80;
+    private static readonly MAP_OVERLAY_HINT_LUMINANCE_THRESHOLD = 0.58;
 
     readonly store = inject(DungeonStoreService);
     private readonly session = inject(SessionService);
@@ -262,6 +264,8 @@ export class CampaignMapPageComponent {
     readonly currentMapId = signal('');
     readonly mapNameDraft = signal('');
     readonly activeTool = signal<MapTool>('select');
+    readonly mapOverlayHintUseDarkText = signal(false);
+    readonly showPlacementHint = signal(this.readStoredPlacementHintVisibility());
     readonly pendingIconType = signal<CampaignMapIconType | null>(null);
     readonly pendingTerrainType = signal<CampaignMapDecorationType | null>(null);
     readonly selectedDecorationId = signal<string | null>(null);
@@ -706,6 +710,7 @@ export class CampaignMapPageComponent {
 
         return '';
     });
+    readonly shouldShowPlacementHint = computed(() => this.canEdit() && this.showPlacementHint() && this.placementHint().trim().length > 0);
     readonly saveStatusText = computed(() => {
         if (this.isAiArtGenerating()) {
             return this.saveMessage();
@@ -721,15 +726,7 @@ export class CampaignMapPageComponent {
         }
     });
     readonly shouldShowSaveStatus = computed(() => {
-        if (this.isAiArtGenerating() || this.hasUnsavedChanges()) {
-            return true;
-        }
-
-        if (this.saveState() === 'saving' || this.saveState() === 'saved' || this.saveState() === 'error') {
-            return true;
-        }
-
-        return this.saveMessage().trim().length > 0;
+        return this.saveState() === 'error';
     });
     readonly confirmOpen = computed(() => this.confirmAction() !== null);
     readonly confirmTitle = computed(() => {
@@ -867,12 +864,15 @@ export class CampaignMapPageComponent {
     private randomSource: () => number = () => Math.random();
     private ctrlKeyPressed = false;
     private readonly shiftKeyPressed = signal(false);
+    private mapOverlayHintRefreshFrameId: number | null = null;
+    private lastMapOverlayHintSourceKey = '';
 
     constructor() {
         this.destroyRef.onDestroy(() => {
             this.clearAutosaveTimer();
             this.clearMapNoticeTimer();
             this.clearVisionMemoryPersistTimer();
+            this.clearMapOverlayHintRefreshFrame();
         });
 
         this.campaignRealtime.campaignMapVisionReset$
@@ -1124,6 +1124,16 @@ export class CampaignMapPageComponent {
     @HostListener('document:fullscreenchange')
     handleFullscreenChange(): void {
         this.isFullscreen.set(globalThis.document?.fullscreenElement === this.mapBoardShell()?.nativeElement);
+        this.cdr.detectChanges();
+    }
+
+    refreshMapOverlayHintTone(): void {
+        const useDarkText = this.computeMapOverlayHintUseDarkText();
+        if (useDarkText === this.mapOverlayHintUseDarkText()) {
+            return;
+        }
+
+        this.mapOverlayHintUseDarkText.set(useDarkText);
         this.cdr.detectChanges();
     }
 
@@ -1680,6 +1690,29 @@ export class CampaignMapPageComponent {
     private storeGridControlsExpanded(value: boolean): void {
         try {
             globalThis.localStorage?.setItem(MAP_GRID_CONTROLS_EXPANDED_STORAGE_KEY, String(value));
+        } catch {
+            // Ignore storage failures and keep the in-memory toggle working.
+        }
+    }
+
+    togglePlacementHintVisibility(): void {
+        const nextVisible = !this.showPlacementHint();
+        this.showPlacementHint.set(nextVisible);
+        this.storePlacementHintVisibility(nextVisible);
+    }
+
+    private readStoredPlacementHintVisibility(): boolean {
+        try {
+            const stored = globalThis.localStorage?.getItem(MAP_PLACEMENT_HINT_VISIBILITY_STORAGE_KEY);
+            return stored !== 'false';
+        } catch {
+            return true;
+        }
+    }
+
+    private storePlacementHintVisibility(value: boolean): void {
+        try {
+            globalThis.localStorage?.setItem(MAP_PLACEMENT_HINT_VISIBILITY_STORAGE_KEY, String(value));
         } catch {
             // Ignore storage failures and keep the in-memory toggle working.
         }
@@ -3641,15 +3674,12 @@ export class CampaignMapPageComponent {
             const maps = entry.maps.map((map) => this.cloneMapBoard(map));
             const activeMap = maps.find((map) => map.id === entry.activeMapId) ?? maps[0] ?? this.createEmptyMapBoard('Main Map');
             this.mapBoards.set(maps.length > 0 ? maps : [this.cloneMapBoard(activeMap)]);
-            this.loadMapBoard(activeMap);
-            this.clearCtrlPolylineDraft();
+            this.loadMapBoard(activeMap, { preserveTool: true });
             this.selectedIconId.set(null);
             this.selectedLabelId.set(null);
             this.selectedStrokeId.set(null);
             this.selectedWallId.set(null);
             this.selectedTokenId.set(null);
-            this.pendingIconType.set(null);
-            this.activeTool.set('select');
         } finally {
             this.historySuppressed = false;
         }
@@ -3726,12 +3756,114 @@ export class CampaignMapPageComponent {
 
     private setWorkingMap(map: CampaignMap): void {
         this.workingMap.set(map);
+        this.scheduleMapOverlayHintToneRefresh(map);
         const currentMapId = this.currentMapId();
         if (!currentMapId) {
             return;
         }
 
         this.mapBoards.update((maps) => maps.map((entry) => entry.id === currentMapId ? { ...entry, ...this.cloneMap(map) } : entry));
+    }
+
+    private scheduleMapOverlayHintToneRefresh(map: CampaignMap): void {
+        const sourceKey = `${map.background}|${map.backgroundImageUrl}`;
+        if (sourceKey === this.lastMapOverlayHintSourceKey) {
+            return;
+        }
+
+        this.lastMapOverlayHintSourceKey = sourceKey;
+        this.clearMapOverlayHintRefreshFrame();
+
+        if (typeof globalThis.requestAnimationFrame === 'function') {
+            this.mapOverlayHintRefreshFrameId = globalThis.requestAnimationFrame(() => {
+                this.mapOverlayHintRefreshFrameId = null;
+                this.refreshMapOverlayHintTone();
+            });
+            return;
+        }
+
+        this.refreshMapOverlayHintTone();
+    }
+
+    private clearMapOverlayHintRefreshFrame(): void {
+        if (this.mapOverlayHintRefreshFrameId === null || typeof globalThis.cancelAnimationFrame !== 'function') {
+            this.mapOverlayHintRefreshFrameId = null;
+            return;
+        }
+
+        globalThis.cancelAnimationFrame(this.mapOverlayHintRefreshFrameId);
+        this.mapOverlayHintRefreshFrameId = null;
+    }
+
+    private computeMapOverlayHintUseDarkText(): boolean {
+        const map = this.workingMap();
+        const board = this.mapBoard()?.nativeElement;
+        const artImage = board?.querySelector<HTMLImageElement>('.map-board-art') ?? null;
+
+        if (!board || !map.backgroundImageUrl || !artImage?.complete || artImage.naturalWidth <= 0 || artImage.naturalHeight <= 0) {
+            return this.defaultMapOverlayHintUseDarkText(map.background);
+        }
+
+        const boardWidth = board.clientWidth;
+        const boardHeight = board.clientHeight;
+        if (boardWidth <= 0 || boardHeight <= 0) {
+            return this.defaultMapOverlayHintUseDarkText(map.background);
+        }
+
+        try {
+            const scale = Math.max(boardWidth / artImage.naturalWidth, boardHeight / artImage.naturalHeight);
+            const renderedWidth = artImage.naturalWidth * scale;
+            const renderedHeight = artImage.naturalHeight * scale;
+            const cropLeft = Math.max(0, (renderedWidth - boardWidth) / 2);
+            const cropTop = Math.max(0, (renderedHeight - boardHeight) / 2);
+            const sampleLeft = boardWidth * 0.2;
+            const sampleTop = boardHeight * 0.015;
+            const sampleWidth = boardWidth * 0.6;
+            const sampleHeight = boardHeight * 0.14;
+            const sourceX = Math.max(0, Math.floor((sampleLeft + cropLeft) / scale));
+            const sourceY = Math.max(0, Math.floor((sampleTop + cropTop) / scale));
+            const sourceWidth = Math.max(1, Math.min(artImage.naturalWidth - sourceX, Math.ceil(sampleWidth / scale)));
+            const sourceHeight = Math.max(1, Math.min(artImage.naturalHeight - sourceY, Math.ceil(sampleHeight / scale)));
+            const canvas = globalThis.document?.createElement('canvas');
+            const context = canvas?.getContext('2d', { willReadFrequently: true });
+
+            if (!canvas || !context) {
+                return this.defaultMapOverlayHintUseDarkText(map.background);
+            }
+
+            canvas.width = 24;
+            canvas.height = 8;
+            context.drawImage(artImage, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
+
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            let luminanceTotal = 0;
+            let sampleCount = 0;
+
+            for (let index = 0; index < imageData.data.length; index += 4) {
+                const alpha = imageData.data[index + 3] / 255;
+                if (alpha < 0.05) {
+                    continue;
+                }
+
+                const red = imageData.data[index] / 255;
+                const green = imageData.data[index + 1] / 255;
+                const blue = imageData.data[index + 2] / 255;
+                luminanceTotal += ((0.2126 * red) + (0.7152 * green) + (0.0722 * blue)) * alpha;
+                sampleCount += 1;
+            }
+
+            if (sampleCount === 0) {
+                return this.defaultMapOverlayHintUseDarkText(map.background);
+            }
+
+            return (luminanceTotal / sampleCount) >= CampaignMapPageComponent.MAP_OVERLAY_HINT_LUMINANCE_THRESHOLD;
+        } catch {
+            return this.defaultMapOverlayHintUseDarkText(map.background);
+        }
+    }
+
+    private defaultMapOverlayHintUseDarkText(background: CampaignMapBackground): boolean {
+        return background !== 'Cavern';
     }
 
     private mergeRealtimeTokenState(campaign: Campaign, routeMapId: string): void {
@@ -4020,6 +4152,7 @@ export class CampaignMapPageComponent {
         this.cavernLayout.set('TunnelNetwork');
         this.confirmAction.set(null);
         this.mapNameDraft.set(map.name);
+        this.scheduleMapOverlayHintToneRefresh(this.workingMap());
     }
 
     private async createRouteMapBoard(): Promise<void> {

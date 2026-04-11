@@ -953,10 +953,6 @@ app-dropdown {
     border: 1px solid var(--panel-border);
     user-select: none;
     -webkit-user-select: none;
-    overflow: auto;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
 }
 
 .map-board-shell:fullscreen {
@@ -1032,11 +1028,6 @@ app-dropdown {
     -webkit-user-select: none;
 }
 
-.map-board.can-edit {
-    touch-action: none;
-    overscroll-behavior: none;
-}
-
 .map-board.is-generating {
     cursor: progress;
 }
@@ -1108,6 +1099,11 @@ app-dropdown {
     .map-board-shell {
         max-width: 100%;
     }
+
+    .map-board.can-edit {
+        touch-action: none;
+        overscroll-behavior: none;
+    }
 }
 
 @media (max-width: 1200px) and (pointer: coarse) {
@@ -1118,6 +1114,11 @@ app-dropdown {
     .map-board-shell {
         padding: 14px;
         scroll-padding-inline: 14px;
+    }
+
+    .map-board.can-edit {
+        touch-action: none;
+        overscroll-behavior: none;
     }
 
     .map-stage-panel--editor .map-board {
@@ -1873,9 +1874,22 @@ app-dropdown {
     z-index: 3;
     pointer-events: none;
     padding-top: 14px;
+    padding-inline: 20px;
+    color: rgba(255, 251, 245, 0.96);
+    font-size: 0.92rem;
+    font-weight: 800;
+    line-height: 1.35;
+    letter-spacing: 0.01em;
+    text-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.72),
+        0 0 12px rgba(0, 0, 0, 0.28);
+}
+
+.map-overlay-hint--dark {
     color: var(--text-soft);
-    font-size: 0.88rem;
-    font-weight: 700;
+    text-shadow:
+        0 1px 0 rgba(255, 250, 242, 0.58),
+        0 0 12px rgba(255, 248, 236, 0.24);
 }
 
 .skeleton-panel,
@@ -1946,6 +1960,10 @@ app-dropdown {
 
     .map-board-shell {
         padding: 12px;
+        overflow: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
     }
 
     .map-fullscreen-exit {
@@ -1986,6 +2004,10 @@ app-dropdown {
     .map-board-shell {
         padding: 10px;
         margin-inline: -2px;
+        overflow: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
     }
 
     .map-stage-panel--editor .map-board,

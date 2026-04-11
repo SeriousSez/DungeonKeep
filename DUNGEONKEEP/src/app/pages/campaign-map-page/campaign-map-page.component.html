@@ -543,6 +543,7 @@
                 <div class="map-stage-meta">
                     <button type="button" class="ghost-button compact-action" (click)="toggleMapFullscreen()">{{ isFullscreen() ? 'Exit Fullscreen' : 'Fullscreen' }}</button>
                     <button type="button" class="ghost-button compact-action" (click)="toggleGuide()">{{ showGuide() ? 'Hide Guide' : 'Show Guide' }}</button>
+                    <button type="button" class="ghost-button compact-action" (click)="togglePlacementHintVisibility()">{{ showPlacementHint() ? 'Hide Hint' : 'Show Hint' }}</button>
                     @if (mapNotice()) {
                     <span class="status-chip map-notice">{{ mapNotice() }}</span>
                     }
@@ -558,7 +559,7 @@
                     (pointerdown)="handleBoardPointerDown($event)" (pointermove)="handleBoardPointerMove($event)" (pointerup)="handleBoardPointerUp($event)" (pointercancel)="handleBoardPointerUp($event)">
                     @if (workingMap().backgroundImageUrl) {
                     <div class="map-board-art-layer" aria-hidden="true">
-                        <img class="map-board-art" [src]="workingMap().backgroundImageUrl" alt="" />
+                        <img class="map-board-art" [src]="workingMap().backgroundImageUrl" alt="" (load)="refreshMapOverlayHintTone()" />
                     </div>
                     }
                     <div class="map-board-texture"></div>
@@ -696,8 +697,8 @@
                     </div>
                     }
 
-                    @if (placementHint() && canEdit()) {
-                    <div class="map-overlay-hint">{{ placementHint() }}</div>
+                    @if (shouldShowPlacementHint()) {
+                    <div class="map-overlay-hint" [class.map-overlay-hint--dark]="mapOverlayHintUseDarkText()">{{ placementHint() }}</div>
                     }
 
                     @if (isAiArtGenerating()) {
@@ -835,7 +836,7 @@
                 [style.--map-grid-offset-y]="gridOffsetY()">
                 @if (workingMap().backgroundImageUrl) {
                 <div class="map-board-art-layer" aria-hidden="true">
-                    <img class="map-board-art" [src]="workingMap().backgroundImageUrl" alt="" />
+                    <img class="map-board-art" [src]="workingMap().backgroundImageUrl" alt="" (load)="refreshMapOverlayHintTone()" />
                 </div>
                 }
                 <div class="map-board-texture"></div>
