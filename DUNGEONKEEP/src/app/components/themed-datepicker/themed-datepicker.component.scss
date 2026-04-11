@@ -14,6 +14,7 @@
 
 .field-input {
     width: 100%;
+    min-height: 44px;
     padding: 12px 44px 12px 14px;
     border-radius: 14px;
     border: 1px solid color-mix(in srgb, var(--panel-border) 88%, var(--text-main) 12%);
@@ -23,6 +24,8 @@
     outline: none;
     transition: border-color 160ms ease, box-shadow 160ms ease;
     cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .field-shell:hover .field-input,
@@ -34,8 +37,8 @@
 .trigger {
     position: absolute;
     right: 10px;
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border: 1px solid var(--pill-border);
     border-radius: 8px;
     background: var(--pill-bg);
@@ -44,6 +47,8 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .calendar-popover {
@@ -59,6 +64,7 @@
     box-shadow: var(--panel-shadow);
     display: grid;
     gap: 10px;
+    overscroll-behavior: contain;
 }
 
 .calendar-popover.opens-upward {
@@ -82,8 +88,8 @@
 }
 
 .nav-btn {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border: 1px solid var(--pill-border);
     border-radius: 10px;
     background: var(--pill-bg);
@@ -92,6 +98,8 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .weekday-row,
@@ -109,7 +117,7 @@
 }
 
 .day-cell {
-    min-height: 34px;
+    min-height: 38px;
     border: 1px solid var(--panel-border);
     border-radius: 10px;
     background: var(--surface-raised);
@@ -117,6 +125,8 @@
     font: inherit;
     font-size: 0.85rem;
     cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .day-cell:hover {
@@ -143,5 +153,9 @@
 @media (max-width: 720px) {
     .calendar-popover {
         width: 100%;
+    }
+
+    .day-cell {
+        min-height: 42px;
     }
 }

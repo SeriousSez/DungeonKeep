@@ -443,6 +443,24 @@ input {
         width: 100%;
     }
 
+    .shortcut-card {
+        grid-template-columns: 1fr;
+    }
+
+    .sort-pill-rail {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .sort-pill-button,
+    .tag-pill {
+        width: 100%;
+    }
+
+    .tag-list {
+        grid-template-columns: 1fr;
+    }
+
     .meta-row,
     .monster-card-header {
         flex-direction: column;

@@ -410,6 +410,7 @@ textarea {
 
 .table-shell {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .editor-table {
@@ -495,6 +496,15 @@ textarea {
 
 @media (max-width: 800px) {
 
+    .page-stack {
+        gap: 16px;
+    }
+
+    .panel {
+        padding: 18px;
+        border-radius: 22px;
+    }
+
     .generation-actions-row {
         align-items: stretch;
     }
@@ -505,6 +515,7 @@ textarea {
     }
 
     .editor-header,
+    .generation-panel-header,
     .scene-card-header,
     .mini-section-header,
     .nested-list-header,
@@ -517,5 +528,67 @@ textarea {
     .section-grid.two-up,
     .nested-list-row {
         grid-template-columns: 1fr;
+    }
+
+    .header-actions,
+    .editor-section summary>.summary-action,
+    .scene-actions,
+    .table-actions {
+        width: 100%;
+    }
+
+    .header-actions>*,
+    .scene-actions>*,
+    .table-actions>*,
+    .summary-action {
+        width: 100%;
+    }
+
+    .mode-options {
+        grid-template-columns: 1fr;
+    }
+
+    .section-body {
+        padding: 0 16px 16px;
+    }
+
+    .scene-card,
+    .mini-section,
+    .preview-panel,
+    .table-shell {
+        padding: 14px;
+    }
+
+    .editor-table {
+        min-width: 760px;
+    }
+}
+
+@media (max-width: 560px) {
+    .panel {
+        padding: 16px;
+        border-radius: 18px;
+    }
+
+    .editor-header h1,
+    .editor-section h2,
+    .notes-panel h2,
+    .generation-panel h2 {
+        line-height: 1.1;
+    }
+
+    .section-body {
+        padding: 0 14px 14px;
+    }
+
+    .editor-table {
+        min-width: 680px;
+    }
+
+    .autosave-pill,
+    .ghost-button,
+    .primary-button,
+    .mode-card {
+        min-height: 44px;
     }
 }

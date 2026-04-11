@@ -946,12 +946,17 @@ app-dropdown {
 }
 
 .map-board-shell {
+    position: relative;
     padding: 18px;
     border-radius: 24px;
     background: color-mix(in srgb, var(--surface-raised) 88%, transparent);
     border: 1px solid var(--panel-border);
     user-select: none;
     -webkit-user-select: none;
+    overflow: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
 }
 
 .map-board-shell:fullscreen {
@@ -971,10 +976,41 @@ app-dropdown {
     background: color-mix(in srgb, var(--text-main) 80%, black 20%);
 }
 
+.map-fullscreen-exit {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    z-index: 9;
+    min-height: 44px;
+    padding-inline: 16px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 82%, var(--text-main) 18%);
+    border-color: color-mix(in srgb, var(--panel-border) 40%, var(--paper-strong) 60%);
+    color: var(--surface-raised-solid);
+    box-shadow: 0 18px 34px rgba(15, 10, 6, 0.24);
+    backdrop-filter: blur(12px);
+}
+
+.map-fullscreen-exit:hover {
+    background: color-mix(in srgb, var(--surface-raised-solid) 74%, var(--accent-primary) 26%);
+    border-color: color-mix(in srgb, var(--panel-border) 24%, var(--accent-primary) 76%);
+}
+
+.map-fullscreen-exit:focus-visible {
+    outline: none;
+    box-shadow:
+        0 18px 34px rgba(15, 10, 6, 0.24),
+        0 0 0 3px color-mix(in srgb, var(--accent-primary) 24%, transparent);
+}
+
 .map-board-shell:fullscreen .map-board {
     width: min(calc((100vh - 48px) * 10 / 7), calc(100vw - 48px));
     max-width: 100%;
     max-height: calc(100vh - 48px);
+}
+
+.map-board-shell:fullscreen .map-fullscreen-exit {
+    top: max(18px, env(safe-area-inset-top, 0px) + 12px);
+    right: max(18px, env(safe-area-inset-right, 0px) + 12px);
 }
 
 .map-board-shell--workspace {
@@ -983,6 +1019,9 @@ app-dropdown {
 
 .map-board {
     position: relative;
+    display: block;
+    width: 100%;
+    min-width: 0;
     overflow: hidden;
     aspect-ratio: 10 / 7;
     border-radius: 24px;
@@ -991,6 +1030,11 @@ app-dropdown {
     cursor: crosshair;
     user-select: none;
     -webkit-user-select: none;
+}
+
+.map-board.can-edit {
+    touch-action: none;
+    overscroll-behavior: none;
 }
 
 .map-board.is-generating {
@@ -1055,6 +1099,68 @@ app-dropdown {
 
     .map-shortcuts-header {
         grid-template-columns: 1fr;
+    }
+
+    .map-stage-panel {
+        overflow: hidden;
+    }
+
+    .map-board-shell {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 1200px) and (pointer: coarse) {
+    .panel {
+        border-radius: 24px;
+    }
+
+    .map-board-shell {
+        padding: 14px;
+        scroll-padding-inline: 14px;
+    }
+
+    .map-stage-panel--editor .map-board {
+        width: max(100%, 860px);
+    }
+
+    .map-stage-panel--viewer .map-board {
+        width: max(100%, 860px);
+        touch-action: manipulation;
+    }
+
+    .tool-toggle-button,
+    .icon-palette-button,
+    .primary-button,
+    .ghost-button,
+    .compact-action,
+    .map-layout input[type='text'],
+    .map-file-input,
+    .grid-setting-field input[type='number'] {
+        min-height: 50px;
+    }
+
+    .map-icon-token {
+        min-height: 48px;
+        padding: 10px 14px;
+    }
+
+    .map-token {
+        min-width: 44px;
+        min-height: 44px;
+        touch-action: none;
+    }
+
+    .map-token span {
+        max-width: 160px;
+        padding: 4px 8px;
+        font-size: 0.72rem;
+    }
+
+    .status-chip {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
     }
 }
 
@@ -1635,6 +1741,7 @@ app-dropdown {
     z-index: 2;
     user-select: none;
     -webkit-user-select: none;
+    touch-action: none;
 }
 
 .map-icon-token.is-selected {
@@ -1724,6 +1831,10 @@ app-dropdown {
 
 .map-token--viewer.is-controllable {
     cursor: grab;
+}
+
+.map-stage-panel--viewer .map-token--viewer.is-controllable {
+    touch-action: none;
 }
 
 .map-token--viewer:not(.is-controllable) img {
@@ -1837,6 +1948,16 @@ app-dropdown {
         padding: 12px;
     }
 
+    .map-fullscreen-exit {
+        top: 12px;
+        right: 12px;
+    }
+
+    .map-stage-meta,
+    .header-actions {
+        gap: 8px;
+    }
+
     .map-icon-token span {
         max-width: 110px;
     }
@@ -1849,6 +1970,46 @@ app-dropdown {
 
     .map-shortcuts-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) and (pointer: coarse) {
+    .page-stack {
+        gap: 18px;
+    }
+
+    .panel {
+        padding: 16px;
+        border-radius: 20px;
+    }
+
+    .map-board-shell {
+        padding: 10px;
+        margin-inline: -2px;
+    }
+
+    .map-stage-panel--editor .map-board,
+    .map-stage-panel--viewer .map-board {
+        width: max(100%, 680px);
+        border-radius: 20px;
+    }
+
+    .tool-toggle-button,
+    .icon-palette-button,
+    .primary-button,
+    .ghost-button,
+    .compact-action {
+        font-size: 0.95rem;
+    }
+
+    .map-icon-token {
+        min-height: 46px;
+        padding: 10px 12px;
+    }
+
+    .map-token span {
+        max-width: 120px;
+        top: calc(100% + 12px);
     }
 }
 

@@ -16,7 +16,7 @@
         <div class="msd-panel-inner" [style.max-height.px]="panelMaxHeight()">
             @if (searchable()) {
             <div class="msd-search-shell">
-                <input type="search" class="msd-search-input" [value]="searchTerm()" [placeholder]="searchPlaceholder()" (input)="updateSearchTerm($any($event.target).value)" />
+                <input #searchInput type="search" class="msd-search-input" [value]="searchTerm()" [placeholder]="searchPlaceholder()" autocomplete="off" autocapitalize="none" spellcheck="false" (input)="updateSearchTerm($any($event.target).value)" />
             </div>
             }
 

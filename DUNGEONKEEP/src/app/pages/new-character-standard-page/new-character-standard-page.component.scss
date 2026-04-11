@@ -3080,3 +3080,124 @@ input {
         font-size: 0.72rem;
     }
 }
+
+@media (max-width: 560px) {
+
+    .page-stack {
+        padding: 14px 12px 24px;
+        gap: 12px;
+    }
+
+    .page-intro,
+    .step-panel {
+        padding: 12px;
+    }
+
+    .standard-steps-shell {
+        padding: 8px;
+    }
+
+    .step-pill {
+        min-height: 40px;
+        padding-inline: 8px;
+    }
+
+    .class-section,
+    .class-selection-pane,
+    .multiclass-summary {
+        padding: 12px;
+    }
+
+    .class-section-header,
+    .class-header,
+    .species-detail-header,
+    .scene-card-header,
+    .spell-item-row,
+    .class-subtabs,
+    .spell-book-subtabs {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .level-selector-group,
+    .class-section-header .level-selector-group,
+    .species-header-right,
+    .class-step-header-actions {
+        width: 100%;
+    }
+
+    .level-selector-group {
+        flex-wrap: wrap;
+    }
+
+    .level-selector-group label,
+    .class-section-header .level-selector-group label {
+        width: 100%;
+    }
+
+    .ability-assignment-grid,
+    .spell-summary-row {
+        grid-template-columns: 1fr;
+    }
+
+    .spell-list {
+        max-height: none;
+    }
+
+    .spell-column,
+    .spell-summary-card {
+        padding: 8px;
+    }
+
+    .option-row,
+    .btn-add-class,
+    .btn-add-another,
+    .btn-deselect,
+    .btn-remove-class,
+    .class-subtab,
+    .spell-book-subtab,
+    .spell-action-btn,
+    .class-hp-trigger,
+    .search-input,
+    .wide-input,
+    select,
+    input {
+        min-height: 44px;
+    }
+
+    .option-row {
+        padding: 12px;
+    }
+
+    .spell-action-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 420px) {
+    .page-stack {
+        padding-inline: 10px;
+    }
+
+    .page-intro h1 {
+        font-size: clamp(1.55rem, 8.4vw, 1.9rem);
+    }
+
+    .step-pill {
+        font-size: 0.72rem;
+    }
+
+    .option-row {
+        gap: 8px;
+    }
+
+    .option-row strong,
+    .option-row.selected strong {
+        font-size: 1rem;
+    }
+
+    .spell-detail-pane.spell-detail-pane--open {
+        max-height: none;
+    }
+}

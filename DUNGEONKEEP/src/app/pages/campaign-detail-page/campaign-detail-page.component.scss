@@ -572,6 +572,11 @@ html {
     .campaign-supplemental-grid {
         grid-template-columns: 1fr;
     }
+
+    .workspace-preview-grid,
+    .details-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 720px) {
@@ -623,6 +628,19 @@ html {
         align-items: flex-start;
     }
 
+    .header-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .header-actions>* {
+        width: 100%;
+    }
+
+    .campaign-nav {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .details-grid {
         grid-template-columns: 1fr;
         gap: 12px;
@@ -635,5 +653,16 @@ html {
     .add-thread-modal-actions {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .workspace-preview-header,
+    .session-card-header {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 420px) {
+    .campaign-nav {
+        grid-template-columns: 1fr;
     }
 }

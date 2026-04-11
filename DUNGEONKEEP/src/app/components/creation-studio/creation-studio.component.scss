@@ -316,4 +316,58 @@ textarea {
     .level-range-fields {
         grid-template-columns: 1fr;
     }
+
+    .panel-heading {
+        margin-bottom: 16px;
+    }
+
+    .panel-heading>*,
+    .wizard-actions>* {
+        width: 100%;
+    }
+
+    .pill,
+    .template-chip,
+    .ghost-button,
+    .primary-button {
+        min-height: 44px;
+    }
+
+    .wizard-actions {
+        flex-direction: column;
+    }
+
+    .form-card {
+        padding: 16px;
+    }
+}
+
+@media (max-width: 560px) {
+    .studio-panel {
+        padding: 16px;
+    }
+
+    .form-card {
+        padding: 14px;
+        border-radius: 18px;
+    }
+
+    .template-bank {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .wizard-steps {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .wizard-step {
+        min-width: 0;
+    }
+
+    .preview-meta {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
 }

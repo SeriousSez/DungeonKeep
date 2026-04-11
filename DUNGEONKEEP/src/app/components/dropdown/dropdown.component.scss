@@ -1,5 +1,5 @@
 .app-dropdown {
-    min-height: 38px;
+    min-height: 44px;
     padding: 0 12px;
     border-radius: 8px;
     border: 1px solid var(--panel-border);
@@ -8,6 +8,8 @@
     font: inherit;
     cursor: pointer;
     transition: all 150ms ease-out;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 
     &:hover:not(:disabled) {
         border-color: var(--accent-primary);
@@ -80,6 +82,7 @@
     padding: 8px;
     display: grid;
     gap: 8px;
+    overscroll-behavior: contain;
 }
 
 .app-dropdown-menu--align-end .app-dropdown-panel {
@@ -94,7 +97,7 @@
 
 .app-dropdown-search {
     width: 100%;
-    min-height: 34px;
+    min-height: 40px;
     padding: 0 10px;
     border: 1px solid var(--panel-border);
     border-radius: 8px;
@@ -119,10 +122,11 @@
     overflow-y: auto;
     display: grid;
     gap: 6px;
+    -webkit-overflow-scrolling: touch;
 }
 
 .app-dropdown-option {
-    min-height: 32px;
+    min-height: 40px;
     border: 1px solid transparent;
     border-radius: 8px;
     background: transparent;
@@ -136,6 +140,8 @@
     cursor: pointer;
     font-size: 0.9rem;
     line-height: 1.25;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 
     &:hover:not(:disabled) {
         background: color-mix(in srgb, var(--surface-raised) 72%, var(--accent-primary) 28%);
@@ -225,4 +231,16 @@
 .app-dropdown--narrow {
     min-width: 78px;
     width: 100%;
+}
+
+@media (max-width: 720px) {
+    .app-dropdown-panel {
+        padding: 10px;
+        border-radius: 12px;
+    }
+
+    .app-dropdown-option {
+        min-height: 44px;
+        padding: 10px 12px;
+    }
 }

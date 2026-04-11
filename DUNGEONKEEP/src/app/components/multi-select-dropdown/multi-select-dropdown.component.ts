@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, output, signal, inject, effect, ElementRef, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, signal, inject, effect, ElementRef, computed, viewChild } from '@angular/core';
 import { CommonModule, DOCUMENT } from '@angular/common';
 
 export interface MultiSelectOption {
@@ -25,9 +25,10 @@ export interface MultiSelectOptionGroup {
 export class MultiSelectDropdownComponent {
     private readonly document = inject(DOCUMENT);
     private readonly el = inject<ElementRef<HTMLElement>>(ElementRef);
-    private readonly defaultPanelMaxHeight = 300;
+    private readonly defaultPanelMaxHeight = this.document.defaultView?.matchMedia?.('(pointer: coarse)').matches ? 360 : 300;
     private readonly viewportPadding = 12;
     private suppressOutsideCloseUntil = 0;
+    private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
     readonly groups = input.required<ReadonlyArray<MultiSelectOptionGroup>>();
     readonly value = input<string[]>([]);
@@ -97,7 +98,7 @@ export class MultiSelectDropdownComponent {
             }
 
             const view = this.document.defaultView;
-            const close = (event: MouseEvent) => {
+            const close = (event: PointerEvent) => {
                 if (Date.now() < this.suppressOutsideCloseUntil) {
                     return;
                 }
@@ -146,8 +147,14 @@ export class MultiSelectDropdownComponent {
                 this.panelAvailableWidth.set(Math.max(triggerRect.width, availableWidth));
             };
 
-            const frameId = view?.requestAnimationFrame(updatePanelPosition) ?? 0;
-            const timeoutId = view?.setTimeout(() => this.document.addEventListener('click', close), 0) ?? 0;
+            const frameId = view?.requestAnimationFrame(() => {
+                updatePanelPosition();
+
+                if (this.searchable()) {
+                    this.searchInput()?.nativeElement.focus();
+                }
+            }) ?? 0;
+            const timeoutId = view?.setTimeout(() => this.document.addEventListener('pointerdown', close, true), 0) ?? 0;
 
             view?.addEventListener('resize', updatePanelPosition);
             this.document.addEventListener('scroll', updatePanelPosition, true);
@@ -157,7 +164,7 @@ export class MultiSelectDropdownComponent {
                 view?.clearTimeout(timeoutId);
                 view?.removeEventListener('resize', updatePanelPosition);
                 this.document.removeEventListener('scroll', updatePanelPosition, true);
-                this.document.removeEventListener('click', close);
+                this.document.removeEventListener('pointerdown', close, true);
             });
         });
     }

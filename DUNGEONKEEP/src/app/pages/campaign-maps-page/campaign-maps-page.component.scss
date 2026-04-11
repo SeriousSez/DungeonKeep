@@ -127,7 +127,7 @@
 
 .atlas-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
     gap: clamp(14px, 3vw, 20px);
 }
 
@@ -336,6 +336,17 @@
     }
 }
 
+@media (max-width: 960px) {
+    .atlas-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .map-card-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
 @media (max-width: 720px) {
     .page-stack {
         gap: 16px;
@@ -357,6 +368,10 @@
         width: 100%;
         justify-content: flex-start;
         gap: 8px;
+    }
+
+    .header-actions>* {
+        width: 100%;
     }
 
     .map-preview-stats {

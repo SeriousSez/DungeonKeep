@@ -12,7 +12,7 @@
     @if (isOpen()) {
     <div class="app-dropdown-panel" [style.max-height.px]="panelMaxHeight()" [style.min-width.px]="getPanelMinWidth()" [style.max-width.px]="getPanelMaxWidth()" role="listbox">
         @if (searchable()) {
-        <input type="text" class="app-dropdown-search" [value]="searchTerm()" [placeholder]="searchPlaceholder()" (input)="onSearchInput($any($event.target).value)" />
+        <input #searchInput type="text" class="app-dropdown-search" [value]="searchTerm()" [placeholder]="searchPlaceholder()" autocomplete="off" autocapitalize="none" spellcheck="false" (input)="onSearchInput($any($event.target).value)" />
         }
         <div class="app-dropdown-options" [style.max-height.px]="getOptionsMaxHeight()">
             @if (filteredOptions().length === 0) {

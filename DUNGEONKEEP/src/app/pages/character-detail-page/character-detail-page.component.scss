@@ -101,7 +101,7 @@
 
     // Elements animated in normal mode start at opacity: 0.
     // In reduced-motion mode, ensure they render immediately.
-    .page-shell > *,
+    .page-shell>*,
     .save-card,
     .skill-row,
     .training-block,
@@ -1500,6 +1500,61 @@
 
     .quick-lists {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .header-status-row {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .campaign-assignment-buttons {
+        grid-template-columns: 1fr;
+    }
+
+    .actions-table-scroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .actions-table {
+        min-width: 34rem;
+    }
+
+    .container-contents {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .inventory-table {
+        min-width: 34rem;
+    }
+
+    .currency-piece-strip {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-content {
+        padding: 14px;
+    }
+
+    .edit-character-btn,
+    .status-pill,
+    .assign-btn,
+    .remove-btn {
+        min-height: 40px;
+    }
+
+    .skill-row {
+        grid-template-columns: auto 1fr auto;
+    }
+
+    .skill-flag {
+        display: none;
     }
 }
 

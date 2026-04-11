@@ -542,6 +542,9 @@
             </div>
 
             <div #mapBoardShell class="map-board-shell">
+                @if (isFullscreen()) {
+                <button type="button" class="ghost-button compact-action map-fullscreen-exit" (click)="toggleMapFullscreen()">Exit Fullscreen</button>
+                }
                 <div #mapBoard class="map-board" [class.can-edit]="canEdit()" [class.is-placement-mode]="pendingIconType() !== null || pendingTerrainType() !== null || activeTool() === 'label'" [class.has-map-art]="!!workingMap().backgroundImageUrl" [class.is-generating]="isAiArtGenerating()"
                     [style.--map-grid-columns]="gridColumns()" [style.--map-grid-rows]="gridRows()" [style.--map-grid-color]="gridColor()" [style.--map-grid-offset-x]="gridOffsetX()" [style.--map-grid-offset-y]="gridOffsetY()" [ngClass]="backgroundTextureClass()" (click)="handleBoardClick($event)"
                     (pointerdown)="handleBoardPointerDown($event)" (pointermove)="handleBoardPointerMove($event)" (pointerup)="handleBoardPointerUp($event)" (pointercancel)="handleBoardPointerUp($event)">
@@ -817,6 +820,9 @@
         </div>
 
         <div #mapBoardShell class="map-board-shell">
+            @if (isFullscreen()) {
+            <button type="button" class="ghost-button compact-action map-fullscreen-exit" (click)="toggleMapFullscreen()">Exit Fullscreen</button>
+            }
             <div #mapBoard class="map-board" [class.has-map-art]="!!workingMap().backgroundImageUrl" [ngClass]="backgroundTextureClass()" [style.--map-grid-columns]="gridColumns()" [style.--map-grid-rows]="gridRows()" [style.--map-grid-color]="gridColor()" [style.--map-grid-offset-x]="gridOffsetX()"
                 [style.--map-grid-offset-y]="gridOffsetY()">
                 @if (workingMap().backgroundImageUrl) {

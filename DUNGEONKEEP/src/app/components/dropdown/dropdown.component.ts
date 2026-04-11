@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, computed, ElementRef, effect, inject, input, output, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, ElementRef, effect, inject, input, output, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 export interface DropdownOption {
@@ -23,11 +23,12 @@ export interface DropdownOption {
 })
 export class DropdownComponent {
     private readonly hostElement = inject(ElementRef<HTMLElement>);
-    private readonly defaultPanelMaxHeight = 300;
+    private readonly defaultPanelMaxHeight = globalThis.window?.matchMedia?.('(pointer: coarse)').matches ? 360 : 300;
     private readonly viewportPadding = 12;
     private readonly handleDocumentPointerDown = (event: Event) => {
         this.onDocumentPointerDown(event);
     };
+    private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
     readonly id = input<string>('');
     readonly ariaLabel = input<string>('');
@@ -152,6 +153,10 @@ export class DropdownComponent {
             const frameId = view.requestAnimationFrame(() => {
                 updatePanelPosition();
                 view.requestAnimationFrame(updatePanelPosition);
+
+                if (this.searchable()) {
+                    this.searchInput()?.nativeElement.focus();
+                }
             });
 
             view.addEventListener('resize', updatePanelPosition);

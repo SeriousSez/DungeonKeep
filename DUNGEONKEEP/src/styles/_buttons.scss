@@ -1,6 +1,8 @@
 button,
 [role='button'] {
     transition: transform 140ms ease, filter 180ms ease, background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 button:focus-visible,
@@ -83,4 +85,17 @@ a:focus-visible {
 .is-loading {
     pointer-events: none;
     opacity: 0.7;
+}
+
+@media (pointer: coarse) {
+
+    .secondary-btn,
+    .btn-secondary,
+    .ghost-button,
+    .equipment-link-action,
+    .equipment-pill-action,
+    .next-actions>button:last-child {
+        min-height: 44px;
+        padding: 0 16px;
+    }
 }

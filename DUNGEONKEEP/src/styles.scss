@@ -47,6 +47,7 @@
 
 html {
     min-height: 100%;
+    -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -75,6 +76,17 @@ input,
 textarea,
 select {
     font: inherit;
+}
+
+@media (pointer: coarse) {
+
+    button,
+    input,
+    textarea,
+    select,
+    a {
+        -webkit-tap-highlight-color: transparent;
+    }
 }
 
 // ── Mobile Responsive Improvements ────────────────────────────────────────────
