@@ -15,6 +15,10 @@ import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 export class CharactersPageComponent {
     readonly store = inject(DungeonStoreService);
     readonly ownedCharacters = computed(() => this.store.characters().filter((character) => character.canEdit !== false));
+    readonly ownedCharacterCount = computed(() => this.ownedCharacters().length);
+    readonly ownedReadyCharacterCount = computed(
+        () => this.ownedCharacters().filter((character) => character.status === 'Ready').length
+    );
 
     confirmDeleteId: string | null = null;
 
