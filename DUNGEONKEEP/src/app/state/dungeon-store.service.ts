@@ -2,7 +2,7 @@ import { Injectable, computed, effect, inject, signal } from '@angular/core';
 
 import { raceMap } from '../data/races';
 import { AbilityScores, Campaign, CampaignDraft, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecorationType, CampaignMapIconType, CampaignMapLabelStyle, CampaignMapLabelTone, CampaignMapToken, CampaignThreadVisibility, CampaignWorldNoteCategory, Character, CharacterDraft, CharacterStatus, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS, SkillProficiencies, ThreatLevel } from '../models/dungeon.models';
-import { ApiCampaignDto, ApiCampaignMapBoardDto, ApiCampaignMapDecorationDto, ApiCampaignMapDto, ApiCampaignMapLabelDto, ApiCampaignMapLabelStyleDto, ApiCampaignMapLibraryDto, ApiCampaignMapTokenDto, ApiCampaignMapTokenMovedDto, ApiCampaignSummaryDto, ApiCampaignWorldNoteDto, ApiCharacterDto, DungeonApiService } from './dungeon-api.service';
+import { ApiCampaignDto, ApiCampaignMapBoardDto, ApiCampaignMapDecorationDto, ApiCampaignMapDto, ApiCampaignMapLabelDto, ApiCampaignMapLabelStyleDto, ApiCampaignMapLibraryDto, ApiCampaignMapTokenDto, ApiCampaignMapTokenMovedDto, ApiCampaignMapVisionMemoryDto, ApiCampaignMapVisionUpdatedDto, ApiCampaignSummaryDto, ApiCampaignWorldNoteDto, ApiCharacterDto, DungeonApiService } from './dungeon-api.service';
 import { SessionService } from './session.service';
 
 @Injectable({ providedIn: 'root' })
@@ -74,7 +74,7 @@ export class DungeonStoreService {
             const campaigns = this.campaigns();
             const selectedCampaignId = this.selectedCampaignId();
 
-            if (!campaigns.some((campaign) => campaign.id === selectedCampaignId)) {
+            if (!selectedCampaignId) {
                 this.selectedCampaignId.set(campaigns[0]?.id ?? '');
             }
         });
@@ -199,6 +199,35 @@ export class DungeonStoreService {
                     ? {
                         ...campaign.map,
                         tokens: this.upsertMapToken(campaign.map.tokens, mappedToken)
+                    }
+                    : campaign.map,
+                maps
+            };
+        }));
+    }
+
+    applyCampaignMapVisionUpdated(event: ApiCampaignMapVisionUpdatedDto): void {
+        const mappedMemory = this.mapCampaignVisionMemoryFromApi(event.memory);
+
+        this.campaigns.update((campaigns) => campaigns.map((campaign) => {
+            if (campaign.id !== event.campaignId) {
+                return campaign;
+            }
+
+            const maps = campaign.maps.map((map) => map.id === event.mapId
+                ? {
+                    ...map,
+                    visionMemory: this.upsertMapVisionMemory(map.visionMemory, mappedMemory)
+                }
+                : map);
+            const shouldUpdatePrimaryMap = campaign.maps.length === 0 || campaign.activeMapId === event.mapId;
+
+            return {
+                ...campaign,
+                map: shouldUpdatePrimaryMap
+                    ? {
+                        ...campaign.map,
+                        visionMemory: this.upsertMapVisionMemory(campaign.map.visionMemory, mappedMemory)
                     }
                     : campaign.map,
                 maps
@@ -518,13 +547,13 @@ export class DungeonStoreService {
         }
     }
 
-    async resetCampaignMapVision(campaignId: string, mapId: string): Promise<boolean> {
+    async resetCampaignMapVision(campaignId: string, mapId: string, key?: string | null): Promise<boolean> {
         if (!this.canManageCampaignContent(campaignId)) {
             return false;
         }
 
         try {
-            await this.api.resetCampaignMapVision(campaignId, { mapId });
+            await this.api.resetCampaignMapVision(campaignId, { mapId, key: key?.trim() || null });
             return true;
         } catch {
             return false;
@@ -878,7 +907,7 @@ export class DungeonStoreService {
             this.campaigns.set(mappedCampaigns);
 
             const selected = this.selectedCampaignId();
-            if (!mappedCampaigns.some((campaign) => campaign.id === selected)) {
+            if (!selected) {
                 this.selectedCampaignId.set(mappedCampaigns[0]?.id ?? '');
             }
         } catch {
@@ -1049,6 +1078,26 @@ export class DungeonStoreService {
         };
     }
 
+    private mapCampaignVisionMemoryFromApi(entry: ApiCampaignMapVisionMemoryDto): CampaignMap['visionMemory'][number] {
+        return {
+            key: entry.key?.trim() || '',
+            polygons: (entry.polygons ?? []).map((polygon) => ({
+                points: (polygon.points ?? []).map((point) => ({
+                    x: this.normalizeMapCoordinate(point.x),
+                    y: this.normalizeMapCoordinate(point.y)
+                }))
+            })).filter((polygon) => polygon.points.length > 0),
+            lastOrigin: entry.lastOrigin
+                ? {
+                    x: this.normalizeMapCoordinate(entry.lastOrigin.x),
+                    y: this.normalizeMapCoordinate(entry.lastOrigin.y)
+                }
+                : null,
+            lastPolygonHash: entry.lastPolygonHash?.trim() || '',
+            revision: this.normalizeMapVisionRevision(entry.revision)
+        };
+    }
+
     private upsertMapToken(tokens: CampaignMapToken[], updatedToken: CampaignMapToken): CampaignMapToken[] {
         const existingIndex = tokens.findIndex((token) => token.id === updatedToken.id);
         if (existingIndex === -1) {
@@ -1062,6 +1111,22 @@ export class DungeonStoreService {
 
         const next = [...tokens];
         next[existingIndex] = updatedToken;
+        return next;
+    }
+
+    private upsertMapVisionMemory(entries: CampaignMap['visionMemory'], updatedEntry: CampaignMap['visionMemory'][number]): CampaignMap['visionMemory'] {
+        const existingIndex = entries.findIndex((entry) => entry.key === updatedEntry.key);
+        if (existingIndex === -1) {
+            return [...entries, updatedEntry];
+        }
+
+        const existingEntry = entries[existingIndex];
+        if ((existingEntry.revision ?? 0) > updatedEntry.revision) {
+            return entries;
+        }
+
+        const next = [...entries];
+        next[existingIndex] = updatedEntry;
         return next;
     }
 

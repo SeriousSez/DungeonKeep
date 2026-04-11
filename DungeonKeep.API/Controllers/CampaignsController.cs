@@ -931,7 +931,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
     }
 
     [HttpPost("{campaignId:guid}/map/{mapId:guid}/vision/reset")]
-    public async Task<IActionResult> ResetMapVision(Guid campaignId, Guid mapId, CancellationToken cancellationToken)
+    public async Task<IActionResult> ResetMapVision(Guid campaignId, Guid mapId, [FromBody] ResetCampaignMapVisionRequest? request, CancellationToken cancellationToken)
     {
         var user = await GetAuthenticatedUserAsync(cancellationToken);
         if (user is null)
@@ -958,7 +958,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
 
         try
         {
-            var reset = await campaignService.ResetMapVisionAsync(campaignId, mapId, user.Id, cancellationToken);
+            var reset = await campaignService.ResetMapVisionAsync(campaignId, mapId, user.Id, request?.Key, cancellationToken);
             if (reset is null)
             {
                 return NotFound("Map was not found.");
@@ -980,8 +980,11 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             {
                 campaignId,
                 mapId,
+                key = request?.Key,
                 initiatedByUserId = user.Id,
-                summary = $"{user.DisplayName} reset remembered sight on {map.Name}."
+                summary = string.IsNullOrWhiteSpace(request?.Key)
+                    ? $"{user.DisplayName} reset remembered sight on {map.Name}."
+                    : $"{user.DisplayName} reset a token's remembered sight on {map.Name}."
             }, cancellationToken);
 
         return NoContent();

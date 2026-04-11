@@ -212,6 +212,7 @@ export interface ApiMoveCampaignMapTokenRequest {
 
 export interface ApiResetCampaignMapVisionRequest {
     mapId: string;
+    key?: string | null;
 }
 
 export interface ApiUpdateCampaignMapVisionRequest {

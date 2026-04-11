@@ -289,6 +289,7 @@ public sealed record UpdateCampaignWorldNoteRequest(string Title, string Categor
 public sealed record DeleteCampaignWorldNoteRequest(Guid NoteId);
 public sealed record UpdateCampaignMapRequest(CampaignMapDto? Map, CampaignMapLibraryDto? Library);
 public sealed record MoveCampaignMapTokenRequest(Guid MapId, double X, double Y, long MoveRevision, CampaignMapVisionMemoryDto? VisionMemory);
+public sealed record ResetCampaignMapVisionRequest(Guid MapId, string? Key);
 public sealed record UpdateCampaignMapVisionRequest(Guid MapId, CampaignMapVisionMemoryDto Memory);
 
 public sealed record CampaignInvitationEmail(

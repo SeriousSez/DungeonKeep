@@ -8,7 +8,7 @@ import { TokenImageCropModalComponent } from '../../components/token-image-crop-
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
 import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelFontFamily, CampaignMapLabelTone, CampaignMapPoint, CampaignMapStroke, CampaignMapToken, CampaignMapWall, CampaignTone, Character, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS } from '../../models/dungeon.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
-import { CampaignMapVisionUpdatedEvent, CampaignRealtimeService } from '../../state/campaign-realtime.service';
+import { CampaignMapTokenMovedEvent, CampaignMapVisionUpdatedEvent, CampaignRealtimeService } from '../../state/campaign-realtime.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 import { SessionService } from '../../state/session.service';
 
@@ -465,6 +465,10 @@ export class CampaignMapPageComponent {
 
         return this.workingMap().tokens.find((token) => token.id === tokenId) ?? null;
     });
+    readonly singleAssignedTokenId = computed(() => {
+        const assignedTokens = this.workingMap().tokens.filter((token) => this.isTokenAssignedToCurrentUser(token));
+        return assignedTokens.length === 1 ? assignedTokens[0]?.id ?? null : null;
+    });
     readonly selectedLabel = computed(() => {
         const labelId = this.selectedLabelId();
         if (!labelId) {
@@ -664,6 +668,11 @@ export class CampaignMapPageComponent {
         });
     });
     readonly hasVisionMemory = computed(() => {
+        const token = this.selectedToken();
+        if (token) {
+            return !!this.visionExploration()[this.visionMemoryKey(token)];
+        }
+
         const prefix = `${this.currentMapId()}::`;
         return Object.keys(this.visionExploration()).some((key) => key.startsWith(prefix));
     });
@@ -857,6 +866,7 @@ export class CampaignMapPageComponent {
     private autosaveQueuedWhileSaving = false;
     private readonly pendingVisionMemoryPersistenceKeys = new Set<string>();
     private readonly inFlightVisionMemoryPersistenceKeys = new Set<string>();
+    private readonly resetVisionMemoryOrigins = new Map<string, CampaignMapPoint | null>();
     private localChangeRevision = 0;
     private lastPersistedRevision = 0;
     private creatingRouteMap = false;
@@ -864,6 +874,7 @@ export class CampaignMapPageComponent {
     private historySuppressed = false;
     private randomSource: () => number = () => Math.random();
     private ctrlKeyPressed = false;
+    private suppressNextBoardClick = false;
     private readonly shiftKeyPressed = signal(false);
     private mapOverlayHintRefreshFrameId: number | null = null;
     private lastMapOverlayHintSourceKey = '';
@@ -883,7 +894,11 @@ export class CampaignMapPageComponent {
                     return;
                 }
 
-                this.clearVisionExplorationForMap(event.mapId);
+                if (event.key) {
+                    this.clearVisionExplorationEntry(event.mapId, event.key);
+                } else {
+                    this.clearVisionExplorationForMap(event.mapId);
+                }
 
                 if (event.mapId === this.currentMapId() && event.initiatedByUserId !== this.currentUserId()) {
                     this.showMapNotice(event.summary);
@@ -896,6 +911,12 @@ export class CampaignMapPageComponent {
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe((event) => {
                 this.applyRealtimeVisionMemoryUpdate(event);
+            });
+
+        this.campaignRealtime.campaignMapTokenMoved$
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe((event) => {
+                this.applyRealtimeTokenMoved(event);
             });
 
         this.route.paramMap
@@ -983,7 +1004,10 @@ export class CampaignMapPageComponent {
 
             this.mapBoards.set(maps);
             this.hydrateVisionExplorationFromMaps(maps);
-            this.loadMapBoard(activeMap, { preserveTool: sameMapEditorRefresh });
+            this.loadMapBoard(activeMap, {
+                preserveTool: sameMapEditorRefresh,
+                preserveTokenSelection: sameMapEditorRefresh
+            });
             if (!sameMapEditorRefresh) {
                 this.undoStack.set([]);
                 this.redoStack.set([]);
@@ -1004,6 +1028,28 @@ export class CampaignMapPageComponent {
             this.tokenNameDraft.set(selectedToken?.name ?? '');
             this.tokenNoteDraft.set(selectedToken?.note ?? '');
             this.tokenAssignmentDraft.set(this.tokenAssignmentValue(selectedToken));
+        });
+
+        effect(() => {
+            const singleTokenId = this.singleAssignedTokenId();
+            const selectedTokenId = this.selectedTokenId();
+            const hasNonTokenSelection = !!this.selectedIconId()
+                || !!this.selectedLabelId()
+                || !!this.selectedDecorationId()
+                || !!this.selectedStrokeId()
+                || !!this.selectedWallId();
+
+            if (singleTokenId) {
+                if (!hasNonTokenSelection && selectedTokenId !== singleTokenId) {
+                    this.selectedTokenId.set(singleTokenId);
+                }
+
+                return;
+            }
+
+            if (selectedTokenId && !this.workingMap().tokens.some((token) => token.id === selectedTokenId)) {
+                this.selectedTokenId.set(null);
+            }
         });
 
         effect(() => {
@@ -2469,6 +2515,11 @@ export class CampaignMapPageComponent {
     }
 
     handleBoardClick(event: MouseEvent): void {
+        if (this.suppressNextBoardClick) {
+            this.suppressNextBoardClick = false;
+            return;
+        }
+
         if (!this.canModify()) {
             return;
         }
@@ -3372,6 +3423,7 @@ export class CampaignMapPageComponent {
         }
 
         this.pendingDragHistory = null;
+        this.suppressNextBoardClick = true;
         void this.persistControlledTokenMove(tokenId, movedToken, origin);
     }
 
@@ -3595,17 +3647,27 @@ export class CampaignMapPageComponent {
             return;
         }
 
-        this.clearVisionExplorationForMap(mapId);
-        this.showMapNotice('Sight memory reset for this board.');
+        const token = this.selectedToken();
+        const visionKey = token ? this.visionMemoryScopeKey(token) : null;
+
+        if (visionKey) {
+            this.clearVisionExplorationEntry(mapId, visionKey);
+            this.showMapNotice('Sight memory reset for this token.');
+        } else {
+            this.clearVisionExplorationForMap(mapId);
+            this.showMapNotice('Sight memory reset for this board.');
+        }
 
         if (!campaignId) {
             return;
         }
 
-        void this.store.resetCampaignMapVision(campaignId, mapId)
+        void this.store.resetCampaignMapVision(campaignId, mapId, visionKey)
             .then((ok) => {
                 if (!ok) {
-                    this.showMapNotice('Sight memory reset here, but other viewers could not be updated.');
+                    this.showMapNotice(visionKey
+                        ? 'Sight memory reset here, but other viewers could not be updated for this token.'
+                        : 'Sight memory reset here, but other viewers could not be updated.');
                 }
 
                 this.cdr.detectChanges();
@@ -4189,11 +4251,13 @@ export class CampaignMapPageComponent {
         };
     }
 
-    private loadMapBoard(map: CampaignMapBoard, options?: { preserveTool?: boolean }): void {
+    private loadMapBoard(map: CampaignMapBoard, options?: { preserveTool?: boolean; preserveTokenSelection?: boolean }): void {
         const preserveTool = options?.preserveTool === true;
+        const preserveTokenSelection = options?.preserveTokenSelection === true;
         const activeTool = this.activeTool();
         const pendingIconType = this.pendingIconType();
         const pendingTerrainType = this.pendingTerrainType();
+        const selectedTokenId = preserveTokenSelection ? this.selectedTokenId() : null;
 
         this.currentMapId.set(map.id);
         this.workingMap.set(this.cloneMap(map));
@@ -4220,7 +4284,7 @@ export class CampaignMapPageComponent {
         this.selectedLabelId.set(null);
         this.selectedStrokeId.set(null);
         this.selectedWallId.set(null);
-        this.selectedTokenId.set(null);
+        this.selectedTokenId.set(selectedTokenId && map.tokens.some((token) => token.id === selectedTokenId) ? selectedTokenId : null);
         this.showVisionPreview.set(false);
         this.iconLabelDraft.set('');
         this.tokenNameDraft.set('');
@@ -4324,6 +4388,10 @@ export class CampaignMapPageComponent {
             return true;
         }
 
+        return this.isTokenAssignedToCurrentUser(token);
+    }
+
+    private isTokenAssignedToCurrentUser(token: CampaignMapToken): boolean {
         const currentUserId = this.currentUserId();
         if (!currentUserId) {
             return false;
@@ -4794,6 +4862,13 @@ export class CampaignMapPageComponent {
         const polygonHash = this.hashVisionPolygon(nextPolygon);
         let updated = false;
 
+        const resetOrigin = this.resetVisionMemoryOrigins.get(key);
+        if (resetOrigin && (!resetOrigin || this.distanceBetweenPoints(resetOrigin, origin) < MAP_VISION_MEMORY_ORIGIN_THRESHOLD)) {
+            return;
+        }
+
+        this.resetVisionMemoryOrigins.delete(key);
+
         this.visionExploration.update((memory) => {
             const existing = memory[key];
             if (existing?.lastPolygonHash === polygonHash && existing.lastOrigin && this.distanceBetweenPoints(existing.lastOrigin, origin) < MAP_VISION_MEMORY_ORIGIN_THRESHOLD) {
@@ -4814,7 +4889,7 @@ export class CampaignMapPageComponent {
             };
         });
 
-        if (updated && this.shouldPersistVisionMemory(token)) {
+        if (updated && this.shouldPersistVisionMemory(token) && this.canEdit()) {
             this.queueVisionMemoryPersistence(key);
         }
     }
@@ -4832,9 +4907,34 @@ export class CampaignMapPageComponent {
             }
         }
 
+        for (const token of this.workingMap().tokens) {
+            this.suppressVisionMemoryUntilTokenMoves(mapId, this.visionMemoryScopeKey(token), token);
+        }
+
         this.visionExploration.update((memory) => Object.fromEntries(
             Object.entries(memory).filter(([key]) => !key.startsWith(prefix))
         ));
+    }
+
+    private clearVisionExplorationEntry(mapId: string, visionKey: string): void {
+        const compoundKey = `${mapId}::${visionKey}`;
+        this.pendingVisionMemoryPersistenceKeys.delete(compoundKey);
+        this.inFlightVisionMemoryPersistenceKeys.delete(compoundKey);
+        const token = this.workingMap().tokens.find((entry) => this.visionMemoryScopeKey(entry) === visionKey) ?? null;
+        this.suppressVisionMemoryUntilTokenMoves(mapId, visionKey, token);
+        this.visionExploration.update((memory) => {
+            const next = { ...memory };
+            delete next[compoundKey];
+            return next;
+        });
+        this.syncPendingVisionMemorySnapshot();
+    }
+
+    private suppressVisionMemoryUntilTokenMoves(mapId: string, visionKey: string, token: CampaignMapToken | null): void {
+        this.resetVisionMemoryOrigins.set(
+            `${mapId}::${visionKey}`,
+            token ? this.tokenVisionOriginNormalized(token) : null
+        );
     }
 
     private visionMemoryKey(token: CampaignMapToken): string {
@@ -4928,6 +5028,14 @@ export class CampaignMapPageComponent {
             if (!this.matchesVisionMemoryEntry(backendMemory[key], localEntry)) {
                 this.pendingVisionMemoryPersistenceKeys.add(key);
             }
+        }
+
+        if (!this.canEdit()) {
+            this.pendingVisionMemoryPersistenceKeys.clear();
+            this.inFlightVisionMemoryPersistenceKeys.clear();
+            this.clearVisionMemoryPersistTimer();
+            this.clearPendingVisionMemorySnapshot();
+            return;
         }
 
         if (this.pendingVisionMemoryPersistenceKeys.size === 0) {
@@ -5534,6 +5642,8 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.resetVisionMemoryOrigins.delete(compoundKey);
+
         this.visionExploration.update((memory) => ({
             ...memory,
             [compoundKey]: incomingEntry
@@ -5546,6 +5656,56 @@ export class CampaignMapPageComponent {
         }
 
         this.cdr.detectChanges();
+    }
+
+    private applyRealtimeTokenMoved(event: CampaignMapTokenMovedEvent): void {
+        if (event.campaignId !== this.campaignId()) {
+            return;
+        }
+
+        const incomingToken: CampaignMapToken = {
+            id: event.token.id,
+            name: event.token.name,
+            imageUrl: event.token.imageUrl,
+            x: this.clampCoordinate(event.token.x),
+            y: this.clampCoordinate(event.token.y),
+            size: this.normalizeTokenGridSpan(event.token.size),
+            note: event.token.note,
+            assignedUserId: event.token.assignedUserId ?? null,
+            assignedCharacterId: event.token.assignedCharacterId ?? null,
+            moveRevision: Number.isFinite(event.token.moveRevision) ? Math.max(0, Math.trunc(event.token.moveRevision)) : 0
+        };
+
+        this.mapBoards.update((maps) => maps.map((map) => map.id === event.mapId
+            ? {
+                ...map,
+                tokens: this.upsertRealtimeMapToken(map.tokens, incomingToken)
+            }
+            : map));
+
+        if (this.currentMapId() === event.mapId) {
+            this.workingMap.update((map) => ({
+                ...this.cloneMap(map),
+                tokens: this.upsertRealtimeMapToken(map.tokens, incomingToken)
+            }));
+        }
+
+        this.cdr.detectChanges();
+    }
+
+    private upsertRealtimeMapToken(tokens: CampaignMapToken[], incomingToken: CampaignMapToken): CampaignMapToken[] {
+        const existingIndex = tokens.findIndex((token) => token.id === incomingToken.id);
+        if (existingIndex === -1) {
+            return [...tokens, incomingToken];
+        }
+
+        if ((tokens[existingIndex].moveRevision ?? 0) > incomingToken.moveRevision) {
+            return tokens;
+        }
+
+        const next = [...tokens];
+        next[existingIndex] = incomingToken;
+        return next;
     }
 
     private updateSelectedWallFlags(wallId: string, flags: Partial<Pick<CampaignMapWall, 'blocksVision' | 'blocksMovement'>>, message: string): void {

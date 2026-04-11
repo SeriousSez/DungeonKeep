@@ -709,7 +709,7 @@ public sealed class CampaignService(
             : CreateCampaignMapVisionUpdatedDto(campaignId, request.MapId, userId, updatedMemory);
     }
 
-    public async Task<bool?> ResetMapVisionAsync(Guid campaignId, Guid mapId, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<bool?> ResetMapVisionAsync(Guid campaignId, Guid mapId, Guid userId, string? key = null, CancellationToken cancellationToken = default)
     {
         if (mapId == Guid.Empty)
         {
@@ -741,8 +741,18 @@ public sealed class CampaignService(
             return null;
         }
 
+        var normalizedKey = string.IsNullOrWhiteSpace(key) ? null : key.Trim();
         var updatedMaps = latestLibrary.Maps
-            .Select(map => map.Id == mapId ? map with { VisionMemory = [] } : map)
+            .Select(map => map.Id == mapId
+                ? map with
+                {
+                    VisionMemory = normalizedKey is null
+                        ? []
+                        : map.VisionMemory
+                            .Where(entry => !string.Equals(entry.Key, normalizedKey, StringComparison.OrdinalIgnoreCase))
+                            .ToList()
+                }
+                : map)
             .ToList();
 
         var updated = await campaignRepository.UpdateMapAsync(campaignId, new CampaignMapLibraryDto(latestLibrary.ActiveMapId, updatedMaps), cancellationToken);

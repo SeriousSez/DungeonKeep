@@ -25,7 +25,7 @@ public interface ICampaignService
     Task<CampaignDto?> UpdateMapAsync(Guid campaignId, UpdateCampaignMapRequest request, Guid userId, CancellationToken cancellationToken = default);
     Task<CampaignMapTokenMoveResultDto?> MoveMapTokenAsync(Guid campaignId, Guid tokenId, MoveCampaignMapTokenRequest request, Guid userId, CancellationToken cancellationToken = default);
     Task<CampaignMapVisionUpdatedDto?> UpdateMapVisionAsync(Guid campaignId, UpdateCampaignMapVisionRequest request, Guid userId, CancellationToken cancellationToken = default);
-    Task<bool?> ResetMapVisionAsync(Guid campaignId, Guid mapId, Guid userId, CancellationToken cancellationToken = default);
+    Task<bool?> ResetMapVisionAsync(Guid campaignId, Guid mapId, Guid userId, string? key = null, CancellationToken cancellationToken = default);
     Task<CampaignDto?> InviteMemberAsync(Guid campaignId, InviteCampaignMemberRequest request, AuthenticatedUser user, string? clientBaseUrl, CancellationToken cancellationToken = default);
     Task LeaveAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default);
