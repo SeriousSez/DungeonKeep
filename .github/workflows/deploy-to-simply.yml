@@ -17,6 +17,7 @@ env:
   WEB_DEPLOY_PATH: "./web-dist"
   WEB_SERVER_DIR: "/DungeonKeep/"
   API_SERVER_DIR: "/dungeonkeep.api/"
+  API_URL: "https://dungeonkeep.api.sezginsahin.dk/"
   API_HEALTH_URL: "https://dungeonkeep.api.sezginsahin.dk/api/health"
   WEB_HEALTH_URL: "https://dungeonkeep.sezginsahin.dk/"
   API_USE_APP_OFFLINE: "false"
@@ -544,5 +545,5 @@ jobs:
       - name: Print deployed URLs
         run: |
           echo "Deployment summary"
-          echo "Web URL: ${{ env.WEB_HEALTH_URL }}"
+          echo "Web URL: ${{ env.API_URL }}"
           echo "API URL: ${{ env.API_HEALTH_URL }}"

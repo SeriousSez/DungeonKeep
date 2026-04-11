@@ -3474,6 +3474,10 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        if (!this.canEdit()) {
+            return;
+        }
+
         this.showWallsInViewer.update((value) => !value);
     }
 
