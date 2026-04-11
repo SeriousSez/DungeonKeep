@@ -7,6 +7,7 @@ import { SessionService } from './session.service';
 
 @Injectable({ providedIn: 'root' })
 export class DungeonStoreService {
+    private readonly latestTokenMoveRequestSequence = new Map<string, number>();
 
     async deleteCharacter(characterId: string): Promise<void> {
         try {
@@ -434,6 +435,10 @@ export class DungeonStoreService {
         position: { x: number; y: number },
         visionMemory?: CampaignMap['visionMemory'][number] | null
     ): Promise<boolean> {
+        const requestKey = this.tokenMoveRequestKey(campaignId, mapId, tokenId);
+        const requestSequence = (this.latestTokenMoveRequestSequence.get(requestKey) ?? 0) + 1;
+        this.latestTokenMoveRequestSequence.set(requestKey, requestSequence);
+
         try {
             const updated = await this.api.moveCampaignMapToken(campaignId, tokenId, {
                 mapId,
@@ -458,10 +463,19 @@ export class DungeonStoreService {
                     }
                     : null
             });
+
+            if (!this.isLatestTokenMoveRequest(requestKey, requestSequence)) {
+                return true;
+            }
+
             this.replaceCampaignFromApi(campaignId, updated);
             return true;
         } catch {
-            return false;
+            return !this.isLatestTokenMoveRequest(requestKey, requestSequence);
+        } finally {
+            if (this.isLatestTokenMoveRequest(requestKey, requestSequence)) {
+                this.latestTokenMoveRequestSequence.delete(requestKey);
+            }
         }
     }
 
@@ -944,6 +958,14 @@ export class DungeonStoreService {
                     : campaign
             )
         );
+    }
+
+    private tokenMoveRequestKey(campaignId: string, mapId: string, tokenId: string): string {
+        return `${campaignId}:${mapId}:${tokenId}`;
+    }
+
+    private isLatestTokenMoveRequest(requestKey: string, requestSequence: number): boolean {
+        return this.latestTokenMoveRequestSequence.get(requestKey) === requestSequence;
     }
 
     private createEmptyCampaignMapBoard(): CampaignMapBoard {

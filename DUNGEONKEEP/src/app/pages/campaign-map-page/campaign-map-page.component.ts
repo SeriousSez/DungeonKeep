@@ -1053,7 +1053,16 @@ export class CampaignMapPageComponent {
             this.shiftKeyPressed.set(true);
         }
 
-        if (!this.canModify() || this.confirmOpen() || this.shouldIgnoreShortcut(event.target) || event.altKey) {
+        if (this.confirmOpen() || this.shouldIgnoreShortcut(event.target) || event.altKey) {
+            return;
+        }
+
+        if (!event.ctrlKey && !event.metaKey && this.handleSelectedTokenArrowMove(event)) {
+            event.preventDefault();
+            return;
+        }
+
+        if (!this.canModify()) {
             return;
         }
 
@@ -3254,6 +3263,75 @@ export class CampaignMapPageComponent {
 
     private shouldMoveTokenFreely(event: PointerEvent): boolean {
         return this.draggingTokenFreeMove || event.ctrlKey || this.ctrlKeyPressed;
+    }
+
+    private handleSelectedTokenArrowMove(event: KeyboardEvent): boolean {
+        const direction = this.tokenArrowMoveDirection(event.key);
+        if (!direction || event.ctrlKey || event.metaKey) {
+            return false;
+        }
+
+        const token = this.selectedToken();
+        if (!token || this.draggingTokenId) {
+            return false;
+        }
+
+        const canMoveSelectedToken = this.canModify() || this.canControlToken(token);
+        if (!canMoveSelectedToken) {
+            return false;
+        }
+
+        const targetPoint = this.computeTokenArrowMoveTarget(token, direction.deltaX, direction.deltaY);
+        if (!targetPoint) {
+            return false;
+        }
+
+        const origin = { x: token.x, y: token.y };
+        const movedToken = { ...token, x: targetPoint.x, y: targetPoint.y };
+
+        if (this.canModify()) {
+            this.captureHistorySnapshot();
+            this.mutateMap((map) => {
+                map.tokens = map.tokens.map((entry) => entry.id === token.id ? { ...entry, x: targetPoint.x, y: targetPoint.y } : entry);
+            });
+            this.markDirty('Token moved.');
+            return true;
+        }
+
+        this.mutateMap((map) => {
+            map.tokens = map.tokens.map((entry) => entry.id === token.id ? { ...entry, x: targetPoint.x, y: targetPoint.y } : entry);
+        });
+        void this.persistControlledTokenMove(token.id, movedToken, origin);
+        return true;
+    }
+
+    private tokenArrowMoveDirection(key: string): { deltaX: number; deltaY: number } | null {
+        switch (key) {
+            case 'ArrowLeft':
+                return { deltaX: -1, deltaY: 0 };
+            case 'ArrowRight':
+                return { deltaX: 1, deltaY: 0 };
+            case 'ArrowUp':
+                return { deltaX: 0, deltaY: -1 };
+            case 'ArrowDown':
+                return { deltaX: 0, deltaY: 1 };
+            default:
+                return null;
+        }
+    }
+
+    private computeTokenArrowMoveTarget(token: CampaignMapToken, deltaX: number, deltaY: number): CampaignMapPoint | null {
+        const candidatePoint = {
+            x: this.clampCoordinate(token.x + (deltaX / this.gridColumns())),
+            y: this.clampCoordinate(token.y + (deltaY / this.gridRows()))
+        } satisfies CampaignMapPoint;
+        const targetPoint = this.snapTokenPointToGrid(candidatePoint, token.size);
+
+        if ((targetPoint.x === token.x && targetPoint.y === token.y) || this.isTokenMoveBlocked(token, targetPoint)) {
+            return null;
+        }
+
+        return targetPoint;
     }
 
     handleTokenPointerUp(event: PointerEvent, tokenId: string): void {
