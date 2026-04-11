@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { Component, computed, effect, HostListener, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { DungeonStoreService } from './state/dungeon-store.service';
@@ -19,6 +19,7 @@ export class App {
   readonly store = inject(DungeonStoreService);
   readonly session = inject(SessionService);
   private readonly campaignRealtime = inject(CampaignRealtimeService);
+  private readonly document = inject(DOCUMENT);
   private readonly router = inject(Router);
   readonly mobileNavOpen = signal(false);
   readonly openDropdown = signal<string | null>(null);
@@ -26,6 +27,7 @@ export class App {
   readonly isInitialized = computed(() => this.session.initialized());
   readonly rulesBrowseLinks = rulesBrowseLinks;
   readonly rulesResourceLinks = rulesResourceLinks;
+  private previousUserId: string | null = null;
 
   constructor() {
     effect(() => {
@@ -46,6 +48,19 @@ export class App {
       if (user && (isAuthRoute || isPublicHomeRoute)) {
         void this.router.navigateByUrl('/dashboard');
       }
+    });
+
+    effect(() => {
+      if (!this.isInitialized()) {
+        return;
+      }
+
+      const userId = this.currentUser()?.id ?? '';
+      if (this.previousUserId !== null && this.previousUserId !== userId) {
+        this.cleanupDetachedModalHosts();
+      }
+
+      this.previousUserId = userId;
     });
   }
 
@@ -98,9 +113,22 @@ export class App {
   }
 
   logout(): void {
+    this.cleanupDetachedModalHosts();
     this.session.logout();
     this.closeMobileNav();
     this.closeDropdown();
+  }
+
+  private cleanupDetachedModalHosts(): void {
+    const modalHosts = this.document.body.querySelectorAll([
+      'app-confirm-modal',
+      'app-character-portrait-modal',
+      'app-character-portrait-crop-modal'
+    ].join(', '));
+
+    for (const host of modalHosts) {
+      host.remove();
+    }
   }
 }
 
