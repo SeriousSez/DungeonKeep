@@ -45,7 +45,7 @@
                 <div class="map-board-summary-card">
                     <strong>{{ activeMap.name }}</strong>
                     <span>{{ activeMap.background }} board</span>
-                    <span>{{ activeMap.icons.length }} landmarks • {{ activeMap.tokens.length }} tokens • {{ activeMap.strokes.length + activeMap.layers.rivers.length }} lines</span>
+                    <span>{{ activeMap.icons.length }} landmarks • {{ activeMap.tokens.length }} tokens • {{ activeMap.strokes.length + activeMap.walls.length + activeMap.layers.rivers.length }} lines</span>
                 </div>
                 @if (canEdit()) {
                 <label class="field-label" for="map-board-name">Map name</label>
@@ -92,7 +92,7 @@
                 <div class="layer-grid layer-grid--stats">
                     <div class="seed-metric-card">
                         <span class="seed-metric-label">Lines</span>
-                        <strong>{{ workingMap().strokes.length + workingMap().layers.rivers.length }}</strong>
+                        <strong>{{ workingMap().strokes.length + workingMap().walls.length + workingMap().layers.rivers.length }}</strong>
                     </div>
                     <div class="seed-metric-card">
                         <span class="seed-metric-label">Landmarks</span>
@@ -122,6 +122,7 @@
                 <div class="tool-toggle-row">
                     <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'select'" [disabled]="isEditorLocked()" (click)="selectSelectTool()">Select</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'draw'" [disabled]="isEditorLocked()" (click)="selectDrawTool()">Draw</button>
+                    <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'wall'" [disabled]="isEditorLocked()" (click)="selectWallTool()">Walls</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'erase'" [disabled]="isEditorLocked()" (click)="selectEraseTool()">Erase Lines</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'icon'" [disabled]="isEditorLocked()" (click)="startLandmarkTool()">Place Landmarks</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="activeTool() === 'terrain'" [disabled]="isEditorLocked()" (click)="selectTerrainTool('Mountain')">Place Terrain</button>
@@ -139,7 +140,16 @@
                 <div class="mode-detail-block">
                     <app-dropdown ariaLabel="Brush color" [value]="brushColor()" [options]="brushColorOptions" [minWidth]="220" [disabled]="isEditorLocked()" (changed)="updateBrushColor($event)"></app-dropdown>
                     <app-dropdown ariaLabel="Brush size" [value]="brushWidth()" [options]="brushSizeOptions" [minWidth]="220" [disabled]="isEditorLocked()" (changed)="updateBrushWidth($event)"></app-dropdown>
-                    <p class="sidebar-note generator-note">Draw mode paints freehand lines directly onto the board. Hold Shift while drawing to snap points to grid intersections. In Select mode, click a drawing to move it, inspect it, or use Ctrl/Cmd+Click to remove it immediately.</p>
+                    <p class="sidebar-note generator-note">Draw mode paints freehand lines directly onto the board. Hold Ctrl and click to place a straight line one corner at a time, then release Ctrl to apply it. Hold Ctrl+Shift while placing corners to keep every point snapped to the grid until
+                        you release Ctrl.</p>
+                </div>
+                }
+
+                @if (activeTool() === 'wall') {
+                <div class="mode-detail-block">
+                    <app-dropdown ariaLabel="Wall width" [value]="brushWidth()" [options]="brushSizeOptions" [minWidth]="220" [disabled]="isEditorLocked()" (changed)="updateBrushWidth($event)"></app-dropdown>
+                    <p class="sidebar-note generator-note">Walls uses the same line workflow and shortcuts as normal drawing. Hold Ctrl and click to place straight wall segments corner by corner, then release Ctrl to apply the wall. Hold Ctrl+Shift while placing corners to keep every wall
+                        point snapped to the grid until you release Ctrl.</p>
                 </div>
                 }
 
@@ -325,10 +335,15 @@
                     <label class="field-label" for="map-selected-token-assignment">Token control</label>
                     <app-dropdown id="map-selected-token-assignment" ariaLabel="Token control" [value]="tokenAssignmentDraft()" [options]="tokenAssignmentOptions()" [minWidth]="220" (changed)="updateTokenAssignmentDraft($event)"></app-dropdown>
                     <p class="sidebar-note token-assignment-summary">{{ tokenAssignmentSummary(token) }}</p>
+                    <button type="button" class="ghost-button full-width-button" [disabled]="!canPreviewVision()" (click)="toggleVisionPreview()">{{ showVisionPreview() ? 'Hide Sight Preview' : 'Preview Sight' }}</button>
+                    <button type="button" class="ghost-button full-width-button" [disabled]="!hasVisionMemory()" (click)="resetCurrentMapVisionExploration()">Reset Sight Memory</button>
+                    <p class="sidebar-note token-assignment-summary">{{ visionPreviewSummary() }}</p>
                     <button type="button" class="primary-button full-width-button" (click)="applySelectedTokenDetails()">Apply Token Details</button>
                     <button type="button" class="ghost-button danger-button full-width-button" (click)="requestDeleteSelectedToken()">Delete Token</button>
                     } @else {
+                    <button type="button" class="ghost-button full-width-button" [disabled]="!canPreviewVision()" (click)="toggleVisionPreview()">{{ showVisionPreview() ? 'Hide Sight Preview' : 'Preview Sight' }}</button>
                     <p class="sidebar-note token-assignment-summary">{{ tokenAssignmentSummary(token) }}</p>
+                    <p class="sidebar-note token-assignment-summary">{{ visionPreviewSummary() }}</p>
                     <p class="sidebar-note">{{ canControlToken(token) ? 'You can drag this token on the active map.' : 'You can inspect this token here, but only its assigned player or character owner can move it.' }}</p>
                     }
                 </div>
@@ -380,6 +395,34 @@
             </div>
             }
 
+            @if (selectedWall(); as wall) {
+            <div class="sidebar-section">
+                <div class="section-heading compact-heading">
+                    <h2>Selected Vision Wall</h2>
+                </div>
+
+                <div class="selected-icon-card">
+                    <div class="selected-icon-header">
+                        <div class="selected-icon-mark selected-route-mark selected-route-mark--wall">
+                            <span></span>
+                        </div>
+                        <div>
+                            <strong>{{ selectedWallRoleLabel(wall) }}</strong>
+                            <p>{{ wall.points.length }} points · {{ wall.width }}px wall</p>
+                        </div>
+                    </div>
+
+                    <div class="selected-wall-toggle-row">
+                        <button type="button" class="tool-toggle-button" [class.is-active]="wall.blocksVision" (click)="toggleSelectedWallVision()">Vision</button>
+                        <button type="button" class="tool-toggle-button" [class.is-active]="wall.blocksMovement" (click)="toggleSelectedWallMovement()">Physics</button>
+                    </div>
+
+                    <p class="sidebar-note">{{ selectedWallBehaviorSummary(wall) }}</p>
+                    <button type="button" class="ghost-button danger-button full-width-button" (click)="requestDeleteSelectedWall()">Delete Vision Wall</button>
+                </div>
+            </div>
+            }
+
             @if (selectedIcon(); as icon) {
             <div class="sidebar-section">
                 <div class="section-heading compact-heading">
@@ -415,6 +458,7 @@
                 </div>
                 <div class="layer-grid">
                     <button type="button" class="tool-toggle-button" [class.is-active]="showGrid()" (click)="toggleGridLayer()">Grid</button>
+                    <button type="button" class="tool-toggle-button" [class.is-active]="showWalls()" (click)="toggleWallsVisibility()">Vision {{ workingMap().walls.length }}</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="showRivers()" (click)="toggleRiverLayer()">Rivers {{ workingMap().layers.rivers.length }}</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="showMountainChains()" (click)="toggleMountainLayer()">Mountains {{ workingMap().layers.mountainChains.length }}</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="showForestBelts()" (click)="toggleForestLayer()">Forests {{ workingMap().layers.forestBelts.length }}</button>
@@ -475,7 +519,7 @@
                     <button type="button" class="ghost-button" [disabled]="!canUndo()" (click)="handleUndo()">Undo</button>
                     <button type="button" class="ghost-button" [disabled]="!canRedo()" (click)="handleRedo()">Redo</button>
                     <button type="button" class="ghost-button danger-button"
-                        [disabled]="workingMap().strokes.length === 0 && workingMap().icons.length === 0 && workingMap().tokens.length === 0 && workingMap().layers.rivers.length === 0 && workingMap().layers.mountainChains.length === 0 && workingMap().layers.forestBelts.length === 0"
+                        [disabled]="workingMap().strokes.length === 0 && workingMap().walls.length === 0 && workingMap().icons.length === 0 && workingMap().tokens.length === 0 && workingMap().layers.rivers.length === 0 && workingMap().layers.mountainChains.length === 0 && workingMap().layers.forestBelts.length === 0"
                         (click)="requestClearMap()">Clear Entire Map</button>
                 </div>
             </div>
@@ -491,7 +535,10 @@
                 <div class="map-stage-meta">
                     <button type="button" class="ghost-button compact-action" (click)="toggleMapFullscreen()">{{ isFullscreen() ? 'Exit Fullscreen' : 'Fullscreen' }}</button>
                     <button type="button" class="ghost-button compact-action" (click)="toggleGuide()">{{ showGuide() ? 'Hide Guide' : 'Show Guide' }}</button>
-                    <span class="count-badge">{{ workingMap().strokes.length }}</span>
+                    @if (mapNotice()) {
+                    <span class="status-chip map-notice">{{ mapNotice() }}</span>
+                    }
+                    <span class="count-badge">{{ visibleLineCount() }}</span>
                     <span class="meta-copy">lines</span>
                     <span class="count-badge">{{ workingMap().icons.length }}</span>
                     <span class="meta-copy">landmarks</span>
@@ -527,6 +574,18 @@
                         }
                         <polyline [attr.points]="formatStrokePoints(stroke.points)" [attr.stroke]="stroke.color" [attr.stroke-width]="stroke.width" fill="none" stroke-linecap="round" stroke-linejoin="round"></polyline>
                         }
+                        @if (showWallOutlines()) {
+                        @for (wall of workingMap().walls; track wall.id) {
+                        @if (isSelectedWall(wall.id)) {
+                        <polyline class="map-stroke-selection map-wall-selection" [attr.points]="formatStrokePoints(wall.points)" [attr.stroke-width]="wall.width + 10" fill="none" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                        }
+                        <polyline class="map-wall-line" [attr.points]="formatStrokePoints(wall.points)" [attr.stroke-width]="wall.width" fill="none" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                        }
+                        }
+                        @if (ctrlPolylineActive() && ctrlPolylineRenderPoints()) {
+                        <polyline class="map-stroke-preview" [class.map-stroke-preview--wall]="ctrlPolylineKind() === 'wall'" [attr.points]="ctrlPolylineRenderPoints()" [attr.stroke]="ctrlPolylineColor()" [attr.stroke-width]="ctrlPolylineWidth()" fill="none" stroke-linecap="round"
+                            stroke-linejoin="round"></polyline>
+                        }
                     </svg>
 
                     @if (showMountainChains()) {
@@ -561,7 +620,7 @@
                         }
                     </div>
 
-                    <div class="map-token-layer">
+                    <div class="map-token-layer" [style.clip-path]="visionClipPath()" [style.-webkit-clip-path]="visionClipPath()">
                         @for (token of workingMap().tokens; track token.id) {
                         <button type="button" class="map-token" [class.is-selected]="selectedTokenId() === token.id" [style.left.%]="token.x * 100" [style.top.%]="token.y * 100" [style.width]="tokenRenderSize(token.size)" (click)="$event.stopPropagation(); selectToken(token.id)"
                             (pointerdown)="handleTokenPointerDown($event, token.id)" (pointermove)="handleTokenPointerMove($event, token.id)" (pointerup)="handleTokenPointerUp($event, token.id)" (pointercancel)="handleTokenPointerUp($event, token.id)">
@@ -595,14 +654,40 @@
                     </div>
                     }
 
-                    @if (!workingMap().backgroundImageUrl && workingMap().strokes.length === 0 && workingMap().icons.length === 0 && workingMap().tokens.length === 0 && workingMap().decorations.length === 0 && workingMap().labels.length === 0 && workingMap().layers.rivers.length === 0 &&
-                    workingMap().layers.mountainChains.length === 0
-                    &&
-                    workingMap().layers.forestBelts.length === 0) {
+                    @if (visionOverlayActive() && visionPolygonPoints().length) {
+                    <svg class="map-vision-layer" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true">
+                        <defs>
+                            <mask [attr.id]="visionUnexploredMaskId">
+                                <rect x="0" y="0" width="1000" height="700" fill="white"></rect>
+                                @for (exploredPolygon of exploredVisionPolygonPoints(); track $index) {
+                                <polygon [attr.points]="exploredPolygon" fill="black"></polygon>
+                                }
+                                @for (polygon of visionPolygonPoints(); track $index) {
+                                <polygon [attr.points]="polygon" fill="black"></polygon>
+                                }
+                            </mask>
+                            <mask [attr.id]="visionExploredMaskId">
+                                <rect x="0" y="0" width="1000" height="700" fill="black"></rect>
+                                @for (exploredPolygon of exploredVisionPolygonPoints(); track $index) {
+                                <polygon [attr.points]="exploredPolygon" fill="white"></polygon>
+                                }
+                                @for (polygon of visionPolygonPoints(); track $index) {
+                                <polygon [attr.points]="polygon" fill="black"></polygon>
+                                }
+                            </mask>
+                        </defs>
+                        <rect class="map-vision-overlay map-vision-overlay--unexplored" x="0" y="0" width="1000" height="700" [attr.mask]="'url(#' + visionUnexploredMaskId + ')'">
+                        </rect>
+                        <rect class="map-vision-overlay map-vision-overlay--explored" x="0" y="0" width="1000" height="700" [attr.mask]="'url(#' + visionExploredMaskId + ')'">
+                        </rect>
+                    </svg>
+                    }
+
+                    @if (isMapVisuallyEmpty()) {
                     <div class="map-empty-state">
                         <i class="fa-duotone fa-thin fa-map"></i>
                         <h3>Nothing is plotted yet</h3>
-                        <p>{{ canEdit() ? 'Draw a line or place a landmark to start shaping the campaign map.' : 'The campaign owner has not plotted any drawings or landmarks yet.' }}</p>
+                        <p>{{ canEdit() ? 'Draw a line, place landmarks, or sketch walls to start shaping the campaign map.' : 'The campaign owner has not plotted any drawings, landmarks, or walls yet.' }}</p>
                     </div>
                     }
 
@@ -633,48 +718,82 @@
             </div>
 
             @if (showGuide()) {
-            <section class="map-guide-panel" aria-label="Map guide">
-                <div class="section-heading compact-heading">
-                    <h2>How to Use This Map</h2>
+            <section #mapGuidePanel class="map-guide-panel" aria-label="Map guide">
+                <div class="map-guide-panel-header section-heading compact-heading">
+                    <div>
+                        <p class="eyebrow">Field Notes</p>
+                        <h2>How to Use This Map</h2>
+                    </div>
+                    <p class="map-guide-intro">The editor now supports independent vision and movement walls, remembered sight, and live token-based visibility. This panel summarizes the parts that affect table play the most.</p>
                 </div>
                 <div class="map-guide-grid map-guide-grid--dense">
                     <article class="map-guide-card">
-                        <p class="eyebrow">Tools</p>
+                        <div class="map-guide-card-header">
+                            <span class="map-guide-icon" aria-hidden="true"><i class="fa-duotone fa-thin fa-compass-drafting"></i></span>
+                            <p class="eyebrow">Tools</p>
+                        </div>
                         <h3>What each mode does</h3>
                         <ul class="map-guide-list">
                             <li><strong>Select:</strong> inspect and move drawings, landmarks, terrain, labels, and tokens.</li>
                             <li><strong>Draw:</strong> add freehand lines for paths, borders, hazards, notes, or callouts.</li>
+                            <li><strong>Walls:</strong> draw walls that can block sight, movement, or both once selected.</li>
                             <li><strong>Erase Lines:</strong> trim only the touched section of a drawing instead of deleting the whole mark.</li>
                             <li><strong>Place tools:</strong> landmarks, terrain, labels, and tokens each stay active until you stop placing.</li>
                         </ul>
                     </article>
                     <article class="map-guide-card">
-                        <p class="eyebrow">Shortcuts</p>
+                        <div class="map-guide-card-header">
+                            <span class="map-guide-icon" aria-hidden="true"><i class="fa-duotone fa-thin fa-keyboard"></i></span>
+                            <p class="eyebrow">Shortcuts</p>
+                        </div>
                         <h3>Fast editing controls</h3>
                         <ul class="map-guide-list">
                             <li><strong>Shift while drawing:</strong> snap new points to grid intersections.</li>
+                            <li><strong>Shift with a selected token:</strong> temporarily preview that token's vision.</li>
+                            <li><strong>Ctrl+Shift while drawing or placing walls:</strong> add straight-line corners that stay snapped to the grid until you release Ctrl.</li>
+                            <li><strong>Keys 1-8:</strong> switch tools in order from Select, Draw, Walls, Erase Lines, Landmarks, Terrain, Labels, to Tokens.</li>
                             <li><strong>Delete or Backspace:</strong> remove the selected drawing, label, landmark, or token.</li>
                             <li><strong>Ctrl/Cmd+Click:</strong> instantly delete a selected drawing target.</li>
                             <li><strong>Enter or Escape:</strong> confirm or close the active confirmation dialog.</li>
                         </ul>
                     </article>
                     <article class="map-guide-card">
-                        <p class="eyebrow">Interaction</p>
+                        <div class="map-guide-card-header">
+                            <span class="map-guide-icon" aria-hidden="true"><i class="fa-duotone fa-thin fa-shield-keyhole"></i></span>
+                            <p class="eyebrow">Vision and Walls</p>
+                        </div>
+                        <h3>How visibility behaves</h3>
+                        <ul class="map-guide-list">
+                            <li><strong>Selected walls:</strong> can toggle sight blocking and physical blocking separately.</li>
+                            <li><strong>Token movement:</strong> respects walls marked for movement, so tokens cannot pass through them.</li>
+                            <li><strong>Preview Sight:</strong> still gives owners a manual way to inspect one token at a time.</li>
+                            <li><strong>Remembered areas:</strong> remain visible after a token has already explored them on this board.</li>
+                        </ul>
+                    </article>
+                    <article class="map-guide-card">
+                        <div class="map-guide-card-header">
+                            <span class="map-guide-icon" aria-hidden="true"><i class="fa-duotone fa-thin fa-hand"></i></span>
+                            <p class="eyebrow">Interaction</p>
+                        </div>
                         <h3>What to expect on the board</h3>
                         <ul class="map-guide-list">
                             <li>Click once to select an item before editing its details.</li>
                             <li>Drag in Select mode to reposition drawings, landmarks, terrain, labels, and eligible tokens.</li>
                             <li>Drawing and erasing work directly on the board, while labels and terrain use the right sidebar to set options before placement.</li>
-                            <li>The guide, grid, and fullscreen controls are view helpers and do not change map data on their own.</li>
+                            <li>The guide, grid, wall, and fullscreen controls are view helpers and do not change map data on their own.</li>
                         </ul>
                     </article>
                     <article class="map-guide-card">
-                        <p class="eyebrow">Saving</p>
+                        <div class="map-guide-card-header">
+                            <span class="map-guide-icon" aria-hidden="true"><i class="fa-duotone fa-thin fa-floppy-disk"></i></span>
+                            <p class="eyebrow">Saving</p>
+                        </div>
                         <h3>How changes are kept</h3>
                         <ul class="map-guide-list">
                             <li>Use Undo and Redo while editing to recover recent map changes.</li>
-                            <li>Your edits remain local until you save the map.</li>
+                            <li>Your edits remain local until you save the map, though active autosave will push map changes quickly.</li>
                             <li>Generated map art clears existing drawings but keeps landmarks unless you remove them yourself.</li>
+                            <li>Remembered sight is stored per explored token on the current board until you reset it.</li>
                             <li>Only campaign owners can edit the board, while members can still inspect the current map state.</li>
                         </ul>
                     </article>
@@ -694,7 +813,13 @@
             <div class="map-stage-meta map-stage-meta--viewer">
                 <button type="button" class="ghost-button compact-action" (click)="toggleMapFullscreen()">{{ isFullscreen() ? 'Exit Fullscreen' : 'Fullscreen' }}</button>
                 <button type="button" class="ghost-button compact-action" (click)="toggleGuide()">{{ showGuide() ? 'Hide Guide' : 'Show Guide' }}</button>
-                <span class="count-badge">{{ workingMap().strokes.length + workingMap().layers.rivers.length }}</span>
+                @if (canSeeWallOutlines()) {
+                <button type="button" class="ghost-button compact-action" (click)="toggleWallsVisibility()">{{ showWalls() ? 'Hide Walls' : 'Show Walls' }}</button>
+                }
+                @if (mapNotice()) {
+                <span class="status-chip map-notice">{{ mapNotice() }}</span>
+                }
+                <span class="count-badge">{{ visibleLineCount() }}</span>
                 <span class="meta-copy">lines</span>
                 <span class="count-badge">{{ workingMap().icons.length }}</span>
                 <span class="meta-copy">landmarks</span>
@@ -731,6 +856,14 @@
                     }
                     <polyline [attr.points]="formatStrokePoints(stroke.points)" [attr.stroke]="stroke.color" [attr.stroke-width]="stroke.width" fill="none" stroke-linecap="round" stroke-linejoin="round"></polyline>
                     }
+                    @if (showWallOutlines()) {
+                    @for (wall of workingMap().walls; track wall.id) {
+                    @if (isSelectedWall(wall.id)) {
+                    <polyline class="map-stroke-selection map-wall-selection" [attr.points]="formatStrokePoints(wall.points)" [attr.stroke-width]="wall.width + 10" fill="none" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                    }
+                    <polyline class="map-wall-line" [attr.points]="formatStrokePoints(wall.points)" [attr.stroke-width]="wall.width" fill="none" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                    }
+                    }
                 </svg>
 
                 @if (showMountainChains()) {
@@ -764,7 +897,7 @@
                     }
                 </div>
 
-                <div class="map-token-layer">
+                <div class="map-token-layer" [style.clip-path]="visionClipPath()" [style.-webkit-clip-path]="visionClipPath()">
                     @for (token of workingMap().tokens; track token.id) {
                     <button type="button" class="map-token map-token--viewer" [class.is-selected]="selectedTokenId() === token.id" [class.is-controllable]="canControlToken(token)" [style.left.%]="token.x * 100" [style.top.%]="token.y * 100" [style.width]="tokenRenderSize(token.size)"
                         (click)="$event.stopPropagation(); selectToken(token.id)" (pointerdown)="handleTokenPointerDown($event, token.id)" (pointermove)="handleTokenPointerMove($event, token.id)" (pointerup)="handleTokenPointerUp($event, token.id)"
@@ -797,60 +930,191 @@
                 </div>
                 }
 
-                @if (!workingMap().backgroundImageUrl && workingMap().strokes.length === 0 && workingMap().icons.length === 0 && workingMap().tokens.length === 0 && workingMap().decorations.length === 0 && workingMap().labels.length === 0 && workingMap().layers.rivers.length === 0 &&
-                workingMap().layers.mountainChains.length === 0 &&
-                workingMap().layers.forestBelts.length === 0) {
+                @if (visionOverlayActive() && visionPolygonPoints().length) {
+                <svg class="map-vision-layer" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true">
+                    <defs>
+                        <mask [attr.id]="visionUnexploredMaskId">
+                            <rect x="0" y="0" width="1000" height="700" fill="white"></rect>
+                            @for (exploredPolygon of exploredVisionPolygonPoints(); track $index) {
+                            <polygon [attr.points]="exploredPolygon" fill="black"></polygon>
+                            }
+                            @for (polygon of visionPolygonPoints(); track $index) {
+                            <polygon [attr.points]="polygon" fill="black"></polygon>
+                            }
+                        </mask>
+                        <mask [attr.id]="visionExploredMaskId">
+                            <rect x="0" y="0" width="1000" height="700" fill="black"></rect>
+                            @for (exploredPolygon of exploredVisionPolygonPoints(); track $index) {
+                            <polygon [attr.points]="exploredPolygon" fill="white"></polygon>
+                            }
+                            @for (polygon of visionPolygonPoints(); track $index) {
+                            <polygon [attr.points]="polygon" fill="black"></polygon>
+                            }
+                        </mask>
+                    </defs>
+                    <rect class="map-vision-overlay map-vision-overlay--unexplored" x="0" y="0" width="1000" height="700" [attr.mask]="'url(#' + visionUnexploredMaskId + ')'">
+                    </rect>
+                    <rect class="map-vision-overlay map-vision-overlay--explored" x="0" y="0" width="1000" height="700" [attr.mask]="'url(#' + visionExploredMaskId + ')'">
+                    </rect>
+                </svg>
+                }
+
+                @if (isMapVisuallyEmpty()) {
                 <div class="map-empty-state">
                     <i class="fa-duotone fa-thin fa-map"></i>
                     <h3>Nothing is plotted yet</h3>
-                    <p>{{ canEdit() ? 'This board is empty until someone edits it.' : 'The campaign owner has not plotted any drawings or landmarks yet.' }}</p>
+                    <p>{{ canEdit() ? 'This board is empty until someone edits it.' : 'The campaign owner has not plotted any visible drawings, landmarks, labels, or tokens yet.' }}</p>
                 </div>
                 }
             </div>
         </div>
 
-        @if (showGuide()) {
-        <section class="map-guide-panel" aria-label="Map guide">
+        @if (canEdit() && selectedToken(); as token) {
+        <section class="panel">
             <div class="section-heading compact-heading">
-                <h2>How to Read This Map</h2>
+                <h2>Selected Token</h2>
+            </div>
+
+            <div class="selected-icon-card selected-token-card">
+                <div class="selected-icon-header">
+                    <div class="selected-token-mark">
+                        <img [src]="token.imageUrl" [alt]="token.name" />
+                    </div>
+                    <div>
+                        <strong>{{ token.name }}</strong>
+                        <p>{{ token.note || 'Interactive tabletop token' }}</p>
+                    </div>
+                </div>
+
+                <p class="sidebar-note token-assignment-summary">{{ tokenAssignmentSummary(token) }}</p>
+                <button type="button" class="ghost-button full-width-button" [disabled]="!canPreviewVision()" (click)="toggleVisionPreview()">{{ showVisionPreview() ? 'Hide Sight Preview' : 'Preview Sight' }}</button>
+                <button type="button" class="ghost-button full-width-button" [disabled]="!hasVisionMemory()" (click)="resetCurrentMapVisionExploration()">Reset Sight Memory</button>
+                <p class="sidebar-note token-assignment-summary">{{ visionPreviewSummary() }}</p>
+                <p class="sidebar-note">Use this panel to inspect the selected token's visibility without switching into editor mode.</p>
+            </div>
+        </section>
+        }
+
+        <section class="map-shortcuts-panel" aria-label="Player map shortcuts">
+            <div class="map-shortcuts-header">
+                <div>
+                    <p class="eyebrow">Table Shortcuts</p>
+                    <h3>Quick controls for players</h3>
+                </div>
+                <p class="map-shortcuts-intro">Keep these nearby when you need to move fast, check sightlines, or clean up the table view without opening the full guide.</p>
+            </div>
+            <div class="map-shortcuts-grid">
+                <article class="map-shortcut-card">
+                    <span class="map-guide-icon" aria-hidden="true"><i class="fa-duotone fa-thin fa-arrows-up-down-left-right"></i></span>
+                    <div>
+                        <div class="map-shortcut-keys" aria-label="Move token shortcut">
+                            <kbd>Drag</kbd>
+                        </div>
+                        <h4>Move on the grid</h4>
+                        <p>Drag a token you control to reposition it one square at a time while walls still block the route.</p>
+                    </div>
+                </article>
+                <article class="map-shortcut-card">
+                    <span class="map-guide-icon" aria-hidden="true"><i class="fa-duotone fa-thin fa-grid-2"></i></span>
+                    <div>
+                        <div class="map-shortcut-keys" aria-label="Free move shortcut">
+                            <kbd>Ctrl</kbd>
+                            <span>+</span>
+                            <kbd>Drag</kbd>
+                        </div>
+                        <h4>Free move off-grid</h4>
+                        <p>Hold Ctrl while dragging to place your token between squares without snapping back to the grid.</p>
+                    </div>
+                </article>
+                <article class="map-shortcut-card">
+                    <span class="map-guide-icon" aria-hidden="true"><i class="fa-duotone fa-thin fa-eye"></i></span>
+                    <div>
+                        <div class="map-shortcut-keys" aria-label="Vision preview shortcut">
+                            <kbd>Shift</kbd>
+                            <span>+</span>
+                            <kbd>Select</kbd>
+                        </div>
+                        <h4>Preview vision</h4>
+                        <p>Hold Shift with a selected token to preview its current vision cone and remembered explored space.</p>
+                    </div>
+                </article>
+                <article class="map-shortcut-card">
+                    <span class="map-guide-icon" aria-hidden="true"><i class="fa-duotone fa-thin fa-layer-group"></i></span>
+                    <div>
+                        <div class="map-shortcut-keys" aria-label="Map view controls">
+                            <kbd>Guide</kbd>
+                            <kbd>Fullscreen</kbd>
+                        </div>
+                        <h4>Clean up the view</h4>
+                        <p>Use the top-right controls to hide the guide or switch into fullscreen for table play.</p>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        @if (showGuide()) {
+        <section #mapGuidePanel class="map-guide-panel" aria-label="Map guide">
+            <div class="map-guide-panel-header section-heading compact-heading">
+                <div>
+                    <p class="eyebrow">Table Guide</p>
+                    <h2>How to Read This Map</h2>
+                </div>
+                <p class="map-guide-intro">Player view now keeps assigned token vision active automatically, including remembered exploration. Use this as a quick reminder of what is visible and interactive at the table.</p>
             </div>
             <div class="map-guide-grid map-guide-grid--dense">
                 <article class="map-guide-card">
-                    <p class="eyebrow">Legend</p>
+                    <div class="map-guide-card-header">
+                        <span class="map-guide-icon" aria-hidden="true"><i class="fa-duotone fa-thin fa-map"></i></span>
+                        <p class="eyebrow">Legend</p>
+                    </div>
                     <h3>What the layers mean</h3>
                     <ul class="map-guide-list">
                         <li><strong>Lines:</strong> paths, borders, hazards, callouts, or other hand-drawn notes.</li>
+                        <li><strong>Hidden wall settings:</strong> the owner can place invisible blockers that still affect line of sight, movement, or both.</li>
                         <li><strong>Landmarks:</strong> important locations, objectives, warnings, and notable sites.</li>
                         <li><strong>Terrain:</strong> mountains, forests, hills, reefs, caves, and wards that shape the scene.</li>
                         <li><strong>Labels:</strong> region names and feature names placed directly on the board.</li>
                     </ul>
                 </article>
                 <article class="map-guide-card">
-                    <p class="eyebrow">Viewing</p>
+                    <div class="map-guide-card-header">
+                        <span class="map-guide-icon" aria-hidden="true"><i class="fa-duotone fa-thin fa-eye"></i></span>
+                        <p class="eyebrow">Viewing</p>
+                    </div>
                     <h3>What you can do here</h3>
                     <ul class="map-guide-list">
                         <li>Inspect the current board state without changing the owner’s layout.</li>
                         <li>Select tokens and review labels, landmarks, and linework visually.</li>
+                        <li>Your assigned tokens keep their vision visible automatically while you are on the board.</li>
+                        <li>Remembered explored areas stay partially revealed as those tokens move.</li>
                         <li>Toggle fullscreen or open this guide for a cleaner table view.</li>
-                        <li>Use the layer controls to simplify the board when you need to focus on one element type.</li>
+                        <li>Use the layer controls to simplify the board when you need to focus on one visible element type.</li>
                     </ul>
                 </article>
                 <article class="map-guide-card">
-                    <p class="eyebrow">Editing Access</p>
+                    <div class="map-guide-card-header">
+                        <span class="map-guide-icon" aria-hidden="true"><i class="fa-duotone fa-thin fa-people-group"></i></span>
+                        <p class="eyebrow">Editing Access</p>
+                    </div>
                     <h3>When the board changes</h3>
                     <ul class="map-guide-list">
                         <li>Campaign owners can switch into Map Editor to add drawings, landmarks, terrain, and labels.</li>
                         <li>Assigned players may still be able to move specific tokens on the active map.</li>
+                        <li>Movement-blocking walls apply to player-controlled token movement as well as sight.</li>
                         <li>Unassigned drawings and map decorations stay controlled by the owner.</li>
                         <li>If you need structural changes, move into editor mode instead of viewer mode.</li>
                     </ul>
                 </article>
                 <article class="map-guide-card">
-                    <p class="eyebrow">Table Use</p>
+                    <div class="map-guide-card-header">
+                        <span class="map-guide-icon" aria-hidden="true"><i class="fa-duotone fa-thin fa-dice-d20"></i></span>
+                        <p class="eyebrow">Table Use</p>
+                    </div>
                     <h3>Good ways to use it live</h3>
                     <ul class="map-guide-list">
                         <li>Keep fullscreen open for encounters or overland travel reference.</li>
                         <li>Use labels and landmarks as anchors while the party moves tokens.</li>
+                        <li>Use selected-token vision checks when the table needs to inspect one creature’s sightline in detail.</li>
                         <li>Treat linework as flexible markup, not only roads or routes.</li>
                         <li>Hide layers when you want a cleaner scene or less visual noise.</li>
                     </ul>

@@ -423,6 +423,19 @@ export class DungeonStoreService {
         }
     }
 
+    async resetCampaignMapVision(campaignId: string, mapId: string): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
+        try {
+            await this.api.resetCampaignMapVision(campaignId, { mapId });
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     async generateCampaignMapArtAi(campaignId: string, payload: { background: CampaignMapBackground; mapName: string; separateLabels?: boolean; settlementScale?: 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis'; parchmentLayout?: 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular'; cavernLayout?: 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes'; battlemapLocale?: 'TownStreet' | 'BuildingInterior' | 'ForestClearing' | 'Roadside' | 'Cliffside' | 'Riverside' | 'Ruins' | 'DungeonRoom' | 'Tavern'; lighting?: 'Day' | 'Dusk' | 'Night'; settlementNames?: string[]; regionNames?: string[]; ruinNames?: string[]; cavernNames?: string[]; additionalDirection?: string }): Promise<{ backgroundImageUrl: string; labels: Campaign['map']['labels'] } | null> {
         try {
             const generated = await this.api.generateCampaignMapArtAi(campaignId, {
@@ -888,6 +901,17 @@ export class DungeonStoreService {
                     y: this.normalizeMapCoordinate(point.y)
                 }))
             })).filter((stroke) => stroke.points.length > 0),
+            walls: (map?.walls ?? []).map((wall) => ({
+                id: wall.id,
+                color: this.normalizeMapColor(wall.color),
+                width: Math.max(2, Math.min(18, Math.trunc(wall.width || 4))),
+                points: (wall.points ?? []).map((point) => ({
+                    x: this.normalizeMapCoordinate(point.x),
+                    y: this.normalizeMapCoordinate(point.y)
+                })),
+                blocksVision: wall.blocksVision ?? true,
+                blocksMovement: wall.blocksMovement ?? true
+            })).filter((wall) => wall.points.length > 0),
             icons: (map?.icons ?? []).map((icon) => ({
                 id: icon.id,
                 type: this.normalizeMapIconType(icon.type),
@@ -984,6 +1008,17 @@ export class DungeonStoreService {
                     x: this.normalizeMapCoordinate(point.x),
                     y: this.normalizeMapCoordinate(point.y)
                 }))
+            })),
+            walls: map.walls.map((wall) => ({
+                id: wall.id,
+                color: this.normalizeMapColor(wall.color),
+                width: Math.max(2, Math.min(18, Math.trunc(wall.width || 4))),
+                points: wall.points.map((point) => ({
+                    x: this.normalizeMapCoordinate(point.x),
+                    y: this.normalizeMapCoordinate(point.y)
+                })),
+                blocksVision: wall.blocksVision,
+                blocksMovement: wall.blocksMovement
             })),
             icons: map.icons.map((icon) => ({
                 id: icon.id,

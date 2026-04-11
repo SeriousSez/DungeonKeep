@@ -25,8 +25,8 @@ public sealed class CampaignService(
     private const string DefaultMapGridColor = "#745338";
     private const double DefaultMapGridOffsetX = 0d;
     private const double DefaultMapGridOffsetY = 0d;
-    private static readonly CampaignMapDto DefaultCampaignMap = new("Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], new CampaignMapLayersDto([], [], []));
-    private static readonly CampaignMapBoardDto DefaultCampaignMapBoard = new(Guid.Parse("11111111-1111-1111-1111-111111111111"), "Main Map", "Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], new CampaignMapLayersDto([], [], []));
+    private static readonly CampaignMapDto DefaultCampaignMap = new("Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], [], new CampaignMapLayersDto([], [], []));
+    private static readonly CampaignMapBoardDto DefaultCampaignMapBoard = new(Guid.Parse("11111111-1111-1111-1111-111111111111"), "Main Map", "Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], [], new CampaignMapLayersDto([], [], []));
 
     public async Task<IReadOnlyList<CampaignSummaryDto>> GetAllSummariesAsync(Guid userId, CancellationToken cancellationToken = default)
     {
@@ -376,6 +376,7 @@ public sealed class CampaignService(
                     request.Map.GridOffsetX,
                     request.Map.GridOffsetY,
                     request.Map.Strokes,
+                    request.Map.Walls,
                     request.Map.Icons,
                     request.Map.Tokens,
                     request.Map.Decorations,
@@ -629,7 +630,7 @@ public sealed class CampaignService(
             ParseNamedItems(campaign.LootJson),
             ParseOpenThreads(campaign.OpenThreadsJson),
             ParseWorldNotes(campaign.WorldNotesJson),
-            new CampaignMapDto(activeMap.Background, activeMap.BackgroundImageUrl, activeMap.GridColumns, activeMap.GridRows, activeMap.GridColor, activeMap.GridOffsetX, activeMap.GridOffsetY, activeMap.Strokes, activeMap.Icons, activeMap.Tokens, activeMap.Decorations, activeMap.Labels, activeMap.Layers),
+            new CampaignMapDto(activeMap.Background, activeMap.BackgroundImageUrl, activeMap.GridColumns, activeMap.GridRows, activeMap.GridColor, activeMap.GridOffsetX, activeMap.GridOffsetY, activeMap.Strokes, activeMap.Walls, activeMap.Icons, activeMap.Tokens, activeMap.Decorations, activeMap.Labels, activeMap.Layers),
             visibleMaps,
             activeMap.Id,
             currentUserRole,
@@ -844,6 +845,7 @@ public sealed class CampaignService(
                     legacyMap.GridOffsetX,
                     legacyMap.GridOffsetY,
                     legacyMap.Strokes,
+                    legacyMap.Walls,
                     legacyMap.Icons,
                     legacyMap.Tokens,
                     legacyMap.Decorations,
@@ -928,6 +930,8 @@ public sealed class CampaignService(
             .Where(stroke => stroke.Points.Count > 0)
             .ToList();
 
+        var normalizedWalls = NormalizeMapWallCollection(map.Walls);
+
         var normalizedIcons = (map.Icons ?? [])
             .Select(icon => new CampaignMapIconDto(
                 icon.Id == Guid.Empty ? Guid.NewGuid() : icon.Id,
@@ -989,6 +993,7 @@ public sealed class CampaignService(
             NormalizeMapGridOffset(map.GridOffsetX, DefaultMapGridOffsetX),
             NormalizeMapGridOffset(map.GridOffsetY, DefaultMapGridOffsetY),
             normalizedStrokes,
+            normalizedWalls,
             normalizedIcons,
             normalizedTokens,
             normalizedDecorations,
@@ -1007,6 +1012,7 @@ public sealed class CampaignService(
             map.GridOffsetX,
             map.GridOffsetY,
             map.Strokes,
+            map.Walls,
             map.Icons,
             map.Tokens,
             map.Decorations,
@@ -1024,6 +1030,7 @@ public sealed class CampaignService(
             normalized.GridOffsetX,
             normalized.GridOffsetY,
             normalized.Strokes,
+            normalized.Walls,
             normalized.Icons,
             normalized.Tokens,
             normalized.Decorations,
@@ -1051,6 +1058,7 @@ public sealed class CampaignService(
                 DefaultCampaignMapBoard.GridOffsetX,
                 DefaultCampaignMapBoard.GridOffsetY,
                 DefaultCampaignMapBoard.Strokes,
+                DefaultCampaignMapBoard.Walls,
                 DefaultCampaignMapBoard.Icons,
                 DefaultCampaignMapBoard.Tokens,
                 DefaultCampaignMapBoard.Decorations,
@@ -1098,6 +1106,21 @@ public sealed class CampaignService(
                 Math.Clamp(stroke.Width, 2, 18),
                 NormalizeMapPoints(stroke.Points)))
             .Where(stroke => stroke.Points.Count > 0)
+            .ToList();
+    }
+
+    private static IReadOnlyList<CampaignMapWallDto> NormalizeMapWallCollection(IReadOnlyList<CampaignMapWallDto>? walls)
+    {
+        return (walls ?? [])
+            .Where(wall => wall.Points is { Count: > 0 })
+            .Select(wall => new CampaignMapWallDto(
+                wall.Id == Guid.Empty ? Guid.NewGuid() : wall.Id,
+                NormalizeMapColor(wall.Color),
+                Math.Clamp(wall.Width, 2, 18),
+                NormalizeMapPoints(wall.Points),
+                wall.BlocksVision ?? true,
+                wall.BlocksMovement ?? true))
+            .Where(wall => wall.Points.Count > 0)
             .ToList();
     }
 

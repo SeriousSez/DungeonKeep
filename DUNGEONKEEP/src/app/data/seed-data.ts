@@ -84,6 +84,7 @@ export const seedCampaigns: Campaign[] = [
                     ]
                 }
             ],
+            walls: [],
             icons: [
                 { id: 'map-embers-icon-1', type: 'Keep', label: 'Redglass Keep', x: 0.62, y: 0.31 },
                 { id: 'map-embers-icon-2', type: 'Town', label: 'Soot Market', x: 0.34, y: 0.58 },
@@ -123,6 +124,7 @@ export const seedCampaigns: Campaign[] = [
                         ]
                     }
                 ],
+                walls: [],
                 icons: [
                     { id: 'map-embers-icon-1', type: 'Keep', label: 'Redglass Keep', x: 0.62, y: 0.31 },
                     { id: 'map-embers-icon-2', type: 'Town', label: 'Soot Market', x: 0.34, y: 0.58 },
@@ -211,6 +213,7 @@ export const seedCampaigns: Campaign[] = [
                     ]
                 }
             ],
+            walls: [],
             icons: [
                 { id: 'map-moonwake-icon-1', type: 'Town', label: 'Saint Vey Harbor', x: 0.42, y: 0.49 },
                 { id: 'map-moonwake-icon-2', type: 'Portal', label: 'Storm Break', x: 0.76, y: 0.43 },
@@ -250,6 +253,7 @@ export const seedCampaigns: Campaign[] = [
                         ]
                     }
                 ],
+                walls: [],
                 icons: [
                     { id: 'map-moonwake-icon-1', type: 'Town', label: 'Saint Vey Harbor', x: 0.42, y: 0.49 },
                     { id: 'map-moonwake-icon-2', type: 'Portal', label: 'Storm Break', x: 0.76, y: 0.43 },
@@ -333,6 +337,7 @@ export const seedCampaigns: Campaign[] = [
                     ]
                 }
             ],
+            walls: [],
             icons: [
                 { id: 'map-wild-icon-1', type: 'Camp', label: 'Bramble Market', x: 0.25, y: 0.18 },
                 { id: 'map-wild-icon-2', type: 'Danger', label: 'Bargain Ring', x: 0.56, y: 0.48 },
@@ -372,6 +377,7 @@ export const seedCampaigns: Campaign[] = [
                         ]
                     }
                 ],
+                walls: [],
                 icons: [
                     { id: 'map-wild-icon-1', type: 'Camp', label: 'Bramble Market', x: 0.25, y: 0.18 },
                     { id: 'map-wild-icon-2', type: 'Danger', label: 'Bargain Ring', x: 0.56, y: 0.48 },

@@ -1,10 +1,18 @@
 import { Injectable, effect, inject } from '@angular/core';
 import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
+import { Subject } from 'rxjs';
 
 import { environment } from '../../environments/environment';
 import { ApiCampaignDto } from './dungeon-api.service';
 import { DungeonStoreService } from './dungeon-store.service';
 import { SessionService } from './session.service';
+
+export interface CampaignMapVisionResetEvent {
+    campaignId: string;
+    mapId: string;
+    initiatedByUserId: string;
+    summary: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class CampaignRealtimeService {
@@ -13,6 +21,9 @@ export class CampaignRealtimeService {
     private connection: HubConnection | null = null;
     private joinedCampaignId = '';
     private connectionToken = '';
+    private readonly _campaignMapVisionReset = new Subject<CampaignMapVisionResetEvent>();
+
+    readonly campaignMapVisionReset$ = this._campaignMapVisionReset.asObservable();
 
     constructor() {
         effect(() => {
@@ -51,6 +62,10 @@ export class CampaignRealtimeService {
 
         connection.on('CampaignMapUpdated', (campaign: ApiCampaignDto) => {
             this.store.applyCampaignRealtimeUpdate(campaign);
+        });
+
+        connection.on('CampaignMapVisionReset', (event: CampaignMapVisionResetEvent) => {
+            this._campaignMapVisionReset.next(event);
         });
 
         connection.onreconnecting(() => {

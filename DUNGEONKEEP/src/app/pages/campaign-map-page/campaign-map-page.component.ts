@@ -6,13 +6,15 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MapArtBattlemapLocale, MapArtGenerationModalComponent, MapArtGenerationOptions, MapArtLighting } from '../../components/map-art-generation-modal/map-art-generation-modal.component';
 import { TokenImageCropModalComponent } from '../../components/token-image-crop-modal/token-image-crop-modal.component';
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
-import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelFontFamily, CampaignMapLabelTone, CampaignMapPoint, CampaignMapToken, CampaignTone, Character, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS } from '../../models/dungeon.models';
+import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelFontFamily, CampaignMapLabelTone, CampaignMapPoint, CampaignMapStroke, CampaignMapToken, CampaignMapWall, CampaignTone, Character, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS } from '../../models/dungeon.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
+import { CampaignRealtimeService } from '../../state/campaign-realtime.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 import { SessionService } from '../../state/session.service';
 
-type MapTool = 'select' | 'draw' | 'erase' | 'icon' | 'terrain' | 'label' | 'token';
-type MapConfirmAction = 'clear-map' | 'delete-icon' | 'delete-token' | 'delete-label' | 'delete-stroke' | 'delete-map' | null;
+type MapTool = 'select' | 'draw' | 'wall' | 'erase' | 'icon' | 'terrain' | 'label' | 'token';
+type MapConfirmAction = 'clear-map' | 'delete-icon' | 'delete-token' | 'delete-label' | 'delete-stroke' | 'delete-wall' | 'delete-map' | null;
+type MapLineKind = 'drawing' | 'wall';
 type MapAnchorProminence = 'major' | 'minor';
 type SettlementScale = 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis';
 type ParchmentLayout = 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular';
@@ -70,6 +72,12 @@ interface MapEditorHistoryEntry {
     activeMapId: string;
 }
 
+interface MapVisionMemoryEntry {
+    polygons: CampaignMapPoint[][];
+    lastOrigin: CampaignMapPoint | null;
+    lastPolygonHash: string;
+}
+
 type MapLabelCatalog = Record<CampaignMapIconType, readonly string[]>;
 
 const TOKEN_SIZE_OPTIONS: DropdownOption[] = [
@@ -84,6 +92,8 @@ const MAP_TOKEN_GRID_SPANS = [0.5, 1, 2, 4] as const;
 const MAP_GRID_VISIBILITY_STORAGE_KEY = 'dungeonkeep.campaign-map.show-grid';
 const MAP_GRID_CONTROLS_EXPANDED_STORAGE_KEY = 'dungeonkeep.campaign-map.grid-controls-expanded';
 const MAP_AUTOSAVE_DELAY_MS = 450;
+const MAP_VISION_MEMORY_LIMIT = 40;
+const MAP_VISION_MEMORY_ORIGIN_THRESHOLD = 0.02;
 
 const MAP_BACKGROUND_OPTIONS: DropdownOption[] = [
     { value: 'Parchment', label: 'Parchment', description: 'Warm paper tones for hand-drawn lines, sketches, and lore maps.' },
@@ -225,12 +235,14 @@ export class CampaignMapPageComponent {
 
     readonly store = inject(DungeonStoreService);
     private readonly session = inject(SessionService);
+    private readonly campaignRealtime = inject(CampaignRealtimeService);
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
     private readonly destroyRef = inject(DestroyRef);
     private readonly cdr = inject(ChangeDetectorRef);
     private readonly mapBoard = viewChild<ElementRef<HTMLDivElement>>('mapBoard');
     private readonly mapBoardShell = viewChild<ElementRef<HTMLDivElement>>('mapBoardShell');
+    private readonly mapGuidePanel = viewChild<ElementRef<HTMLElement>>('mapGuidePanel');
 
     readonly campaignId = signal('');
     readonly routeMapId = signal('');
@@ -246,6 +258,7 @@ export class CampaignMapPageComponent {
     readonly selectedIconId = signal<string | null>(null);
     readonly selectedLabelId = signal<string | null>(null);
     readonly selectedStrokeId = signal<string | null>(null);
+    readonly selectedWallId = signal<string | null>(null);
     readonly selectedTokenId = signal<string | null>(null);
     readonly iconLabelDraft = signal('');
     readonly tokenNameDraft = signal('');
@@ -278,6 +291,7 @@ export class CampaignMapPageComponent {
     readonly brushWidth = signal(5);
     readonly saveState = signal<'idle' | 'saving' | 'saved' | 'error'>('idle');
     readonly saveMessage = signal('');
+    readonly mapNotice = signal('');
     readonly hasUnsavedChanges = signal(false);
     readonly confirmAction = signal<MapConfirmAction>(null);
     readonly isDrawing = signal(false);
@@ -288,6 +302,14 @@ export class CampaignMapPageComponent {
     readonly redoStack = signal<MapEditorHistoryEntry[]>([]);
     readonly isFullscreen = signal(false);
     readonly showGuide = signal(false);
+    readonly showWalls = signal(true);
+    readonly showVisionPreview = signal(false);
+    readonly visionExploration = signal<Record<string, MapVisionMemoryEntry>>({});
+    readonly ctrlPolylineKind = signal<MapLineKind | null>(null);
+    readonly ctrlPolylinePoints = signal<CampaignMapPoint[]>([]);
+    readonly ctrlPolylinePreviewPoint = signal<CampaignMapPoint | null>(null);
+    readonly ctrlPolylineColor = signal(this.brushColor());
+    readonly ctrlPolylineWidth = signal(this.brushWidth());
 
     readonly backgroundOptions = MAP_BACKGROUND_OPTIONS;
     readonly brushColorOptions = BRUSH_COLOR_OPTIONS;
@@ -315,6 +337,25 @@ export class CampaignMapPageComponent {
     readonly isEditorMode = computed(() => this.routeMode() === 'edit');
     readonly isEditorLocked = computed(() => this.isAiArtGenerating());
     readonly canModify = computed(() => this.canEdit() && this.isEditorMode() && !this.isEditorLocked());
+    readonly canSeeWallOutlines = computed(() => this.isEditorMode() || this.canEdit());
+    readonly showWallOutlines = computed(() => this.canSeeWallOutlines() && this.showWalls());
+    readonly visibleLineCount = computed(() => {
+        const map = this.workingMap();
+        return map.strokes.length + map.layers.rivers.length + (this.showWallOutlines() ? map.walls.length : 0);
+    });
+    readonly isMapVisuallyEmpty = computed(() => {
+        const map = this.workingMap();
+        return !map.backgroundImageUrl
+            && map.strokes.length === 0
+            && (!this.canSeeWallOutlines() || map.walls.length === 0)
+            && map.icons.length === 0
+            && map.tokens.length === 0
+            && map.decorations.length === 0
+            && map.labels.length === 0
+            && map.layers.rivers.length === 0
+            && map.layers.mountainChains.length === 0
+            && map.layers.forestBelts.length === 0;
+    });
     readonly showSettlementScale = computed(() => this.workingMap().background === 'City');
     readonly showParchmentLayout = computed(() => this.workingMap().background === 'Parchment');
     readonly showCavernLayout = computed(() => this.workingMap().background === 'Cavern');
@@ -382,6 +423,14 @@ export class CampaignMapPageComponent {
         }
 
         return this.workingMap().strokes.find((stroke) => stroke.id === strokeId) ?? null;
+    });
+    readonly selectedWall = computed(() => {
+        const wallId = this.selectedWallId();
+        if (!wallId) {
+            return null;
+        }
+
+        return this.workingMap().walls.find((wall) => wall.id === wallId) ?? null;
     });
     readonly selectedDecoration = computed(() => {
         const decorationId = this.selectedDecorationId();
@@ -454,8 +503,108 @@ export class CampaignMapPageComponent {
     });
     readonly activeIconOption = computed(() => this.iconOptions.find((option) => option.type === this.pendingIconType()) ?? null);
     readonly activeTerrainOption = computed(() => this.terrainOptions.find((option) => option.type === this.pendingTerrainType()) ?? null);
+    readonly previewableTokens = computed(() => this.workingMap().tokens.filter((token) => this.canEdit() || this.canControlToken(token)));
+    readonly automaticVisionTokens = computed(() => this.canEdit() ? [] : this.previewableTokens());
+    readonly visionPreviewToken = computed(() => {
+        const token = this.selectedToken();
+        if (!token) {
+            return null;
+        }
+
+        return this.canEdit() || this.canControlToken(token) ? token : null;
+    });
+    readonly canPreviewVision = computed(() => this.previewableTokens().length > 0);
+    readonly visionPreviewRangeFeet = computed(() => {
+        const token = this.visionPreviewToken();
+        return token ? this.resolveTokenVisionRangeFeet(token) : 0;
+    });
+    readonly visionPreviewSummary = computed(() => {
+        const token = this.visionPreviewToken();
+        if (!token) {
+            return 'Select a token to preview line of sight.';
+        }
+
+        const assignedCharacter = token.assignedCharacterId
+            ? this.campaignCharacters().find((character) => character.id === token.assignedCharacterId) ?? null
+            : null;
+        const rangeFeet = this.resolveTokenVisionRangeFeet(token);
+
+        if (assignedCharacter) {
+            return `${assignedCharacter.name} reveals roughly ${rangeFeet} ft of sight using assigned character senses.`;
+        }
+
+        return `This token reveals roughly ${rangeFeet} ft of sight using the default token vision range.`;
+    });
+    readonly temporaryVisionPreviewActive = computed(() => this.shiftKeyPressed() && !!this.visionPreviewToken());
+    readonly manualVisionOverlayActive = computed(() => (this.showVisionPreview() || this.temporaryVisionPreviewActive()) && !!this.visionPreviewToken());
+    readonly activeVisionTokens = computed(() => {
+        const automaticTokens = this.automaticVisionTokens();
+        if (automaticTokens.length > 0) {
+            return automaticTokens;
+        }
+
+        const token = this.visionPreviewToken();
+        return this.manualVisionOverlayActive() && token ? [token] : [];
+    });
+    readonly visionOverlayActive = computed(() => this.automaticVisionTokens().length > 0 || this.manualVisionOverlayActive());
+    readonly currentVisionPolygon = computed(() => {
+        const token = this.visionPreviewToken();
+        if (!this.manualVisionOverlayActive() || !token) {
+            return [];
+        }
+
+        return this.buildVisionPolygon(token);
+    });
+    readonly activeVisionPolygons = computed(() => {
+        return this.activeVisionTokens()
+            .map((token) => this.buildVisionPolygon(token))
+            .filter((polygon) => polygon.length >= 3);
+    });
+    readonly visionPolygonPoints = computed(() => this.activeVisionPolygons().map((polygon) => this.formatVisionPolygonPoints(polygon)));
+    readonly primaryVisionPolygon = computed(() => {
+        const polygons = this.activeVisionPolygons();
+        return polygons.length === 1 ? polygons[0] : [];
+    });
+    readonly visionClipPath = computed(() => {
+        const polygon = this.primaryVisionPolygon();
+        if (!this.visionOverlayActive() || polygon.length < 3) {
+            return 'none';
+        }
+
+        return `polygon(${polygon.map((point) => `${(point.x * 100).toFixed(2)}% ${(point.y * 100).toFixed(2)}%`).join(', ')})`;
+    });
+    readonly exploredVisionPolygonPoints = computed(() => {
+        const tokens = this.activeVisionTokens();
+        if (!tokens.length) {
+            return [];
+        }
+
+        return tokens.flatMap((token) => {
+            const memory = this.visionExploration()[this.visionMemoryKey(token)];
+            return (memory?.polygons ?? []).map((polygon) => this.formatVisionPolygonPoints(polygon));
+        });
+    });
+    readonly hasVisionMemory = computed(() => {
+        const prefix = `${this.currentMapId()}::`;
+        return Object.keys(this.visionExploration()).some((key) => key.startsWith(prefix));
+    });
+    readonly ctrlPolylineActive = computed(() => this.ctrlPolylineKind() !== null && this.ctrlPolylinePoints().length > 0);
+    readonly ctrlPolylineRenderPoints = computed(() => {
+        const points = this.ctrlPolylinePoints();
+        if (!points.length) {
+            return '';
+        }
+
+        const previewPoint = this.ctrlPolylinePreviewPoint();
+        const renderPoints = previewPoint ? [...points, previewPoint] : points;
+        return this.formatStrokePoints(renderPoints);
+    });
     readonly hasPendingTokenPlacement = computed(() => this.activeTool() === 'token' && !!this.tokenPlacementImageUrl());
     readonly placementHint = computed(() => {
+        if (this.ctrlPolylineActive()) {
+            return 'Ctrl line mode is active. Click to add corners, hold Shift to snap them to the grid, and release Ctrl to apply the line.';
+        }
+
         if (this.hasPendingTokenPlacement()) {
             return `Click anywhere on the board to place ${this.tokenPlacementNameDraft().trim() || 'this token'}.`;
         }
@@ -471,6 +620,14 @@ export class CampaignMapPageComponent {
         if (this.activeTool() === 'label') {
             const labelText = this.labelTextDraft().trim() || this.defaultLabelText(this.labelToneDraft());
             return `Click anywhere on the board to place the label "${labelText}".`;
+        }
+
+        if (this.activeTool() === 'wall') {
+            return 'Drag to sketch a vision wall, or hold Ctrl and click to place straight wall segments. Hold Ctrl+Shift to place snapped corners, then release Ctrl to apply.';
+        }
+
+        if (this.activeTool() === 'draw') {
+            return 'Drag to paint a freehand line, or hold Ctrl and click to place straight segments. Hold Ctrl+Shift to place snapped corners, then release Ctrl to apply.';
         }
 
         return '';
@@ -511,6 +668,8 @@ export class CampaignMapPageComponent {
                 return 'Delete Label?';
             case 'delete-stroke':
                 return 'Delete Drawing?';
+            case 'delete-wall':
+                return 'Delete Vision Wall?';
             case 'delete-map':
                 return 'Delete Map?';
             default:
@@ -543,6 +702,10 @@ export class CampaignMapPageComponent {
             return 'Remove this drawing from the campaign map?';
         }
 
+        if (this.confirmAction() === 'delete-wall') {
+            return 'Remove this vision wall from the campaign map?';
+        }
+
         const icon = this.selectedIcon();
         return icon ? `Remove ${icon.label}? This landmark marker will disappear for everyone in the campaign.` : 'Remove this landmark from the campaign map?';
     });
@@ -556,6 +719,8 @@ export class CampaignMapPageComponent {
                 return 'Delete Label';
             case 'delete-stroke':
                 return 'Delete Drawing';
+            case 'delete-wall':
+                return 'Delete Vision Wall';
             case 'delete-map':
                 return 'Delete Map';
             default:
@@ -571,20 +736,25 @@ export class CampaignMapPageComponent {
     readonly showMountainChains = signal(true);
     readonly showForestBelts = signal(true);
     readonly showLabels = signal(true);
+    readonly visionUnexploredMaskId = `campaign-map-vision-unexplored-mask-${crypto.randomUUID()}`;
+    readonly visionExploredMaskId = `campaign-map-vision-explored-mask-${crypto.randomUUID()}`;
 
     private lastLoadedCampaignId = '';
     private lastLoadedMapSignature = '';
     private lastLoadedRouteMapId = '';
     private activeStrokePointerId: number | null = null;
+    private activeLineKind: MapLineKind | null = null;
     private activeErasePointerId: number | null = null;
     private draggingDecorationId: string | null = null;
     private draggingDecorationPointerId: number | null = null;
     private pendingStrokeId: string | null = null;
+    private pendingStrokeKind: MapLineKind | null = null;
     private pendingStrokePointerId: number | null = null;
     private pendingStrokeClientX = 0;
     private pendingStrokeClientY = 0;
     private pendingStrokePoint: CampaignMapPoint | null = null;
     private draggingStrokeId: string | null = null;
+    private draggingStrokeKind: MapLineKind | null = null;
     private draggingStrokePointerId: number | null = null;
     private draggingStrokeLastPoint: CampaignMapPoint | null = null;
     private strokeMoved = false;
@@ -600,20 +770,41 @@ export class CampaignMapPageComponent {
     private draggingTokenPointerId: number | null = null;
     private draggingTokenMode: 'editor' | 'viewer' | null = null;
     private draggingTokenOrigin: CampaignMapPoint | null = null;
+    private draggingTokenFreeMove = false;
     private eraseChanged = false;
     private pendingDragHistory: MapEditorHistoryEntry | null = null;
     private persistInFlight = false;
     private autosaveTimerId: ReturnType<typeof setTimeout> | null = null;
+    private mapNoticeTimerId: ReturnType<typeof setTimeout> | null = null;
     private autosaveQueuedWhileSaving = false;
     private creatingRouteMap = false;
     private generationVariant = 0;
     private historySuppressed = false;
     private randomSource: () => number = () => Math.random();
+    private ctrlKeyPressed = false;
+    private readonly shiftKeyPressed = signal(false);
 
     constructor() {
         this.destroyRef.onDestroy(() => {
             this.clearAutosaveTimer();
+            this.clearMapNoticeTimer();
         });
+
+        this.campaignRealtime.campaignMapVisionReset$
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe((event) => {
+                if (event.campaignId !== this.campaignId()) {
+                    return;
+                }
+
+                this.clearVisionExplorationForMap(event.mapId);
+
+                if (event.mapId === this.currentMapId() && event.initiatedByUserId !== this.currentUserId()) {
+                    this.showMapNotice(event.summary);
+                }
+
+                this.cdr.detectChanges();
+            });
 
         this.route.paramMap
             .pipe(takeUntilDestroyed(this.destroyRef))
@@ -645,6 +836,10 @@ export class CampaignMapPageComponent {
 
             const signature = this.mapLibrarySignature(campaign.maps, campaign.activeMapId);
             if (campaign.id === this.lastLoadedCampaignId && signature === this.lastLoadedMapSignature && routeMapId === this.lastLoadedRouteMapId) {
+                return;
+            }
+
+            if (this.canModify() && this.persistInFlight && campaign.id === this.lastLoadedCampaignId && routeMapId === this.lastLoadedRouteMapId) {
                 return;
             }
 
@@ -692,10 +887,14 @@ export class CampaignMapPageComponent {
                 void this.router.navigate(this.mapRouteForCurrentMode(campaign.id, activeMap.id), { replaceUrl: true });
             }
 
+            const sameMapEditorRefresh = this.isEditorMode() && this.canModify() && !!activeMap && this.currentMapId() === activeMap.id;
+
             this.mapBoards.set(maps);
-            this.loadMapBoard(activeMap);
-            this.undoStack.set([]);
-            this.redoStack.set([]);
+            this.loadMapBoard(activeMap, { preserveTool: sameMapEditorRefresh });
+            if (!sameMapEditorRefresh) {
+                this.undoStack.set([]);
+                this.redoStack.set([]);
+            }
             this.pendingDragHistory = null;
             this.hasUnsavedChanges.set(false);
             this.saveState.set('idle');
@@ -723,6 +922,22 @@ export class CampaignMapPageComponent {
             this.labelTextDraft.set(selectedLabel.text);
             this.labelToneDraft.set(selectedLabel.tone);
         });
+
+        effect(() => {
+            const tokens = this.activeVisionTokens();
+            if (!tokens.length) {
+                return;
+            }
+
+            for (const token of tokens) {
+                const polygon = this.buildVisionPolygon(token);
+                if (polygon.length < 3) {
+                    continue;
+                }
+
+                this.rememberVisionPolygon(token, polygon);
+            }
+        });
     }
 
     private async ensureCampaignDetails(campaignId: string): Promise<void> {
@@ -732,7 +947,20 @@ export class CampaignMapPageComponent {
 
     @HostListener('document:keydown', ['$event'])
     handleDocumentKeydown(event: KeyboardEvent): void {
+        if (event.key === 'Control') {
+            this.ctrlKeyPressed = true;
+        }
+
+        if (event.key === 'Shift') {
+            this.shiftKeyPressed.set(true);
+        }
+
         if (!this.canModify() || this.confirmOpen() || this.shouldIgnoreShortcut(event.target) || event.altKey) {
+            return;
+        }
+
+        if (!event.ctrlKey && !event.metaKey && this.handleToolShortcut(event)) {
+            event.preventDefault();
             return;
         }
 
@@ -759,6 +987,30 @@ export class CampaignMapPageComponent {
         }
     }
 
+    @HostListener('document:keyup', ['$event'])
+    handleDocumentKeyup(event: KeyboardEvent): void {
+        if (event.key === 'Control') {
+            this.ctrlKeyPressed = false;
+        }
+
+        if (event.key === 'Shift') {
+            this.shiftKeyPressed.set(false);
+        }
+
+        if (event.key !== 'Control' && event.key !== 'Shift') {
+            return;
+        }
+
+        if (!this.canModify()) {
+            this.clearCtrlPolylineDraft();
+            return;
+        }
+
+        if (!this.isModifierPolylineHeld()) {
+            this.commitCtrlPolylineDraft();
+        }
+    }
+
     @HostListener('document:fullscreenchange')
     handleFullscreenChange(): void {
         this.isFullscreen.set(globalThis.document?.fullscreenElement === this.mapBoardShell()?.nativeElement);
@@ -781,6 +1033,11 @@ export class CampaignMapPageComponent {
             return true;
         }
 
+        if (this.selectedWall()) {
+            this.requestDeleteSelectedWall();
+            return true;
+        }
+
         if (this.selectedIcon()) {
             this.requestDeleteSelectedIcon();
             return true;
@@ -789,11 +1046,51 @@ export class CampaignMapPageComponent {
         return false;
     }
 
+    private handleToolShortcut(event: KeyboardEvent): boolean {
+        switch (event.key) {
+            case '1':
+            case 'Numpad1':
+                this.selectSelectTool();
+                return true;
+            case '2':
+            case 'Numpad2':
+                this.selectDrawTool();
+                return true;
+            case '3':
+            case 'Numpad3':
+                this.selectWallTool();
+                return true;
+            case '4':
+            case 'Numpad4':
+                this.selectEraseTool();
+                return true;
+            case '5':
+            case 'Numpad5':
+                this.startLandmarkTool();
+                return true;
+            case '6':
+            case 'Numpad6':
+                this.selectTerrainTool('Mountain');
+                return true;
+            case '7':
+            case 'Numpad7':
+                this.selectLabelTool();
+                return true;
+            case '8':
+            case 'Numpad8':
+                this.selectTokenTool();
+                return true;
+            default:
+                return false;
+        }
+    }
+
     selectSelectTool(): void {
         if (!this.canModify()) {
             return;
         }
 
+        this.clearCtrlPolylineDraft();
         this.activeTool.set('select');
         this.pendingIconType.set(null);
         this.pendingTerrainType.set(null);
@@ -804,7 +1101,19 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.clearCtrlPolylineDraft();
         this.activeTool.set('draw');
+        this.pendingIconType.set(null);
+        this.pendingTerrainType.set(null);
+    }
+
+    selectWallTool(): void {
+        if (!this.canModify()) {
+            return;
+        }
+
+        this.clearCtrlPolylineDraft();
+        this.activeTool.set('wall');
         this.pendingIconType.set(null);
         this.pendingTerrainType.set(null);
     }
@@ -814,6 +1123,7 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.clearCtrlPolylineDraft();
         this.activeTool.set('erase');
         this.pendingIconType.set(null);
         this.pendingTerrainType.set(null);
@@ -824,6 +1134,7 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.clearCtrlPolylineDraft();
         this.activeTool.set('icon');
         this.pendingIconType.set(iconType);
         this.pendingTerrainType.set(null);
@@ -834,6 +1145,7 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.clearCtrlPolylineDraft();
         this.activeTool.set('terrain');
         this.pendingTerrainType.set(terrainType);
         this.pendingIconType.set(null);
@@ -844,6 +1156,7 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.clearCtrlPolylineDraft();
         this.activeTool.set('label');
         this.pendingIconType.set(null);
         this.pendingTerrainType.set(null);
@@ -854,6 +1167,7 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.clearCtrlPolylineDraft();
         this.activeTool.set('token');
         this.pendingIconType.set(null);
         this.pendingTerrainType.set(null);
@@ -877,6 +1191,7 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.clearCtrlPolylineDraft();
         this.pendingIconType.set(null);
         this.pendingTerrainType.set(null);
         this.activeTool.set('select');
@@ -887,6 +1202,7 @@ export class CampaignMapPageComponent {
         this.selectedDecorationId.set(null);
         this.selectedIconId.set(null);
         this.selectedStrokeId.set(null);
+        this.selectedWallId.set(null);
         this.selectedTokenId.set(null);
     }
 
@@ -978,6 +1294,66 @@ export class CampaignMapPageComponent {
             });
         });
         this.markDirty('Token size updated.');
+    }
+
+    toggleSelectedWallVision(): void {
+        const wall = this.selectedWall();
+        if (!wall || !this.canModify()) {
+            return;
+        }
+
+        this.updateSelectedWallFlags(
+            wall.id,
+            { blocksVision: !wall.blocksVision },
+            wall.blocksVision ? 'Wall sight blocking disabled.' : 'Wall sight blocking enabled.'
+        );
+    }
+
+    toggleSelectedWallMovement(): void {
+        const wall = this.selectedWall();
+        if (!wall || !this.canModify()) {
+            return;
+        }
+
+        this.updateSelectedWallFlags(
+            wall.id,
+            { blocksMovement: !wall.blocksMovement },
+            wall.blocksMovement ? 'Wall movement blocking disabled.' : 'Wall movement blocking enabled.'
+        );
+    }
+
+    selectedWallRoleLabel(wall: CampaignMapWall): string {
+        if (wall.blocksVision && wall.blocksMovement) {
+            return 'Sight and movement blocker';
+        }
+
+        if (wall.blocksVision) {
+            return 'Sight blocker';
+        }
+
+        if (wall.blocksMovement) {
+            return 'Movement blocker';
+        }
+
+        return 'Reference wall';
+    }
+
+    selectedWallBehaviorSummary(wall: CampaignMapWall): string {
+        const behaviors: string[] = [];
+
+        if (wall.blocksVision) {
+            behaviors.push('blocks the token sight preview');
+        }
+
+        if (wall.blocksMovement) {
+            behaviors.push('stops tokens from moving through it');
+        }
+
+        if (!behaviors.length) {
+            return 'This wall is currently only visual reference linework. Drag it in Select mode, erase touched segments, or remove it entirely.';
+        }
+
+        return `This wall ${behaviors.join(' and ')}. Drag it in Select mode, erase touched segments, or remove it entirely.`;
     }
 
     tokenRenderSize(size: number): string {
@@ -1105,7 +1481,33 @@ export class CampaignMapPageComponent {
     }
 
     toggleGuide(): void {
-        this.showGuide.update((visible) => !visible);
+        const nextVisible = !this.showGuide();
+        this.showGuide.set(nextVisible);
+
+        if (!nextVisible) {
+            return;
+        }
+
+        this.cdr.detectChanges();
+        this.scheduleGuideScroll();
+    }
+
+    private scheduleGuideScroll(): void {
+        const scrollToGuide = () => {
+            this.mapGuidePanel()?.nativeElement.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        };
+
+        if (typeof globalThis.requestAnimationFrame === 'function') {
+            globalThis.requestAnimationFrame(() => {
+                globalThis.requestAnimationFrame(scrollToGuide);
+            });
+            return;
+        }
+
+        globalThis.setTimeout(scrollToGuide, 0);
     }
 
     private readStoredGridVisibility(): boolean {
@@ -1342,6 +1744,7 @@ export class CampaignMapPageComponent {
         this.selectedDecorationId.set(null);
         this.selectedLabelId.set(null);
         this.selectedStrokeId.set(null);
+        this.selectedWallId.set(null);
         this.selectedTokenId.set(null);
     }
 
@@ -1350,6 +1753,7 @@ export class CampaignMapPageComponent {
         this.selectedIconId.set(null);
         this.selectedLabelId.set(null);
         this.selectedStrokeId.set(null);
+        this.selectedWallId.set(null);
         this.selectedTokenId.set(null);
     }
 
@@ -1358,6 +1762,16 @@ export class CampaignMapPageComponent {
         this.selectedDecorationId.set(null);
         this.selectedIconId.set(null);
         this.selectedLabelId.set(null);
+        this.selectedWallId.set(null);
+        this.selectedTokenId.set(null);
+    }
+
+    selectWall(wallId: string): void {
+        this.selectedWallId.set(wallId);
+        this.selectedDecorationId.set(null);
+        this.selectedIconId.set(null);
+        this.selectedLabelId.set(null);
+        this.selectedStrokeId.set(null);
         this.selectedTokenId.set(null);
     }
 
@@ -1444,8 +1858,16 @@ export class CampaignMapPageComponent {
         this.confirmAction.set('delete-stroke');
     }
 
+    requestDeleteSelectedWall(): void {
+        if (!this.selectedWall() || !this.canModify()) {
+            return;
+        }
+
+        this.confirmAction.set('delete-wall');
+    }
+
     requestClearMap(): void {
-        if (!this.canModify() || (!this.workingMap().strokes.length && !this.workingMap().icons.length && !this.workingMap().tokens.length && !this.workingMap().decorations.length && !this.workingMap().labels.length && !this.workingMap().layers.rivers.length && !this.workingMap().layers.mountainChains.length && !this.workingMap().layers.forestBelts.length)) {
+        if (!this.canModify() || (!this.workingMap().strokes.length && !this.workingMap().walls.length && !this.workingMap().icons.length && !this.workingMap().tokens.length && !this.workingMap().decorations.length && !this.workingMap().labels.length && !this.workingMap().layers.rivers.length && !this.workingMap().layers.mountainChains.length && !this.workingMap().layers.forestBelts.length)) {
             return;
         }
 
@@ -1511,6 +1933,16 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        if (action === 'delete-wall') {
+            const wallId = this.selectedWallId();
+            if (!wallId) {
+                return;
+            }
+
+            this.deleteWallById(wallId, 'Vision wall removed.');
+            return;
+        }
+
         if (action === 'clear-map') {
             const background = this.workingMap().background;
             this.captureHistorySnapshot();
@@ -1519,6 +1951,7 @@ export class CampaignMapPageComponent {
             this.selectedIconId.set(null);
             this.selectedLabelId.set(null);
             this.selectedStrokeId.set(null);
+            this.selectedWallId.set(null);
             this.selectedTokenId.set(null);
             this.markDirty('Map cleared.');
             return;
@@ -1704,6 +2137,7 @@ export class CampaignMapPageComponent {
                 map.background = background;
                 map.backgroundImageUrl = backgroundImageUrl;
                 map.strokes = [];
+                map.walls = [];
                 map.decorations = [];
                 map.labels = generated?.labels ?? [];
                 map.layers = {
@@ -1840,6 +2274,12 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        if (this.shouldHandleModifierPolyline(event.ctrlKey) && (this.activeTool() === 'draw' || this.activeTool() === 'wall')) {
+            this.handleCtrlPolylineClick(point, event.shiftKey);
+            event.preventDefault();
+            return;
+        }
+
         if (this.hasPendingTokenPlacement()) {
             const snappedPoint = this.snapTokenPointToGrid(point, this.tokenPlacementSize());
             const token: CampaignMapToken = {
@@ -1955,17 +2395,34 @@ export class CampaignMapPageComponent {
                 this.selectStroke(clickedStroke.id);
                 return;
             }
+
+            const clickedWall = this.findNearestWallAtPoint(point.x, point.y);
+            if (clickedWall) {
+                if (event.ctrlKey || event.metaKey) {
+                    this.deleteWallById(clickedWall.id, 'Vision wall removed.');
+                    return;
+                }
+
+                this.selectWall(clickedWall.id);
+                return;
+            }
         }
 
         this.selectedDecorationId.set(null);
         this.selectedIconId.set(null);
         this.selectedLabelId.set(null);
         this.selectedStrokeId.set(null);
+        this.selectedWallId.set(null);
         this.selectedTokenId.set(null);
     }
 
     handleBoardPointerDown(event: PointerEvent): void {
         if (!this.canModify() || event.button !== 0) {
+            return;
+        }
+
+        if (this.shouldHandleModifierPolyline(event.ctrlKey) && (this.activeTool() === 'draw' || this.activeTool() === 'wall')) {
+            event.preventDefault();
             return;
         }
 
@@ -2005,7 +2462,13 @@ export class CampaignMapPageComponent {
 
             const clickedStroke = this.findNearestStrokeAtPoint(point.x, point.y);
             if (clickedStroke) {
-                this.armStrokeInteraction(clickedStroke.id, point, event);
+                this.armStrokeInteraction(clickedStroke.id, point, event, 'drawing');
+                return;
+            }
+
+            const clickedWall = this.findNearestWallAtPoint(point.x, point.y);
+            if (clickedWall) {
+                this.armStrokeInteraction(clickedWall.id, point, event, 'wall');
                 return;
             }
 
@@ -2017,6 +2480,7 @@ export class CampaignMapPageComponent {
             this.selectedIconId.set(null);
             this.selectedLabelId.set(null);
             this.selectedStrokeId.set(null);
+            this.selectedWallId.set(null);
             this.selectedTokenId.set(null);
             this.pendingDragHistory = this.createHistoryEntry();
             this.activeErasePointerId = event.pointerId;
@@ -2027,31 +2491,36 @@ export class CampaignMapPageComponent {
             return;
         }
 
-        if (this.activeTool() !== 'draw') {
+        if (this.activeTool() !== 'draw' && this.activeTool() !== 'wall') {
             return;
         }
 
         const drawPoint = event.shiftKey ? this.snapRoutePointToGridIntersection(point) : point;
+        const lineKind: MapLineKind = this.activeTool() === 'wall' ? 'wall' : 'drawing';
 
         this.selectedDecorationId.set(null);
         this.selectedIconId.set(null);
         this.selectedLabelId.set(null);
         this.selectedStrokeId.set(null);
+        this.selectedWallId.set(null);
         this.isDrawing.set(true);
         this.captureHistorySnapshot();
         this.activeStrokePointerId = event.pointerId;
+        this.activeLineKind = lineKind;
         (event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId);
 
         this.mutateMap((map) => {
-            map.strokes = [
-                ...map.strokes,
-                {
-                    id: this.createId(),
-                    color: this.brushColor(),
-                    width: this.brushWidth(),
-                    points: [drawPoint]
-                }
-            ];
+            if (lineKind === 'wall') {
+                map.walls = [...map.walls, this.createMapWall([drawPoint])];
+                return;
+            }
+
+            map.strokes = [...map.strokes, {
+                id: this.createId(),
+                color: this.brushColor(),
+                width: this.brushWidth(),
+                points: [drawPoint]
+            }];
         });
 
         event.preventDefault();
@@ -2063,6 +2532,17 @@ export class CampaignMapPageComponent {
         }
 
         if (this.handlePendingOrActiveStrokeMove(event)) {
+            return;
+        }
+
+        if (this.ctrlPolylineActive() && this.isModifierPolylineHeld() && (this.activeTool() === 'draw' || this.activeTool() === 'wall')) {
+            const point = this.getRelativePoint(event.clientX, event.clientY);
+            if (!point) {
+                return;
+            }
+
+            this.ctrlPolylinePreviewPoint.set(event.shiftKey ? this.snapRoutePointToGridIntersection(point) : point);
+            event.preventDefault();
             return;
         }
 
@@ -2117,7 +2597,8 @@ export class CampaignMapPageComponent {
         const drawPoint = event.shiftKey ? this.snapRoutePointToGridIntersection(point) : point;
 
         this.mutateMap((map) => {
-            const lastStroke = map.strokes.at(-1);
+            const targetLines = this.activeLineKind === 'wall' ? map.walls : map.strokes;
+            const lastStroke = targetLines.at(-1);
             if (!lastStroke) {
                 return;
             }
@@ -2195,7 +2676,7 @@ export class CampaignMapPageComponent {
 
             this.pendingDragHistory = null;
             if (this.eraseChanged) {
-                this.markDirty('Drawing erased.');
+                this.markDirty('Linework erased.');
             }
 
             this.eraseChanged = false;
@@ -2206,12 +2687,15 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        const finishedLineKind = this.activeLineKind;
         this.activeStrokePointerId = null;
+        this.activeLineKind = null;
         this.isDrawing.set(false);
         (event.currentTarget as HTMLElement | null)?.releasePointerCapture(event.pointerId);
 
         this.mutateMap((map) => {
-            const lastStroke = map.strokes.at(-1);
+            const targetLines = finishedLineKind === 'wall' ? map.walls : map.strokes;
+            const lastStroke = targetLines.at(-1);
             if (!lastStroke || lastStroke.points.length !== 1) {
                 return;
             }
@@ -2219,7 +2703,7 @@ export class CampaignMapPageComponent {
             lastStroke.points = [...lastStroke.points, lastStroke.points[0]];
         });
 
-        this.markDirty('Drawing added.');
+        this.markDirty(finishedLineKind === 'wall' ? 'Vision wall added.' : 'Drawing added.');
     }
 
     handleIconPointerDown(event: PointerEvent, iconId: string): void {
@@ -2303,14 +2787,19 @@ export class CampaignMapPageComponent {
         return true;
     }
 
-    private armStrokeInteraction(strokeId: string, point: CampaignMapPoint, event: PointerEvent): void {
-        this.selectStroke(strokeId);
+    private armStrokeInteraction(strokeId: string, point: CampaignMapPoint, event: PointerEvent, kind: MapLineKind = 'drawing'): void {
+        if (kind === 'wall') {
+            this.selectWall(strokeId);
+        } else {
+            this.selectStroke(strokeId);
+        }
 
         if (!this.canModify() || event.button !== 0) {
             return;
         }
 
         this.pendingStrokeId = strokeId;
+        this.pendingStrokeKind = kind;
         this.pendingStrokePointerId = event.pointerId;
         this.pendingStrokeClientX = event.clientX;
         this.pendingStrokeClientY = event.clientY;
@@ -2328,7 +2817,7 @@ export class CampaignMapPageComponent {
 
             const previousPoint = this.draggingStrokeLastPoint ?? point;
             this.draggingStrokeLastPoint = point;
-            this.strokeMoved = this.translateStrokeById(this.draggingStrokeId, point.x - previousPoint.x, point.y - previousPoint.y) || this.strokeMoved;
+            this.strokeMoved = this.translateStrokeById(this.draggingStrokeId, point.x - previousPoint.x, point.y - previousPoint.y, this.draggingStrokeKind ?? 'drawing') || this.strokeMoved;
             event.preventDefault();
             return true;
         }
@@ -2342,9 +2831,11 @@ export class CampaignMapPageComponent {
         }
 
         this.draggingStrokeId = this.pendingStrokeId;
+        this.draggingStrokeKind = this.pendingStrokeKind;
         this.draggingStrokePointerId = event.pointerId;
         this.draggingStrokeLastPoint = this.pendingStrokePoint;
         this.pendingStrokeId = null;
+        this.pendingStrokeKind = null;
         this.pendingStrokePointerId = null;
         this.pendingStrokePoint = null;
         this.pendingDragHistory = this.createHistoryEntry();
@@ -2357,14 +2848,16 @@ export class CampaignMapPageComponent {
 
         const previousPoint = this.draggingStrokeLastPoint ?? point;
         this.draggingStrokeLastPoint = point;
-        this.strokeMoved = this.translateStrokeById(this.draggingStrokeId, point.x - previousPoint.x, point.y - previousPoint.y) || this.strokeMoved;
+        this.strokeMoved = this.translateStrokeById(this.draggingStrokeId, point.x - previousPoint.x, point.y - previousPoint.y, this.draggingStrokeKind ?? 'drawing') || this.strokeMoved;
         event.preventDefault();
         return true;
     }
 
     private finishStrokeInteraction(event: PointerEvent): boolean {
         if (this.draggingStrokePointerId === event.pointerId && this.draggingStrokeId) {
+            const movedKind = this.draggingStrokeKind;
             this.draggingStrokeId = null;
+            this.draggingStrokeKind = null;
             this.draggingStrokePointerId = null;
             this.draggingStrokeLastPoint = null;
             (event.currentTarget as HTMLElement | null)?.releasePointerCapture(event.pointerId);
@@ -2380,7 +2873,7 @@ export class CampaignMapPageComponent {
 
             this.pendingDragHistory = null;
             if (this.strokeMoved) {
-                this.markDirty('Drawing moved.');
+                this.markDirty(movedKind === 'wall' ? 'Vision wall moved.' : 'Drawing moved.');
             }
 
             this.strokeMoved = false;
@@ -2392,6 +2885,7 @@ export class CampaignMapPageComponent {
         }
 
         this.pendingStrokeId = null;
+        this.pendingStrokeKind = null;
         this.pendingStrokePointerId = null;
         this.pendingStrokePoint = null;
         (event.currentTarget as HTMLElement | null)?.releasePointerCapture(event.pointerId);
@@ -2434,6 +2928,7 @@ export class CampaignMapPageComponent {
         this.selectedIconId.set(null);
         this.selectedLabelId.set(null);
         this.selectedStrokeId.set(null);
+        this.selectedWallId.set(null);
     }
 
     handleLabelPointerDown(event: PointerEvent, labelId: string): void {
@@ -2510,6 +3005,7 @@ export class CampaignMapPageComponent {
         this.draggingTokenPointerId = event.pointerId;
         this.draggingTokenMode = this.canModify() ? 'editor' : 'viewer';
         this.draggingTokenOrigin = { x: token.x, y: token.y };
+        this.draggingTokenFreeMove = event.ctrlKey || this.ctrlKeyPressed;
         this.pendingDragHistory = this.draggingTokenMode === 'editor' ? this.createHistoryEntry() : null;
         (event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId);
         event.stopPropagation();
@@ -2531,17 +3027,36 @@ export class CampaignMapPageComponent {
                     return token;
                 }
 
-                const snappedPoint = this.snapTokenPointToGrid(point, token.size);
+                if (this.shouldMoveTokenFreely(event)) {
+                    this.draggingTokenFreeMove = true;
+                }
+
+                const targetPoint = this.shouldMoveTokenFreely(event)
+                    ? point
+                    : this.snapTokenPointToGrid(point, token.size);
+
+                if (targetPoint.x === token.x && targetPoint.y === token.y) {
+                    return token;
+                }
+
+                if (this.isTokenMoveBlocked(token, targetPoint)) {
+                    return token;
+                }
+
                 return {
                     ...token,
-                    x: snappedPoint.x,
-                    y: snappedPoint.y
+                    x: targetPoint.x,
+                    y: targetPoint.y
                 };
             });
         });
 
         event.preventDefault();
         event.stopPropagation();
+    }
+
+    private shouldMoveTokenFreely(event: PointerEvent): boolean {
+        return this.draggingTokenFreeMove || event.ctrlKey || this.ctrlKeyPressed;
     }
 
     handleTokenPointerUp(event: PointerEvent, tokenId: string): void {
@@ -2575,6 +3090,87 @@ export class CampaignMapPageComponent {
 
         this.pendingDragHistory = null;
         void this.persistControlledTokenMove(tokenId, movedToken, origin);
+    }
+
+    private handleCtrlPolylineClick(point: CampaignMapPoint, snapToGrid: boolean): void {
+        const drawPoint = snapToGrid ? this.snapRoutePointToGridIntersection(point) : point;
+        const lineKind: MapLineKind = this.activeTool() === 'wall' ? 'wall' : 'drawing';
+        const points = this.ctrlPolylinePoints();
+        const nextPoint = { ...drawPoint };
+
+        if (this.ctrlPolylineKind() !== lineKind || points.length === 0) {
+            this.selectedDecorationId.set(null);
+            this.selectedIconId.set(null);
+            this.selectedLabelId.set(null);
+            this.selectedStrokeId.set(null);
+            this.selectedWallId.set(null);
+            this.selectedTokenId.set(null);
+            this.ctrlPolylineKind.set(lineKind);
+            this.ctrlPolylineColor.set(lineKind === 'wall' ? '#101418' : this.brushColor());
+            this.ctrlPolylineWidth.set(lineKind === 'wall' ? Math.max(4, this.brushWidth()) : this.brushWidth());
+            this.ctrlPolylinePoints.set([nextPoint]);
+            this.ctrlPolylinePreviewPoint.set(nextPoint);
+            return;
+        }
+
+        const lastPoint = points.at(-1);
+        if (lastPoint && Math.hypot(lastPoint.x - nextPoint.x, lastPoint.y - nextPoint.y) < 0.005) {
+            this.ctrlPolylinePreviewPoint.set(nextPoint);
+            return;
+        }
+
+        this.ctrlPolylinePoints.set([...points, nextPoint]);
+        this.ctrlPolylinePreviewPoint.set(nextPoint);
+    }
+
+    private commitCtrlPolylineDraft(): boolean {
+        const lineKind = this.ctrlPolylineKind();
+        const points = this.ctrlPolylinePoints();
+        if (!lineKind) {
+            return false;
+        }
+
+        if (points.length < 2) {
+            this.clearCtrlPolylineDraft();
+            return false;
+        }
+
+        this.captureHistorySnapshot();
+        this.mutateMap((map) => {
+            if (lineKind === 'wall') {
+                map.walls = [...map.walls, this.createMapWall(points)];
+                return;
+            }
+
+            map.strokes = [...map.strokes, {
+                id: this.createId(),
+                color: this.ctrlPolylineColor(),
+                width: this.ctrlPolylineWidth(),
+                points: points.map((entry) => ({ ...entry }))
+            }];
+        });
+
+        this.clearCtrlPolylineDraft();
+        this.markDirty(lineKind === 'wall' ? 'Vision wall added.' : 'Drawing added.');
+        return true;
+    }
+
+    private clearCtrlPolylineDraft(): void {
+        this.ctrlPolylineKind.set(null);
+        this.ctrlPolylinePoints.set([]);
+        this.ctrlPolylinePreviewPoint.set(null);
+    }
+
+    private isModifierPolylineHeld(): boolean {
+        return this.ctrlKeyPressed || this.shiftKeyPressed();
+    }
+
+    private shouldHandleModifierPolyline(eventCtrlKey: boolean): boolean {
+        if (!this.ctrlPolylineActive()) {
+            return eventCtrlKey || this.ctrlKeyPressed;
+        }
+
+        return this.isModifierPolylineHeld();
     }
 
     async saveMap(): Promise<void> {
@@ -2671,6 +3267,54 @@ export class CampaignMapPageComponent {
         return this.selectedStrokeId() === strokeId;
     }
 
+    isSelectedWall(wallId: string): boolean {
+        return this.selectedWallId() === wallId;
+    }
+
+    toggleWallsVisibility(): void {
+        this.showWalls.update((value) => !value);
+    }
+
+    toggleVisionPreview(): void {
+        if (!this.canPreviewVision()) {
+            this.showVisionPreview.set(false);
+            return;
+        }
+
+        if (!this.visionPreviewToken()) {
+            const fallbackToken = this.previewableTokens()[0] ?? null;
+            if (fallbackToken) {
+                this.selectToken(fallbackToken.id);
+            }
+        }
+
+        this.showVisionPreview.update((value) => !value);
+    }
+
+    resetCurrentMapVisionExploration(): void {
+        const campaignId = this.campaignId();
+        const mapId = this.currentMapId();
+        if (!mapId) {
+            return;
+        }
+
+        this.clearVisionExplorationForMap(mapId);
+        this.showMapNotice('Sight memory reset for this board.');
+
+        if (!campaignId || !this.canEdit()) {
+            return;
+        }
+
+        void this.store.resetCampaignMapVision(campaignId, mapId)
+            .then((ok) => {
+                if (!ok) {
+                    this.showMapNotice('Sight memory reset here, but other viewers could not be updated.');
+                }
+
+                this.cdr.detectChanges();
+            });
+    }
+
     private markDirty(message = 'Unsaved changes.'): void {
         if (!this.canModify()) {
             return;
@@ -2711,6 +3355,25 @@ export class CampaignMapPageComponent {
 
         globalThis.clearTimeout(this.autosaveTimerId);
         this.autosaveTimerId = null;
+    }
+
+    private clearMapNoticeTimer(): void {
+        if (this.mapNoticeTimerId === null) {
+            return;
+        }
+
+        globalThis.clearTimeout(this.mapNoticeTimerId);
+        this.mapNoticeTimerId = null;
+    }
+
+    private showMapNotice(message: string): void {
+        this.mapNotice.set(message);
+        this.clearMapNoticeTimer();
+        this.mapNoticeTimerId = globalThis.setTimeout(() => {
+            this.mapNotice.set('');
+            this.mapNoticeTimerId = null;
+            this.cdr.detectChanges();
+        }, 5000);
     }
 
     private buildMapArtAdditionalDirection(options: MapArtGenerationOptions): string | undefined {
@@ -2787,9 +3450,11 @@ export class CampaignMapPageComponent {
             const activeMap = maps.find((map) => map.id === entry.activeMapId) ?? maps[0] ?? this.createEmptyMapBoard('Main Map');
             this.mapBoards.set(maps.length > 0 ? maps : [this.cloneMapBoard(activeMap)]);
             this.loadMapBoard(activeMap);
+            this.clearCtrlPolylineDraft();
             this.selectedIconId.set(null);
             this.selectedLabelId.set(null);
             this.selectedStrokeId.set(null);
+            this.selectedWallId.set(null);
             this.selectedTokenId.set(null);
             this.pendingIconType.set(null);
             this.activeTool.set('select');
@@ -2820,7 +3485,7 @@ export class CampaignMapPageComponent {
             const saved = await this.store.updateCampaignMap(campaign.id, { activeMapId, maps });
             this.saveState.set(saved ? 'saved' : 'error');
             this.saveMessage.set(saved
-                ? `Saved ${maps.length} maps with ${snapshot.strokes.length} drawings, ${snapshot.icons.length} landmarks, and ${snapshot.tokens.length} tokens on ${this.mapNameDraft().trim() || currentMap.name}.`
+                ? `Saved ${maps.length} maps with ${snapshot.strokes.length} drawings, ${snapshot.walls.length} walls, ${snapshot.icons.length} landmarks, and ${snapshot.tokens.length} tokens on ${this.mapNameDraft().trim() || currentMap.name}.`
                 : 'Could not save your latest map change.');
 
             if (saved) {
@@ -2963,26 +3628,23 @@ export class CampaignMapPageComponent {
                 width: stroke.width,
                 points: stroke.points.map((point) => ({ ...point }))
             })),
+            walls: map.walls.map((wall) => ({
+                id: wall.id,
+                color: wall.color,
+                width: wall.width,
+                points: wall.points.map((point) => ({ ...point })),
+                blocksVision: wall.blocksVision ?? true,
+                blocksMovement: wall.blocksMovement ?? true
+            })),
             icons: map.icons.map((icon) => ({ ...icon })),
-            tokens: map.tokens.map((token) => {
-                const snappedPoint = this.snapTokenPointToGridForConfig(
-                    { x: token.x, y: token.y },
-                    token.size,
-                    gridColumns,
-                    gridRows,
-                    gridOffsetX,
-                    gridOffsetY
-                );
-
-                return {
-                    ...token,
-                    x: snappedPoint.x,
-                    y: snappedPoint.y,
-                    size: this.normalizeTokenGridSpan(token.size),
-                    assignedUserId: token.assignedUserId ?? null,
-                    assignedCharacterId: token.assignedCharacterId ?? null
-                };
-            }),
+            tokens: map.tokens.map((token) => ({
+                ...token,
+                x: this.clampCoordinate(token.x),
+                y: this.clampCoordinate(token.y),
+                size: this.normalizeTokenGridSpan(token.size),
+                assignedUserId: token.assignedUserId ?? null,
+                assignedCharacterId: token.assignedCharacterId ?? null
+            })),
             decorations: map.decorations.map((decoration) => ({ ...decoration })),
             labels: map.labels.map((label) => ({
                 ...label,
@@ -3011,6 +3673,7 @@ export class CampaignMapPageComponent {
             gridOffsetX: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X,
             gridOffsetY: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y,
             strokes: [],
+            walls: [],
             icons: [],
             tokens: [],
             decorations: [],
@@ -3081,16 +3744,24 @@ export class CampaignMapPageComponent {
         };
     }
 
-    private loadMapBoard(map: CampaignMapBoard): void {
+    private loadMapBoard(map: CampaignMapBoard, options?: { preserveTool?: boolean }): void {
+        const preserveTool = options?.preserveTool === true;
+        const activeTool = this.activeTool();
+        const pendingIconType = this.pendingIconType();
+        const pendingTerrainType = this.pendingTerrainType();
+
         this.currentMapId.set(map.id);
         this.workingMap.set(this.cloneMap(map));
-        this.activeTool.set('select');
-        this.pendingIconType.set(null);
-        this.pendingTerrainType.set(null);
+        this.clearCtrlPolylineDraft();
+        this.activeTool.set(preserveTool ? activeTool : 'select');
+        this.pendingIconType.set(preserveTool ? pendingIconType : null);
+        this.pendingTerrainType.set(preserveTool ? pendingTerrainType : null);
         this.pendingStrokeId = null;
+        this.pendingStrokeKind = null;
         this.pendingStrokePointerId = null;
         this.pendingStrokePoint = null;
         this.draggingStrokeId = null;
+        this.draggingStrokeKind = null;
         this.draggingStrokePointerId = null;
         this.draggingStrokeLastPoint = null;
         this.strokeMoved = false;
@@ -3098,7 +3769,9 @@ export class CampaignMapPageComponent {
         this.selectedIconId.set(null);
         this.selectedLabelId.set(null);
         this.selectedStrokeId.set(null);
+        this.selectedWallId.set(null);
         this.selectedTokenId.set(null);
+        this.showVisionPreview.set(false);
         this.iconLabelDraft.set('');
         this.tokenNameDraft.set('');
         this.tokenNoteDraft.set('');
@@ -3299,28 +3972,68 @@ export class CampaignMapPageComponent {
     }
 
     private deleteStrokeById(strokeId: string, message: string): void {
+        this.deleteLineById(strokeId, message, 'drawing');
+    }
+
+    private deleteWallById(wallId: string, message: string): void {
+        this.deleteLineById(wallId, message, 'wall');
+    }
+
+    private deleteLineById(lineId: string, message: string, kind: MapLineKind): void {
         if (!this.canModify()) {
             return;
         }
 
-        const existingStroke = this.workingMap().strokes.find((stroke) => stroke.id === strokeId);
+        const lines = kind === 'wall' ? this.workingMap().walls : this.workingMap().strokes;
+        const existingStroke = lines.find((stroke) => stroke.id === lineId);
         if (!existingStroke) {
             return;
         }
 
         this.captureHistorySnapshot();
         this.mutateMap((map) => {
-            map.strokes = map.strokes.filter((stroke) => stroke.id !== strokeId);
+            if (kind === 'wall') {
+                map.walls = map.walls.filter((stroke) => stroke.id !== lineId);
+                return;
+            }
+
+            map.strokes = map.strokes.filter((stroke) => stroke.id !== lineId);
         });
-        this.selectedStrokeId.set(null);
+        if (kind === 'wall') {
+            this.selectedWallId.set(null);
+        } else {
+            this.selectedStrokeId.set(null);
+        }
         this.markDirty(message);
     }
 
     private findNearestStrokeAtPoint(x: number, y: number): CampaignMap['strokes'][number] | null {
+        return this.findNearestLineAtPoint(x, y, 'drawing');
+    }
+
+    private findNearestWallAtPoint(x: number, y: number): CampaignMap['walls'][number] | null {
+        let closestWall: CampaignMap['walls'][number] | null = null;
+        let closestDistance = Number.POSITIVE_INFINITY;
+
+        for (const wall of this.workingMap().walls) {
+            const distance = this.distanceToStroke(wall, x, y);
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestWall = wall;
+            }
+        }
+
+        return closestWall && closestDistance <= this.strokeSelectionThreshold(closestWall.width)
+            ? closestWall
+            : null;
+    }
+
+    private findNearestLineAtPoint(x: number, y: number, kind: MapLineKind): CampaignMapStroke | null {
         let closestStroke: CampaignMap['strokes'][number] | null = null;
         let closestDistance = Number.POSITIVE_INFINITY;
 
-        for (const stroke of this.workingMap().strokes) {
+        const lines = kind === 'wall' ? this.workingMap().walls : this.workingMap().strokes;
+        for (const stroke of lines) {
             const distance = this.distanceToStroke(stroke, x, y);
             if (distance < closestDistance) {
                 closestDistance = distance;
@@ -3379,29 +4092,48 @@ export class CampaignMapPageComponent {
         return 0.018 + (Math.max(2, width) / 1000);
     }
 
-    private translateStrokeById(strokeId: string, deltaX: number, deltaY: number): boolean {
+    private translateStrokeById(strokeId: string, deltaX: number, deltaY: number, kind: MapLineKind = 'drawing'): boolean {
         if (!deltaX && !deltaY) {
             return false;
         }
 
         let changed = false;
         this.mutateMap((map) => {
-            map.strokes = map.strokes.map((stroke) => {
-                if (stroke.id !== strokeId) {
-                    return stroke;
-                }
+            if (kind === 'wall') {
+                map.walls = map.walls.map((wall) => {
+                    if (wall.id !== strokeId) {
+                        return wall;
+                    }
 
-                const translated = this.translateStrokePoints(stroke.points, deltaX, deltaY);
-                if (translated === stroke.points) {
-                    return stroke;
-                }
+                    const translated = this.translateStrokePoints(wall.points, deltaX, deltaY);
+                    if (translated === wall.points) {
+                        return wall;
+                    }
 
-                changed = true;
-                return {
-                    ...stroke,
-                    points: translated
-                };
-            });
+                    changed = true;
+                    return {
+                        ...wall,
+                        points: translated
+                    };
+                });
+            } else {
+                map.strokes = map.strokes.map((stroke) => {
+                    if (stroke.id !== strokeId) {
+                        return stroke;
+                    }
+
+                    const translated = this.translateStrokePoints(stroke.points, deltaX, deltaY);
+                    if (translated === stroke.points) {
+                        return stroke;
+                    }
+
+                    changed = true;
+                    return {
+                        ...stroke,
+                        points: translated
+                    };
+                });
+            }
         });
 
         return changed;
@@ -3450,25 +4182,45 @@ export class CampaignMapPageComponent {
             }
 
             map.strokes = nextStrokes;
+
+            const nextWalls: CampaignMap['walls'] = [];
+            for (const wall of map.walls) {
+                const remainingSegments = this.removeStrokeSegmentsAtPoint(wall, point, eraseRadius);
+                const unchanged = remainingSegments.length === 1
+                    && remainingSegments[0].id === wall.id
+                    && remainingSegments[0].points.length === wall.points.length;
+
+                if (!unchanged) {
+                    changed = true;
+                }
+
+                nextWalls.push(...remainingSegments);
+            }
+
+            map.walls = nextWalls;
         });
 
         if (changed && this.selectedStrokeId() && !this.workingMap().strokes.some((stroke) => stroke.id === this.selectedStrokeId())) {
             this.selectedStrokeId.set(null);
         }
 
+        if (changed && this.selectedWallId() && !this.workingMap().walls.some((wall) => wall.id === this.selectedWallId())) {
+            this.selectedWallId.set(null);
+        }
+
         return changed;
     }
 
-    private removeStrokeSegmentsAtPoint(
-        stroke: CampaignMap['strokes'][number],
+    private removeStrokeSegmentsAtPoint<T extends CampaignMapStroke>(
+        stroke: T,
         point: CampaignMapPoint,
         eraseRadius: number
-    ): CampaignMap['strokes'] {
+    ): T[] {
         if (stroke.points.length < 2) {
             return this.distanceToStroke(stroke, point.x, point.y) <= eraseRadius ? [] : [stroke];
         }
 
-        const segments: CampaignMap['strokes'] = [];
+        const segments: T[] = [];
         let currentPoints: CampaignMapPoint[] = [];
 
         for (let index = 1; index < stroke.points.length; index++) {
@@ -3505,6 +4257,235 @@ export class CampaignMapPageComponent {
         }
 
         return segments;
+    }
+
+    private resolveTokenVisionRangeFeet(token: CampaignMapToken): number {
+        const assignedCharacter = token.assignedCharacterId
+            ? this.campaignCharacters().find((character) => character.id === token.assignedCharacterId) ?? null
+            : null;
+
+        if (!assignedCharacter) {
+            return 30;
+        }
+
+        const ranges = [
+            ...this.extractVisionRanges(assignedCharacter.traits),
+            ...this.extractVisionRanges(assignedCharacter.speciesTraits),
+            ...this.extractVisionRanges(assignedCharacter.classFeatures),
+            ...this.extractVisionRanges(assignedCharacter.equipment)
+        ];
+
+        return ranges.length > 0 ? Math.max(...ranges) : 30;
+    }
+
+    private extractVisionRanges(entries: string[] | undefined): number[] {
+        if (!entries?.length) {
+            return [];
+        }
+
+        return entries.flatMap((entry) => {
+            const normalized = entry.toLowerCase();
+            if (!/(darkvision|blindsight|truesight|tremorsense|vision)/.test(normalized)) {
+                return [];
+            }
+
+            const matches = [...entry.matchAll(/(\d{1,3})\s*(?:foot|feet|ft)\b/gi)];
+            return matches.map((match) => Number(match[1])).filter((value) => Number.isFinite(value) && value > 0);
+        });
+    }
+
+    private buildVisionPolygon(token: CampaignMapToken): CampaignMapPoint[] {
+        const origin = this.tokenVisionOrigin(token);
+        const rangeFeet = this.resolveTokenVisionRangeFeet(token);
+        const rangePixels = this.visionRangePixels(rangeFeet);
+        const wallSegments = this.mapWallSegments('vision');
+        const boundarySegments = [
+            [{ x: 0, y: 0 }, { x: 1000, y: 0 }],
+            [{ x: 1000, y: 0 }, { x: 1000, y: 700 }],
+            [{ x: 1000, y: 700 }, { x: 0, y: 700 }],
+            [{ x: 0, y: 700 }, { x: 0, y: 0 }]
+        ] as const;
+        const segments = [...wallSegments, ...boundarySegments];
+        const epsilon = 0.0001;
+        const angles = new Set<number>();
+
+        for (let index = 0; index < 72; index++) {
+            angles.add((Math.PI * 2 * index) / 72);
+        }
+
+        for (const [start, end] of wallSegments) {
+            const startAngle = Math.atan2(start.y - origin.y, start.x - origin.x);
+            const endAngle = Math.atan2(end.y - origin.y, end.x - origin.x);
+            for (const angle of [startAngle, startAngle - epsilon, startAngle + epsilon, endAngle, endAngle - epsilon, endAngle + epsilon]) {
+                angles.add(angle);
+            }
+        }
+
+        return [...angles]
+            .sort((left, right) => left - right)
+            .map((angle) => this.castVisionRay(origin, angle, rangePixels, segments))
+            .map((point) => ({
+                x: this.clampCoordinate(point.x / 1000),
+                y: this.clampCoordinate(point.y / 700)
+            }));
+    }
+
+    private formatVisionPolygonPoints(points: CampaignMapPoint[]): string {
+        return points.map((point) => `${Math.round(point.x * 1000)},${Math.round(point.y * 700)}`).join(' ');
+    }
+
+    private rememberVisionPolygon(token: CampaignMapToken, polygon: CampaignMapPoint[]): void {
+        const key = this.visionMemoryKey(token);
+        const origin = this.tokenVisionOriginNormalized(token);
+        const nextPolygon = polygon.map((point) => ({ ...point }));
+        const polygonHash = this.hashVisionPolygon(nextPolygon);
+
+        this.visionExploration.update((memory) => {
+            const existing = memory[key];
+            if (existing?.lastPolygonHash === polygonHash && existing.lastOrigin && this.distanceBetweenPoints(existing.lastOrigin, origin) < MAP_VISION_MEMORY_ORIGIN_THRESHOLD) {
+                return memory;
+            }
+
+            const polygons = [...(existing?.polygons ?? []), nextPolygon].slice(-MAP_VISION_MEMORY_LIMIT);
+            return {
+                ...memory,
+                [key]: {
+                    polygons,
+                    lastOrigin: origin,
+                    lastPolygonHash: polygonHash
+                }
+            };
+        });
+    }
+
+    private clearVisionExplorationForMap(mapId: string): void {
+        const prefix = `${mapId}::`;
+        this.visionExploration.update((memory) => Object.fromEntries(
+            Object.entries(memory).filter(([key]) => !key.startsWith(prefix))
+        ));
+    }
+
+    private visionMemoryKey(token: CampaignMapToken): string {
+        return `${this.currentMapId()}::${token.id}`;
+    }
+
+    private hashVisionPolygon(points: CampaignMapPoint[]): string {
+        return points
+            .map((point) => `${point.x.toFixed(3)}:${point.y.toFixed(3)}`)
+            .join('|');
+    }
+
+    private tokenVisionOrigin(token: CampaignMapToken): { x: number; y: number } {
+        return {
+            x: this.clampCoordinate(token.x) * 1000,
+            y: this.clampCoordinate(token.y) * 700
+        };
+    }
+
+    private tokenVisionOriginNormalized(token: CampaignMapToken): CampaignMapPoint {
+        const origin = this.tokenVisionOrigin(token);
+        return {
+            x: origin.x / 1000,
+            y: origin.y / 700
+        };
+    }
+
+    private distanceBetweenPoints(left: CampaignMapPoint, right: CampaignMapPoint): number {
+        return Math.hypot(left.x - right.x, left.y - right.y);
+    }
+
+    private visionRangePixels(rangeFeet: number): number {
+        const cellSize = Math.min(1000 / this.gridColumns(), 700 / this.gridRows());
+        const cellCount = Math.max(1, rangeFeet / 5);
+        return cellSize * cellCount;
+    }
+
+    private mapWallSegments(kind: 'all' | 'vision' | 'movement' = 'all'): Array<[{ x: number; y: number }, { x: number; y: number }]> {
+        return this.workingMap().walls
+            .filter((wall) => {
+                if (kind === 'vision') {
+                    return wall.blocksVision;
+                }
+
+                if (kind === 'movement') {
+                    return wall.blocksMovement;
+                }
+
+                return true;
+            })
+            .flatMap((wall) => {
+                const segments: Array<[{ x: number; y: number }, { x: number; y: number }]> = [];
+
+                for (let index = 1; index < wall.points.length; index++) {
+                    const start = wall.points[index - 1];
+                    const end = wall.points[index];
+                    segments.push([
+                        { x: start.x * 1000, y: start.y * 700 },
+                        { x: end.x * 1000, y: end.y * 700 }
+                    ]);
+                }
+
+                return segments;
+            });
+    }
+
+    private castVisionRay(
+        origin: { x: number; y: number },
+        angle: number,
+        rangePixels: number,
+        segments: ReadonlyArray<readonly [{ x: number; y: number }, { x: number; y: number }]>
+    ): { x: number; y: number } {
+        const direction = { x: Math.cos(angle), y: Math.sin(angle) };
+        let closestDistance = rangePixels;
+        let closestPoint = {
+            x: origin.x + (direction.x * rangePixels),
+            y: origin.y + (direction.y * rangePixels)
+        };
+
+        for (const [start, end] of segments) {
+            const intersection = this.intersectRayWithSegment(origin, direction, start, end);
+            if (!intersection || intersection.distance >= closestDistance) {
+                continue;
+            }
+
+            closestDistance = intersection.distance;
+            closestPoint = intersection.point;
+        }
+
+        return {
+            x: Math.max(0, Math.min(1000, closestPoint.x)),
+            y: Math.max(0, Math.min(700, closestPoint.y))
+        };
+    }
+
+    private intersectRayWithSegment(
+        origin: { x: number; y: number },
+        direction: { x: number; y: number },
+        start: { x: number; y: number },
+        end: { x: number; y: number }
+    ): { point: { x: number; y: number }; distance: number } | null {
+        const segment = { x: end.x - start.x, y: end.y - start.y };
+        const determinant = (direction.x * segment.y) - (direction.y * segment.x);
+
+        if (Math.abs(determinant) < 0.000001) {
+            return null;
+        }
+
+        const delta = { x: start.x - origin.x, y: start.y - origin.y };
+        const distance = ((delta.x * segment.y) - (delta.y * segment.x)) / determinant;
+        const segmentT = ((delta.x * direction.y) - (delta.y * direction.x)) / determinant;
+
+        if (distance < 0 || segmentT < 0 || segmentT > 1) {
+            return null;
+        }
+
+        return {
+            point: {
+                x: origin.x + (direction.x * distance),
+                y: origin.y + (direction.y * distance)
+            },
+            distance
+        };
     }
 
     private findNearestIconAtPoint(x: number, y: number): CampaignMapIcon | null {
@@ -3632,6 +4613,202 @@ export class CampaignMapPageComponent {
         this.cdr.detectChanges();
     }
 
+    private updateSelectedWallFlags(wallId: string, flags: Partial<Pick<CampaignMapWall, 'blocksVision' | 'blocksMovement'>>, message: string): void {
+        this.captureHistorySnapshot();
+        this.mutateMap((map) => {
+            map.walls = map.walls.map((wall) => wall.id === wallId
+                ? {
+                    ...wall,
+                    ...flags
+                }
+                : wall);
+        });
+        this.markDirty(message);
+    }
+
+    private createMapWall(points: CampaignMapPoint[]): CampaignMapWall {
+        return {
+            id: this.createId(),
+            color: '#101418',
+            width: Math.max(4, this.brushWidth()),
+            points: points.map((point) => ({ ...point })),
+            blocksVision: true,
+            blocksMovement: true
+        };
+    }
+
+    private isTokenMoveBlocked(token: CampaignMapToken, targetPoint: CampaignMapPoint): boolean {
+        const start = this.tokenCenterForPosition(token.x, token.y, token.size);
+        const end = this.tokenCenterForPosition(targetPoint.x, targetPoint.y, token.size);
+        const targetBounds = this.tokenBoundsForPosition(targetPoint.x, targetPoint.y, token.size);
+
+        if (Math.hypot(end.x - start.x, end.y - start.y) < 0.5) {
+            return false;
+        }
+
+        return this.workingMap().walls
+            .filter((wall) => wall.blocksMovement)
+            .some((wall) => {
+                for (let index = 1; index < wall.points.length; index++) {
+                    const wallStart = {
+                        x: wall.points[index - 1].x * 1000,
+                        y: wall.points[index - 1].y * 700
+                    };
+                    const wallEnd = {
+                        x: wall.points[index].x * 1000,
+                        y: wall.points[index].y * 700
+                    };
+
+                    if (this.isMovementBlockedByWallSegment(start, end, wallStart, wallEnd, targetBounds)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            });
+    }
+
+    private tokenCenterForPosition(x: number, y: number, size: number): { x: number; y: number } {
+        return {
+            x: this.clampCoordinate(x) * 1000,
+            y: this.clampCoordinate(y) * 700
+        };
+    }
+
+    private tokenBoundsForPosition(x: number, y: number, size: number): { left: number; top: number; right: number; bottom: number } {
+        const span = this.normalizeTokenGridSpan(size);
+        const halfWidth = (span / this.gridColumns()) / 2;
+        const halfHeight = (span / this.gridRows()) / 2;
+
+        return {
+            left: this.clampCoordinate(x - halfWidth) * 1000,
+            top: this.clampCoordinate(y - halfHeight) * 700,
+            right: this.clampCoordinate(x + halfWidth) * 1000,
+            bottom: this.clampCoordinate(y + halfHeight) * 700
+        };
+    }
+
+    private isMovementBlockedByWallSegment(
+        start: { x: number; y: number },
+        end: { x: number; y: number },
+        wallStart: { x: number; y: number },
+        wallEnd: { x: number; y: number },
+        targetBounds: { left: number; top: number; right: number; bottom: number }
+    ): boolean {
+        if (this.doesWallOverlapTokenBounds(wallStart, wallEnd, targetBounds)) {
+            return true;
+        }
+
+        return this.segmentsCrossStrictly(start, end, wallStart, wallEnd);
+    }
+
+    private doesWallOverlapTokenBounds(
+        start: { x: number; y: number },
+        end: { x: number; y: number },
+        bounds: { left: number; top: number; right: number; bottom: number }
+    ): boolean {
+        const epsilon = 0.75;
+        const interior = {
+            left: bounds.left + epsilon,
+            top: bounds.top + epsilon,
+            right: bounds.right - epsilon,
+            bottom: bounds.bottom - epsilon
+        };
+
+        if (interior.left >= interior.right || interior.top >= interior.bottom) {
+            return false;
+        }
+
+        const pointInside = (point: { x: number; y: number }): boolean => {
+            return point.x > interior.left
+                && point.x < interior.right
+                && point.y > interior.top
+                && point.y < interior.bottom;
+        };
+
+        if (pointInside(start) || pointInside(end)) {
+            return true;
+        }
+
+        const topLeft = { x: interior.left, y: interior.top };
+        const topRight = { x: interior.right, y: interior.top };
+        const bottomLeft = { x: interior.left, y: interior.bottom };
+        const bottomRight = { x: interior.right, y: interior.bottom };
+
+        return this.segmentsIntersect(start, end, topLeft, topRight)
+            || this.segmentsIntersect(start, end, topRight, bottomRight)
+            || this.segmentsIntersect(start, end, bottomRight, bottomLeft)
+            || this.segmentsIntersect(start, end, bottomLeft, topLeft);
+    }
+
+    private segmentsIntersect(
+        startA: { x: number; y: number },
+        endA: { x: number; y: number },
+        startB: { x: number; y: number },
+        endB: { x: number; y: number }
+    ): boolean {
+        const epsilon = 0.0001;
+        const orientation = (first: { x: number; y: number }, second: { x: number; y: number }, third: { x: number; y: number }): number => {
+            const value = ((second.y - first.y) * (third.x - second.x)) - ((second.x - first.x) * (third.y - second.y));
+            if (Math.abs(value) <= epsilon) {
+                return 0;
+            }
+
+            return value > 0 ? 1 : 2;
+        };
+        const onSegment = (first: { x: number; y: number }, second: { x: number; y: number }, third: { x: number; y: number }): boolean => {
+            return second.x <= Math.max(first.x, third.x) + epsilon
+                && second.x + epsilon >= Math.min(first.x, third.x)
+                && second.y <= Math.max(first.y, third.y) + epsilon
+                && second.y + epsilon >= Math.min(first.y, third.y);
+        };
+
+        const firstOrientation = orientation(startA, endA, startB);
+        const secondOrientation = orientation(startA, endA, endB);
+        const thirdOrientation = orientation(startB, endB, startA);
+        const fourthOrientation = orientation(startB, endB, endA);
+
+        if (firstOrientation !== secondOrientation && thirdOrientation !== fourthOrientation) {
+            return true;
+        }
+
+        if (firstOrientation === 0 && onSegment(startA, startB, endA)) {
+            return true;
+        }
+
+        if (secondOrientation === 0 && onSegment(startA, endB, endA)) {
+            return true;
+        }
+
+        if (thirdOrientation === 0 && onSegment(startB, startA, endB)) {
+            return true;
+        }
+
+        return fourthOrientation === 0 && onSegment(startB, endA, endB);
+    }
+
+    private segmentsCrossStrictly(
+        startA: { x: number; y: number },
+        endA: { x: number; y: number },
+        startB: { x: number; y: number },
+        endB: { x: number; y: number }
+    ): boolean {
+        const directionA = { x: endA.x - startA.x, y: endA.y - startA.y };
+        const directionB = { x: endB.x - startB.x, y: endB.y - startB.y };
+        const determinant = (directionA.x * directionB.y) - (directionA.y * directionB.x);
+        const epsilon = 0.0001;
+
+        if (Math.abs(determinant) <= epsilon) {
+            return false;
+        }
+
+        const delta = { x: startB.x - startA.x, y: startB.y - startA.y };
+        const t = ((delta.x * directionB.y) - (delta.y * directionB.x)) / determinant;
+        const u = ((delta.x * directionA.y) - (delta.y * directionA.x)) / determinant;
+
+        return t > epsilon && t < 1 - epsilon && u > epsilon && u < 1 - epsilon;
+    }
+
     terrainLabel(type: CampaignMapDecorationType): string {
         return this.terrainOptions.find((option) => option.type === type)?.label ?? 'Terrain';
     }
@@ -3734,6 +4911,7 @@ export class CampaignMapPageComponent {
                 gridOffsetX: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X,
                 gridOffsetY: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y,
                 strokes: strokes.filter((stroke) => stroke.points.length > 1),
+                walls: [],
                 icons: anchors.map((anchor) => ({
                     id: anchor.id,
                     type: anchor.type,

@@ -97,6 +97,7 @@ export interface ApiCampaignMapDto {
     gridOffsetX: number;
     gridOffsetY: number;
     strokes: ApiCampaignMapStrokeDto[];
+    walls: ApiCampaignMapWallDto[];
     icons: ApiCampaignMapIconDto[];
     tokens: ApiCampaignMapTokenDto[];
     decorations: ApiCampaignMapDecorationDto[];
@@ -143,6 +144,11 @@ export interface ApiCampaignMapStrokeDto {
     points: ApiCampaignMapPointDto[];
 }
 
+export interface ApiCampaignMapWallDto extends ApiCampaignMapStrokeDto {
+    blocksVision?: boolean;
+    blocksMovement?: boolean;
+}
+
 export interface ApiCampaignMapPointDto {
     x: number;
     y: number;
@@ -172,6 +178,10 @@ export interface ApiMoveCampaignMapTokenRequest {
     mapId: string;
     x: number;
     y: number;
+}
+
+export interface ApiResetCampaignMapVisionRequest {
+    mapId: string;
 }
 
 export interface ApiCampaignMapDecorationDto {
@@ -776,6 +786,10 @@ export class DungeonApiService {
 
     async moveCampaignMapToken(campaignId: string, tokenId: string, payload: ApiMoveCampaignMapTokenRequest): Promise<ApiCampaignDto> {
         return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/map/tokens/${tokenId}/position`, payload));
+    }
+
+    async resetCampaignMapVision(campaignId: string, payload: ApiResetCampaignMapVisionRequest): Promise<void> {
+        await firstValueFrom(this.http.post<void>(`${this.baseUrl}/campaigns/${campaignId}/map/${payload.mapId}/vision/reset`, {}));
     }
 
     async generateCampaignMapArtAi(campaignId: string, payload: ApiGenerateCampaignMapArtRequest): Promise<ApiGenerateCampaignMapArtResponse> {

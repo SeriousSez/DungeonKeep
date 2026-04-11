@@ -889,6 +889,45 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         }
     }
 
+    [HttpPost("{campaignId:guid}/map/{mapId:guid}/vision/reset")]
+    public async Task<IActionResult> ResetMapVision(Guid campaignId, Guid mapId, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var campaign = await campaignService.GetByIdAsync(campaignId, user.Id, cancellationToken);
+        if (campaign is null)
+        {
+            return NotFound("Campaign was not found.");
+        }
+
+        if (!string.Equals(campaign.CurrentUserRole, "Owner", StringComparison.OrdinalIgnoreCase))
+        {
+            return StatusCode(403);
+        }
+
+        var map = campaign.Maps.FirstOrDefault(entry => entry.Id == mapId);
+        if (map is null)
+        {
+            return NotFound("Map was not found.");
+        }
+
+        await campaignHub.Clients
+            .Group($"campaign-{campaignId}")
+            .SendAsync("CampaignMapVisionReset", new
+            {
+                campaignId,
+                mapId,
+                initiatedByUserId = user.Id,
+                summary = $"{user.DisplayName} reset remembered sight on {map.Name}."
+            }, cancellationToken);
+
+        return NoContent();
+    }
+
     [HttpPost("{campaignId:guid}/map/generate-ai")]
     public async Task<ActionResult<CampaignMapDto>> GenerateMap(Guid campaignId, [FromBody] GenerateCampaignMapRequest request, CancellationToken cancellationToken)
     {
@@ -3071,6 +3110,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             GridOffsetX: 0d,
             GridOffsetY: 0d,
             Strokes: (generated.Strokes ?? []).Select(stroke => NormalizeGeneratedCampaignMapStroke(stroke, fallbackStrokeColor)).Where(stroke => stroke is not null).Cast<CampaignMapStrokeDto>().Take(16).ToList(),
+            Walls: [],
             Icons: (generated.Icons ?? []).Select(NormalizeGeneratedCampaignMapIcon).Where(icon => icon is not null).Cast<CampaignMapIconDto>().Take(16).ToList(),
             Tokens: [],
             Decorations: (generated.Decorations ?? []).Select(NormalizeGeneratedCampaignMapDecoration).Where(decoration => decoration is not null).Cast<CampaignMapDecorationDto>().Take(18).ToList(),

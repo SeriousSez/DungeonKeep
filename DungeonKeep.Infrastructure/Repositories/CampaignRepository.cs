@@ -632,6 +632,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                         .ToList()))
                 .Where(stroke => stroke.Points.Count > 0)
                 .ToList(),
+            NormalizeMapWallCollection(map.Walls),
             (map.Icons ?? [])
                 .Select(icon => new CampaignMapIconDto(
                     icon.Id == Guid.Empty ? Guid.NewGuid() : icon.Id,
@@ -692,6 +693,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             map.GridOffsetX,
             map.GridOffsetY,
             map.Strokes,
+            map.Walls,
             map.Icons,
             map.Tokens,
             map.Decorations,
@@ -709,6 +711,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             normalized.GridOffsetX,
             normalized.GridOffsetY,
             normalized.Strokes,
+            normalized.Walls,
             normalized.Icons,
             normalized.Tokens,
             normalized.Decorations,
@@ -725,7 +728,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
         if (maps.Count == 0)
         {
-            maps.Add(new CampaignMapBoardDto(Guid.NewGuid(), "Main Map", "Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], new CampaignMapLayersDto([], [], [])));
+            maps.Add(new CampaignMapBoardDto(Guid.NewGuid(), "Main Map", "Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], [], new CampaignMapLayersDto([], [], [])));
         }
 
         var activeMapId = library.ActiveMapId != Guid.Empty && maps.Any(map => map.Id == library.ActiveMapId)
@@ -763,6 +766,24 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                     .Distinct()
                     .ToList()))
             .Where(stroke => stroke.Points.Count > 0)
+            .ToList();
+    }
+
+    private static IReadOnlyList<CampaignMapWallDto> NormalizeMapWallCollection(IReadOnlyList<CampaignMapWallDto>? walls)
+    {
+        return (walls ?? [])
+            .Where(wall => wall.Points is { Count: > 0 })
+            .Select(wall => new CampaignMapWallDto(
+                wall.Id == Guid.Empty ? Guid.NewGuid() : wall.Id,
+                NormalizeMapColor(wall.Color),
+                Math.Clamp(wall.Width, 2, 18),
+                wall.Points
+                    .Select(point => new CampaignMapPointDto(ClampMapCoordinate(point.X), ClampMapCoordinate(point.Y)))
+                    .Distinct()
+                    .ToList(),
+                wall.BlocksVision ?? true,
+                wall.BlocksMovement ?? true))
+            .Where(wall => wall.Points.Count > 0)
             .ToList();
     }
 

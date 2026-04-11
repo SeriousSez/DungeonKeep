@@ -91,6 +91,7 @@ public sealed record CampaignMapDto(
     double GridOffsetX,
     double GridOffsetY,
     IReadOnlyList<CampaignMapStrokeDto> Strokes,
+    IReadOnlyList<CampaignMapWallDto> Walls,
     IReadOnlyList<CampaignMapIconDto> Icons,
     IReadOnlyList<CampaignMapTokenDto> Tokens,
     IReadOnlyList<CampaignMapDecorationDto> Decorations,
@@ -109,6 +110,7 @@ public sealed record CampaignMapBoardDto(
     double GridOffsetX,
     double GridOffsetY,
     IReadOnlyList<CampaignMapStrokeDto> Strokes,
+    IReadOnlyList<CampaignMapWallDto> Walls,
     IReadOnlyList<CampaignMapIconDto> Icons,
     IReadOnlyList<CampaignMapTokenDto> Tokens,
     IReadOnlyList<CampaignMapDecorationDto> Decorations,
@@ -126,6 +128,15 @@ public sealed record CampaignMapStrokeDto(
     string Color,
     int Width,
     IReadOnlyList<CampaignMapPointDto> Points
+);
+
+public sealed record CampaignMapWallDto(
+    Guid Id,
+    string Color,
+    int Width,
+    IReadOnlyList<CampaignMapPointDto> Points,
+    bool? BlocksVision,
+    bool? BlocksMovement
 );
 
 public sealed record CampaignMapPointDto(

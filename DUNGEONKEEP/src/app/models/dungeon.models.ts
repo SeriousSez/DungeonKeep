@@ -81,6 +81,11 @@ export interface CampaignMapStroke {
     points: CampaignMapPoint[];
 }
 
+export interface CampaignMapWall extends CampaignMapStroke {
+    blocksVision: boolean;
+    blocksMovement: boolean;
+}
+
 export interface CampaignMapIcon {
     id: string;
     type: CampaignMapIconType;
@@ -156,6 +161,7 @@ export interface CampaignMap {
     gridOffsetX: number;
     gridOffsetY: number;
     strokes: CampaignMapStroke[];
+    walls: CampaignMapWall[];
     icons: CampaignMapIcon[];
     tokens: CampaignMapToken[];
     decorations: CampaignMapDecoration[];
