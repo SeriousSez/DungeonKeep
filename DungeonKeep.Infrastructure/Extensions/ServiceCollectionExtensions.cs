@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddHttpClient<IBackstoryGenerator, OpenAiBackstoryGenerator>();
+        services.AddHttpClient<ICharacterPortraitGenerator, OpenAiCharacterPortraitGenerator>();
         services.AddSingleton(emailOptions);
         services.AddScoped<IAuthRepository, AuthRepository>();
         services.AddScoped<ICampaignRepository, CampaignRepository>();

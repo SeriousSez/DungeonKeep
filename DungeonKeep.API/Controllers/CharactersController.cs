@@ -187,6 +187,30 @@ public sealed class CharactersController(ICharacterService characterService, IAu
         }
     }
 
+    [HttpPost("portrait/generate")]
+    public async Task<ActionResult<GenerateCharacterPortraitResponse>> GeneratePortrait([FromBody] GenerateCharacterPortraitRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var generated = await characterService.GeneratePortraitAsync(request, user.Id, cancellationToken);
+            return Ok(generated);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return Problem(title: "Portrait generation unavailable.", detail: exception.Message, statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+        catch (HttpRequestException exception)
+        {
+            return Problem(title: "Portrait generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+    }
+
     [HttpPut("{characterId:guid}/backstory")]
     public async Task<ActionResult<CharacterDto>> UpdateBackstory(Guid characterId, [FromBody] UpdateCharacterBackstoryRequest request, CancellationToken cancellationToken)
     {

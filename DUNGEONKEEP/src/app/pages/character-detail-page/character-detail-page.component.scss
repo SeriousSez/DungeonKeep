@@ -163,10 +163,108 @@
     min-width: 0;
 }
 
+.header-identity {
+    display: grid;
+    grid-template-columns: minmax(120px, 172px) minmax(0, 1fr);
+    gap: 16px;
+    min-width: 0;
+    align-items: start;
+}
+
 .header-copy {
     display: grid;
     gap: 6px;
     min-width: 0;
+}
+
+.portrait-card {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+}
+
+.portrait-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 18px;
+    border: 1px solid var(--panel-border);
+    background:
+        radial-gradient(circle at top, color-mix(in srgb, var(--accent-primary) 24%, transparent), transparent 58%),
+        linear-gradient(160deg, color-mix(in srgb, var(--surface-raised) 84%, var(--panel-bg) 16%), color-mix(in srgb, var(--panel-bg) 86%, var(--surface-raised) 14%));
+    box-shadow: var(--panel-shadow);
+}
+
+.portrait-image,
+.portrait-placeholder {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.portrait-image {
+    object-fit: cover;
+}
+
+.portrait-placeholder {
+    display: grid;
+    place-items: center;
+    font-family: var(--display-font);
+    font-size: clamp(1.8rem, 3vw, 2.6rem);
+    font-weight: 700;
+    color: color-mix(in srgb, var(--text-main) 86%, var(--accent-primary) 14%);
+    letter-spacing: 0.08em;
+}
+
+.portrait-editor {
+    display: grid;
+    gap: 8px;
+}
+
+.portrait-file-input {
+    display: none;
+}
+
+.portrait-actions {
+    display: grid;
+    gap: 8px;
+}
+
+.portrait-prompt-field {
+    display: grid;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.portrait-prompt-field span {
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+}
+
+.portrait-prompt-field textarea {
+    width: 100%;
+    min-height: 88px;
+    resize: vertical;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    background: var(--surface-raised);
+    color: var(--text-main);
+    padding: 10px 12px;
+    font: inherit;
+}
+
+.portrait-feedback {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.portrait-feedback--error {
+    color: #c4514b;
 }
 
 .header-actions {
@@ -1405,6 +1503,14 @@
 
     .header-actions {
         justify-items: stretch;
+    }
+
+    .header-identity {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .portrait-card {
+        max-width: min(100%, 19rem);
     }
 
     .campaign-assignment-controls {

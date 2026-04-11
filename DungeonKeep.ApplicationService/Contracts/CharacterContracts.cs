@@ -88,6 +88,18 @@ public sealed record GenerateCharacterBackstoryRequest(
 
 public sealed record GenerateCharacterBackstoryResponse(string Backstory);
 
+public sealed record GenerateCharacterPortraitRequest(
+    string Name,
+    string ClassName,
+    string Background,
+    string Species,
+    string Alignment,
+    string Gender,
+    string AdditionalDirection
+);
+
+public sealed record GenerateCharacterPortraitResponse(string ImageUrl);
+
 public sealed record UpdateCharacterRequest(
     string Name,
     string PlayerName,

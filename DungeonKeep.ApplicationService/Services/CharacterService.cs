@@ -4,7 +4,7 @@ using DungeonKeep.Domain.Entities;
 
 namespace DungeonKeep.ApplicationService.Services;
 
-public sealed class CharacterService(ICampaignRepository campaignRepository, ICharacterRepository characterRepository, IBackstoryGenerator backstoryGenerator) : ICharacterService
+public sealed class CharacterService(ICampaignRepository campaignRepository, ICharacterRepository characterRepository, IBackstoryGenerator backstoryGenerator, ICharacterPortraitGenerator characterPortraitGenerator) : ICharacterService
 {
     public async Task<IReadOnlyList<CharacterDto>> GetAccessibleAsync(Guid userId, CancellationToken cancellationToken = default)
     {
@@ -199,6 +199,24 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
 
         var backstory = await backstoryGenerator.GenerateAsync(normalizedRequest, cancellationToken);
         return new GenerateCharacterBackstoryResponse(backstory);
+    }
+
+    public async Task<GenerateCharacterPortraitResponse> GeneratePortraitAsync(GenerateCharacterPortraitRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        _ = userId;
+
+        var normalizedRequest = new GenerateCharacterPortraitRequest(
+            NormalizeText(request.Name, "Unnamed adventurer"),
+            NormalizeText(request.ClassName, "Unknown class"),
+            NormalizeText(request.Background, "Unknown background"),
+            NormalizeText(request.Species, "Unknown species"),
+            NormalizeText(request.Alignment, "Unchosen alignment"),
+            request.Gender?.Trim() ?? string.Empty,
+            request.AdditionalDirection?.Trim() ?? string.Empty
+        );
+
+        var imageUrl = await characterPortraitGenerator.GenerateAsync(normalizedRequest, cancellationToken);
+        return new GenerateCharacterPortraitResponse(imageUrl);
     }
 
     public async Task<CharacterDto?> UpdateBackstoryAsync(Guid characterId, UpdateCharacterBackstoryRequest request, Guid userId, CancellationToken cancellationToken = default)

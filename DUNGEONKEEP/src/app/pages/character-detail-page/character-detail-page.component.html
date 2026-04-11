@@ -52,10 +52,49 @@
         <a routerLink="/characters" class="back-link">← Back to Characters</a>
         <div class="header-content">
             <div class="header-main">
-                <div class="header-copy">
-                    <p class="eyebrow">Character Sheet</p>
-                    <h1>{{ char.name }}</h1>
-                    <p class="subheader">{{ char.race }} {{ char.className }} · Level {{ char.level }} · {{ campaignName() }}</p>
+                <div class="header-identity">
+                    <div class="portrait-card">
+                        <div class="portrait-frame">
+                            @if (char.image) {
+                            <img class="portrait-image" [src]="char.image" [alt]="char.name + ' portrait'" />
+                            } @else {
+                            <div class="portrait-placeholder" aria-hidden="true">{{ portraitInitials() }}</div>
+                            }
+                        </div>
+
+                        @if (char.canEdit) {
+                        <div class="portrait-editor">
+                            <input #portraitUploadInput type="file" accept="image/*" class="portrait-file-input" (change)="onPortraitFileSelected($event)" />
+                            <div class="portrait-actions">
+                                <button type="button" class="assign-btn" [disabled]="isSavingPortrait() || isGeneratingPortrait()" (click)="portraitUploadInput.click()">
+                                    {{ isSavingPortrait() ? 'Saving...' : 'Upload Portrait' }}
+                                </button>
+                                <button type="button" class="assign-btn" [disabled]="isSavingPortrait() || isGeneratingPortrait()" (click)="generatePortrait()">
+                                    {{ isGeneratingPortrait() ? 'Generating...' : 'Generate AI Portrait' }}
+                                </button>
+                                <button type="button" class="remove-btn" [disabled]="isSavingPortrait() || isGeneratingPortrait() || !char.image" (click)="clearPortrait()">
+                                    Remove
+                                </button>
+                            </div>
+                            <label class="portrait-prompt-field">
+                                <span>Art direction</span>
+                                <textarea rows="3" [value]="portraitPromptDetails()" (input)="onPortraitPromptDetailsChanged($any($event.target).value)" placeholder="Describe pose, mood, armor, colors, scars, lighting, or signature details."></textarea>
+                            </label>
+                            @if (portraitGenerationError()) {
+                            <p class="portrait-feedback portrait-feedback--error">{{ portraitGenerationError() }}</p>
+                            }
+                            @if (portraitSaveMessage()) {
+                            <p class="portrait-feedback">{{ portraitSaveMessage() }}</p>
+                            }
+                        </div>
+                        }
+                    </div>
+
+                    <div class="header-copy">
+                        <p class="eyebrow">Character Sheet</p>
+                        <h1>{{ char.name }}</h1>
+                        <p class="subheader">{{ char.race }} {{ char.className }} · Level {{ char.level }} · {{ campaignName() }}</p>
+                    </div>
                 </div>
 
                 <div class="header-actions">
@@ -80,7 +119,7 @@
                     @if (campaignUpdateError()) {
                     <p class="campaign-error">{{ campaignUpdateError() }}</p>
                     }
-                }
+                    }
                 </div>
             </div>
         </div>

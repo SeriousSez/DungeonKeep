@@ -316,6 +316,20 @@ export interface ApiGenerateCharacterBackstoryResponse {
     backstory: string;
 }
 
+export interface ApiGenerateCharacterPortraitRequest {
+    name: string;
+    className: string;
+    background: string;
+    species: string;
+    alignment: string;
+    gender: string;
+    additionalDirection: string;
+}
+
+export interface ApiGenerateCharacterPortraitResponse {
+    imageUrl: string;
+}
+
 export interface ApiDndChatMessage {
     role: 'user' | 'assistant';
     content: string;
@@ -892,6 +906,10 @@ export class DungeonApiService {
 
     async generateCharacterBackstory(payload: ApiGenerateCharacterBackstoryRequest): Promise<ApiGenerateCharacterBackstoryResponse> {
         return await firstValueFrom(this.http.post<ApiGenerateCharacterBackstoryResponse>(`${this.baseUrl}/characters/backstory/generate`, payload));
+    }
+
+    async generateCharacterPortrait(payload: ApiGenerateCharacterPortraitRequest): Promise<ApiGenerateCharacterPortraitResponse> {
+        return await firstValueFrom(this.http.post<ApiGenerateCharacterPortraitResponse>(`${this.baseUrl}/characters/portrait/generate`, payload));
     }
 
     async updateCharacterBackstory(characterId: string, backstory: string): Promise<ApiCharacterDto> {

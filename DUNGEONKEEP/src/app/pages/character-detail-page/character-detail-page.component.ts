@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -12,6 +13,7 @@ import { races } from '../../data/races';
 import { equipmentCatalog } from '../../data/new-character-standard-page.data';
 import { spellDetailsMap } from '../../data/spell-details.data';
 import type { SkillProficiencies } from '../../models/dungeon.models';
+import { DungeonApiService } from '../../state/dungeon-api.service';
 import { CampaignHubService } from '../../state/campaign-hub.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
@@ -116,6 +118,7 @@ export class CharacterDetailPageComponent {
     private static readonly UNASSIGNED_CAMPAIGN_ID = '00000000-0000-0000-0000-000000000000';
 
     private readonly store = inject(DungeonStoreService);
+    private readonly api = inject(DungeonApiService);
     private readonly route = inject(ActivatedRoute);
     private readonly cdr = inject(ChangeDetectorRef);
     private readonly destroyRef = inject(DestroyRef);
@@ -338,6 +341,11 @@ export class CharacterDetailPageComponent {
     readonly selectedCampaignAssignment = signal('');
     readonly isUpdatingCampaign = signal(false);
     readonly campaignUpdateError = signal('');
+    readonly portraitPromptDetails = signal('');
+    readonly portraitSaveMessage = signal('');
+    readonly portraitGenerationError = signal('');
+    readonly isSavingPortrait = signal(false);
+    readonly isGeneratingPortrait = signal(false);
     readonly usedSpellSlotsByLevel = signal<Record<number, number>>({});
     readonly expandedContainers = signal<Set<string>>(new Set());
     readonly activeDetailDrawer = signal<DetailDrawerContent | null>(null);
@@ -740,6 +748,8 @@ export class CharacterDetailPageComponent {
         return this.store.campaigns().find((campaign) => campaign.id === char.campaignId) ?? null;
     });
 
+    readonly portraitInitials = computed(() => this.buildCharacterInitials(this.character()?.name ?? ''));
+
     readonly partyCurrency = computed<PersistedCurrencyState>(() => {
         const campaign = this.currentCampaign();
         if (!campaign) {
@@ -754,6 +764,72 @@ export class CharacterDetailPageComponent {
     readonly assignableCampaignOptions = computed<DropdownOption[]>(() =>
         this.store.campaigns().map((campaign) => ({ value: campaign.id, label: campaign.name }))
     );
+
+    readonly onPortraitPromptDetailsChanged = (value: string) => {
+        this.portraitPromptDetails.set(value);
+        this.portraitGenerationError.set('');
+        this.portraitSaveMessage.set('');
+    };
+
+    readonly onPortraitFileSelected = async (event: Event) => {
+        const input = event.target as HTMLInputElement | null;
+        const file = input?.files?.[0] ?? null;
+        if (!file) {
+            return;
+        }
+
+        try {
+            const imageUrl = await this.readPortraitFile(file);
+            await this.persistPortrait(imageUrl, 'Portrait updated.');
+        } catch (error) {
+            this.portraitGenerationError.set(error instanceof Error ? error.message : 'Unable to use that image right now.');
+        } finally {
+            if (input) {
+                input.value = '';
+            }
+
+            this.cdr.detectChanges();
+        }
+    };
+
+    readonly generatePortrait = async () => {
+        const char = this.character();
+        if (!char || !char.canEdit || this.isGeneratingPortrait()) {
+            return;
+        }
+
+        this.isGeneratingPortrait.set(true);
+        this.portraitGenerationError.set('');
+        this.portraitSaveMessage.set('');
+
+        try {
+            const response = await this.api.generateCharacterPortrait({
+                name: char.name,
+                className: char.className,
+                background: char.background,
+                species: char.race,
+                alignment: char.alignment ?? '',
+                gender: char.gender ?? '',
+                additionalDirection: this.portraitPromptDetails().trim()
+            });
+
+            await this.persistPortrait(response.imageUrl, 'Portrait generated and saved.');
+        } catch (error) {
+            this.portraitGenerationError.set(this.getPortraitGenerationErrorMessage(error));
+        } finally {
+            this.isGeneratingPortrait.set(false);
+            this.cdr.detectChanges();
+        }
+    };
+
+    readonly clearPortrait = async () => {
+        const char = this.character();
+        if (!char || !char.canEdit || this.isSavingPortrait()) {
+            return;
+        }
+
+        await this.persistPortrait('', 'Portrait removed.');
+    };
 
     readonly raceInfo = computed(() => {
         const char = this.character();
@@ -2222,6 +2298,98 @@ export class CharacterDetailPageComponent {
             this.isSavingHp.set(false);
             this.cdr.detectChanges();
         }
+    }
+
+    private async persistPortrait(imageUrl: string, successMessage: string): Promise<void> {
+        const char = this.character();
+        if (!char || this.isSavingPortrait()) {
+            return;
+        }
+
+        this.isSavingPortrait.set(true);
+        this.portraitGenerationError.set('');
+        this.portraitSaveMessage.set('');
+
+        try {
+            const updated = await this.store.updateCharacter(this.characterId, {
+                name: char.name,
+                playerName: char.playerName,
+                race: char.race,
+                className: char.className,
+                role: char.role,
+                level: char.level,
+                background: char.background,
+                notes: char.notes,
+                campaignId: char.campaignId,
+                hitPoints: char.hitPoints,
+                maxHitPoints: char.maxHitPoints,
+                image: imageUrl
+            });
+
+            this.portraitSaveMessage.set(updated ? successMessage : 'Unable to save portrait right now.');
+        } catch {
+            this.portraitGenerationError.set('Unable to save portrait right now.');
+        } finally {
+            this.isSavingPortrait.set(false);
+            this.cdr.detectChanges();
+        }
+    }
+
+    private readPortraitFile(file: File): Promise<string> {
+        if (!file.type.startsWith('image/')) {
+            return Promise.reject(new Error('Choose an image file for the portrait.'));
+        }
+
+        if (file.size > 8 * 1024 * 1024) {
+            return Promise.reject(new Error('Choose an image smaller than 8 MB.'));
+        }
+
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error('Unable to read that image file.'));
+            reader.onload = () => {
+                const result = typeof reader.result === 'string' ? reader.result : '';
+                if (!result) {
+                    reject(new Error('Unable to read that image file.'));
+                    return;
+                }
+
+                resolve(result);
+            };
+
+            reader.readAsDataURL(file);
+        });
+    }
+
+    private getPortraitGenerationErrorMessage(error: unknown): string {
+        if (error instanceof HttpErrorResponse) {
+            if (typeof error.error === 'string' && error.error.trim()) {
+                return error.error.trim();
+            }
+
+            if (error.error && typeof error.error === 'object') {
+                const detail = 'detail' in error.error && typeof error.error.detail === 'string' ? error.error.detail : '';
+                const title = 'title' in error.error && typeof error.error.title === 'string' ? error.error.title : '';
+                if (detail.trim() || title.trim()) {
+                    return detail.trim() || title.trim();
+                }
+            }
+
+            if (error.status === 0) {
+                return 'Unable to reach the portrait service right now.';
+            }
+        }
+
+        return error instanceof Error ? error.message : 'Unable to generate a portrait right now.';
+    }
+
+    private buildCharacterInitials(name: string): string {
+        const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
+        if (parts.length === 0) {
+            return 'DK';
+        }
+
+        return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
     }
 
     private parseInteger(value: string): number {

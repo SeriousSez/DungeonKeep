@@ -777,6 +777,8 @@ export class CampaignMapPageComponent {
     private autosaveTimerId: ReturnType<typeof setTimeout> | null = null;
     private mapNoticeTimerId: ReturnType<typeof setTimeout> | null = null;
     private autosaveQueuedWhileSaving = false;
+    private localChangeRevision = 0;
+    private lastPersistedRevision = 0;
     private creatingRouteMap = false;
     private generationVariant = 0;
     private historySuppressed = false;
@@ -3320,6 +3322,7 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.localChangeRevision += 1;
         this.hasUnsavedChanges.set(true);
         this.saveState.set('idle');
         this.saveMessage.set(message);
@@ -3339,6 +3342,11 @@ export class CampaignMapPageComponent {
         this.clearAutosaveTimer();
         this.autosaveTimerId = globalThis.setTimeout(() => {
             this.autosaveTimerId = null;
+
+            if (this.shouldDeferAutosave()) {
+                this.queueAutosave();
+                return;
+            }
 
             if (!this.canModify() || !this.hasUnsavedChanges() || this.persistInFlight) {
                 return;
@@ -3364,6 +3372,18 @@ export class CampaignMapPageComponent {
 
         globalThis.clearTimeout(this.mapNoticeTimerId);
         this.mapNoticeTimerId = null;
+    }
+
+    private shouldDeferAutosave(): boolean {
+        if (!this.canModify()) {
+            return false;
+        }
+
+        if (this.isDrawing() || this.activeStrokePointerId !== null || this.activeLineKind !== null) {
+            return true;
+        }
+
+        return this.ctrlPolylineActive() && (this.activeTool() === 'draw' || this.activeTool() === 'wall');
     }
 
     private showMapNotice(message: string): void {
@@ -3475,6 +3495,7 @@ export class CampaignMapPageComponent {
         this.clearAutosaveTimer();
         this.autosaveQueuedWhileSaving = false;
         this.persistInFlight = true;
+        const saveRevision = this.localChangeRevision;
         const snapshot = this.cloneMap(this.workingMap());
         const maps = this.mapBoards().map((map) => map.id === currentMap.id ? { ...map, name: this.mapNameDraft().trim() || map.name, ...snapshot } : this.cloneMapBoard(map));
         const activeMapId = this.currentMapId() || currentMap.id;
@@ -3483,12 +3504,25 @@ export class CampaignMapPageComponent {
 
         try {
             const saved = await this.store.updateCampaignMap(campaign.id, { activeMapId, maps });
-            this.saveState.set(saved ? 'saved' : 'error');
-            this.saveMessage.set(saved
-                ? `Saved ${maps.length} maps with ${snapshot.strokes.length} drawings, ${snapshot.walls.length} walls, ${snapshot.icons.length} landmarks, and ${snapshot.tokens.length} tokens on ${this.mapNameDraft().trim() || currentMap.name}.`
-                : 'Could not save your latest map change.');
+            const savedMessage = `Saved ${maps.length} maps with ${snapshot.strokes.length} drawings, ${snapshot.walls.length} walls, ${snapshot.icons.length} landmarks, and ${snapshot.tokens.length} tokens on ${this.mapNameDraft().trim() || currentMap.name}.`;
+            const hasNewerLocalChanges = this.localChangeRevision !== saveRevision;
 
-            if (saved) {
+            if (!saved) {
+                this.saveState.set('error');
+                this.saveMessage.set('Could not save your latest map change.');
+                return;
+            }
+
+            this.lastPersistedRevision = Math.max(this.lastPersistedRevision, saveRevision);
+
+            if (hasNewerLocalChanges) {
+                this.saveState.set('idle');
+                this.saveMessage.set('Saved previous changes. Newer edits are still local.');
+                this.hasUnsavedChanges.set(true);
+                this.autosaveQueuedWhileSaving = true;
+            } else {
+                this.saveState.set('saved');
+                this.saveMessage.set(savedMessage);
                 this.hasUnsavedChanges.set(false);
                 this.lastLoadedMapSignature = this.mapLibrarySignature(maps, activeMapId);
             }
@@ -3786,6 +3820,8 @@ export class CampaignMapPageComponent {
         this.tokenCropSourceName.set('Token');
         this.labelToneDraft.set('Region');
         this.labelTextDraft.set(this.defaultLabelText('Region'));
+        this.localChangeRevision = 0;
+        this.lastPersistedRevision = 0;
         this.mapArtModalOpen.set(false);
         this.settlementNamesDraft.set('');
         this.regionNamesDraft.set('');
