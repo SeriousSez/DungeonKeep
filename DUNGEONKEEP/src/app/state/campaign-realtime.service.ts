@@ -82,11 +82,19 @@ export class CampaignRealtimeService {
         });
 
         connection.on('CampaignMapTokenMoved', (event: ApiCampaignMapTokenMovedDto) => {
+            if (event.initiatedByUserId === (this.session.currentUser()?.id ?? '')) {
+                return;
+            }
+
             this.store.applyCampaignMapTokenMoved(event);
             this._campaignMapTokenMoved.next(event);
         });
 
         connection.on('CampaignMapVisionUpdated', (event: ApiCampaignMapVisionUpdatedDto) => {
+            if (event.initiatedByUserId === (this.session.currentUser()?.id ?? '')) {
+                return;
+            }
+
             this.store.applyCampaignMapVisionUpdated(event);
             this._campaignMapVisionUpdated.next(event);
         });

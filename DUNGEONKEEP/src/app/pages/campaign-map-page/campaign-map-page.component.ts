@@ -843,6 +843,7 @@ export class CampaignMapPageComponent {
     private strokeMoved = false;
     private pendingIconId: string | null = null;
     private pendingIconPointerId: number | null = null;
+    private controlledTokenMoveRequestsInFlight = 0;
     private pendingIconClientX = 0;
     private pendingIconClientY = 0;
     private draggingIconId: string | null = null;
@@ -953,6 +954,11 @@ export class CampaignMapPageComponent {
             }
 
             if (this.canModify() && this.persistInFlight && campaign.id === this.lastLoadedCampaignId && routeMapId === this.lastLoadedRouteMapId) {
+                return;
+            }
+
+            if (this.controlledTokenMoveRequestsInFlight > 0 && campaign.id === this.lastLoadedCampaignId && routeMapId === this.lastLoadedRouteMapId) {
+                this.mergeRealtimeTokenState(campaign, routeMapId);
                 return;
             }
 
@@ -3311,7 +3317,8 @@ export class CampaignMapPageComponent {
                 return {
                     ...token,
                     x: targetPoint.x,
-                    y: targetPoint.y
+                    y: targetPoint.y,
+                    moveRevision: Math.max(0, token.moveRevision ?? 0) + 1
                 };
             });
         });
@@ -3346,19 +3353,24 @@ export class CampaignMapPageComponent {
         }
 
         const origin = { x: token.x, y: token.y };
-        const movedToken = { ...token, x: targetPoint.x, y: targetPoint.y };
+        const nextMoveRevision = Math.max(0, token.moveRevision ?? 0) + 1;
+        const movedToken = { ...token, x: targetPoint.x, y: targetPoint.y, moveRevision: nextMoveRevision };
 
         if (this.canModify()) {
             this.captureHistorySnapshot();
             this.mutateMap((map) => {
-                map.tokens = map.tokens.map((entry) => entry.id === token.id ? { ...entry, x: targetPoint.x, y: targetPoint.y } : entry);
+                map.tokens = map.tokens.map((entry) => entry.id === token.id
+                    ? { ...entry, x: targetPoint.x, y: targetPoint.y, moveRevision: nextMoveRevision }
+                    : entry);
             });
             this.markDirty('Token moved.');
             return true;
         }
 
         this.mutateMap((map) => {
-            map.tokens = map.tokens.map((entry) => entry.id === token.id ? { ...entry, x: targetPoint.x, y: targetPoint.y } : entry);
+            map.tokens = map.tokens.map((entry) => entry.id === token.id
+                ? { ...entry, x: targetPoint.x, y: targetPoint.y, moveRevision: nextMoveRevision }
+                : entry);
         });
         void this.persistControlledTokenMove(token.id, movedToken, origin);
         return true;
@@ -4889,8 +4901,13 @@ export class CampaignMapPageComponent {
             };
         });
 
-        if (updated && this.shouldPersistVisionMemory(token) && this.canEdit()) {
-            this.queueVisionMemoryPersistence(key);
+        if (updated && this.shouldPersistVisionMemory(token)) {
+            if (this.canEdit()) {
+                this.queueVisionMemoryPersistence(key);
+            } else {
+                this.pendingVisionMemoryPersistenceKeys.add(key);
+                this.syncPendingVisionMemorySnapshot();
+            }
         }
     }
 
@@ -5031,10 +5048,9 @@ export class CampaignMapPageComponent {
         }
 
         if (!this.canEdit()) {
-            this.pendingVisionMemoryPersistenceKeys.clear();
             this.inFlightVisionMemoryPersistenceKeys.clear();
             this.clearVisionMemoryPersistTimer();
-            this.clearPendingVisionMemorySnapshot();
+            this.syncPendingVisionMemorySnapshot();
             return;
         }
 
@@ -5582,16 +5598,21 @@ export class CampaignMapPageComponent {
         }
 
         const visionMemory = this.captureVisionMemoryForControlledMove(token);
+        this.controlledTokenMoveRequestsInFlight += 1;
 
-        const moved = await this.store.moveCampaignMapToken(campaign.id, mapId, tokenId, { x: token.x, y: token.y }, visionMemory);
-        if (moved) {
-            return;
+        try {
+            const moved = await this.store.moveCampaignMapToken(campaign.id, mapId, tokenId, { x: token.x, y: token.y }, visionMemory);
+            if (moved) {
+                return;
+            }
+
+            this.mutateMap((map) => {
+                map.tokens = map.tokens.map((entry) => entry.id === tokenId ? { ...entry, x: origin.x, y: origin.y } : entry);
+            });
+            this.cdr.detectChanges();
+        } finally {
+            this.controlledTokenMoveRequestsInFlight = Math.max(0, this.controlledTokenMoveRequestsInFlight - 1);
         }
-
-        this.mutateMap((map) => {
-            map.tokens = map.tokens.map((entry) => entry.id === tokenId ? { ...entry, x: origin.x, y: origin.y } : entry);
-        });
-        this.cdr.detectChanges();
     }
 
     private captureVisionMemoryForControlledMove(token: CampaignMapToken): CampaignMap['visionMemory'][number] | null {
@@ -5660,6 +5681,10 @@ export class CampaignMapPageComponent {
 
     private applyRealtimeTokenMoved(event: CampaignMapTokenMovedEvent): void {
         if (event.campaignId !== this.campaignId()) {
+            return;
+        }
+
+        if (event.initiatedByUserId === this.currentUserId()) {
             return;
         }
 
