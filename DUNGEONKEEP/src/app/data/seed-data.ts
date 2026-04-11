@@ -97,7 +97,8 @@ export const seedCampaigns: Campaign[] = [
                 rivers: [],
                 mountainChains: [],
                 forestBelts: []
-            }
+            },
+            visionMemory: []
         },
         maps: [
             {
@@ -137,7 +138,8 @@ export const seedCampaigns: Campaign[] = [
                     rivers: [],
                     mountainChains: [],
                     forestBelts: []
-                }
+                },
+                visionMemory: []
             }
         ],
         activeMapId: 'map-board-crown-of-embers',
@@ -226,7 +228,8 @@ export const seedCampaigns: Campaign[] = [
                 rivers: [],
                 mountainChains: [],
                 forestBelts: []
-            }
+            },
+            visionMemory: []
         },
         maps: [
             {
@@ -266,7 +269,8 @@ export const seedCampaigns: Campaign[] = [
                     rivers: [],
                     mountainChains: [],
                     forestBelts: []
-                }
+                },
+                visionMemory: []
             }
         ],
         activeMapId: 'map-board-moonwake-ledger',
@@ -350,7 +354,8 @@ export const seedCampaigns: Campaign[] = [
                 rivers: [],
                 mountainChains: [],
                 forestBelts: []
-            }
+            },
+            visionMemory: []
         },
         maps: [
             {
@@ -390,7 +395,8 @@ export const seedCampaigns: Campaign[] = [
                     rivers: [],
                     mountainChains: [],
                     forestBelts: []
-                }
+                },
+                visionMemory: []
             }
         ],
         activeMapId: 'map-board-wild-below',

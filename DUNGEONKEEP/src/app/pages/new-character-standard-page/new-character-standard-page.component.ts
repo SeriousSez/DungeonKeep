@@ -13,6 +13,7 @@ import type { Character, CharacterDraft } from '../../models/dungeon.models';
 import { OptionMenuFilterComponent } from '../../components/option-menu-filter/option-menu-filter.component';
 import { NewCharacterInfoModalComponent } from '../../components/new-character-info-modal/new-character-info-modal.component';
 import { CharacteristicsModalComponent } from '../../components/characteristics-modal/characteristics-modal.component';
+import { CharacterPortraitCropModalComponent } from '../../components/character-portrait-crop-modal/character-portrait-crop-modal.component';
 import { DeityPickerModalComponent } from '../../components/deity-picker-modal/deity-picker-modal.component';
 import { ItemDetailModalComponent } from '../../components/item-detail-modal/item-detail-modal.component';
 import { ChoiceBadgeComponent } from '../../components/choice-badge/choice-badge';
@@ -139,7 +140,7 @@ interface PersistedBuilderState {
 
 @Component({
     selector: 'app-new-character-standard-page',
-    imports: [CommonModule, RouterLink, NewCharacterInfoModalComponent, CharacteristicsModalComponent, DeityPickerModalComponent, ItemDetailModalComponent, ChoiceBadgeComponent, DropdownComponent, HitPointManagerModalComponent, MultiSelectDropdownComponent, OptionMenuFilterComponent],
+    imports: [CommonModule, RouterLink, NewCharacterInfoModalComponent, CharacteristicsModalComponent, DeityPickerModalComponent, ItemDetailModalComponent, ChoiceBadgeComponent, DropdownComponent, HitPointManagerModalComponent, MultiSelectDropdownComponent, OptionMenuFilterComponent, CharacterPortraitCropModalComponent],
     templateUrl: './new-character-standard-page.component.html',
     styleUrl: './new-character-standard-page.component.scss'
 })
@@ -537,11 +538,17 @@ export class NewCharacterStandardPageComponent {
     readonly selectedSpeciesLanguages = signal<string[]>([]);
     readonly selectedSpeciesTraitChoices = signal<Record<string, string[]>>({});
     readonly completionCharacterName = signal('');
-    readonly completionPlayerName = signal('');
+    readonly completionPortraitImageUrl = signal('');
+    readonly completionPortraitCropModalOpen = signal(false);
+    readonly completionPortraitCropSourceImageUrl = signal('');
+    readonly completionPortraitOriginalImageUrl = signal('');
+    readonly completionPortraitPromptDetails = signal('');
     readonly selectedCampaignIdsOnCreate = signal<string[]>([]);
     readonly hasTouchedCompletionCampaignSelection = signal(false);
     readonly completionError = signal('');
     readonly isCompletingCharacter = signal(false);
+    readonly isGeneratingCompletionPortrait = signal(false);
+    readonly completionPortraitInitials = computed(() => this.buildInitials(this.completionCharacterName().trim() || 'Character'));
     readonly completionCampaignGroups = computed<MultiSelectOptionGroup[]>(() => {
         const campaigns = this.store.campaigns();
 
@@ -3451,7 +3458,7 @@ export class NewCharacterStandardPageComponent {
     readonly backgroundLanguageDisabledOptions = computed(() =>
         this.selectedSpeciesLanguages().filter((language) => !this.selectedLanguages().includes(language))
     );
-    readonly suggestedPlayerName = computed(() => this.session.currentUser()?.displayName ?? '');
+    readonly suggestedPlayerName = computed(() => this.session.currentUser()?.displayName ?? 'Player');
     readonly canCompleteCharacter = computed(() => {
         const hasName = this.completionCharacterName().trim().length > 0;
         const hasClass = this.getPrimaryClassName().length > 0;
@@ -6271,10 +6278,10 @@ export class NewCharacterStandardPageComponent {
 
     private buildCompletionDraft(): CharacterDraft | null {
         const characterName = this.completionCharacterName().trim();
-        const playerName = this.completionPlayerName().trim() || this.suggestedPlayerName().trim();
+        const playerName = this.suggestedPlayerName().trim() || 'Player';
         const className = this.getPrimaryClassName();
 
-        if (!characterName || !playerName || !className) {
+        if (!characterName || !className) {
             return null;
         }
 
@@ -6296,7 +6303,8 @@ export class NewCharacterStandardPageComponent {
             campaignId: selectedCampaignId,
             campaignIds: this.selectedCampaignIdsOnCreate(),
             hitPoints: maxHitPoints,
-            maxHitPoints
+            maxHitPoints,
+            image: this.completionPortraitImageUrl()
         };
     }
 
@@ -6305,10 +6313,147 @@ export class NewCharacterStandardPageComponent {
         this.completionError.set('');
     };
 
-    readonly onCompletionPlayerNameChanged = (value: string) => {
-        this.completionPlayerName.set(value);
+    readonly onCompletionPortraitPromptChanged = (value: string) => {
+        this.completionPortraitPromptDetails.set(value);
         this.completionError.set('');
     };
+
+    readonly onCompletionPortraitFileSelected = async (event: Event) => {
+        const input = event.target as HTMLInputElement | null;
+        const file = input?.files?.[0] ?? null;
+        if (!file) {
+            return;
+        }
+
+        try {
+            const imageUrl = await this.readImageFile(file);
+            this.completionPortraitOriginalImageUrl.set(imageUrl);
+            this.completionPortraitCropSourceImageUrl.set(imageUrl);
+            this.completionPortraitCropModalOpen.set(true);
+            this.completionError.set('');
+        } catch (error) {
+            this.completionError.set(error instanceof Error ? error.message : 'Unable to use that image right now.');
+        } finally {
+            if (input) {
+                input.value = '';
+            }
+
+            this.cdr.detectChanges();
+        }
+    };
+
+    readonly closeCompletionPortraitCropModal = () => {
+        this.completionPortraitCropModalOpen.set(false);
+        this.completionPortraitCropSourceImageUrl.set('');
+    };
+
+    readonly applyCompletionPortraitCrop = (croppedImageUrl: string) => {
+        this.completionPortraitImageUrl.set(croppedImageUrl);
+        this.completionPortraitCropModalOpen.set(false);
+        this.completionPortraitCropSourceImageUrl.set('');
+        this.completionError.set('');
+    };
+
+    readonly recropCompletionPortrait = () => {
+        const imageUrl = this.completionPortraitOriginalImageUrl() || this.completionPortraitImageUrl();
+        if (!imageUrl || this.isCompletingCharacter()) {
+            return;
+        }
+
+        this.completionPortraitCropSourceImageUrl.set(imageUrl);
+        this.completionPortraitCropModalOpen.set(true);
+        this.completionError.set('');
+    };
+
+    readonly clearCompletionPortrait = () => {
+        if (this.isCompletingCharacter()) {
+            return;
+        }
+
+        this.completionPortraitImageUrl.set('');
+        this.completionPortraitOriginalImageUrl.set('');
+        this.completionPortraitCropSourceImageUrl.set('');
+        this.completionPortraitCropModalOpen.set(false);
+        this.completionError.set('');
+    };
+
+    readonly generateCompletionPortrait = async () => {
+        if (this.isCompletingCharacter() || this.isGeneratingCompletionPortrait()) {
+            return;
+        }
+
+        const className = this.getPrimaryClassName();
+        if (!className) {
+            this.completionError.set('Choose a class before generating a portrait.');
+            return;
+        }
+
+        this.isGeneratingCompletionPortrait.set(true);
+        this.completionError.set('');
+
+        try {
+            const response = await this.api.generateCharacterPortrait({
+                name: this.completionCharacterName().trim() || 'Unnamed adventurer',
+                className,
+                background: this.selectedBackgroundName() || this.selectedBackground()?.name || 'Freshly arrived adventurer',
+                species: this.selectedSpeciesName() || 'Human',
+                alignment: this.selectedAlignment() || '',
+                gender: this.physicalGender() || '',
+                additionalDirection: this.completionPortraitPromptDetails().trim()
+            });
+
+            this.completionPortraitOriginalImageUrl.set(response.imageUrl);
+            this.completionPortraitImageUrl.set(response.imageUrl);
+        } catch (error) {
+            this.completionError.set(this.getPortraitGenerationErrorMessage(error));
+        } finally {
+            this.isGeneratingCompletionPortrait.set(false);
+            this.cdr.detectChanges();
+        }
+    };
+
+    private readImageFile(file: File): Promise<string> {
+        if (!file.type.startsWith('image/')) {
+            return Promise.reject(new Error('Choose an image file for the portrait.'));
+        }
+
+        if (file.size > 8 * 1024 * 1024) {
+            return Promise.reject(new Error('Choose an image smaller than 8 MB.'));
+        }
+
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error('Unable to read that image file.'));
+            reader.onload = () => {
+                const result = typeof reader.result === 'string' ? reader.result : '';
+                if (!result) {
+                    reject(new Error('Unable to read that image file.'));
+                    return;
+                }
+
+                resolve(result);
+            };
+
+            reader.readAsDataURL(file);
+        });
+    }
+
+    private buildInitials(name: string): string {
+        const parts = name
+            .split(/\s+/)
+            .map((part) => part.trim())
+            .filter((part) => part.length > 0);
+
+        if (parts.length === 0) {
+            return 'DK';
+        }
+
+        if (parts.length === 1) {
+            return parts[0].slice(0, 2).toUpperCase();
+        }
+
+        return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
+    }
 
     readonly completeCharacterCreation = async () => {
         if (this.isCompletingCharacter()) {
@@ -6317,7 +6462,7 @@ export class NewCharacterStandardPageComponent {
 
         const draft = this.buildCompletionDraft();
         if (!draft) {
-            this.completionError.set('Add a character name, player name, and class before completing creation.');
+            this.completionError.set('Add a character name and class before completing creation.');
             return;
         }
 
@@ -6362,13 +6507,35 @@ export class NewCharacterStandardPageComponent {
         return error instanceof Error ? error.message : 'Unable to generate a backstory right now.';
     }
 
+    private getPortraitGenerationErrorMessage(error: unknown): string {
+        if (error instanceof HttpErrorResponse) {
+            if (typeof error.error === 'string' && error.error.trim()) {
+                return error.error.trim();
+            }
+
+            if (error.error && typeof error.error === 'object') {
+                const detail = 'detail' in error.error && typeof error.error.detail === 'string' ? error.error.detail : '';
+                const title = 'title' in error.error && typeof error.error.title === 'string' ? error.error.title : '';
+                if (detail.trim() || title.trim()) {
+                    return detail.trim() || title.trim();
+                }
+            }
+
+            if (error.status === 0) {
+                return 'Unable to reach the portrait service right now.';
+            }
+        }
+
+        return error instanceof Error ? error.message : 'Unable to generate a portrait right now.';
+    }
+
     private hydrateBuilderFromCharacter(character: Character, levelOverride: number = Number.NaN): void {
         const resolvedLevel = Number.isFinite(levelOverride)
             ? Math.min(20, Math.max(1, Math.trunc(levelOverride)))
             : Math.max(character.level, 1);
 
         this.completionCharacterName.set(character.name);
-        this.completionPlayerName.set(character.playerName);
+        this.completionPortraitImageUrl.set(character.image || '');
         this.multiclassList.set({ [character.className]: resolvedLevel });
         this.setClassPanelTab(character.className, 'class-features');
         this.syncPreparedSpellsForClass(character.className, resolvedLevel);

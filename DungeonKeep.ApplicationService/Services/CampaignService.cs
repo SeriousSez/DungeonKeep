@@ -25,8 +25,8 @@ public sealed class CampaignService(
     private const string DefaultMapGridColor = "#745338";
     private const double DefaultMapGridOffsetX = 0d;
     private const double DefaultMapGridOffsetY = 0d;
-    private static readonly CampaignMapDto DefaultCampaignMap = new("Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], [], new CampaignMapLayersDto([], [], []));
-    private static readonly CampaignMapBoardDto DefaultCampaignMapBoard = new(Guid.Parse("11111111-1111-1111-1111-111111111111"), "Main Map", "Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], [], new CampaignMapLayersDto([], [], []));
+    private static readonly CampaignMapDto DefaultCampaignMap = new("Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], [], new CampaignMapLayersDto([], [], []), []);
+    private static readonly CampaignMapBoardDto DefaultCampaignMapBoard = new(Guid.Parse("11111111-1111-1111-1111-111111111111"), "Main Map", "Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], [], new CampaignMapLayersDto([], [], []), []);
 
     public async Task<IReadOnlyList<CampaignSummaryDto>> GetAllSummariesAsync(Guid userId, CancellationToken cancellationToken = default)
     {
@@ -381,13 +381,25 @@ public sealed class CampaignService(
                     request.Map.Tokens,
                     request.Map.Decorations,
                     request.Map.Labels,
-                    request.Map.Layers)]))
+                    request.Map.Layers,
+                    request.Map.VisionMemory)]))
                 : null;
 
         if (library is null)
         {
             return null;
         }
+
+        var existingLibrary = ParseCampaignMapLibrary(campaign.CampaignMapJson);
+        var existingVisionByMapId = existingLibrary.Maps.ToDictionary(map => map.Id, map => map.VisionMemory);
+        library = new CampaignMapLibraryDto(
+            library.ActiveMapId,
+            library.Maps.Select(map => map with
+            {
+                VisionMemory = existingVisionByMapId.TryGetValue(map.Id, out var visionMemory)
+                    ? visionMemory
+                    : map.VisionMemory
+            }).ToList());
 
         var updated = await campaignRepository.UpdateMapAsync(campaignId, library, cancellationToken);
         return updated is null ? null : MapCampaign(updated, userId);
@@ -436,8 +448,36 @@ public sealed class CampaignService(
             throw new UnauthorizedAccessException("You cannot control this token.");
         }
 
-        var updatedMaps = library.Maps
-            .Select(map => map.Id == targetMap.Id
+        var latestCampaign = await campaignRepository.GetByIdAsync(campaignId, cancellationToken);
+        if (latestCampaign is null)
+        {
+            return null;
+        }
+
+        var latestLibrary = ParseCampaignMapLibrary(latestCampaign.CampaignMapJson);
+        var latestTargetMap = latestLibrary.Maps.FirstOrDefault(map => map.Id == request.MapId);
+        if (latestTargetMap is null)
+        {
+            return null;
+        }
+
+        var latestToken = latestTargetMap.Tokens.FirstOrDefault(entry => entry.Id == tokenId);
+        if (latestToken is null)
+        {
+            return null;
+        }
+
+        CampaignMapVisionMemoryDto? normalizedVisionMemory = null;
+        if (request.VisionMemory is not null)
+        {
+            normalizedVisionMemory = NormalizeMapVisionMemory(request.VisionMemory with
+            {
+                Key = BuildVisionMemoryKey(latestToken)
+            });
+        }
+
+        var updatedMaps = latestLibrary.Maps
+            .Select(map => map.Id == latestTargetMap.Id
                 ? map with
                 {
                     Tokens = map.Tokens
@@ -448,13 +488,180 @@ public sealed class CampaignService(
                                 Y = ClampMapCoordinate(request.Y)
                             }
                             : entry)
+                        .ToList(),
+                    VisionMemory = normalizedVisionMemory is null
+                        ? map.VisionMemory
+                        : map.VisionMemory
+                            .Where(entry => !string.Equals(entry.Key, normalizedVisionMemory.Key, StringComparison.OrdinalIgnoreCase))
+                            .Append(normalizedVisionMemory)
+                            .ToList()
+                }
+                : map)
+            .ToList();
+
+        var updated = await campaignRepository.UpdateMapAsync(campaignId, new CampaignMapLibraryDto(latestLibrary.ActiveMapId, updatedMaps), cancellationToken);
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
+    public async Task<bool?> UpdateMapVisionAsync(Guid campaignId, UpdateCampaignMapVisionRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        if (request.MapId == Guid.Empty || request.Memory is null)
+        {
+            return false;
+        }
+
+        var campaign = await campaignRepository.GetByIdAsync(campaignId, cancellationToken);
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var membership = campaign.Memberships.FirstOrDefault(member => member.UserId == userId && member.Status == "Active");
+        if (membership is null)
+        {
+            throw new UnauthorizedAccessException("You are not a member of this campaign.");
+        }
+
+        var library = ParseCampaignMapLibrary(campaign.CampaignMapJson);
+        var activeMap = library.Maps.FirstOrDefault(map => map.Id == library.ActiveMapId) ?? library.Maps[0];
+        var targetMap = library.Maps.FirstOrDefault(map => map.Id == request.MapId);
+        if (targetMap is null)
+        {
+            return null;
+        }
+
+        if (membership.Role != "Owner" && targetMap.Id != activeMap.Id)
+        {
+            throw new UnauthorizedAccessException("Members can only remember sight on the active map.");
+        }
+
+        var normalizedMemory = NormalizeMapVisionMemory(request.Memory);
+        if (normalizedMemory is null)
+        {
+            return false;
+        }
+
+        if (membership.Role != "Owner")
+        {
+            var controllableTokens = targetMap.Tokens.Where(token => MatchesVisionMemoryKey(token, normalizedMemory.Key)).ToList();
+            if (controllableTokens.Count == 0)
+            {
+                throw new UnauthorizedAccessException("You cannot update remembered sight for that token.");
+            }
+
+            var canControlAny = false;
+            foreach (var token in controllableTokens)
+            {
+                if (await CanUserControlTokenAsync(token, userId, cancellationToken))
+                {
+                    canControlAny = true;
+                    break;
+                }
+            }
+
+            if (!canControlAny)
+            {
+                throw new UnauthorizedAccessException("You cannot update remembered sight for that token.");
+            }
+        }
+
+        var latestCampaign = await campaignRepository.GetByIdAsync(campaignId, cancellationToken);
+        if (latestCampaign is null)
+        {
+            return null;
+        }
+
+        var latestLibrary = ParseCampaignMapLibrary(latestCampaign.CampaignMapJson);
+        var latestActiveMap = latestLibrary.Maps.FirstOrDefault(map => map.Id == latestLibrary.ActiveMapId) ?? latestLibrary.Maps[0];
+        var latestTargetMap = latestLibrary.Maps.FirstOrDefault(map => map.Id == request.MapId);
+        if (latestTargetMap is null)
+        {
+            return null;
+        }
+
+        if (membership.Role != "Owner" && latestTargetMap.Id != latestActiveMap.Id)
+        {
+            throw new UnauthorizedAccessException("Members can only remember sight on the active map.");
+        }
+
+        if (membership.Role != "Owner")
+        {
+            var controllableTokens = latestTargetMap.Tokens.Where(token => MatchesVisionMemoryKey(token, normalizedMemory.Key)).ToList();
+            if (controllableTokens.Count == 0)
+            {
+                throw new UnauthorizedAccessException("You cannot update remembered sight for that token.");
+            }
+
+            var canControlAny = false;
+            foreach (var token in controllableTokens)
+            {
+                if (await CanUserControlTokenAsync(token, userId, cancellationToken))
+                {
+                    canControlAny = true;
+                    break;
+                }
+            }
+
+            if (!canControlAny)
+            {
+                throw new UnauthorizedAccessException("You cannot update remembered sight for that token.");
+            }
+        }
+
+        var updatedMaps = latestLibrary.Maps
+            .Select(map => map.Id == latestTargetMap.Id
+                ? map with
+                {
+                    VisionMemory = map.VisionMemory
+                        .Where(entry => !string.Equals(entry.Key, normalizedMemory.Key, StringComparison.OrdinalIgnoreCase))
+                        .Append(normalizedMemory)
                         .ToList()
                 }
                 : map)
             .ToList();
 
-        var updated = await campaignRepository.UpdateMapAsync(campaignId, new CampaignMapLibraryDto(library.ActiveMapId, updatedMaps), cancellationToken);
-        return updated is null ? null : MapCampaign(updated, userId);
+        var updated = await campaignRepository.UpdateMapAsync(campaignId, new CampaignMapLibraryDto(latestLibrary.ActiveMapId, updatedMaps), cancellationToken);
+        return updated is not null;
+    }
+
+    public async Task<bool?> ResetMapVisionAsync(Guid campaignId, Guid mapId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        if (mapId == Guid.Empty)
+        {
+            return false;
+        }
+
+        var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var library = ParseCampaignMapLibrary(campaign.CampaignMapJson);
+        var targetMap = library.Maps.FirstOrDefault(map => map.Id == mapId);
+        if (targetMap is null)
+        {
+            return null;
+        }
+
+        var latestCampaign = await campaignRepository.GetByIdAsync(campaignId, cancellationToken);
+        if (latestCampaign is null)
+        {
+            return null;
+        }
+
+        var latestLibrary = ParseCampaignMapLibrary(latestCampaign.CampaignMapJson);
+        if (!latestLibrary.Maps.Any(map => map.Id == mapId))
+        {
+            return null;
+        }
+
+        var updatedMaps = latestLibrary.Maps
+            .Select(map => map.Id == mapId ? map with { VisionMemory = [] } : map)
+            .ToList();
+
+        var updated = await campaignRepository.UpdateMapAsync(campaignId, new CampaignMapLibraryDto(latestLibrary.ActiveMapId, updatedMaps), cancellationToken);
+        return updated is not null;
     }
 
     public async Task<CampaignDto?> InviteMemberAsync(Guid campaignId, InviteCampaignMemberRequest request, AuthenticatedUser user, string? clientBaseUrl, CancellationToken cancellationToken = default)
@@ -601,6 +808,26 @@ public sealed class CampaignService(
         return character?.OwnerUserId == userId;
     }
 
+    private static bool MatchesVisionMemoryKey(CampaignMapTokenDto token, string key)
+    {
+        return string.Equals(BuildVisionMemoryKey(token), key, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string BuildVisionMemoryKey(CampaignMapTokenDto token)
+    {
+        if (token.AssignedCharacterId is Guid assignedCharacterId && assignedCharacterId != Guid.Empty)
+        {
+            return $"character:{assignedCharacterId}";
+        }
+
+        if (token.AssignedUserId is Guid assignedUserId && assignedUserId != Guid.Empty)
+        {
+            return $"user:{assignedUserId}";
+        }
+
+        return $"token:{token.Id}";
+    }
+
     private static CampaignDto MapCampaign(Campaign campaign, Guid userId)
     {
         var currentUserRole = campaign.Memberships
@@ -630,7 +857,7 @@ public sealed class CampaignService(
             ParseNamedItems(campaign.LootJson),
             ParseOpenThreads(campaign.OpenThreadsJson),
             ParseWorldNotes(campaign.WorldNotesJson),
-            new CampaignMapDto(activeMap.Background, activeMap.BackgroundImageUrl, activeMap.GridColumns, activeMap.GridRows, activeMap.GridColor, activeMap.GridOffsetX, activeMap.GridOffsetY, activeMap.Strokes, activeMap.Walls, activeMap.Icons, activeMap.Tokens, activeMap.Decorations, activeMap.Labels, activeMap.Layers),
+            new CampaignMapDto(activeMap.Background, activeMap.BackgroundImageUrl, activeMap.GridColumns, activeMap.GridRows, activeMap.GridColor, activeMap.GridOffsetX, activeMap.GridOffsetY, activeMap.Strokes, activeMap.Walls, activeMap.Icons, activeMap.Tokens, activeMap.Decorations, activeMap.Labels, activeMap.Layers, activeMap.VisionMemory),
             visibleMaps,
             activeMap.Id,
             currentUserRole,
@@ -850,7 +1077,8 @@ public sealed class CampaignService(
                     legacyMap.Tokens,
                     legacyMap.Decorations,
                     legacyMap.Labels,
-                    legacyMap.Layers)]));
+                    legacyMap.Layers,
+                    legacyMap.VisionMemory)]));
             }
         }
         catch
@@ -983,6 +1211,7 @@ public sealed class CampaignService(
             NormalizeMapStrokeCollection(map.Layers?.Rivers),
             NormalizeMapDecorationCollection(map.Layers?.MountainChains),
             NormalizeMapDecorationCollection(map.Layers?.ForestBelts));
+        var normalizedVisionMemory = NormalizeMapVisionMemoryCollection(map.VisionMemory);
 
         return new CampaignMapDto(
             NormalizeMapBackground(map.Background),
@@ -998,7 +1227,8 @@ public sealed class CampaignService(
             normalizedTokens,
             normalizedDecorations,
             normalizedLabels,
-            normalizedLayers);
+                normalizedLayers,
+                normalizedVisionMemory);
     }
 
     private static CampaignMapBoardDto NormalizeCampaignMapBoard(CampaignMapBoardDto map)
@@ -1017,7 +1247,8 @@ public sealed class CampaignService(
             map.Tokens,
             map.Decorations,
             map.Labels,
-            map.Layers));
+            map.Layers,
+            map.VisionMemory));
 
         return new CampaignMapBoardDto(
             map.Id == Guid.Empty ? Guid.NewGuid() : map.Id,
@@ -1035,7 +1266,8 @@ public sealed class CampaignService(
             normalized.Tokens,
             normalized.Decorations,
             normalized.Labels,
-            normalized.Layers);
+            normalized.Layers,
+            normalized.VisionMemory);
     }
 
     private static CampaignMapLibraryDto NormalizeCampaignMapLibrary(CampaignMapLibraryDto library)
@@ -1063,7 +1295,8 @@ public sealed class CampaignService(
                 DefaultCampaignMapBoard.Tokens,
                 DefaultCampaignMapBoard.Decorations,
                 DefaultCampaignMapBoard.Labels,
-                DefaultCampaignMapBoard.Layers));
+                DefaultCampaignMapBoard.Layers,
+                DefaultCampaignMapBoard.VisionMemory));
         }
 
         var activeMapId = library.ActiveMapId != Guid.Empty && maps.Any(map => map.Id == library.ActiveMapId)
@@ -1086,6 +1319,41 @@ public sealed class CampaignService(
     private static Guid? NormalizeMapAssignedCharacterId(Guid? assignedCharacterId)
     {
         return assignedCharacterId is Guid characterId && characterId != Guid.Empty ? characterId : null;
+    }
+
+    private static IReadOnlyList<CampaignMapVisionMemoryDto> NormalizeMapVisionMemoryCollection(IReadOnlyList<CampaignMapVisionMemoryDto>? entries)
+    {
+        return (entries ?? [])
+            .Select(NormalizeMapVisionMemory)
+            .Where(entry => entry is not null)
+            .Cast<CampaignMapVisionMemoryDto>()
+            .DistinctBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static CampaignMapVisionMemoryDto? NormalizeMapVisionMemory(CampaignMapVisionMemoryDto? entry)
+    {
+        if (entry is null || string.IsNullOrWhiteSpace(entry.Key))
+        {
+            return null;
+        }
+
+        var normalizedPolygons = (entry.Polygons ?? [])
+            .Select(polygon => new CampaignMapVisionPolygonDto(NormalizeMapPoints(polygon.Points).Take(256).ToList()))
+            .Where(polygon => polygon.Points.Count >= 3)
+            .Take(40)
+            .ToList();
+
+        if (normalizedPolygons.Count == 0)
+        {
+            return null;
+        }
+
+        return new CampaignMapVisionMemoryDto(
+            entry.Key.Trim(),
+            normalizedPolygons,
+            entry.LastOrigin is null ? null : new CampaignMapPointDto(ClampMapCoordinate(entry.LastOrigin.X), ClampMapCoordinate(entry.LastOrigin.Y)),
+            entry.LastPolygonHash?.Trim() ?? string.Empty);
     }
 
     private static IReadOnlyList<CampaignMapPointDto> NormalizeMapPoints(IReadOnlyList<CampaignMapPointDto> points)

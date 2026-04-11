@@ -20,6 +20,19 @@ type SettlementScale = 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis';
 type ParchmentLayout = 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular';
 type CavernLayout = 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes';
 
+interface MapVisionMemoryEntryState {
+    key: string;
+    polygons: CampaignMapPoint[][];
+    lastOrigin: CampaignMapPoint | null;
+    lastPolygonHash: string;
+}
+
+interface PendingMapVisionMemorySnapshot {
+    campaignId: string;
+    savedAt: number;
+    entries: Record<string, MapVisionMemoryEntryState>;
+}
+
 interface MapIconOption {
     type: CampaignMapIconType;
     label: string;
@@ -72,12 +85,6 @@ interface MapEditorHistoryEntry {
     activeMapId: string;
 }
 
-interface MapVisionMemoryEntry {
-    polygons: CampaignMapPoint[][];
-    lastOrigin: CampaignMapPoint | null;
-    lastPolygonHash: string;
-}
-
 type MapLabelCatalog = Record<CampaignMapIconType, readonly string[]>;
 
 const TOKEN_SIZE_OPTIONS: DropdownOption[] = [
@@ -94,6 +101,9 @@ const MAP_GRID_CONTROLS_EXPANDED_STORAGE_KEY = 'dungeonkeep.campaign-map.grid-co
 const MAP_AUTOSAVE_DELAY_MS = 450;
 const MAP_VISION_MEMORY_LIMIT = 40;
 const MAP_VISION_MEMORY_ORIGIN_THRESHOLD = 0.02;
+const MAP_VISION_MEMORY_PERSIST_DELAY_MS = 1200;
+const MAP_VISION_MEMORY_PENDING_STORAGE_KEY = 'dungeonkeep.campaign-map.pending-vision-memory';
+const MAP_VISION_MEMORY_PENDING_STORAGE_MAX_AGE_MS = 1000 * 60 * 30;
 
 const MAP_BACKGROUND_OPTIONS: DropdownOption[] = [
     { value: 'Parchment', label: 'Parchment', description: 'Warm paper tones for hand-drawn lines, sketches, and lore maps.' },
@@ -183,7 +193,7 @@ const MAP_LABELS_BY_BACKGROUND: Record<CampaignMapBackground, MapLabelCatalog> =
     City: {
         Keep: ['Garnet Citadel', 'High Ward Bastion', 'Rivergate Keep'],
         Town: ['Market Ward', 'Lantern Square', 'Copper Quay'],
-        Camp: ['Siege Camp', 'Gatehouse Camp', 'Mercer Yard'],
+        Camp: ['Guard Post', 'Supply Yard', 'Refuge Court'],
         Dungeon: ['Undercrypt', 'Flooded Cells', 'Ash Sewers'],
         Danger: ['Riot Quarter', 'Burned Gate', 'Silent Alley'],
         Treasure: ['Guild Vault', 'Hidden Ledger', 'Coin Cellar'],
@@ -264,6 +274,9 @@ export class CampaignMapPageComponent {
     readonly tokenNameDraft = signal('');
     readonly tokenNoteDraft = signal('');
     readonly tokenAssignmentDraft = signal('none');
+    readonly tokenPlacementCharacterId = signal('');
+    readonly tokenPlacementAssignedUserId = signal<string | null>(null);
+    readonly tokenPlacementAssignedCharacterId = signal<string | null>(null);
     readonly tokenPlacementNameDraft = signal('Token');
     readonly tokenPlacementNoteDraft = signal('');
     readonly tokenPlacementImageUrl = signal('');
@@ -302,9 +315,10 @@ export class CampaignMapPageComponent {
     readonly redoStack = signal<MapEditorHistoryEntry[]>([]);
     readonly isFullscreen = signal(false);
     readonly showGuide = signal(false);
-    readonly showWalls = signal(true);
+    readonly showWallsInEditor = signal(true);
+    readonly showWallsInViewer = signal(false);
     readonly showVisionPreview = signal(false);
-    readonly visionExploration = signal<Record<string, MapVisionMemoryEntry>>({});
+    readonly visionExploration = signal<Record<string, MapVisionMemoryEntryState>>({});
     readonly ctrlPolylineKind = signal<MapLineKind | null>(null);
     readonly ctrlPolylinePoints = signal<CampaignMapPoint[]>([]);
     readonly ctrlPolylinePreviewPoint = signal<CampaignMapPoint | null>(null);
@@ -337,6 +351,7 @@ export class CampaignMapPageComponent {
     readonly isEditorMode = computed(() => this.routeMode() === 'edit');
     readonly isEditorLocked = computed(() => this.isAiArtGenerating());
     readonly canModify = computed(() => this.canEdit() && this.isEditorMode() && !this.isEditorLocked());
+    readonly showWalls = computed(() => this.isEditorMode() ? this.showWallsInEditor() : this.showWallsInViewer());
     readonly canSeeWallOutlines = computed(() => this.isEditorMode() || this.canEdit());
     readonly showWallOutlines = computed(() => this.canSeeWallOutlines() && this.showWalls());
     readonly visibleLineCount = computed(() => {
@@ -369,6 +384,10 @@ export class CampaignMapPageComponent {
     readonly canUndo = computed(() => this.undoStack().length > 0);
     readonly canRedo = computed(() => this.redoStack().length > 0);
     readonly currentUserId = computed(() => this.session.currentUser()?.id ?? '');
+    readonly isRefreshingCampaignData = computed(() => {
+        const campaignId = this.campaignId();
+        return !!campaignId && this.store.isCampaignDetailsLoading(campaignId);
+    });
     readonly currentMapBoard = computed(() => this.mapBoards().find((map) => map.id === this.currentMapId()) ?? this.mapBoards()[0] ?? null);
     readonly backLink = computed(() => {
         const campaign = this.selectedCampaign();
@@ -449,6 +468,28 @@ export class CampaignMapPageComponent {
         return this.store.characters()
             .filter((character) => this.isCharacterInCampaign(character, campaignId))
             .sort((left, right) => left.name.localeCompare(right.name));
+    });
+    readonly characterTokenOptions = computed<DropdownOption[]>(() => {
+        const options: DropdownOption[] = [
+            {
+                value: '',
+                label: 'Choose a character portrait',
+                description: 'Place a token using a party character portrait and auto-assign control.'
+            }
+        ];
+
+        options.push(...this.campaignCharacters()
+            .filter((character) => !!character.image)
+            .map((character) => ({
+                value: character.id,
+                label: character.name,
+                description: character.ownerDisplayName
+                    ? `${character.ownerDisplayName} will automatically control this token.`
+                    : 'This token will stay linked to the selected character.',
+                group: 'Character Portraits'
+            } satisfies DropdownOption)));
+
+        return options;
     });
     readonly tokenAssignmentOptions = computed<DropdownOption[]>(() => {
         const options: DropdownOption[] = [
@@ -623,11 +664,11 @@ export class CampaignMapPageComponent {
         }
 
         if (this.activeTool() === 'wall') {
-            return 'Drag to sketch a vision wall, or hold Ctrl and click to place straight wall segments. Hold Ctrl+Shift to place snapped corners, then release Ctrl to apply.';
+            return 'Drag to sketch a vision wall, hold Alt as you start dragging to draw an oval, or hold Ctrl and click to place straight wall segments. Hold Ctrl+Shift to place snapped corners, then release Ctrl to apply.';
         }
 
         if (this.activeTool() === 'draw') {
-            return 'Drag to paint a freehand line, or hold Ctrl and click to place straight segments. Hold Ctrl+Shift to place snapped corners, then release Ctrl to apply.';
+            return 'Drag to paint a freehand line, hold Alt as you start dragging to draw an oval, or hold Ctrl and click to place straight segments. Hold Ctrl+Shift to place snapped corners, then release Ctrl to apply.';
         }
 
         return '';
@@ -744,6 +785,8 @@ export class CampaignMapPageComponent {
     private lastLoadedRouteMapId = '';
     private activeStrokePointerId: number | null = null;
     private activeLineKind: MapLineKind | null = null;
+    private activeStrokeOrigin: CampaignMapPoint | null = null;
+    private activeStrokeDrawMode: 'freehand' | 'circle' = 'freehand';
     private activeErasePointerId: number | null = null;
     private draggingDecorationId: string | null = null;
     private draggingDecorationPointerId: number | null = null;
@@ -776,7 +819,13 @@ export class CampaignMapPageComponent {
     private persistInFlight = false;
     private autosaveTimerId: ReturnType<typeof setTimeout> | null = null;
     private mapNoticeTimerId: ReturnType<typeof setTimeout> | null = null;
+    private visionMemoryPersistTimerId: ReturnType<typeof setTimeout> | null = null;
+    private visionMemoryPersistInFlight = false;
+    private visionMemoryPersistInFlightPromise: Promise<void> | null = null;
+    private resolveVisionMemoryPersistInFlight: (() => void) | null = null;
     private autosaveQueuedWhileSaving = false;
+    private readonly pendingVisionMemoryPersistenceKeys = new Set<string>();
+    private readonly inFlightVisionMemoryPersistenceKeys = new Set<string>();
     private localChangeRevision = 0;
     private lastPersistedRevision = 0;
     private creatingRouteMap = false;
@@ -790,6 +839,7 @@ export class CampaignMapPageComponent {
         this.destroyRef.onDestroy(() => {
             this.clearAutosaveTimer();
             this.clearMapNoticeTimer();
+            this.clearVisionMemoryPersistTimer();
         });
 
         this.campaignRealtime.campaignMapVisionReset$
@@ -892,6 +942,7 @@ export class CampaignMapPageComponent {
             const sameMapEditorRefresh = this.isEditorMode() && this.canModify() && !!activeMap && this.currentMapId() === activeMap.id;
 
             this.mapBoards.set(maps);
+            this.hydrateVisionExplorationFromMaps(maps);
             this.loadMapBoard(activeMap, { preserveTool: sameMapEditorRefresh });
             if (!sameMapEditorRefresh) {
                 this.undoStack.set([]);
@@ -944,6 +995,18 @@ export class CampaignMapPageComponent {
 
     private async ensureCampaignDetails(campaignId: string): Promise<void> {
         await this.store.ensureCampaignLoaded(campaignId);
+        this.cdr.detectChanges();
+    }
+
+    async refreshMapData(): Promise<void> {
+        const campaignId = this.campaignId();
+        if (!campaignId || this.hasUnsavedChanges() || this.saveState() === 'saving' || this.isAiArtGenerating() || this.isRefreshingCampaignData()) {
+            return;
+        }
+
+        await this.store.refreshCampaignLoaded(campaignId);
+        this.saveState.set('saved');
+        this.saveMessage.set('Map data refreshed.');
         this.cdr.detectChanges();
     }
 
@@ -1010,6 +1073,18 @@ export class CampaignMapPageComponent {
 
         if (!this.isModifierPolylineHeld()) {
             this.commitCtrlPolylineDraft();
+        }
+    }
+
+    @HostListener('window:pagehide')
+    handleWindowPageHide(): void {
+        this.syncPendingVisionMemorySnapshot();
+    }
+
+    @HostListener('document:visibilitychange')
+    handleDocumentVisibilityChange(): void {
+        if (globalThis.document?.visibilityState === 'hidden') {
+            this.syncPendingVisionMemorySnapshot();
         }
     }
 
@@ -1210,6 +1285,39 @@ export class CampaignMapPageComponent {
 
     updateTokenPlacementNameDraft(value: string): void {
         this.tokenPlacementNameDraft.set(value);
+    }
+
+    updateTokenPlacementCharacter(value: string | number): void {
+        const characterId = typeof value === 'string' ? value : String(value);
+        if (!characterId) {
+            this.tokenPlacementCharacterId.set('');
+            this.tokenPlacementAssignedCharacterId.set(null);
+            this.tokenPlacementAssignedUserId.set(null);
+            this.tokenUploadFeedback.set(this.tokenPlacementImageUrl() ? 'Custom token art ready. Click the board to place it.' : '');
+            return;
+        }
+
+        const character = this.campaignCharacters().find((entry) => entry.id === characterId && !!entry.image);
+        if (!character?.image) {
+            this.tokenUploadFeedback.set('That character does not have a portrait yet. Add one on the character page first.');
+            this.tokenPlacementCharacterId.set('');
+            this.tokenPlacementAssignedCharacterId.set(null);
+            this.tokenPlacementAssignedUserId.set(null);
+            return;
+        }
+
+        this.tokenPlacementCharacterId.set(character.id);
+        this.tokenPlacementImageUrl.set(character.image);
+        this.tokenPlacementNameDraft.set(character.name);
+        this.tokenPlacementNoteDraft.set('');
+        this.tokenPlacementAssignedCharacterId.set(character.id);
+        this.tokenPlacementAssignedUserId.set(character.ownerUserId ?? null);
+        this.tokenPlacementSize.set(1);
+        this.tokenUploadFeedback.set(character.ownerDisplayName
+            ? `${character.name} is ready to place. ${character.ownerDisplayName} will be able to move this token.`
+            : `${character.name} is ready to place. This token will stay linked to the selected character.`);
+        this.selectTokenTool();
+        this.cdr.detectChanges();
     }
 
     updateTokenPlacementNoteDraft(value: string): void {
@@ -1581,6 +1689,9 @@ export class CampaignMapPageComponent {
             }
 
             const tokenName = this.sanitizeTokenName(file.name);
+            this.tokenPlacementCharacterId.set('');
+            this.tokenPlacementAssignedCharacterId.set(null);
+            this.tokenPlacementAssignedUserId.set(null);
             this.tokenCropSourceImageUrl.set(imageUrl);
             this.tokenCropSourceName.set(tokenName);
             this.tokenCropModalOpen.set(true);
@@ -1603,6 +1714,9 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.tokenPlacementCharacterId.set('');
+        this.tokenPlacementAssignedUserId.set(null);
+        this.tokenPlacementAssignedCharacterId.set(null);
         this.tokenPlacementImageUrl.set('');
         this.tokenPlacementNameDraft.set('Token');
         this.tokenPlacementNoteDraft.set('');
@@ -1621,6 +1735,9 @@ export class CampaignMapPageComponent {
 
     applyTokenCrop(croppedImageUrl: string): void {
         const tokenName = this.tokenCropSourceName().trim() || 'Token';
+        this.tokenPlacementCharacterId.set('');
+        this.tokenPlacementAssignedCharacterId.set(null);
+        this.tokenPlacementAssignedUserId.set(null);
         this.tokenPlacementImageUrl.set(croppedImageUrl);
         this.tokenPlacementNameDraft.set(tokenName);
         this.tokenPlacementNoteDraft.set('');
@@ -2167,6 +2284,9 @@ export class CampaignMapPageComponent {
     private lockEditorForAiGeneration(): void {
         this.isDrawing.set(false);
         this.activeStrokePointerId = null;
+        this.activeLineKind = null;
+        this.activeStrokeOrigin = null;
+        this.activeStrokeDrawMode = 'freehand';
         this.activeErasePointerId = null;
         this.pendingStrokeId = null;
         this.pendingStrokePointerId = null;
@@ -2292,8 +2412,8 @@ export class CampaignMapPageComponent {
                 y: snappedPoint.y,
                 size: this.tokenPlacementSize(),
                 note: this.tokenPlacementNoteDraft().trim(),
-                assignedUserId: null,
-                assignedCharacterId: null
+                assignedUserId: this.tokenPlacementAssignedUserId(),
+                assignedCharacterId: this.tokenPlacementAssignedCharacterId()
             };
 
             this.captureHistorySnapshot();
@@ -2509,6 +2629,8 @@ export class CampaignMapPageComponent {
         this.captureHistorySnapshot();
         this.activeStrokePointerId = event.pointerId;
         this.activeLineKind = lineKind;
+        this.activeStrokeOrigin = drawPoint;
+        this.activeStrokeDrawMode = event.altKey ? 'circle' : 'freehand';
         (event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId);
 
         this.mutateMap((map) => {
@@ -2605,6 +2727,11 @@ export class CampaignMapPageComponent {
                 return;
             }
 
+            if (this.activeStrokeDrawMode === 'circle' && this.activeStrokeOrigin) {
+                lastStroke.points = this.createCircleDragPoints(this.activeStrokeOrigin, drawPoint);
+                return;
+            }
+
             const previousPoint = lastStroke.points.at(-1);
             if (previousPoint && Math.hypot(previousPoint.x - drawPoint.x, previousPoint.y - drawPoint.y) < 0.005) {
                 return;
@@ -2692,6 +2819,8 @@ export class CampaignMapPageComponent {
         const finishedLineKind = this.activeLineKind;
         this.activeStrokePointerId = null;
         this.activeLineKind = null;
+        this.activeStrokeOrigin = null;
+        this.activeStrokeDrawMode = 'freehand';
         this.isDrawing.set(false);
         (event.currentTarget as HTMLElement | null)?.releasePointerCapture(event.pointerId);
 
@@ -3274,7 +3403,12 @@ export class CampaignMapPageComponent {
     }
 
     toggleWallsVisibility(): void {
-        this.showWalls.update((value) => !value);
+        if (this.isEditorMode()) {
+            this.showWallsInEditor.update((value) => !value);
+            return;
+        }
+
+        this.showWallsInViewer.update((value) => !value);
     }
 
     toggleVisionPreview(): void {
@@ -3300,10 +3434,15 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        if (!this.canEdit()) {
+            this.showMapNotice('Only campaign owners can reset shared sight memory.');
+            return;
+        }
+
         this.clearVisionExplorationForMap(mapId);
         this.showMapNotice('Sight memory reset for this board.');
 
-        if (!campaignId || !this.canEdit()) {
+        if (!campaignId) {
             return;
         }
 
@@ -3693,7 +3832,15 @@ export class CampaignMapPageComponent {
                 })),
                 mountainChains: map.layers.mountainChains.map((decoration) => ({ ...decoration })),
                 forestBelts: map.layers.forestBelts.map((decoration) => ({ ...decoration }))
-            }
+            },
+            visionMemory: map.visionMemory.map((entry) => ({
+                key: entry.key,
+                polygons: entry.polygons.map((polygon) => ({
+                    points: polygon.points.map((point) => ({ ...point }))
+                })),
+                lastOrigin: entry.lastOrigin ? { ...entry.lastOrigin } : null,
+                lastPolygonHash: entry.lastPolygonHash
+            }))
         };
     }
 
@@ -3716,7 +3863,8 @@ export class CampaignMapPageComponent {
                 rivers: [],
                 mountainChains: [],
                 forestBelts: []
-            }
+            },
+            visionMemory: []
         };
     }
 
@@ -3787,6 +3935,11 @@ export class CampaignMapPageComponent {
         this.currentMapId.set(map.id);
         this.workingMap.set(this.cloneMap(map));
         this.clearCtrlPolylineDraft();
+        this.isDrawing.set(false);
+        this.activeStrokePointerId = null;
+        this.activeLineKind = null;
+        this.activeStrokeOrigin = null;
+        this.activeStrokeDrawMode = 'freehand';
         this.activeTool.set(preserveTool ? activeTool : 'select');
         this.pendingIconType.set(preserveTool ? pendingIconType : null);
         this.pendingTerrainType.set(preserveTool ? pendingTerrainType : null);
@@ -4375,6 +4528,7 @@ export class CampaignMapPageComponent {
         const origin = this.tokenVisionOriginNormalized(token);
         const nextPolygon = polygon.map((point) => ({ ...point }));
         const polygonHash = this.hashVisionPolygon(nextPolygon);
+        let updated = false;
 
         this.visionExploration.update((memory) => {
             const existing = memory[key];
@@ -4383,26 +4537,430 @@ export class CampaignMapPageComponent {
             }
 
             const polygons = [...(existing?.polygons ?? []), nextPolygon].slice(-MAP_VISION_MEMORY_LIMIT);
+            updated = true;
             return {
                 ...memory,
                 [key]: {
+                    key: existing?.key ?? this.visionMemoryScopeKey(token),
                     polygons,
                     lastOrigin: origin,
                     lastPolygonHash: polygonHash
                 }
             };
         });
+
+        if (updated && this.shouldPersistVisionMemory(token)) {
+            this.queueVisionMemoryPersistence(key);
+        }
     }
 
     private clearVisionExplorationForMap(mapId: string): void {
         const prefix = `${mapId}::`;
+        for (const key of [...this.pendingVisionMemoryPersistenceKeys]) {
+            if (key.startsWith(prefix)) {
+                this.pendingVisionMemoryPersistenceKeys.delete(key);
+            }
+        }
+        for (const key of [...this.inFlightVisionMemoryPersistenceKeys]) {
+            if (key.startsWith(prefix)) {
+                this.inFlightVisionMemoryPersistenceKeys.delete(key);
+            }
+        }
+
         this.visionExploration.update((memory) => Object.fromEntries(
             Object.entries(memory).filter(([key]) => !key.startsWith(prefix))
         ));
     }
 
     private visionMemoryKey(token: CampaignMapToken): string {
-        return `${this.currentMapId()}::${token.id}`;
+        return `${this.currentMapId()}::${this.visionMemoryScopeKey(token)}`;
+    }
+
+    private visionMemoryScopeKey(token: CampaignMapToken): string {
+        if (token.assignedCharacterId) {
+            return `character:${token.assignedCharacterId}`;
+        }
+
+        if (token.assignedUserId) {
+            return `user:${token.assignedUserId}`;
+        }
+
+        return `token:${token.id}`;
+    }
+
+    private shouldPersistVisionMemory(token: CampaignMapToken): boolean {
+        return !!this.campaignId() && !!this.currentMapId() && !this.canEdit() && this.canControlToken(token);
+    }
+
+    private hydrateVisionExplorationFromMaps(maps: CampaignMapBoard[]): void {
+        const existingMemory = this.visionExploration();
+        const persistedPendingMemory = this.loadPendingVisionMemorySnapshot(this.campaignId());
+        const localMemory = {
+            ...persistedPendingMemory,
+            ...existingMemory
+        };
+        const currentMapIds = new Set(maps.map((map) => map.id));
+        const pendingKeys = new Set([
+            ...this.pendingVisionMemoryPersistenceKeys,
+            ...this.inFlightVisionMemoryPersistenceKeys,
+            ...Object.keys(persistedPendingMemory)
+        ]);
+        const backendMemory = Object.fromEntries(maps.flatMap((map) =>
+            map.visionMemory.map((entry) => [
+                `${map.id}::${entry.key}`,
+                {
+                    key: entry.key,
+                    polygons: entry.polygons.map((polygon) => polygon.points.map((point) => ({ ...point }))),
+                    lastOrigin: entry.lastOrigin ? { ...entry.lastOrigin } : null,
+                    lastPolygonHash: entry.lastPolygonHash
+                } satisfies MapVisionMemoryEntryState
+            ])
+        ));
+
+        const nextMemory = { ...backendMemory };
+        for (const [key, localEntry] of Object.entries(localMemory)) {
+            const separatorIndex = key.indexOf('::');
+            if (separatorIndex <= 0) {
+                continue;
+            }
+
+            const mapId = key.slice(0, separatorIndex);
+            if (!currentMapIds.has(mapId) || !this.shouldPreferLocalVisionMemory(localEntry, backendMemory[key])) {
+                continue;
+            }
+
+            nextMemory[key] = {
+                key: localEntry.key,
+                polygons: localEntry.polygons.map((polygon) => polygon.map((point) => ({ ...point }))),
+                lastOrigin: localEntry.lastOrigin ? { ...localEntry.lastOrigin } : null,
+                lastPolygonHash: localEntry.lastPolygonHash
+            } satisfies MapVisionMemoryEntryState;
+        }
+
+        for (const key of pendingKeys) {
+            const localEntry = existingMemory[key] ?? persistedPendingMemory[key];
+            if (!localEntry) {
+                continue;
+            }
+
+            nextMemory[key] = {
+                key: localEntry.key,
+                polygons: localEntry.polygons.map((polygon) => polygon.map((point) => ({ ...point }))),
+                lastOrigin: localEntry.lastOrigin ? { ...localEntry.lastOrigin } : null,
+                lastPolygonHash: localEntry.lastPolygonHash
+            } satisfies MapVisionMemoryEntryState;
+        }
+
+        this.visionExploration.set(nextMemory);
+
+        this.pendingVisionMemoryPersistenceKeys.clear();
+        this.inFlightVisionMemoryPersistenceKeys.clear();
+        for (const key of pendingKeys) {
+            const localEntry = existingMemory[key] ?? persistedPendingMemory[key];
+            if (!this.matchesVisionMemoryEntry(backendMemory[key], localEntry)) {
+                this.pendingVisionMemoryPersistenceKeys.add(key);
+            }
+        }
+
+        if (this.pendingVisionMemoryPersistenceKeys.size === 0) {
+            this.clearVisionMemoryPersistTimer();
+            this.clearPendingVisionMemorySnapshot();
+            return;
+        }
+
+        this.syncPendingVisionMemorySnapshot();
+        this.ensureVisionMemoryPersistTimer();
+    }
+
+    private matchesVisionMemoryEntry(
+        left: MapVisionMemoryEntryState | undefined,
+        right: MapVisionMemoryEntryState | undefined
+    ): boolean {
+        if (!left || !right) {
+            return left === right;
+        }
+
+        if (left.key !== right.key || left.lastPolygonHash !== right.lastPolygonHash) {
+            return false;
+        }
+
+        if (!this.matchesVisionPoint(left.lastOrigin, right.lastOrigin)) {
+            return false;
+        }
+
+        if (left.polygons.length !== right.polygons.length) {
+            return false;
+        }
+
+        return left.polygons.every((polygon, polygonIndex) => {
+            const otherPolygon = right.polygons[polygonIndex];
+            if (!otherPolygon || polygon.length !== otherPolygon.length) {
+                return false;
+            }
+
+            return polygon.every((point, pointIndex) => this.matchesVisionPoint(point, otherPolygon[pointIndex]));
+        });
+    }
+
+    private matchesVisionPoint(
+        left: CampaignMapPoint | null | undefined,
+        right: CampaignMapPoint | null | undefined
+    ): boolean {
+        if (!left || !right) {
+            return left === right;
+        }
+
+        return left.x === right.x && left.y === right.y;
+    }
+
+    private shouldPreferLocalVisionMemory(
+        localEntry: MapVisionMemoryEntryState | undefined,
+        backendEntry: MapVisionMemoryEntryState | undefined
+    ): boolean {
+        if (!localEntry) {
+            return false;
+        }
+
+        if (!backendEntry) {
+            return true;
+        }
+
+        if (localEntry.polygons.length !== backendEntry.polygons.length) {
+            return localEntry.polygons.length > backendEntry.polygons.length;
+        }
+
+        return localEntry.lastPolygonHash !== backendEntry.lastPolygonHash
+            || !this.matchesVisionPoint(localEntry.lastOrigin, backendEntry.lastOrigin);
+    }
+
+    private queueVisionMemoryPersistence(key: string): void {
+        this.pendingVisionMemoryPersistenceKeys.add(key);
+        this.syncPendingVisionMemorySnapshot();
+        this.ensureVisionMemoryPersistTimer();
+    }
+
+    private clearVisionMemoryPersistTimer(): void {
+        if (this.visionMemoryPersistTimerId === null) {
+            return;
+        }
+
+        globalThis.clearTimeout(this.visionMemoryPersistTimerId);
+        this.visionMemoryPersistTimerId = null;
+    }
+
+    private ensureVisionMemoryPersistTimer(): void {
+        if (this.visionMemoryPersistTimerId !== null || this.visionMemoryPersistInFlight || this.pendingVisionMemoryPersistenceKeys.size === 0) {
+            return;
+        }
+
+        this.visionMemoryPersistTimerId = globalThis.setTimeout(() => {
+            this.visionMemoryPersistTimerId = null;
+            void this.persistQueuedVisionMemory();
+        }, MAP_VISION_MEMORY_PERSIST_DELAY_MS);
+    }
+
+    private syncPendingVisionMemorySnapshot(): void {
+        if (typeof globalThis.localStorage === 'undefined') {
+            return;
+        }
+
+        const campaignId = this.campaignId();
+        const snapshotKeys = new Set([
+            ...this.pendingVisionMemoryPersistenceKeys,
+            ...this.inFlightVisionMemoryPersistenceKeys
+        ]);
+
+        if (!campaignId || snapshotKeys.size === 0) {
+            this.clearPendingVisionMemorySnapshot();
+            return;
+        }
+
+        const memory = this.visionExploration();
+        const entries = Object.fromEntries(
+            [...snapshotKeys]
+                .map((key) => {
+                    const entry = memory[key];
+                    if (!entry) {
+                        return null;
+                    }
+
+                    return [
+                        key,
+                        {
+                            key: entry.key,
+                            polygons: entry.polygons.map((polygon) => polygon.map((point) => ({ ...point }))),
+                            lastOrigin: entry.lastOrigin ? { ...entry.lastOrigin } : null,
+                            lastPolygonHash: entry.lastPolygonHash
+                        } satisfies MapVisionMemoryEntryState
+                    ] as const;
+                })
+                .filter((entry): entry is readonly [string, MapVisionMemoryEntryState] => !!entry)
+        );
+
+        if (Object.keys(entries).length === 0) {
+            this.clearPendingVisionMemorySnapshot();
+            return;
+        }
+
+        const snapshot: PendingMapVisionMemorySnapshot = {
+            campaignId,
+            savedAt: Date.now(),
+            entries
+        };
+
+        try {
+            globalThis.localStorage.setItem(MAP_VISION_MEMORY_PENDING_STORAGE_KEY, JSON.stringify(snapshot));
+        } catch {
+            return;
+        }
+    }
+
+    private loadPendingVisionMemorySnapshot(campaignId: string): Record<string, MapVisionMemoryEntryState> {
+        if (!campaignId || typeof globalThis.localStorage === 'undefined') {
+            return {};
+        }
+
+        try {
+            const raw = globalThis.localStorage.getItem(MAP_VISION_MEMORY_PENDING_STORAGE_KEY);
+            if (!raw) {
+                return {};
+            }
+
+            const snapshot = JSON.parse(raw) as Partial<PendingMapVisionMemorySnapshot>;
+            if (
+                !snapshot
+                || snapshot.campaignId !== campaignId
+                || typeof snapshot.savedAt !== 'number'
+                || Date.now() - snapshot.savedAt > MAP_VISION_MEMORY_PENDING_STORAGE_MAX_AGE_MS
+                || !snapshot.entries
+                || typeof snapshot.entries !== 'object'
+            ) {
+                this.clearPendingVisionMemorySnapshot();
+                return {};
+            }
+
+            return Object.fromEntries(
+                Object.entries(snapshot.entries).flatMap(([key, entry]) => {
+                    if (!entry || typeof entry !== 'object' || typeof entry.key !== 'string' || !Array.isArray(entry.polygons)) {
+                        return [];
+                    }
+
+                    const polygons = entry.polygons
+                        .filter((polygon): polygon is CampaignMapPoint[] => Array.isArray(polygon))
+                        .map((polygon) => polygon
+                            .filter((point): point is CampaignMapPoint => !!point && typeof point.x === 'number' && typeof point.y === 'number')
+                            .map((point) => ({ x: point.x, y: point.y })))
+                        .filter((polygon) => polygon.length >= 3);
+
+                    if (!key || !entry.key.trim() || polygons.length === 0) {
+                        return [];
+                    }
+
+                    const lastOrigin = entry.lastOrigin && typeof entry.lastOrigin.x === 'number' && typeof entry.lastOrigin.y === 'number'
+                        ? { x: entry.lastOrigin.x, y: entry.lastOrigin.y }
+                        : null;
+
+                    return [[
+                        key,
+                        {
+                            key: entry.key.trim(),
+                            polygons,
+                            lastOrigin,
+                            lastPolygonHash: typeof entry.lastPolygonHash === 'string' ? entry.lastPolygonHash : ''
+                        } satisfies MapVisionMemoryEntryState
+                    ]];
+                })
+            );
+        } catch {
+            this.clearPendingVisionMemorySnapshot();
+            return {};
+        }
+    }
+
+    private clearPendingVisionMemorySnapshot(): void {
+        if (typeof globalThis.localStorage === 'undefined') {
+            return;
+        }
+
+        try {
+            globalThis.localStorage.removeItem(MAP_VISION_MEMORY_PENDING_STORAGE_KEY);
+        } catch {
+            return;
+        }
+    }
+
+    private async persistQueuedVisionMemory(): Promise<void> {
+        const campaignId = this.campaignId();
+        if (this.visionMemoryPersistInFlight) {
+            await (this.visionMemoryPersistInFlightPromise ?? Promise.resolve());
+            return;
+        }
+
+        if (!campaignId || this.pendingVisionMemoryPersistenceKeys.size === 0) {
+            this.clearPendingVisionMemorySnapshot();
+            return;
+        }
+
+        this.visionMemoryPersistInFlight = true;
+        this.visionMemoryPersistInFlightPromise = new Promise<void>((resolve) => {
+            this.resolveVisionMemoryPersistInFlight = resolve;
+        });
+
+        try {
+            const keys = [...this.pendingVisionMemoryPersistenceKeys];
+            this.pendingVisionMemoryPersistenceKeys.clear();
+            this.inFlightVisionMemoryPersistenceKeys.clear();
+            for (const key of keys) {
+                this.inFlightVisionMemoryPersistenceKeys.add(key);
+            }
+            this.syncPendingVisionMemorySnapshot();
+            const memory = this.visionExploration();
+
+            for (const compoundKey of keys) {
+                const separatorIndex = compoundKey.indexOf('::');
+                if (separatorIndex <= 0) {
+                    this.inFlightVisionMemoryPersistenceKeys.delete(compoundKey);
+                    continue;
+                }
+
+                const mapId = compoundKey.slice(0, separatorIndex);
+                const entry = memory[compoundKey];
+                if (!entry) {
+                    this.inFlightVisionMemoryPersistenceKeys.delete(compoundKey);
+                    continue;
+                }
+
+                const ok = await this.store.updateCampaignMapVision(campaignId, mapId, {
+                    key: entry.key,
+                    polygons: entry.polygons.map((polygon) => ({
+                        points: polygon.map((point) => ({ ...point }))
+                    })),
+                    lastOrigin: entry.lastOrigin ? { ...entry.lastOrigin } : null,
+                    lastPolygonHash: entry.lastPolygonHash
+                });
+
+                this.inFlightVisionMemoryPersistenceKeys.delete(compoundKey);
+                if (!ok) {
+                    this.pendingVisionMemoryPersistenceKeys.add(compoundKey);
+                }
+
+                this.syncPendingVisionMemorySnapshot();
+            }
+        }
+        finally {
+            this.visionMemoryPersistInFlight = false;
+            this.resolveVisionMemoryPersistInFlight?.();
+            this.resolveVisionMemoryPersistInFlight = null;
+            this.visionMemoryPersistInFlightPromise = null;
+        }
+
+        if (this.pendingVisionMemoryPersistenceKeys.size > 0) {
+            this.syncPendingVisionMemorySnapshot();
+            this.ensureVisionMemoryPersistTimer();
+            return;
+        }
+
+        this.clearPendingVisionMemorySnapshot();
     }
 
     private hashVisionPolygon(points: CampaignMapPoint[]): string {
@@ -4638,7 +5196,9 @@ export class CampaignMapPageComponent {
             return;
         }
 
-        const moved = await this.store.moveCampaignMapToken(campaign.id, mapId, tokenId, { x: token.x, y: token.y });
+        const visionMemory = this.captureVisionMemoryForControlledMove(token);
+
+        const moved = await this.store.moveCampaignMapToken(campaign.id, mapId, tokenId, { x: token.x, y: token.y }, visionMemory);
         if (moved) {
             return;
         }
@@ -4647,6 +5207,34 @@ export class CampaignMapPageComponent {
             map.tokens = map.tokens.map((entry) => entry.id === tokenId ? { ...entry, x: origin.x, y: origin.y } : entry);
         });
         this.cdr.detectChanges();
+    }
+
+    private captureVisionMemoryForControlledMove(token: CampaignMapToken): CampaignMap['visionMemory'][number] | null {
+        if (!this.shouldPersistVisionMemory(token)) {
+            return null;
+        }
+
+        const polygon = this.buildVisionPolygon(token);
+        if (polygon.length >= 3) {
+            this.rememberVisionPolygon(token, polygon);
+        }
+
+        const key = this.visionMemoryKey(token);
+        const entry = this.visionExploration()[key];
+        if (!entry) {
+            return null;
+        }
+
+        this.clearVisionMemoryPersistTimer();
+
+        return {
+            key: entry.key,
+            polygons: entry.polygons.map((entryPolygon) => ({
+                points: entryPolygon.map((point) => ({ ...point }))
+            })),
+            lastOrigin: entry.lastOrigin ? { ...entry.lastOrigin } : null,
+            lastPolygonHash: entry.lastPolygonHash
+        };
     }
 
     private updateSelectedWallFlags(wallId: string, flags: Partial<Pick<CampaignMapWall, 'blocksVision' | 'blocksMovement'>>, message: string): void {
@@ -4958,7 +5546,8 @@ export class CampaignMapPageComponent {
                 tokens: [],
                 decorations: this.createDecorations(background, anchors, seed),
                 labels: this.createLabels(background, anchors, seed),
-                layers: this.createTerrainLayers(background, anchors, seed)
+                layers: this.createTerrainLayers(background, anchors, seed),
+                visionMemory: []
             };
         });
     }
@@ -5545,6 +6134,20 @@ export class CampaignMapPageComponent {
             width,
             points: this.smoothStrokePoints(points.map((point) => ({ x: this.clampCoordinate(point.x), y: this.clampCoordinate(point.y) })))
         };
+    }
+
+    private createCircleDragPoints(origin: CampaignMapPoint, current: CampaignMapPoint): CampaignMapPoint[] {
+        const radiusX = Math.abs(current.x - origin.x) / 2;
+        const radiusY = Math.abs(current.y - origin.y) / 2;
+        if (radiusX < 0.0025 && radiusY < 0.0025) {
+            return [origin, origin];
+        }
+
+        const centerX = (origin.x + current.x) / 2;
+        const centerY = (origin.y + current.y) / 2;
+        const dominantRadius = Math.max(radiusX, radiusY);
+        const segments = Math.max(18, Math.min(72, Math.round(dominantRadius * 220)));
+        return this.createLoopPoints(centerX, centerY, radiusX, radiusY, segments, 0);
     }
 
     private createLoopPoints(centerX: number, centerY: number, radiusX: number, radiusY: number, segments: number, jitter: number): CampaignMapPoint[] {

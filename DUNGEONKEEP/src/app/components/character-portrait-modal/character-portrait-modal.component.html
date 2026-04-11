@@ -1,0 +1,61 @@
+@if (open()) {
+<div class="portrait-modal-backdrop" (click)="close()">
+    <section class="portrait-modal panel" role="dialog" aria-modal="true" [attr.aria-label]="'Edit portrait for ' + characterName()" (click)="$event.stopPropagation()">
+        <header class="portrait-modal-header">
+            <div>
+                <p class="portrait-modal-eyebrow">Character Portrait</p>
+                <h2>Edit Portrait</h2>
+                <p>Upload art or generate a new portrait with AI-guided direction.</p>
+            </div>
+            <button type="button" class="ghost-button portrait-modal-close" (click)="close()" aria-label="Close portrait editor">
+                <i class="fa-duotone fa-thin fa-xmark"></i>
+            </button>
+        </header>
+
+        <div class="portrait-modal-body">
+            <div class="portrait-modal-preview">
+                <div class="portrait-modal-frame">
+                    @if (imageUrl()) {
+                    <img class="portrait-modal-image" [src]="imageUrl()" [alt]="characterName() + ' portrait'" />
+                    } @else {
+                    <div class="portrait-modal-placeholder" aria-hidden="true">{{ portraitInitials() }}</div>
+                    }
+                </div>
+                <p class="portrait-modal-caption">{{ characterName() }}</p>
+            </div>
+
+            <div class="portrait-modal-controls">
+                <input #portraitUploadInput type="file" accept="image/*" class="portrait-file-input" (change)="handleFileChange($event)" />
+
+                <div class="portrait-modal-actions">
+                    <button type="button" class="ghost-button" [disabled]="isSaving() || isGenerating()" (click)="requestUpload(portraitUploadInput)">
+                        {{ isSaving() ? 'Saving...' : 'Upload Portrait' }}
+                    </button>
+                    <button type="button" class="primary-button" [disabled]="isSaving() || isGenerating()" (click)="requestGeneration()">
+                        {{ isGenerating() ? 'Generating...' : 'Generate AI Portrait' }}
+                    </button>
+                    <button type="button" class="ghost-button" [disabled]="isSaving() || isGenerating() || !imageUrl()" (click)="requestRecrop()">
+                        Re-crop Portrait
+                    </button>
+                    <button type="button" class="ghost-button danger-button" [disabled]="isSaving() || isGenerating() || !canRemove()" (click)="requestRemoval()">
+                        Remove Portrait
+                    </button>
+                </div>
+
+                <label class="portrait-prompt-field">
+                    <span>Art direction</span>
+                    <textarea rows="4" [value]="promptDetails()" (input)="updatePromptDetails($any($event.target).value)" placeholder="Describe pose, mood, armor, colors, scars, lighting, or signature details."></textarea>
+                </label>
+
+                @if (errorMessage()) {
+                <p class="portrait-feedback portrait-feedback--error">{{ errorMessage() }}</p>
+                }
+
+                @if (saveMessage()) {
+                <p class="portrait-feedback">{{ saveMessage() }}</p>
+                }
+            </div>
+        </div>
+    </section>
+</div>
+}

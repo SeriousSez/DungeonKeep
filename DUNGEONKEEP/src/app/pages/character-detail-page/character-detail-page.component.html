@@ -61,32 +61,10 @@
                             <div class="portrait-placeholder" aria-hidden="true">{{ portraitInitials() }}</div>
                             }
                         </div>
-
                         @if (char.canEdit) {
-                        <div class="portrait-editor">
-                            <input #portraitUploadInput type="file" accept="image/*" class="portrait-file-input" (change)="onPortraitFileSelected($event)" />
-                            <div class="portrait-actions">
-                                <button type="button" class="assign-btn" [disabled]="isSavingPortrait() || isGeneratingPortrait()" (click)="portraitUploadInput.click()">
-                                    {{ isSavingPortrait() ? 'Saving...' : 'Upload Portrait' }}
-                                </button>
-                                <button type="button" class="assign-btn" [disabled]="isSavingPortrait() || isGeneratingPortrait()" (click)="generatePortrait()">
-                                    {{ isGeneratingPortrait() ? 'Generating...' : 'Generate AI Portrait' }}
-                                </button>
-                                <button type="button" class="remove-btn" [disabled]="isSavingPortrait() || isGeneratingPortrait() || !char.image" (click)="clearPortrait()">
-                                    Remove
-                                </button>
-                            </div>
-                            <label class="portrait-prompt-field">
-                                <span>Art direction</span>
-                                <textarea rows="3" [value]="portraitPromptDetails()" (input)="onPortraitPromptDetailsChanged($any($event.target).value)" placeholder="Describe pose, mood, armor, colors, scars, lighting, or signature details."></textarea>
-                            </label>
-                            @if (portraitGenerationError()) {
-                            <p class="portrait-feedback portrait-feedback--error">{{ portraitGenerationError() }}</p>
-                            }
-                            @if (portraitSaveMessage()) {
-                            <p class="portrait-feedback">{{ portraitSaveMessage() }}</p>
-                            }
-                        </div>
+                        <button type="button" class="portrait-edit-trigger" (click)="openPortraitModal()" aria-label="Edit portrait" title="Edit portrait">
+                            <i class="fa-duotone fa-thin fa-pen-to-square"></i>
+                        </button>
                         }
                     </div>
 
@@ -124,6 +102,13 @@
             </div>
         </div>
     </div>
+
+    @if (char.canEdit) {
+    <app-character-portrait-modal [open]="portraitModalOpen()" [characterName]="char.name" [imageUrl]="char.image || ''" [portraitInitials]="portraitInitials()" [promptDetails]="portraitPromptDetails()" [isSaving]="isSavingPortrait()" [isGenerating]="isGeneratingPortrait()"
+        [errorMessage]="portraitGenerationError()" [saveMessage]="portraitSaveMessage()" [canRemove]="!!char.image" (closed)="closePortraitModal()" (promptDetailsChanged)="onPortraitPromptDetailsChanged($event)" (fileSelected)="onPortraitFileSelected($event)" (generateRequested)="generatePortrait()"
+        (recropRequested)="openPortraitRecrop()" (removeRequested)="clearPortrait()"></app-character-portrait-modal>
+    <app-character-portrait-crop-modal [open]="portraitCropModalOpen()" [imageUrl]="portraitCropSourceImageUrl()" [characterName]="char.name" (closed)="closePortraitCropModal()" (applied)="applyPortraitCrop($event)"></app-character-portrait-crop-modal>
+    }
 
     <div class="summary-panels">
         <section class="panel summary-panel">

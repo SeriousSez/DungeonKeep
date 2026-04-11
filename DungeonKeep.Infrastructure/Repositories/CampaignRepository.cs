@@ -679,7 +679,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             new CampaignMapLayersDto(
                 NormalizeMapStrokeCollection(map.Layers?.Rivers),
                 NormalizeMapDecorationCollection(map.Layers?.MountainChains),
-                NormalizeMapDecorationCollection(map.Layers?.ForestBelts)));
+                NormalizeMapDecorationCollection(map.Layers?.ForestBelts)),
+            []);
     }
 
     private static CampaignMapBoardDto NormalizeCampaignMapBoard(CampaignMapBoardDto map)
@@ -698,7 +699,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             map.Tokens,
             map.Decorations,
             map.Labels,
-            map.Layers));
+            map.Layers,
+            map.VisionMemory));
 
         return new CampaignMapBoardDto(
             map.Id == Guid.Empty ? Guid.NewGuid() : map.Id,
@@ -716,7 +718,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             normalized.Tokens,
             normalized.Decorations,
             normalized.Labels,
-            normalized.Layers);
+            normalized.Layers,
+            normalized.VisionMemory);
     }
 
     private static CampaignMapLibraryDto NormalizeCampaignMapLibrary(CampaignMapLibraryDto library)
@@ -728,7 +731,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
         if (maps.Count == 0)
         {
-            maps.Add(new CampaignMapBoardDto(Guid.NewGuid(), "Main Map", "Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], [], new CampaignMapLayersDto([], [], [])));
+            maps.Add(new CampaignMapBoardDto(Guid.NewGuid(), "Main Map", "Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], [], new CampaignMapLayersDto([], [], []), []));
         }
 
         var activeMapId = library.ActiveMapId != Guid.Empty && maps.Any(map => map.Id == library.ActiveMapId)

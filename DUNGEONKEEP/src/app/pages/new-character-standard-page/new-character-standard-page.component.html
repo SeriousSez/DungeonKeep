@@ -1801,10 +1801,34 @@
             Character Name
             <input class="wide-input" type="text" [value]="completionCharacterName()" (input)="onCompletionCharacterNameChanged($any($event.target).value)" placeholder="Enter character name" />
         </label>
-        <label>
-            Player Name
-            <input class="wide-input" type="text" [value]="completionPlayerName()" (input)="onCompletionPlayerNameChanged($any($event.target).value)" [placeholder]="suggestedPlayerName() || 'Enter player name'" />
-        </label>
+
+        <div class="completion-portrait-field">
+            <span class="assign-campaign-label">Portrait</span>
+            <div class="completion-portrait-card">
+                <div class="completion-portrait-frame">
+                    @if (completionPortraitImageUrl()) {
+                    <img class="completion-portrait-image" [src]="completionPortraitImageUrl()" [alt]="(completionCharacterName() || 'Character') + ' portrait'" />
+                    } @else {
+                    <div class="completion-portrait-placeholder" aria-hidden="true">{{ completionPortraitInitials() }}</div>
+                    }
+                </div>
+
+                <div class="completion-portrait-actions">
+                    <input #completionPortraitUploadInput type="file" accept="image/*" class="completion-portrait-file-input" (change)="onCompletionPortraitFileSelected($event)" />
+                    <button type="button" class="ghost-button" [disabled]="isCompletingCharacter()" (click)="completionPortraitUploadInput.click()">Upload Portrait</button>
+                    <button type="button" class="primary-button" [disabled]="isCompletingCharacter() || isGeneratingCompletionPortrait()" (click)="generateCompletionPortrait()">
+                        {{ isGeneratingCompletionPortrait() ? 'Generating...' : 'Generate AI Portrait' }}
+                    </button>
+                    <button type="button" class="ghost-button" [disabled]="isCompletingCharacter() || !completionPortraitImageUrl()" (click)="recropCompletionPortrait()">Re-crop Portrait</button>
+                    <button type="button" class="ghost-button danger-button" [disabled]="isCompletingCharacter() || !completionPortraitImageUrl()" (click)="clearCompletionPortrait()">Remove Portrait</button>
+                </div>
+
+                <label class="completion-portrait-prompt-field">
+                    <span>Art direction</span>
+                    <textarea rows="3" [value]="completionPortraitPromptDetails()" (input)="onCompletionPortraitPromptChanged($any($event.target).value)" placeholder="Describe pose, mood, armor, colors, lighting, or signature details."></textarea>
+                </label>
+            </div>
+        </div>
 
         <div class="assign-campaign-field">
             <span class="assign-campaign-label">Campaign</span>
@@ -1834,6 +1858,9 @@
     @if (activeCharacteristicModal()) {
     <app-characteristics-modal [characteristicType]="activeCharacteristicModal()!" [selectedValues]="getActiveCharacteristicValues()" (onClose)="closeCharacteristicModal()" (onSubmit)="onCharacteristicSubmit($event)"></app-characteristics-modal>
     }
+
+    <app-character-portrait-crop-modal [open]="completionPortraitCropModalOpen()" [imageUrl]="completionPortraitCropSourceImageUrl()" [characterName]="completionCharacterName() || 'Character'" (closed)="closeCompletionPortraitCropModal()"
+        (applied)="applyCompletionPortraitCrop($event)"></app-character-portrait-crop-modal>
 
     @if (faithDropdownOpen() && faithSuggestions().length > 0) {
     <ul class="deity-suggestions deity-suggestions--floating" [class.deity-suggestions--up]="faithOpensUpward()" [ngStyle]="faithSuggestionsStyle()" role="listbox">

@@ -82,6 +82,29 @@ a:focus-visible {
     }
 }
 
+.danger-button {
+    border-color: color-mix(in srgb, #a63f3a 48%, var(--color-border-strong));
+    color: #8f2f2a;
+
+    &:hover:not(:disabled) {
+        background: color-mix(in srgb, #c4514b 12%, var(--color-surface-solid));
+        border-color: color-mix(in srgb, #b8423c 68%, var(--color-border-strong));
+        color: #7c231f;
+    }
+}
+
+.primary-button.danger-button,
+.danger-button:not(.ghost-button):not(.secondary-btn):not(.btn-secondary) {
+    border-color: transparent;
+    background: linear-gradient(135deg, #bb4a43, #8f2f2a);
+    color: var(--surface-raised-solid);
+
+    &:hover:not(:disabled) {
+        filter: brightness(1.04);
+        background: linear-gradient(135deg, #c4514b, #982f2a);
+    }
+}
+
 .is-loading {
     pointer-events: none;
     opacity: 0.7;

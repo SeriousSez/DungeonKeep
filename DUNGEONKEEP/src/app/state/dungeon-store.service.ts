@@ -108,6 +108,22 @@ export class DungeonStoreService {
             return;
         }
 
+        await this.loadCampaignDetails(campaignId);
+    }
+
+    async refreshCampaignLoaded(campaignId: string): Promise<void> {
+        if (!campaignId || this.isCampaignDetailsLoading(campaignId)) {
+            return;
+        }
+
+        await this.loadCampaignDetails(campaignId);
+    }
+
+    private async loadCampaignDetails(campaignId: string): Promise<void> {
+        if (!campaignId || this.isCampaignDetailsLoading(campaignId)) {
+            return;
+        }
+
         this.loadingCampaignDetails.update((ids) => [...ids, campaignId]);
 
         try {
@@ -170,7 +186,9 @@ export class DungeonStoreService {
     }
 
     async updateCharacter(characterId: string, draft: CharacterDraft): Promise<Character | null> {
-        if (!draft.name || !draft.playerName || !draft.className) {
+        const playerName = draft.playerName?.trim() || this.session.currentUser()?.displayName || 'Player';
+
+        if (!draft.name || !draft.className) {
             return null;
         }
 
@@ -179,7 +197,7 @@ export class DungeonStoreService {
         try {
             const updated = await this.api.updateCharacter(characterId, {
                 name: draft.name,
-                playerName: draft.playerName,
+                playerName,
                 className: draft.className,
                 level: Math.max(1, draft.level),
                 background: draft.background || 'Freshly arrived adventurer',
@@ -409,12 +427,36 @@ export class DungeonStoreService {
         }
     }
 
-    async moveCampaignMapToken(campaignId: string, mapId: string, tokenId: string, position: { x: number; y: number }): Promise<boolean> {
+    async moveCampaignMapToken(
+        campaignId: string,
+        mapId: string,
+        tokenId: string,
+        position: { x: number; y: number },
+        visionMemory?: CampaignMap['visionMemory'][number] | null
+    ): Promise<boolean> {
         try {
             const updated = await this.api.moveCampaignMapToken(campaignId, tokenId, {
                 mapId,
                 x: position.x,
-                y: position.y
+                y: position.y,
+                visionMemory: visionMemory
+                    ? {
+                        key: visionMemory.key.trim(),
+                        polygons: visionMemory.polygons.map((polygon) => ({
+                            points: polygon.points.map((point) => ({
+                                x: this.normalizeMapCoordinate(point.x),
+                                y: this.normalizeMapCoordinate(point.y)
+                            }))
+                        })),
+                        lastOrigin: visionMemory.lastOrigin
+                            ? {
+                                x: this.normalizeMapCoordinate(visionMemory.lastOrigin.x),
+                                y: this.normalizeMapCoordinate(visionMemory.lastOrigin.y)
+                            }
+                            : null,
+                        lastPolygonHash: visionMemory.lastPolygonHash
+                    }
+                    : null
             });
             this.replaceCampaignFromApi(campaignId, updated);
             return true;
@@ -430,6 +472,33 @@ export class DungeonStoreService {
 
         try {
             await this.api.resetCampaignMapVision(campaignId, { mapId });
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async updateCampaignMapVision(campaignId: string, mapId: string, memory: CampaignMap['visionMemory'][number]): Promise<boolean> {
+        try {
+            await this.api.updateCampaignMapVision(campaignId, {
+                mapId,
+                memory: {
+                    key: memory.key.trim(),
+                    polygons: memory.polygons.map((polygon) => ({
+                        points: polygon.points.map((point) => ({
+                            x: this.normalizeMapCoordinate(point.x),
+                            y: this.normalizeMapCoordinate(point.y)
+                        }))
+                    })),
+                    lastOrigin: memory.lastOrigin
+                        ? {
+                            x: this.normalizeMapCoordinate(memory.lastOrigin.x),
+                            y: this.normalizeMapCoordinate(memory.lastOrigin.y)
+                        }
+                        : null,
+                    lastPolygonHash: memory.lastPolygonHash
+                }
+            });
             return true;
         } catch {
             return false;
@@ -629,7 +698,9 @@ export class DungeonStoreService {
     }
 
     private async addCharacterFromApi(draft: CharacterDraft): Promise<Character | null> {
-        if (!draft.name || !draft.playerName || !draft.className) {
+        const playerName = draft.playerName?.trim() || this.session.currentUser()?.displayName || 'Player';
+
+        if (!draft.name || !draft.className) {
             return null;
         }
 
@@ -638,7 +709,7 @@ export class DungeonStoreService {
         try {
             const created = await this.api.createCharacter({
                 name: draft.name,
-                playerName: draft.playerName,
+                playerName,
                 className: draft.className,
                 level: Math.max(1, draft.level),
                 background: draft.background || 'Freshly arrived adventurer',
@@ -979,7 +1050,23 @@ export class DungeonStoreService {
                     rotation: this.normalizeMapRotation(decoration.rotation),
                     opacity: this.normalizeMapOpacity(decoration.opacity)
                 }))
-            }
+            },
+            visionMemory: (map?.visionMemory ?? []).map((entry) => ({
+                key: entry.key?.trim() || '',
+                polygons: (entry.polygons ?? []).map((polygon) => ({
+                    points: (polygon.points ?? []).map((point) => ({
+                        x: this.normalizeMapCoordinate(point.x),
+                        y: this.normalizeMapCoordinate(point.y)
+                    }))
+                })).filter((polygon) => polygon.points.length > 0),
+                lastOrigin: entry.lastOrigin
+                    ? {
+                        x: this.normalizeMapCoordinate(entry.lastOrigin.x),
+                        y: this.normalizeMapCoordinate(entry.lastOrigin.y)
+                    }
+                    : null,
+                lastPolygonHash: entry.lastPolygonHash?.trim() || ''
+            })).filter((entry) => !!entry.key && entry.polygons.length > 0)
         };
     }
 
@@ -1087,7 +1174,23 @@ export class DungeonStoreService {
                     rotation: this.normalizeMapRotation(decoration.rotation),
                     opacity: this.normalizeMapOpacity(decoration.opacity)
                 }))
-            }
+            },
+            visionMemory: map.visionMemory.map((entry) => ({
+                key: entry.key.trim(),
+                polygons: entry.polygons.map((polygon) => ({
+                    points: polygon.points.map((point) => ({
+                        x: this.normalizeMapCoordinate(point.x),
+                        y: this.normalizeMapCoordinate(point.y)
+                    }))
+                })).filter((polygon) => polygon.points.length > 0),
+                lastOrigin: entry.lastOrigin
+                    ? {
+                        x: this.normalizeMapCoordinate(entry.lastOrigin.x),
+                        y: this.normalizeMapCoordinate(entry.lastOrigin.y)
+                    }
+                    : null,
+                lastPolygonHash: entry.lastPolygonHash
+            })).filter((entry) => !!entry.key && entry.polygons.length > 0)
         };
     }
 

@@ -19,6 +19,7 @@
             </div>
             <div class="header-actions">
                 @if (isEditorMode() && canModify()) {
+                <button type="button" class="ghost-button" [disabled]="hasUnsavedChanges() || saveState() === 'saving' || isAiArtGenerating() || isRefreshingCampaignData()" (click)="refreshMapData()">{{ isRefreshingCampaignData() ? 'Refreshing...' : 'Refresh Data' }}</button>
                 <button type="button" class="primary-button" [disabled]="!hasUnsavedChanges() || saveState() === 'saving' || isAiArtGenerating()" (click)="saveMap()">{{ saveState() === 'saving' ? 'Saving...' : 'Save Map' }}</button>
                 <a [routerLink]="['/campaigns', campaign.id, 'edit']" class="primary-button">Edit Campaign</a>
                 }
@@ -254,6 +255,13 @@
                             }
                         </div>
                     </div>
+                    <label class="field-label" for="map-token-character">Character portrait</label>
+                    <app-dropdown id="map-token-character" ariaLabel="Character portrait" [value]="tokenPlacementCharacterId()" [options]="characterTokenOptions()" [minWidth]="220" [disabled]="isEditorLocked()" (changed)="updateTokenPlacementCharacter($event)"></app-dropdown>
+                    @if (campaignCharacters().length === 0) {
+                    <p class="sidebar-note">Add characters to this campaign first to place portrait-linked tokens.</p>
+                    } @else if (characterTokenOptions().length === 1) {
+                    <p class="sidebar-note">Characters need portraits before they can be placed as linked tokens.</p>
+                    }
                     <label class="field-label" for="map-token-upload">Token art</label>
                     <input id="map-token-upload" class="map-file-input" type="file" accept="image/*" [disabled]="isEditorLocked()" (change)="handleTokenUpload($event)" />
                     @if (tokenPlacementImageUrl()) {
@@ -261,7 +269,7 @@
                         <img class="token-upload-preview" [src]="tokenPlacementImageUrl()" alt="Token preview" />
                         <div class="token-upload-copy">
                             <strong>{{ tokenPlacementNameDraft().trim() || 'Token' }}</strong>
-                            <span>Ready to place on the board</span>
+                            <span>{{ tokenPlacementAssignedCharacterId() ? 'Linked to a character and ready to place' : 'Ready to place on the board' }}</span>
                         </div>
                     </div>
                     }
@@ -274,7 +282,7 @@
                     @if (tokenUploadFeedback()) {
                     <p class="sidebar-note">{{ tokenUploadFeedback() }}</p>
                     } @else {
-                    <p class="sidebar-note">Upload token art, then click the board to place it. You can keep placing the same token until you clear it.</p>
+                    <p class="sidebar-note">Choose a character portrait or upload token art, then click the board to place it. You can keep placing the same token until you clear it.</p>
                     }
                 </div>
                 }

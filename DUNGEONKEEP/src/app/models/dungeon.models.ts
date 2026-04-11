@@ -152,6 +152,17 @@ export interface CampaignMapLayers {
     forestBelts: CampaignMapDecoration[];
 }
 
+export interface CampaignMapVisionPolygon {
+    points: CampaignMapPoint[];
+}
+
+export interface CampaignMapVisionMemoryEntry {
+    key: string;
+    polygons: CampaignMapVisionPolygon[];
+    lastOrigin: CampaignMapPoint | null;
+    lastPolygonHash: string;
+}
+
 export interface CampaignMap {
     background: CampaignMapBackground;
     backgroundImageUrl: string;
@@ -167,6 +178,7 @@ export interface CampaignMap {
     decorations: CampaignMapDecoration[];
     labels: CampaignMapLabel[];
     layers: CampaignMapLayers;
+    visionMemory: CampaignMapVisionMemoryEntry[];
 }
 
 export interface CampaignMapBoard extends CampaignMap {

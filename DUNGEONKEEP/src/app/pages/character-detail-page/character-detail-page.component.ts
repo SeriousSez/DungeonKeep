@@ -5,6 +5,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { marked } from 'marked';
 
+import { CharacterPortraitCropModalComponent } from '../../components/character-portrait-crop-modal/character-portrait-crop-modal.component';
+import { CharacterPortraitModalComponent } from '../../components/character-portrait-modal/character-portrait-modal.component';
 import { DropdownComponent, type DropdownOption } from '../../components/dropdown/dropdown.component';
 import { classLevelOneFeatures } from '../../data/class-features.data';
 import { premadeCharacters, type PremadeCharacter } from '../../data/premade-characters.data';
@@ -110,7 +112,7 @@ interface DetailDrawerContent {
 
 @Component({
     selector: 'app-character-detail-page',
-    imports: [CommonModule, RouterLink, DropdownComponent],
+    imports: [CommonModule, RouterLink, DropdownComponent, CharacterPortraitModalComponent, CharacterPortraitCropModalComponent],
     templateUrl: './character-detail-page.component.html',
     styleUrl: './character-detail-page.component.scss'
 })
@@ -346,6 +348,10 @@ export class CharacterDetailPageComponent {
     readonly portraitGenerationError = signal('');
     readonly isSavingPortrait = signal(false);
     readonly isGeneratingPortrait = signal(false);
+    readonly portraitModalOpen = signal(false);
+    readonly portraitCropModalOpen = signal(false);
+    readonly portraitCropSourceImageUrl = signal('');
+    readonly portraitOriginalImageUrl = signal('');
     readonly usedSpellSlotsByLevel = signal<Record<number, number>>({});
     readonly expandedContainers = signal<Set<string>>(new Set());
     readonly activeDetailDrawer = signal<DetailDrawerContent | null>(null);
@@ -373,6 +379,7 @@ export class CharacterDetailPageComponent {
     readonly appearanceMeasurementSystem = signal<MeasurementSystem>('imperial');
 
     private lastCharacterId: string | null = null;
+    private lastPortraitSourceCharacterId: string | null = null;
     private saveSpellSlotTimeout: ReturnType<typeof setTimeout> | null = null;
 
     constructor() {
@@ -408,6 +415,16 @@ export class CharacterDetailPageComponent {
                 this.lastCharacterId = char.id;
                 this.usedSpellSlotsByLevel.set({ ...initial });
             }
+        });
+
+        effect(() => {
+            const characterId = this.character()?.id ?? null;
+            if (this.lastPortraitSourceCharacterId === characterId) {
+                return;
+            }
+
+            this.lastPortraitSourceCharacterId = characterId;
+            this.portraitOriginalImageUrl.set('');
         });
 
         effect(() => {
@@ -771,6 +788,37 @@ export class CharacterDetailPageComponent {
         this.portraitSaveMessage.set('');
     };
 
+    readonly openPortraitModal = () => {
+        const char = this.character();
+        if (!char?.canEdit) {
+            return;
+        }
+
+        this.portraitModalOpen.set(true);
+    };
+
+    readonly closePortraitModal = () => {
+        this.portraitModalOpen.set(false);
+    };
+
+    readonly closePortraitCropModal = () => {
+        this.portraitCropModalOpen.set(false);
+        this.portraitCropSourceImageUrl.set('');
+    };
+
+    readonly openPortraitRecrop = () => {
+        const char = this.character();
+        const sourceImageUrl = this.portraitOriginalImageUrl() || char?.image || '';
+        if (!char?.canEdit || !sourceImageUrl || this.isSavingPortrait() || this.isGeneratingPortrait()) {
+            return;
+        }
+
+        this.portraitGenerationError.set('');
+        this.portraitSaveMessage.set('');
+        this.portraitCropSourceImageUrl.set(sourceImageUrl);
+        this.portraitCropModalOpen.set(true);
+    };
+
     readonly onPortraitFileSelected = async (event: Event) => {
         const input = event.target as HTMLInputElement | null;
         const file = input?.files?.[0] ?? null;
@@ -780,7 +828,9 @@ export class CharacterDetailPageComponent {
 
         try {
             const imageUrl = await this.readPortraitFile(file);
-            await this.persistPortrait(imageUrl, 'Portrait updated.');
+            this.portraitOriginalImageUrl.set(imageUrl);
+            this.portraitCropSourceImageUrl.set(imageUrl);
+            this.portraitCropModalOpen.set(true);
         } catch (error) {
             this.portraitGenerationError.set(error instanceof Error ? error.message : 'Unable to use that image right now.');
         } finally {
@@ -813,6 +863,7 @@ export class CharacterDetailPageComponent {
                 additionalDirection: this.portraitPromptDetails().trim()
             });
 
+            this.portraitOriginalImageUrl.set(response.imageUrl);
             await this.persistPortrait(response.imageUrl, 'Portrait generated and saved.');
         } catch (error) {
             this.portraitGenerationError.set(this.getPortraitGenerationErrorMessage(error));
@@ -828,7 +879,14 @@ export class CharacterDetailPageComponent {
             return;
         }
 
+        this.portraitOriginalImageUrl.set('');
         await this.persistPortrait('', 'Portrait removed.');
+    };
+
+    readonly applyPortraitCrop = async (croppedImageUrl: string) => {
+        this.portraitCropModalOpen.set(false);
+        this.portraitCropSourceImageUrl.set('');
+        await this.persistPortrait(croppedImageUrl, 'Portrait updated.');
     };
 
     readonly raceInfo = computed(() => {

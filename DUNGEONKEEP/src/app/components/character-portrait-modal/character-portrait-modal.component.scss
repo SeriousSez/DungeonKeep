@@ -1,0 +1,194 @@
+:host {
+    display: block;
+}
+
+.portrait-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 30000;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(22, 16, 11, 0.56);
+    backdrop-filter: blur(6px);
+}
+
+.portrait-modal {
+    width: min(760px, calc(100vw - 32px));
+    max-height: min(90vh, 840px);
+    display: grid;
+    gap: 22px;
+    padding: 26px;
+    border-radius: 24px;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 72%, var(--accent-primary) 28%);
+    background: var(--panel-bg-solid);
+    box-shadow:
+        0 28px 60px rgba(20, 12, 6, 0.3),
+        inset 0 1px 0 rgba(255, 248, 236, 0.55);
+}
+
+.portrait-modal-header,
+.portrait-modal-actions {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.portrait-modal-header {
+    padding-bottom: 18px;
+    border-bottom: 1px solid color-mix(in srgb, var(--panel-border) 78%, transparent);
+}
+
+.portrait-modal-header h2,
+.portrait-modal-header p,
+.portrait-modal-caption,
+.portrait-feedback {
+    margin: 0;
+}
+
+.portrait-modal-header h2 {
+    font-family: var(--display-font);
+    font-size: 1.9rem;
+    line-height: 1;
+    color: var(--text-main);
+}
+
+.portrait-modal-header p,
+.portrait-modal-caption,
+.portrait-feedback {
+    color: var(--text-muted);
+    line-height: 1.45;
+}
+
+.portrait-modal-eyebrow,
+.portrait-prompt-field span {
+    margin: 0 0 8px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+}
+
+.portrait-modal-close {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+}
+
+.portrait-modal-body {
+    display: grid;
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+    gap: 22px;
+    align-items: start;
+}
+
+.portrait-modal-preview,
+.portrait-modal-controls,
+.portrait-prompt-field {
+    display: grid;
+    gap: 12px;
+}
+
+.portrait-modal-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 72%, var(--accent-primary) 28%);
+    background:
+        radial-gradient(circle at top, color-mix(in srgb, var(--accent-primary) 16%, transparent), transparent 58%),
+        color-mix(in srgb, var(--surface-raised) 92%, var(--accent-primary) 8%);
+}
+
+.portrait-modal-image,
+.portrait-modal-placeholder {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.portrait-modal-image {
+    object-fit: cover;
+}
+
+.portrait-modal-placeholder {
+    display: grid;
+    place-items: center;
+    font-family: var(--display-font);
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 700;
+    color: color-mix(in srgb, var(--text-main) 86%, var(--accent-primary) 14%);
+    letter-spacing: 0.08em;
+}
+
+.portrait-modal-caption {
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.portrait-modal-controls {
+    padding: 16px;
+    border-radius: 18px;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 82%, transparent);
+    background: var(--surface-raised);
+    box-shadow: inset 0 1px 0 rgba(255, 248, 236, 0.45);
+}
+
+.portrait-file-input {
+    display: none;
+}
+
+.portrait-modal-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+
+.portrait-modal-actions>button {
+    min-width: 160px;
+}
+
+.portrait-prompt-field {
+    color: var(--text-muted);
+    font-size: 0.84rem;
+}
+
+.portrait-prompt-field textarea {
+    width: 100%;
+    min-height: 104px;
+    resize: vertical;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    background: var(--panel-bg);
+    color: var(--text-main);
+    padding: 10px 12px;
+    font: inherit;
+}
+
+.portrait-feedback--error {
+    color: #c4514b;
+}
+
+@media (max-width: 760px) {
+    .portrait-modal {
+        padding: 20px;
+    }
+
+    .portrait-modal-body {
+        grid-template-columns: 1fr;
+    }
+
+    .portrait-modal-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .portrait-modal-actions>button {
+        width: 100%;
+        min-width: 0;
+    }
+}

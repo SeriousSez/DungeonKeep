@@ -103,6 +103,7 @@ export interface ApiCampaignMapDto {
     decorations: ApiCampaignMapDecorationDto[];
     labels: ApiCampaignMapLabelDto[];
     layers: ApiCampaignMapLayersDto;
+    visionMemory: ApiCampaignMapVisionMemoryDto[];
 }
 
 export interface ApiCampaignMapBoardDto extends ApiCampaignMapDto {
@@ -154,6 +155,17 @@ export interface ApiCampaignMapPointDto {
     y: number;
 }
 
+export interface ApiCampaignMapVisionPolygonDto {
+    points: ApiCampaignMapPointDto[];
+}
+
+export interface ApiCampaignMapVisionMemoryDto {
+    key: string;
+    polygons: ApiCampaignMapVisionPolygonDto[];
+    lastOrigin: ApiCampaignMapPointDto | null;
+    lastPolygonHash: string;
+}
+
 export interface ApiCampaignMapIconDto {
     id: string;
     type: 'Keep' | 'Town' | 'Camp' | 'Dungeon' | 'Danger' | 'Treasure' | 'Portal' | 'Tower';
@@ -178,10 +190,16 @@ export interface ApiMoveCampaignMapTokenRequest {
     mapId: string;
     x: number;
     y: number;
+    visionMemory?: ApiCampaignMapVisionMemoryDto | null;
 }
 
 export interface ApiResetCampaignMapVisionRequest {
     mapId: string;
+}
+
+export interface ApiUpdateCampaignMapVisionRequest {
+    mapId: string;
+    memory: ApiCampaignMapVisionMemoryDto;
 }
 
 export interface ApiCampaignMapDecorationDto {
@@ -804,6 +822,10 @@ export class DungeonApiService {
 
     async resetCampaignMapVision(campaignId: string, payload: ApiResetCampaignMapVisionRequest): Promise<void> {
         await firstValueFrom(this.http.post<void>(`${this.baseUrl}/campaigns/${campaignId}/map/${payload.mapId}/vision/reset`, {}));
+    }
+
+    async updateCampaignMapVision(campaignId: string, payload: ApiUpdateCampaignMapVisionRequest): Promise<void> {
+        await firstValueFrom(this.http.put<void>(`${this.baseUrl}/campaigns/${campaignId}/map/vision`, payload));
     }
 
     async generateCampaignMapArtAi(campaignId: string, payload: ApiGenerateCampaignMapArtRequest): Promise<ApiGenerateCampaignMapArtResponse> {

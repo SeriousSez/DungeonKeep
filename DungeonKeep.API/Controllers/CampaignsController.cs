@@ -889,6 +889,36 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         }
     }
 
+    [HttpPut("{campaignId:guid}/map/vision")]
+    public async Task<IActionResult> UpdateMapVision(Guid campaignId, [FromBody] UpdateCampaignMapVisionRequest request, CancellationToken cancellationToken)
+    {
+        if (request.MapId == Guid.Empty || request.Memory is null)
+        {
+            return BadRequest("Map vision memory is required.");
+        }
+
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var updated = await campaignService.UpdateMapVisionAsync(campaignId, request, user.Id, cancellationToken);
+            if (updated is null)
+            {
+                return NotFound("Campaign or map was not found.");
+            }
+
+            return updated.Value ? NoContent() : BadRequest("Map vision memory was invalid.");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
     [HttpPost("{campaignId:guid}/map/{mapId:guid}/vision/reset")]
     public async Task<IActionResult> ResetMapVision(Guid campaignId, Guid mapId, CancellationToken cancellationToken)
     {
@@ -913,6 +943,24 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         if (map is null)
         {
             return NotFound("Map was not found.");
+        }
+
+        try
+        {
+            var reset = await campaignService.ResetMapVisionAsync(campaignId, mapId, user.Id, cancellationToken);
+            if (reset is null)
+            {
+                return NotFound("Map was not found.");
+            }
+
+            if (!reset.Value)
+            {
+                return BadRequest("Map vision could not be reset.");
+            }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
         }
 
         await campaignHub.Clients
@@ -3121,7 +3169,8 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                     new(Guid.NewGuid(), string.IsNullOrWhiteSpace(request.MapName) ? "Unnamed Reach" : request.MapName.Trim(), "Region", 0.5, 0.24, 0, DefaultGeneratedLabelStyle("Region")),
                     new(Guid.NewGuid(), background == "City" ? "Market Ward" : background == "Coast" ? "Beacon Route" : background == "Cavern" ? "Crystal Span" : "Pilgrim Road", "Feature", 0.66, 0.64, -7, DefaultGeneratedLabelStyle("Feature"))
                 },
-            Layers: NormalizeGeneratedCampaignMapLayers(generated.Layers, background));
+            Layers: NormalizeGeneratedCampaignMapLayers(generated.Layers, background),
+            VisionMemory: []);
     }
 
     private static CampaignMapLayersDto NormalizeGeneratedCampaignMapLayers(GenerateCampaignMapLayersPayload? layers, string background)
