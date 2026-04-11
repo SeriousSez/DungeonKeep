@@ -347,7 +347,23 @@ export class CampaignMapPageComponent {
     });
     readonly campaignReady = computed(() => this.selectedCampaign()?.detailsLoaded === true);
 
-    readonly canEdit = computed(() => this.selectedCampaign()?.currentUserRole === 'Owner');
+    readonly canEdit = computed(() => {
+        const campaign = this.selectedCampaign();
+        if (!campaign) {
+            return false;
+        }
+
+        if (campaign.currentUserRole === 'Owner') {
+            return true;
+        }
+
+        const currentUserId = this.currentUserId();
+        if (!currentUserId || !campaign.members?.length) {
+            return false;
+        }
+
+        return campaign.members.some((member) => member.userId === currentUserId && member.status === 'Active' && member.role === 'Owner');
+    });
     readonly isEditorMode = computed(() => this.routeMode() === 'edit');
     readonly isEditorLocked = computed(() => this.isAiArtGenerating());
     readonly canModify = computed(() => this.canEdit() && this.isEditorMode() && !this.isEditorLocked());
@@ -388,7 +404,24 @@ export class CampaignMapPageComponent {
         const campaignId = this.campaignId();
         return !!campaignId && this.store.isCampaignDetailsLoading(campaignId);
     });
-    readonly currentMapBoard = computed(() => this.mapBoards().find((map) => map.id === this.currentMapId()) ?? this.mapBoards()[0] ?? null);
+    readonly currentMapBoard = computed(() => {
+        const currentMapId = this.currentMapId();
+        const localMapBoards = this.mapBoards();
+        const localMatch = localMapBoards.find((map) => map.id === currentMapId) ?? localMapBoards[0] ?? null;
+        if (localMatch) {
+            return localMatch;
+        }
+
+        const campaign = this.selectedCampaign();
+        if (!campaign?.maps?.length) {
+            return null;
+        }
+
+        return campaign.maps.find((map) => map.id === currentMapId)
+            ?? campaign.maps.find((map) => map.id === campaign.activeMapId)
+            ?? campaign.maps[0]
+            ?? null;
+    });
     readonly backLink = computed(() => {
         const campaign = this.selectedCampaign();
         const currentMap = this.currentMapBoard();

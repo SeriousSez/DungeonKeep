@@ -836,9 +836,13 @@ public sealed class CampaignService(
 
         var library = ParseCampaignMapLibrary(campaign.CampaignMapJson);
         var activeMap = library.Maps.FirstOrDefault(map => map.Id == library.ActiveMapId) ?? library.Maps[0];
+        var firstMap = library.Maps[0];
         IReadOnlyList<CampaignMapBoardDto> visibleMaps = string.Equals(currentUserRole, "Owner", StringComparison.OrdinalIgnoreCase)
             ? library.Maps
-            : [activeMap];
+            : library.Maps
+                .Where(map => map.Id == firstMap.Id || map.Id == activeMap.Id)
+                .DistinctBy(map => map.Id)
+                .ToList();
 
         return new CampaignDto(
             campaign.Id,

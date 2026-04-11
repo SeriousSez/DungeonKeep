@@ -535,3 +535,14 @@ jobs:
               Start-Sleep -Seconds 5
             }
           }
+
+  announce-urls:
+    runs-on: ubuntu-latest
+    needs: [deploy-api, deploy-web]
+    if: always()
+    steps:
+      - name: Print deployed URLs
+        run: |
+          echo "Deployment summary"
+          echo "Web URL: ${{ env.WEB_HEALTH_URL }}"
+          echo "API URL: ${{ env.API_HEALTH_URL }}"
