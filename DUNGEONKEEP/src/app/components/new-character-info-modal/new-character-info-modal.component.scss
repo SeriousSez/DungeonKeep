@@ -256,6 +256,34 @@
     line-height: 1.25;
 }
 
+.inline-action {
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid color-mix(in srgb, var(--accent-primary) 40%, var(--panel-border));
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--accent-primary) 10%, var(--surface-raised));
+    color: var(--text-main);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    transition: border-color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+
+    &:hover {
+        border-color: color-mix(in srgb, var(--accent-primary) 65%, var(--panel-border));
+        background: color-mix(in srgb, var(--accent-primary) 16%, var(--surface-raised));
+        transform: translateY(-1px);
+    }
+
+    &:focus-visible {
+        outline: 2px solid color-mix(in srgb, var(--accent-primary) 65%, transparent);
+        outline-offset: 2px;
+    }
+}
+
 .show-more {
     justify-self: start;
     min-height: 34px;

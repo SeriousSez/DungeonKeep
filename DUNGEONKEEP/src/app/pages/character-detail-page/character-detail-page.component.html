@@ -71,7 +71,14 @@
                     <div class="header-copy">
                         <p class="eyebrow">Character Sheet</p>
                         <h1>{{ char.name }}</h1>
-                        <p class="subheader">{{ char.race }} {{ char.className }} · Level {{ char.level }} · {{ campaignName() }}</p>
+                        <p class="subheader">
+                            {{ char.race }} {{ char.className }} · Level {{ char.level }} ·
+                            @if (currentCampaign(); as campaign) {
+                            <a class="campaign-link" [routerLink]="['/campaigns', campaign.id]">{{ campaign.name }}</a>
+                            } @else {
+                            {{ campaignName() }}
+                            }
+                        </p>
                     </div>
                 </div>
 
