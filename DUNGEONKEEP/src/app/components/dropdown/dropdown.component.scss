@@ -55,6 +55,13 @@
     justify-content: space-between;
     text-align: left;
 
+    span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
     i {
         font-size: 0.78rem;
         color: var(--text-muted);
@@ -231,6 +238,20 @@
 .app-dropdown--narrow {
     min-width: 78px;
     width: 100%;
+}
+
+:host(.app-dropdown-host--chip) .app-dropdown {
+    min-height: 30px;
+    padding: 0 10px;
+    border-radius: 8px;
+    background: var(--surface-raised);
+    color: var(--text-main);
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+:host(.app-dropdown-host--chip) .app-dropdown-trigger i {
+    font-size: 0.7rem;
 }
 
 @media (max-width: 720px) {

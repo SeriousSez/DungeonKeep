@@ -1,4 +1,13 @@
 <main class="page-stack">
+    @if (!showBuilderSkeleton()) {
+    <button type="button" class="step-nav-arrow step-nav-arrow--left" [disabled]="!canGoToPreviousStep()" aria-label="Go to previous builder step" (click)="goToAdjacentStep(-1)">
+        <i class="fa-duotone fa-thin fa-chevron-left" aria-hidden="true"></i>
+    </button>
+    <button type="button" class="step-nav-arrow step-nav-arrow--right" [disabled]="!canGoToNextStep()" aria-label="Go to next builder step" (click)="goToAdjacentStep(1)">
+        <i class="fa-duotone fa-thin fa-chevron-right" aria-hidden="true"></i>
+    </button>
+    }
+
     <section class="panel page-intro">
         <p class="eyebrow">Character Builder</p>
         <h1>Standard Character Creation</h1>

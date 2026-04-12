@@ -12,7 +12,17 @@ import { classLevelOneFeatures } from '../../data/class-features.data';
 import { premadeCharacters, type PremadeCharacter } from '../../data/premade-characters.data';
 import { classSpellCatalog, spellcastingProgressionByClass } from '../../data/class-spells.data';
 import { races } from '../../data/races';
-import { equipmentCatalog } from '../../data/new-character-standard-page.data';
+import {
+    equipmentCatalog,
+    backgroundDescriptionFallbacks,
+    backgroundDetailOverrides,
+    backgroundLanguagesFallbacks,
+    backgroundSkillProficienciesFallbacks,
+    backgroundToolProficienciesFallbacks,
+    classDetailFallbacks,
+    classInfoMap,
+    speciesInfoMap
+} from '../../data/new-character-standard-page.data';
 import { spellDetailsMap } from '../../data/spell-details.data';
 import { normalizePreparedLeveledSpellNames } from '../../rules/spell-preparation.rules';
 import { getWizardPreparedSpellLimit, isWizardSpellbookCantripAlwaysPrepared } from '../../rules/wizard-class.rules';
@@ -32,6 +42,7 @@ type InventoryFilter = string; // Can be 'all', 'equipment', 'other', or a conta
 type FeaturesFilter = 'all' | 'class-features' | 'species-traits' | 'feats';
 type NotesFilter = 'all' | 'orgs' | 'allies' | 'enemies' | 'backstory' | 'other';
 type MeasurementSystem = 'imperial' | 'metric';
+type InventoryDraftField = 'name' | 'category' | 'quantity' | 'weight' | 'costGp' | 'notes';
 
 interface PersistedInventoryEntry {
     name: string;
@@ -111,6 +122,16 @@ interface DetailDrawerContent {
     bullets?: string[];
     lineItems?: Array<{ value: string; label: string; note?: string }>;
     secondaryHeading?: string;
+    variant?: 'default' | 'inventory-item';
+    metaLine?: string;
+    profileTags?: string[];
+    facts?: Array<{
+        label: string;
+        value?: string;
+        linkLabel?: string;
+        linkUrl?: string;
+    }>;
+    rulesText?: string | null;
 }
 
 @Component({
@@ -358,6 +379,7 @@ export class CharacterDetailPageComponent {
     readonly usedSpellSlotsByLevel = signal<Record<number, number>>({});
     readonly expandedContainers = signal<Set<string>>(new Set());
     readonly activeDetailDrawer = signal<DetailDrawerContent | null>(null);
+    readonly detailSecondaryExpanded = signal(true);
     readonly hpManagerOpen = signal(false);
     readonly hpHealingInput = signal('0');
     readonly hpDamageInput = signal('0');
@@ -378,6 +400,24 @@ export class CharacterDetailPageComponent {
     readonly spellManagerSearch = signal('');
     readonly spellManagerLevelFilter = signal<'all' | `${number}`>('all');
     readonly spellManagerExpandedSpellName = signal('');
+    readonly inventoryManagerOpen = signal(false);
+    readonly inventoryManagerOpening = signal(false);
+    readonly inventoryManagerSearch = signal('');
+    readonly inventoryCustomItemExpanded = signal(false);
+    readonly inventoryCurrentExpanded = signal(true);
+    readonly inventoryManagerExpandedSections = signal<Set<string>>(new Set());
+    readonly inventoryCatalogExpanded = signal(true);
+    readonly inventoryCatalogCategory = signal('All');
+    readonly inventoryCatalogExpandedItem = signal('');
+    readonly inventoryManagerContainedExpandedItem = signal('');
+    readonly inventoryManagerMoveTargets = signal<Record<string, string>>({});
+    readonly inventoryDraftAddTarget = signal('equipment');
+    readonly inventoryDraftName = signal('');
+    readonly inventoryDraftCategory = signal('Adventuring Gear');
+    readonly inventoryDraftQuantity = signal('1');
+    readonly inventoryDraftWeight = signal('');
+    readonly inventoryDraftCostGp = signal('');
+    readonly inventoryDraftNotes = signal('');
     readonly coinAdjustInput = signal<PersistedCurrencyState>({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 });
     readonly partyCoinAdjustInput = signal<PersistedCurrencyState>({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 });
     readonly coinLifestyleExpanded = signal(false);
@@ -578,7 +618,7 @@ export class CharacterDetailPageComponent {
 
     readonly normalizedInventoryEntries = computed<PersistedInventoryEntry[]>(() => {
         const entries = this.persistedBuilderState()?.inventoryEntries;
-        const sourceEntries = Array.isArray(entries) && entries.length > 0
+        const sourceEntries = Array.isArray(entries)
             ? entries
             : this.getPremadeInventoryEntries();
 
@@ -586,11 +626,34 @@ export class CharacterDetailPageComponent {
             return [];
         }
 
-        return sourceEntries
+        const normalizedEntries = sourceEntries
             .filter((entry) => entry && typeof entry.name === 'string' && typeof entry.category === 'string')
             .map((entry) => this.normalizeInventoryEntry(entry))
             .filter((entry) => entry.name.length > 0 && entry.category.length > 0);
+
+        return this.expandIndependentContainers(normalizedEntries);
     });
+
+    private expandIndependentContainers(entries: PersistedInventoryEntry[]): PersistedInventoryEntry[] {
+        const expanded: PersistedInventoryEntry[] = [];
+
+        for (const entry of entries) {
+            if (!entry.isContainer || entry.quantity <= 1) {
+                expanded.push(entry);
+                continue;
+            }
+
+            for (let copyIndex = 0; copyIndex < entry.quantity; copyIndex++) {
+                expanded.push({
+                    ...entry,
+                    quantity: 1,
+                    containedItems: copyIndex === 0 ? [...(entry.containedItems ?? [])] : []
+                });
+            }
+        }
+
+        return expanded;
+    }
 
     private normalizeInventoryEntry(entry: PersistedInventoryEntry): PersistedInventoryEntry {
         const name = entry.name.trim();
@@ -601,7 +664,8 @@ export class CharacterDetailPageComponent {
                 .filter((item) => item && typeof item.name === 'string' && typeof item.category === 'string')
                 .map((item) => this.normalizeInventoryEntry(item))
             : [];
-        const isContainer = Boolean(entry.isContainer) || this.isContainerItemName(name) || containedItems.length > 0;
+        const mergedContainedItems = this.mergeDuplicateContainedItems(containedItems);
+        const isContainer = Boolean(entry.isContainer) || this.isContainerItemName(name) || mergedContainedItems.length > 0;
         const catalogItem = this.catalogLookup.get(name.toLowerCase());
 
         return {
@@ -613,9 +677,50 @@ export class CharacterDetailPageComponent {
             costGp: typeof entry.costGp === 'number' ? entry.costGp : catalogItem?.costGp,
             notes: entry.notes?.trim() || catalogItem?.notes || undefined,
             isContainer,
-            containedItems,
+            containedItems: mergedContainedItems,
             maxCapacity: entry.maxCapacity ?? (isContainer ? this.getContainerCapacity(name) : undefined)
         };
+    }
+
+    private mergeDuplicateContainedItems(entries: PersistedInventoryEntry[]): PersistedInventoryEntry[] {
+        if (entries.length <= 1) {
+            return entries;
+        }
+
+        const mergedByKey = new Map<string, PersistedInventoryEntry>();
+
+        for (const entry of entries) {
+            const key = `${entry.name.trim().toLowerCase()}|${entry.category.trim().toLowerCase()}`;
+            const existing = mergedByKey.get(key);
+
+            if (!existing) {
+                mergedByKey.set(key, { ...entry });
+                continue;
+            }
+
+            existing.quantity += entry.quantity;
+            if (existing.weight == null && entry.weight != null) {
+                existing.weight = entry.weight;
+            }
+            if (existing.costGp == null && entry.costGp != null) {
+                existing.costGp = entry.costGp;
+            }
+            if (!existing.notes && entry.notes) {
+                existing.notes = entry.notes;
+            }
+            if (!existing.maxCapacity && entry.maxCapacity) {
+                existing.maxCapacity = entry.maxCapacity;
+            }
+
+            const mergedChildren = this.mergeDuplicateContainedItems([
+                ...(existing.containedItems ?? []),
+                ...(entry.containedItems ?? [])
+            ]);
+            existing.containedItems = mergedChildren;
+            existing.isContainer = existing.isContainer || entry.isContainer || mergedChildren.length > 0;
+        }
+
+        return [...mergedByKey.values()];
     }
 
     private getPremadeInventoryEntries(): PersistedInventoryEntry[] {
@@ -1669,6 +1774,87 @@ export class CharacterDetailPageComponent {
         });
     });
 
+    readonly inventoryManagerRows = computed<Array<{ entry: PersistedInventoryEntry; index: number }>>(() => {
+        const term = this.inventoryManagerSearch().trim().toLowerCase();
+
+        return this.normalizedInventoryEntries()
+            .map((entry, index) => ({ entry, index }))
+            .filter((row) => {
+                if (!term) {
+                    return true;
+                }
+
+                const haystack = [
+                    row.entry.name,
+                    row.entry.category,
+                    row.entry.notes ?? '',
+                    row.entry.costGp != null ? String(row.entry.costGp) : '',
+                    row.entry.weight != null ? String(row.entry.weight) : ''
+                ].join(' ').toLowerCase();
+
+                return haystack.includes(term);
+            });
+    });
+
+    readonly inventoryManagerEquipmentRows = computed<Array<{ entry: PersistedInventoryEntry; index: number }>>(() =>
+        this.inventoryManagerRows().filter((row) => !row.entry.isContainer)
+    );
+
+    readonly inventoryManagerContainerRows = computed<Array<{ entry: PersistedInventoryEntry; index: number }>>(() =>
+        this.inventoryManagerRows().filter((row) => row.entry.isContainer)
+    );
+
+    readonly inventoryManagerContainerBuckets = computed<Array<{ entry: PersistedInventoryEntry; sourceIndex: number; copyIndex: number }>>(() =>
+        this.inventoryManagerContainerRows().map((row) => ({
+            entry: row.entry,
+            sourceIndex: row.index,
+            copyIndex: 0
+        }))
+    );
+
+    readonly inventoryManagerEquipmentWeight = computed(() =>
+        this.inventoryManagerEquipmentRows().reduce((sum, row) => sum + this.getInventoryEntryWeight(row.entry), 0)
+    );
+
+    readonly inventoryCatalogCategories = computed<string[]>(() => {
+        const categories = new Set<string>();
+
+        for (const item of equipmentCatalog) {
+            const category = item.category?.trim();
+            if (category) {
+                categories.add(category);
+            }
+        }
+
+        return ['All', ...[...categories].sort((left, right) => left.localeCompare(right))];
+    });
+
+    readonly filteredInventoryCatalogItems = computed(() => {
+        const term = this.inventoryManagerSearch().trim().toLowerCase();
+        const selectedCategory = this.inventoryCatalogCategory();
+
+        return equipmentCatalog.filter((item) => {
+            if (selectedCategory !== 'All' && item.category !== selectedCategory) {
+                return false;
+            }
+
+            if (!term) {
+                return true;
+            }
+
+            const haystack = [
+                item.name,
+                item.category,
+                item.notes ?? '',
+                item.summary ?? '',
+                item.rarity ?? '',
+                item.attunement ?? ''
+            ].join(' ').toLowerCase();
+
+            return haystack.includes(term);
+        });
+    });
+
     private getInventoryEntryWeight(entry: PersistedInventoryEntry): number {
         const ownWeight = (entry.weight ?? 0) * Math.max(1, entry.quantity || 1);
         const containedWeight = (entry.containedItems ?? []).reduce(
@@ -1733,21 +1919,11 @@ export class CharacterDetailPageComponent {
         return `${parsed.cleanedSummary}\n\n${this.partyCurrencyStartTag}${stateJson}${this.partyCurrencyEndTag}`.trim();
     }
 
-    readonly containersByName = computed(() => {
+    readonly containersByName = computed<Array<{ entry: PersistedInventoryEntry; index: number }>>(() => {
         const entries = this.normalizedInventoryEntries();
         const containers = entries.filter((entry) => entry.isContainer);
 
-        // Group containers by name with index for unique identification
-        const grouped: Array<{ entry: PersistedInventoryEntry; index: number }> = [];
-
-        for (const container of containers) {
-            // Add one entry per quantity (so 2 backpacks = 2 separate expandable containers)
-            for (let i = 0; i < container.quantity; i++) {
-                grouped.push({ entry: container, index: i });
-            }
-        }
-
-        return grouped;
+        return containers.map((entry, index) => ({ entry, index }));
     });
 
     readonly filteredContainersByName = computed<Array<{ entry: PersistedInventoryEntry; index: number }>>(() => {
@@ -1793,6 +1969,26 @@ export class CharacterDetailPageComponent {
 
         return results;
     });
+
+    containerInventoryDisplayName(containerItem: { entry: PersistedInventoryEntry; index: number }): string {
+        const matchingContainers = this.containersByName().filter((item) => item.entry.name === containerItem.entry.name);
+        if (matchingContainers.length <= 1) {
+            return containerItem.entry.name;
+        }
+
+        const displayIndex = matchingContainers.findIndex((item) => item.index === containerItem.index && item.entry.name === containerItem.entry.name);
+        return `${containerItem.entry.name} ${displayIndex + 1}`;
+    }
+
+    containerBucketDisplayName(bucket: { entry: PersistedInventoryEntry; sourceIndex: number; copyIndex: number }): string {
+        const matchingBuckets = this.inventoryManagerContainerBuckets().filter((item) => item.entry.name === bucket.entry.name);
+        if (matchingBuckets.length <= 1) {
+            return bucket.entry.name;
+        }
+
+        const displayIndex = matchingBuckets.findIndex((item) => item.sourceIndex === bucket.sourceIndex && item.copyIndex === bucket.copyIndex);
+        return `${bucket.entry.name} ${displayIndex + 1}`;
+    }
 
 
     readonly weaponCombatRows = computed<CombatRow[]>(() => {
@@ -2079,10 +2275,17 @@ export class CharacterDetailPageComponent {
 
     closeDetailDrawer(): void {
         this.activeDetailDrawer.set(null);
+        this.detailSecondaryExpanded.set(true);
+    }
+
+    toggleDetailSecondary(): void {
+        this.detailSecondaryExpanded.update((value) => !value);
     }
 
     private openDetailDrawer(content: DetailDrawerContent): void {
         this.hpManagerOpen.set(false);
+        this.inventoryManagerOpen.set(false);
+        this.detailSecondaryExpanded.set(true);
         this.activeDetailDrawer.set(content);
     }
 
@@ -2093,6 +2296,7 @@ export class CharacterDetailPageComponent {
         }
 
         this.activeDetailDrawer.set(null);
+        this.inventoryManagerOpen.set(false);
         this.hpDraftCurrent.set(char.hitPoints);
         this.hpDraftMax.set(char.maxHitPoints);
         this.hpDraftTemp.set(this.tempHitPoints());
@@ -2310,8 +2514,8 @@ export class CharacterDetailPageComponent {
             background: char.background,
             notes: updatedNotes,
             campaignId: char.campaignId,
-            hitPoints: this.hpDraftCurrent(),
-            maxHitPoints: this.hpDraftMax()
+            hitPoints: char.hitPoints,
+            maxHitPoints: char.maxHitPoints
         });
     }
 
@@ -2341,8 +2545,8 @@ export class CharacterDetailPageComponent {
             background: char.background,
             notes: updatedNotes,
             campaignId: char.campaignId,
-            hitPoints: this.hpDraftCurrent(),
-            maxHitPoints: this.hpDraftMax()
+            hitPoints: char.hitPoints,
+            maxHitPoints: char.maxHitPoints
         });
     }
 
@@ -2372,8 +2576,8 @@ export class CharacterDetailPageComponent {
             background: char.background,
             notes: updatedNotes,
             campaignId: char.campaignId,
-            hitPoints: this.hpDraftCurrent(),
-            maxHitPoints: this.hpDraftMax()
+            hitPoints: char.hitPoints,
+            maxHitPoints: char.maxHitPoints
         });
     }
 
@@ -2478,8 +2682,8 @@ export class CharacterDetailPageComponent {
             background: char.background,
             notes: char.notes,
             campaignId: char.campaignId,
-            hitPoints: this.hpDraftCurrent(),
-            maxHitPoints: this.hpDraftMax(),
+            hitPoints: char.hitPoints,
+            maxHitPoints: char.maxHitPoints,
             deathSaveFailures: clampedFailures,
             deathSaveSuccesses: clampedSuccesses
         });
@@ -2623,6 +2827,16 @@ export class CharacterDetailPageComponent {
 
         const parsed = Number.parseInt(raw, 10);
         return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    private parseOptionalNumber(value: string): number | null {
+        const raw = value.trim();
+        if (!raw) {
+            return null;
+        }
+
+        const parsed = Number(raw);
+        return Number.isFinite(parsed) ? parsed : null;
     }
 
     private clampDeathSaveCount(value: number): number {
@@ -3292,15 +3506,91 @@ export class CharacterDetailPageComponent {
     }
 
     openInventoryItemDetail(item: { name: string; category: string; quantity: number; weight?: number; costGp?: number; notes?: string }): void {
+        const catalogItem = this.catalogLookup.get(item.name.trim().toLowerCase());
+        const summaryText = catalogItem?.summary?.trim() || item.notes?.trim() || catalogItem?.notes?.trim() || 'Tracked inventory item details.';
+        const rulesText = this.inventoryItemRulesText(item, summaryText, catalogItem?.notes?.trim());
+        const highlights = this.inventoryItemHighlights(catalogItem?.detailLines, summaryText, catalogItem?.sourceLabel, catalogItem?.rarity, catalogItem?.attunement);
+        const profileTags = [catalogItem?.rarity?.trim(), catalogItem?.attunement?.trim(), catalogItem?.sourceLabel?.trim()]
+            .filter((value): value is string => Boolean(value));
+
+        const facts: Array<{ label: string; value?: string; linkLabel?: string; linkUrl?: string }> = [
+            { label: 'Quantity', value: `${item.quantity}` },
+            { label: 'Weight', value: item.weight != null ? `${item.weight} lb.` : '—' },
+            { label: 'Cost', value: item.costGp != null ? `${item.costGp} gp` : '—' },
+            catalogItem?.sourceUrl?.trim()
+                ? {
+                    label: 'Source',
+                    linkLabel: catalogItem.sourceLabel?.trim() || 'Reference link',
+                    linkUrl: catalogItem.sourceUrl.trim()
+                }
+                : { label: 'Source', value: '—' }
+        ];
+
         this.openDetailDrawer({
             title: item.name,
-            subtitle: `Inventory • ${item.category}`,
-            description: item.notes?.trim() || 'Tracked inventory item details.',
-            bullets: [
-                `Quantity: ${item.quantity}`,
-                `Weight: ${item.weight != null ? `${item.weight} lb` : '—'}`,
-                `Cost: ${item.costGp != null ? `${item.costGp} gp` : '—'}`
-            ]
+            subtitle: item.category,
+            description: summaryText,
+            bullets: highlights,
+            variant: 'inventory-item',
+            metaLine: `Reference • ${item.category.toLowerCase()}`,
+            profileTags: profileTags.length > 0 ? profileTags : [item.category],
+            facts,
+            rulesText
+        });
+    }
+
+    private inventoryItemRulesText(
+        item: { notes?: string },
+        summaryText: string,
+        catalogNotes?: string
+    ): string | null {
+        const notes = item.notes?.trim() || catalogNotes;
+        if (!notes) {
+            return null;
+        }
+
+        return this.normalizeInventoryDetailText(notes) === this.normalizeInventoryDetailText(summaryText) ? null : notes;
+    }
+
+    private inventoryItemHighlights(
+        detailLines: string[] | undefined,
+        summaryText: string,
+        sourceLabel: string | undefined,
+        rarity: string | undefined,
+        attunement: string | undefined
+    ): string[] {
+        const summary = this.normalizeInventoryDetailText(summaryText);
+        const seen = new Set<string>();
+
+        return (detailLines ?? []).filter((line) => {
+            const trimmedLine = line.trim();
+            if (!trimmedLine) {
+                return false;
+            }
+
+            if (sourceLabel?.trim() && trimmedLine === `Source group: ${sourceLabel}`) {
+                return false;
+            }
+
+            if (rarity?.trim() && trimmedLine === `Rarity: ${rarity}`) {
+                return false;
+            }
+
+            if (attunement?.trim() && trimmedLine === `Attunement: ${attunement}`) {
+                return false;
+            }
+
+            const normalizedLine = this.normalizeInventoryDetailText(trimmedLine);
+            if (!normalizedLine || summary.includes(normalizedLine)) {
+                return false;
+            }
+
+            if (seen.has(normalizedLine)) {
+                return false;
+            }
+
+            seen.add(normalizedLine);
+            return true;
         });
     }
 
@@ -3317,6 +3607,487 @@ export class CharacterDetailPageComponent {
         });
     }
 
+    private readonly alignmentDetails: Readonly<Record<string, { description: string; bullets: string[] }>> = {
+        'Lawful Good': {
+            description: 'Lawful good characters combine compassion with duty. They believe mercy, justice, and restraint matter most when they are upheld through honorable action and reliable principles.',
+            bullets: [
+                'Acts with integrity, discipline, and a strong sense of responsibility toward others.',
+                'Favors fair systems, oaths, and institutions when those systems protect the innocent.',
+                'Will often sacrifice comfort or safety to do what is right in a principled way.'
+            ]
+        },
+        'Neutral Good': {
+            description: 'Neutral good characters focus on helping others without being tightly bound to law or rebellion. Their moral compass is guided by kindness, practicality, and conscience.',
+            bullets: [
+                'Puts compassion ahead of ideology or rigid codes.',
+                'Supports rules when they help people, and ignores them when they cause harm.',
+                'Usually seeks the most humane and constructive outcome available.'
+            ]
+        },
+        'Chaotic Good': {
+            description: 'Chaotic good characters value freedom, empathy, and self-expression. They resist oppression and prefer to do good on their own terms rather than through imposed systems.',
+            bullets: [
+                'Distrusts authority that limits liberty or enables cruelty.',
+                'Acts from personal conviction rather than obedience.',
+                'Often protects others by defying unjust expectations, laws, or traditions.'
+            ]
+        },
+        'Lawful Neutral': {
+            description: 'Lawful neutral characters prioritize order, structure, and consistency. They believe systems, discipline, and rules provide stability, even when emotional or moral questions are complicated.',
+            bullets: [
+                'Values hierarchy, routine, contracts, and procedure.',
+                'May choose duty over personal preference or sentiment.',
+                'Can be dependable and fair, but also rigid when flexibility is needed.'
+            ]
+        },
+        'True Neutral': {
+            description: 'True neutral characters tend toward balance, restraint, or simple pragmatism. They avoid extremes and often respond to situations case by case instead of following a fixed creed.',
+            bullets: [
+                'Prefers measured choices over ideological commitments.',
+                'May act as a mediator, observer, or practical survivor.',
+                'Can seem calm and grounded, though sometimes detached.'
+            ]
+        },
+        'Chaotic Neutral': {
+            description: 'Chaotic neutral characters are driven by freedom, impulse, and independence. They resist control and prefer to make choices according to their own instincts and desires.',
+            bullets: [
+                'Protects personal autonomy above conformity or duty.',
+                'Can be spontaneous, unpredictable, and hard to manage.',
+                'May champion freedom sincerely or simply reject restraint.'
+            ]
+        },
+        'Lawful Evil': {
+            description: 'Lawful evil characters use order, hierarchy, and discipline in service of selfish or cruel goals. They are often patient, strategic, and comfortable with systems of control.',
+            bullets: [
+                'Seeks power through structure, enforcement, and leverage.',
+                'Honors rules when they are useful, especially when those rules benefit them.',
+                'Can be coldly reliable, but rarely merciful.'
+            ]
+        },
+        'Neutral Evil': {
+            description: 'Neutral evil characters are motivated by self-interest above all else. They pursue advantage with little concern for fairness, loyalty, or the suffering left behind.',
+            bullets: [
+                'Measures choices by profit, safety, or influence.',
+                'Will cooperate when useful and betray when convenient.',
+                'Often hides ruthlessness behind pragmatism or charm.'
+            ]
+        },
+        'Chaotic Evil': {
+            description: 'Chaotic evil characters embrace destruction, cruelty, or violent selfishness without respect for rules or order. Their desires and impulses override stability, trust, and restraint.',
+            bullets: [
+                'Rejects authority, obligation, and moral restraint.',
+                'Frequently acts through fear, rage, or appetite.',
+                'Creates danger not only for enemies, but often for allies as well.'
+            ]
+        }
+    };
+
+    private readonly lifestyleDetails: Readonly<Record<string, { description: string; bullets: string[] }>> = {
+        wretched: {
+            description: 'A wretched lifestyle means almost no shelter, privacy, or security. Survival comes before dignity, and every day is shaped by exposure, hunger, and danger.',
+            bullets: [
+                'Often sleeps outdoors, in alleys, ruins, or whatever temporary refuge can be found.',
+                'Meals are inconsistent and usually poor in quality.',
+                'This level of poverty makes illness, exhaustion, and social vulnerability far more common.'
+            ]
+        },
+        squalid: {
+            description: 'A squalid lifestyle provides a roof of some kind, but conditions remain filthy, unsafe, and degrading. The character lives with discomfort and constant risk.',
+            bullets: [
+                'Lodging is cramped, dirty, and often infested or poorly maintained.',
+                'Food is cheap and unreliable, and sanitation is poor.',
+                'The character is likely familiar with desperate neighborhoods and hard living.'
+            ]
+        },
+        poor: {
+            description: 'A poor lifestyle covers basic needs but little else. The character can keep going day to day, though comfort, quality, and social standing remain limited.',
+            bullets: [
+                'Meals are simple, lodging is crowded, and clothing is practical rather than refined.',
+                'Money is watched carefully, with little margin for luxuries or mistakes.',
+                'This is stable survival, not true security.'
+            ]
+        },
+        modest: {
+            description: 'A modest lifestyle is respectable and sustainable. It provides decent food, reasonable shelter, and enough stability to keep equipment and reputation in order.',
+            bullets: [
+                'The character can afford ordinary lodging and dependable meals.',
+                'This lifestyle avoids obvious hardship without signaling wealth.',
+                'It suits many adventurers between expeditions.'
+            ]
+        },
+        comfortable: {
+            description: 'A comfortable lifestyle means a clean home or good inn room, quality meals, and the ability to maintain gear and appearances without daily anxiety about coin.',
+            bullets: [
+                'Living quarters are private or semi-private, well-kept, and socially respectable.',
+                'Food, clothing, and services are consistently good rather than merely adequate.',
+                'The character has enough means to appear established and competent in most settlements.'
+            ]
+        },
+        wealthy: {
+            description: 'A wealthy lifestyle supports fine lodging, excellent meals, and access to influential spaces. The character lives with ease and visible signs of status.',
+            bullets: [
+                'Can maintain servants, tailored clothing, and premium accommodations.',
+                'Has easier access to elite venues, contacts, and comforts.',
+                'This lifestyle communicates rank, success, or strong patronage.'
+            ]
+        },
+        aristocratic: {
+            description: 'An aristocratic lifestyle reflects the highest level of luxury and prestige. The character is surrounded by servants, ceremony, expensive tastes, and the expectations that come with power.',
+            bullets: [
+                'Lives among estates, noble courts, or elite circles with significant attention to etiquette.',
+                'Enjoys exceptional food, furnishings, fashion, and social access.',
+                'This lifestyle carries obligations, reputation pressure, and political scrutiny as well as comfort.'
+            ]
+        }
+    };
+
+    private readonly lifestyleCosts: Readonly<Record<string, { perDay: string; perMonth: string }>> = {
+        wretched: { perDay: '—', perMonth: '—' },
+        squalid: { perDay: '1 sp/day', perMonth: '3 gp/month' },
+        poor: { perDay: '2 sp/day', perMonth: '6 gp/month' },
+        modest: { perDay: '1 gp/day', perMonth: '30 gp/month' },
+        comfortable: { perDay: '2 gp/day', perMonth: '60 gp/month' },
+        wealthy: { perDay: '4 gp/day', perMonth: '120 gp/month' },
+        aristocratic: { perDay: '10 gp/day (minimum)', perMonth: '300 gp/month (minimum)' }
+    };
+
+    private readonly speciesLoreDetails: Readonly<Record<string, {
+        history: string;
+        adulthood: string;
+        lifespan: string;
+        height: string;
+        weight: string;
+        bullets: string[];
+    }>> = {
+            Elf: {
+                history: 'Elves are ancient, fey-touched people tied to magic, artistry, and memory. Their cultures are often associated with old forests, refined learning, and a long view of history that makes human kingdoms feel brief by comparison.',
+                adulthood: 'Elves reach physical maturity at roughly the same age as humans, but an elf is not usually regarded as a true adult until around age 100, when experience and identity are considered fully formed.',
+                lifespan: 'Elves commonly live to around 750 years, giving them a very different sense of legacy, patience, grief, and long-term obligation than shorter-lived peoples.',
+                height: 'Elves are typically slender and graceful, ranging from under 5 feet to over 6 feet tall depending on lineage and individual build.',
+                weight: 'Elves usually have lighter, leaner frames than similarly tall humans, emphasizing balance, agility, and a narrow build over bulk.',
+                bullets: [
+                    'Elven culture often prizes artistry, memory, magic, and natural beauty.',
+                    'Their long lives can make them patient, reserved, nostalgic, or slow to fully trust quick-moving cultures.',
+                    'Many elven traditions balance personal freedom with deep continuity across centuries.'
+                ]
+            }
+        };
+
+    private readonly deityFaithDetails: Readonly<Record<string, {
+        description: string;
+        lineItems: Array<{ value: string; label: string; note?: string }>;
+        bullets: string[];
+    }>> = {
+            ilmater: {
+                description: 'Ilmater, the Crying God or Broken God, is a lawful good deity of endurance, suffering, martyrdom, and perseverance. His faith teaches compassion, mercy, and the duty to bear burdens so that others may suffer less.',
+                lineItems: [
+                    { value: 'Lawful Good', label: 'Divine alignment' },
+                    { value: 'Portfolio', label: 'Endurance, suffering, martyrdom, perseverance' },
+                    { value: 'Life, Twilight', label: 'Associated domains' },
+                    { value: 'Hands bound with red cord', label: 'Holy symbol' }
+                ],
+                bullets: [
+                    'Ilmater is closely associated with compassion, patient endurance, and protection of the oppressed, injured, and poor.',
+                    'In Forgotten Realms history, he stood beside Tyr and Torm as part of the Triad, a powerful alliance of lawful good deities.',
+                    'His clergy are known for relieving suffering, ministering to the weak, and opposing cruelty, torture, and needless pain.'
+                ]
+            }
+        };
+
+    private readonly xpThresholds: ReadonlyArray<[number, number]> = [
+        [2, 300], [3, 900], [4, 2700], [5, 6500], [6, 14000],
+        [7, 23000], [8, 34000], [9, 48000], [10, 64000],
+        [11, 85000], [12, 100000], [13, 120000], [14, 140000],
+        [15, 165000], [16, 195000], [17, 225000], [18, 265000],
+        [19, 305000], [20, 355000]
+    ];
+
+    private getSpeciesInfo(speciesName: string) {
+        const match = Object.entries(speciesInfoMap).find(([key]) => key.toLowerCase() === speciesName.trim().toLowerCase());
+        return match?.[1] ?? null;
+    }
+
+    private getSpeciesLore(speciesName: string) {
+        const match = Object.entries(this.speciesLoreDetails).find(([key]) => key.toLowerCase() === speciesName.trim().toLowerCase());
+        return match?.[1] ?? null;
+    }
+
+    private formatAlignmentValue(value: string): string {
+        return value
+            .trim()
+            .replace(/-/g, ' ')
+            .split(/\s+/)
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+    }
+
+    private describeSpeciesAge(speciesName: string, value: string): DetailDrawerContent {
+        const lore = this.getSpeciesLore(speciesName);
+        const parsedAge = Number.parseInt(value, 10);
+        const stage = Number.isFinite(parsedAge)
+            ? parsedAge < 100
+                ? 'This character is physically mature by many humanoid standards, but still young by elven cultural expectations.'
+                : parsedAge < 350
+                    ? 'This character is a fully established adult by elven standards, with significant time to build identity and reputation.'
+                    : 'This character stands within the long historical memory of an elven life, carrying decades or centuries of perspective.'
+            : null;
+
+        return {
+            title: `Age: ${value}`,
+            subtitle: `${speciesName} lifespan`,
+            lineItems: lore
+                ? [
+                    { value, label: 'Current recorded age' },
+                    { value: 'Maturity', label: lore.adulthood },
+                    { value: 'Lifespan', label: lore.lifespan }
+                ]
+                : undefined,
+            description: 'Age is interpreted through species culture, maturity expectations, and lifespan norms.',
+            bullets: [stage].filter((entry): entry is string => Boolean(entry))
+        };
+    }
+
+    private describeSpeciesHeight(speciesName: string, value: string): DetailDrawerContent {
+        const lore = this.getSpeciesLore(speciesName);
+        return {
+            title: `Height: ${value}`,
+            subtitle: `${speciesName} physique`,
+            lineItems: lore
+                ? [
+                    { value, label: 'Current recorded height' },
+                    { value: 'Typical range', label: lore.height }
+                ]
+                : undefined,
+            description: 'Height helps define silhouette, posture, and first-impression presence in scenes and portraits.',
+            bullets: lore ? [lore.weight] : ['Height and build often influence movement style, presence, and how equipment or clothing are visualized.']
+        };
+    }
+
+    private describeSpeciesWeight(speciesName: string, value: string): DetailDrawerContent {
+        const lore = this.getSpeciesLore(speciesName);
+        return {
+            title: `Weight: ${value}`,
+            subtitle: `${speciesName} build`,
+            lineItems: lore
+                ? [
+                    { value, label: 'Current recorded weight' },
+                    { value: 'Typical build', label: lore.weight }
+                ]
+                : undefined,
+            description: 'Weight reflects frame and build, helping describe how the character carries gear and moves through the world.',
+            bullets: lore ? [lore.height] : ['Weight can inform how the character moves, appears, and is described in armor or travel gear.']
+        };
+    }
+
+    openBackgroundRowDetail(label: string, value: string): void {
+        const char = this.character();
+        if (!char) {
+            return;
+        }
+
+        switch (label) {
+            case 'Name': {
+                this.openDetailDrawer({
+                    title: value,
+                    subtitle: 'Character Name',
+                    description: 'This is the identity your character presents to the world and the name allies, rivals, and legends will remember.',
+                    bullets: [
+                        `Class: ${char.className}`,
+                        `Background: ${this.displayBackground()}`,
+                        `Species: ${char.race}`
+                    ]
+                });
+                break;
+            }
+            case 'Race': {
+                const race = this.raceLookup.get(value.toLowerCase());
+                const speciesInfo = this.getSpeciesInfo(value);
+                const speciesLore = this.getSpeciesLore(value);
+                this.openDetailDrawer({
+                    title: value,
+                    subtitle: 'Species',
+                    description: speciesLore?.history ?? speciesInfo?.summary ?? race?.description ?? 'A unique species with its own history, culture, and traits.',
+                    lineItems: [
+                        ...(speciesInfo?.speciesDetails?.coreTraits ?? []).map((item) => ({ value: item.value, label: item.label })),
+                        ...(speciesLore
+                            ? [
+                                { value: 'Adulthood', label: speciesLore.adulthood },
+                                { value: 'Lifespan', label: speciesLore.lifespan }
+                            ]
+                            : [])
+                    ],
+                    secondaryHeading: 'Notable species traits',
+                    bullets: speciesInfo?.speciesDetails?.traitNotes?.map((item) => `${item.title}: ${item.summary}`)
+                        ?? speciesLore?.bullets
+                        ?? race?.traits
+                        ?? []
+                });
+                break;
+            }
+            case 'Background': {
+                const key = value.trim();
+                const backgroundDetail = backgroundDetailOverrides[key];
+                const description = key === 'Sage'
+                    ? 'You spent years learning the lore of the multiverse, studying manuscripts, scrolls, and expert teachers until deep research became part of your identity.'
+                    : backgroundDetail?.description ?? backgroundDescriptionFallbacks[key] ?? 'A background that shaped who your character was before adventuring.';
+                const skills = backgroundDetail?.skillProficiencies ?? backgroundSkillProficienciesFallbacks[key] ?? 'Not recorded';
+                const tools = backgroundDetail?.toolProficiencies ?? backgroundToolProficienciesFallbacks[key] ?? 'Not recorded';
+                const languages = backgroundDetail?.languages ?? backgroundLanguagesFallbacks[key] ?? 'Not recorded';
+                this.openDetailDrawer({
+                    title: key,
+                    subtitle: 'Background',
+                    description,
+                    lineItems: [
+                        { value: skills, label: 'Skill proficiencies' },
+                        { value: tools, label: 'Tool proficiencies' },
+                        { value: languages, label: 'Languages' }
+                    ],
+                    secondaryHeading: 'Background details',
+                    bullets: key === 'Sage'
+                        ? [
+                            'Researcher: if you do not know a piece of lore, you often know where or from whom it can be learned.',
+                            'Typical specialties include alchemy, astronomy, history, religion, magic theory, and other deep academic fields.',
+                            'Sages are often driven by knowledge, mystery, scholarship, and the preservation of dangerous or valuable truths.'
+                        ]
+                        : (backgroundDetail?.choices ?? []).map((choice) => `${choice.title}: ${choice.description ?? choice.options.slice(0, 3).join(', ')}`)
+                });
+                break;
+            }
+            case 'Class & Level': {
+                const className = char.className;
+                const classKey = Object.keys(classLevelOneFeatures).find((k) => k.toLowerCase() === className.toLowerCase());
+                const levelEntries = classKey ? classLevelOneFeatures[classKey] : undefined;
+                const levelOneFeatures = levelEntries?.find((e) => e.level === 1)?.features ?? [];
+                const classInfo = Object.entries(classInfoMap).find(([key]) => key.toLowerCase() === className.toLowerCase())?.[1] ?? null;
+                const classDetail = Object.entries(classDetailFallbacks).find(([key]) => key.toLowerCase() === className.toLowerCase())?.[1] ?? null;
+                this.openDetailDrawer({
+                    title: className,
+                    subtitle: `Level ${char.level} ${className}`,
+                    description: classDetail?.tagline ?? classInfo?.summary ?? `${className} is a class with distinct combat, exploration, and progression tools.`,
+                    lineItems: [
+                        ...(classDetail?.coreTraits?.slice(0, 4).map((item) => ({ value: item.value, label: item.label })) ?? []),
+                        ...(classInfo ? [{ value: classInfo.source, label: 'Source' }] : [])
+                    ],
+                    secondaryHeading: 'Class profile',
+                    bullets: [
+                        ...(classInfo?.highlights ?? []),
+                        ...(classDetail?.levelOneGains?.slice(0, 3) ?? []),
+                        ...(classDetail?.featureNotes?.slice(0, 3).map((note) => `${note.title}: ${note.summary}`) ?? []),
+                        ...levelOneFeatures.slice(0, 3).map((feature) => `${feature.name}: ${feature.description ?? 'Signature class feature.'}`)
+                    ]
+                });
+                break;
+            }
+            case 'Alignment': {
+                const normalized = this.formatAlignmentValue(value);
+                const detail = this.alignmentDetails[normalized];
+                this.openDetailDrawer({
+                    title: normalized,
+                    subtitle: 'Alignment',
+                    description: detail?.description ?? 'An ethical and moral outlook that guides how this character thinks and acts in the world.',
+                    bullets: detail?.bullets ?? [
+                        'Alignment reflects how a character tends to approach duty, freedom, mercy, selfishness, and restraint.',
+                        'It is a roleplay tool rather than a prison, and can shift as the character changes.',
+                        'Consistent behavior gives the alignment meaning at the table.'
+                    ]
+                });
+                break;
+            }
+            case 'Lifestyle': {
+                const key = value.trim().toLowerCase();
+                const detail = this.lifestyleDetails[key];
+                const cost = this.lifestyleCosts[key];
+                this.openDetailDrawer({
+                    title: value,
+                    subtitle: 'Lifestyle Expense',
+                    description: detail?.description ?? "A chosen lifestyle that determines your character's living standards between adventures.",
+                    lineItems: cost
+                        ? [
+                            { value: cost.perDay, label: 'Typical cost per day' },
+                            { value: cost.perMonth, label: 'Typical cost per 30 days' }
+                        ]
+                        : undefined,
+                    bullets: detail?.bullets ?? [
+                        'Lifestyle affects lodging, meals, comfort, and how respectable your day-to-day living appears.',
+                        'It can change how NPCs perceive your means, manners, and social standing.',
+                        'Many campaigns track lifestyle during downtime or long urban stays.'
+                    ]
+                });
+                break;
+            }
+            case 'Faith': {
+                const normalizedFaith = value.trim().toLowerCase();
+                const detail = this.deityFaithDetails[normalizedFaith];
+                this.openDetailDrawer({
+                    title: value,
+                    subtitle: 'Faith',
+                    description: value && value !== 'Not recorded'
+                        ? detail?.description ?? 'This reflects the deity, philosophy, or spiritual path that influences your character\'s worldview and behavior.'
+                        : 'No faith or spiritual tradition has been recorded for this character yet.',
+                    lineItems: detail?.lineItems,
+                    secondaryHeading: detail ? 'Faith and worship' : undefined,
+                    bullets: detail?.bullets ?? [
+                        'Faith can shape ideals, rituals, oaths, and roleplay choices.',
+                        'It may affect relationships with temples, priests, cults, and divine factions.',
+                        'Some campaigns also tie faith into downtime, omens, or divine favor.'
+                    ]
+                });
+                break;
+            }
+            case 'Experience': {
+                const currentXp = typeof char.experiencePoints === 'number' ? Math.max(0, Math.trunc(char.experiencePoints)) : null;
+                const nextThreshold = currentXp != null ? this.xpThresholds.find(([, xp]) => xp > currentXp) : null;
+                const bullets: string[] = [];
+                if (currentXp != null && nextThreshold) {
+                    const [nextLevel, nextXp] = nextThreshold;
+                    const needed = nextXp - currentXp;
+                    bullets.push(`${needed.toLocaleString()} XP needed to reach level ${nextLevel}.`);
+                    bullets.push(`Next milestone: ${nextXp.toLocaleString()} XP.`);
+                } else if (currentXp != null) {
+                    bullets.push('You have reached the maximum level — no further XP thresholds apply.');
+                }
+                bullets.push('XP is typically awarded at the end of an encounter or session by your DM.');
+                this.openDetailDrawer({
+                    title: 'Experience Points',
+                    subtitle: currentXp != null ? `${currentXp.toLocaleString()} XP` : 'Not recorded',
+                    description: "Experience points track your character's growth and advancement toward the next level.",
+                    bullets
+                });
+                break;
+            }
+            case 'Gender':
+            case 'Hair':
+            case 'Eyes':
+            case 'Skin': {
+                this.openDetailDrawer({
+                    title: `${label}: ${value}`,
+                    subtitle: 'Appearance',
+                    description: `This appearance detail helps define how the character is perceived at a glance and supports more consistent roleplay and scene description.`,
+                    bullets: [
+                        'Use appearance details to anchor introductions, disguises, portraits, and witness descriptions.',
+                        'These traits can help make recurring NPC interactions and party roleplay feel more grounded.',
+                        'Update them as scars, aging, magical changes, or travel wear alter the character over time.'
+                    ]
+                });
+                break;
+            }
+            case 'Age': {
+                this.openDetailDrawer(this.describeSpeciesAge(char.race, value));
+                break;
+            }
+            case 'Height': {
+                this.openDetailDrawer(this.describeSpeciesHeight(char.race, value));
+                break;
+            }
+            case 'Weight': {
+                this.openDetailDrawer(this.describeSpeciesWeight(char.race, value));
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
     setSpellFilter(filter: SpellFilter): void {
         this.activeSpellFilter.set(filter);
     }
@@ -3330,6 +4101,7 @@ export class CharacterDetailPageComponent {
         this.activeDetailDrawer.set(null);
         this.hpManagerOpen.set(false);
         this.coinManagerOpen.set(false);
+        this.inventoryManagerOpen.set(false);
         this.spellManagerTab.set('prepared');
         this.spellManagerSearch.set('');
         this.spellManagerLevelFilter.set('all');
@@ -3549,6 +4321,46 @@ export class CharacterDetailPageComponent {
         }));
     }
 
+    private async persistInventoryEntries(entries: PersistedInventoryEntry[]): Promise<void> {
+        const char = this.character();
+        if (!char || !char.canEdit) {
+            return;
+        }
+
+        const currentState: PersistedBuilderState = this.persistedBuilderState() ?? {};
+        const normalizedEntries = this.expandIndependentContainers(entries.map((entry) => this.normalizeInventoryEntry(entry)));
+        const updatedState: PersistedBuilderState = {
+            ...currentState,
+            inventoryEntries: normalizedEntries
+        };
+        const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
+
+        await this.store.updateCharacter(this.characterId, {
+            name: char.name,
+            playerName: char.playerName,
+            race: char.race,
+            className: char.className,
+            role: char.role,
+            level: char.level,
+            background: char.background,
+            notes: updatedNotes,
+            campaignId: char.campaignId,
+            hitPoints: char.hitPoints,
+            maxHitPoints: char.maxHitPoints
+        });
+
+        this.cdr.detectChanges();
+    }
+
+    private resetInventoryDraft(): void {
+        this.inventoryDraftName.set('');
+        this.inventoryDraftCategory.set('Adventuring Gear');
+        this.inventoryDraftQuantity.set('1');
+        this.inventoryDraftWeight.set('');
+        this.inventoryDraftCostGp.set('');
+        this.inventoryDraftNotes.set('');
+    }
+
     onSpellSearchChanged(value: string): void {
         this.spellSearchTerm.set(value);
     }
@@ -3582,6 +4394,676 @@ export class CharacterDetailPageComponent {
         this.inventorySearchTerm.set(value);
     }
 
+    openInventoryManagerPopup(): void {
+        const char = this.character();
+        if (!char?.canEdit) {
+            return;
+        }
+
+        this.inventoryManagerOpening.set(true);
+        this.cdr.detectChanges();
+
+        setTimeout(() => {
+            this.activeDetailDrawer.set(null);
+            this.hpManagerOpen.set(false);
+            this.coinManagerOpen.set(false);
+            this.spellManagerOpen.set(false);
+            this.inventoryManagerSearch.set('');
+            this.inventoryCurrentExpanded.set(true);
+            this.inventoryManagerExpandedSections.set(new Set());
+            this.inventoryCatalogExpanded.set(true);
+            this.inventoryManagerContainedExpandedItem.set('');
+            this.inventoryManagerMoveTargets.set({});
+            this.inventoryDraftAddTarget.set('equipment');
+            this.inventoryCatalogCategory.set('All');
+            this.resetInventoryDraft();
+            this.inventoryManagerOpening.set(false);
+            this.inventoryManagerOpen.set(true);
+        }, 0);
+    }
+
+    closeInventoryManagerPopup(): void {
+        this.inventoryManagerOpen.set(false);
+    }
+
+    onInventoryManagerSearchChanged(value: string): void {
+        this.inventoryManagerSearch.set(value);
+    }
+
+    setInventoryCatalogCategory(category: string): void {
+        this.inventoryCatalogCategory.set(category);
+    }
+
+    toggleInventoryCatalogItemDetail(name: string): void {
+        this.inventoryCatalogExpandedItem.set(this.inventoryCatalogExpandedItem() === name ? '' : name);
+    }
+
+    inventoryContainedItemKey(containerIndex: number, copyIndex: number, itemIndex: number): string {
+        return `container_${containerIndex}_${copyIndex}_${itemIndex}`;
+    }
+
+    toggleInventoryManagerContainedItemDetail(key: string): void {
+        this.inventoryManagerContainedExpandedItem.set(this.inventoryManagerContainedExpandedItem() === key ? '' : key);
+    }
+
+    inventoryMoveOptions(currentContainerIndex: number | null): DropdownOption[] {
+        return this.inventoryContainerTargetOptions(currentContainerIndex);
+    }
+
+    inventoryAddOptions(): DropdownOption[] {
+        return this.inventoryContainerTargetOptions(null);
+    }
+
+    private inventoryContainerTargetOptions(currentContainerIndex: number | null): DropdownOption[] {
+        const options: DropdownOption[] = [
+            { label: 'Equipment', value: 'equipment' }
+        ];
+
+        for (const bucket of this.inventoryManagerContainerBuckets()) {
+            options.push({
+                label: this.containerBucketDisplayName(bucket),
+                value: `container:${bucket.sourceIndex}`
+            });
+        }
+
+        return options;
+    }
+
+    setInventoryDraftAddTarget(value: string | number): void {
+        this.inventoryDraftAddTarget.set(String(value || 'equipment'));
+    }
+
+    async onInventoryCatalogAddTargetChanged(item: (typeof equipmentCatalog)[number], value: string | number): Promise<void> {
+        const target = String(value || 'equipment');
+        await this.addInventoryCatalogItem(item, target);
+    }
+
+    inventoryDefaultMoveTarget(currentContainerIndex: number | null): string {
+        return currentContainerIndex == null ? 'equipment' : `container:${currentContainerIndex}`;
+    }
+
+    inventoryMoveTarget(itemKey: string, currentContainerIndex: number | null): string {
+        return this.inventoryManagerMoveTargets()[itemKey] ?? this.inventoryDefaultMoveTarget(currentContainerIndex);
+    }
+
+    setInventoryMoveTarget(itemKey: string, value: string | number): void {
+        const nextValue = String(value || '');
+        this.inventoryManagerMoveTargets.update((current) => ({
+            ...current,
+            [itemKey]: nextValue
+        }));
+    }
+
+    async onInventoryMoveTargetChanged(index: number, itemKey: string, value: string | number): Promise<void> {
+        const nextValue = String(value || '');
+        const defaultTarget = this.inventoryDefaultMoveTarget(null);
+
+        if (!nextValue || nextValue === defaultTarget) {
+            this.setInventoryMoveTarget(itemKey, '');
+            return;
+        }
+
+        this.setInventoryMoveTarget(itemKey, nextValue);
+        await this.moveInventoryEntry(index, nextValue);
+        this.setInventoryMoveTarget(itemKey, '');
+    }
+
+    async onContainedInventoryMoveTargetChanged(containerIndex: number, containedIndex: number, itemKey: string, value: string | number): Promise<void> {
+        const nextValue = String(value || '');
+        const defaultTarget = this.inventoryDefaultMoveTarget(containerIndex);
+
+        if (!nextValue || nextValue === defaultTarget) {
+            this.setInventoryMoveTarget(itemKey, '');
+            return;
+        }
+
+        this.setInventoryMoveTarget(itemKey, nextValue);
+        await this.moveContainedInventoryEntry(containerIndex, containedIndex, nextValue);
+        this.setInventoryMoveTarget(itemKey, '');
+    }
+
+    async moveInventoryEntryToTarget(index: number, itemKey: string): Promise<void> {
+        const target = this.inventoryMoveTarget(itemKey, null);
+        if (!target) {
+            return;
+        }
+
+        await this.moveInventoryEntry(index, target);
+        this.setInventoryMoveTarget(itemKey, '');
+    }
+
+    async moveContainedInventoryEntryToTarget(containerIndex: number, containedIndex: number, itemKey: string): Promise<void> {
+        const target = this.inventoryMoveTarget(itemKey, containerIndex);
+        if (!target) {
+            return;
+        }
+
+        await this.moveContainedInventoryEntry(containerIndex, containedIndex, target);
+        this.setInventoryMoveTarget(itemKey, '');
+    }
+
+    inventoryContainedSummaryText(item: PersistedInventoryEntry): string {
+        const catalogItem = this.catalogLookup.get(item.name.trim().toLowerCase());
+        return catalogItem?.summary?.trim() || item.notes?.trim() || catalogItem?.notes?.trim() || 'No additional notes are available for this item yet.';
+    }
+
+    inventoryContainedRulesText(item: PersistedInventoryEntry): string | null {
+        const catalogItem = this.catalogLookup.get(item.name.trim().toLowerCase());
+        const summaryText = this.inventoryContainedSummaryText(item);
+        return this.inventoryItemRulesText(item, summaryText, catalogItem?.notes?.trim());
+    }
+
+    inventoryContainedHighlights(item: PersistedInventoryEntry): string[] {
+        const catalogItem = this.catalogLookup.get(item.name.trim().toLowerCase());
+        const summaryText = this.inventoryContainedSummaryText(item);
+        return this.inventoryItemHighlights(catalogItem?.detailLines, summaryText, catalogItem?.sourceLabel, catalogItem?.rarity, catalogItem?.attunement);
+    }
+
+    inventoryContainedRarity(item: PersistedInventoryEntry): string | undefined {
+        return this.catalogLookup.get(item.name.trim().toLowerCase())?.rarity?.trim() || undefined;
+    }
+
+    inventoryContainedAttunement(item: PersistedInventoryEntry): string | undefined {
+        return this.catalogLookup.get(item.name.trim().toLowerCase())?.attunement?.trim() || undefined;
+    }
+
+    inventoryContainedSourceUrl(item: PersistedInventoryEntry): string | undefined {
+        return this.catalogLookup.get(item.name.trim().toLowerCase())?.sourceUrl?.trim() || undefined;
+    }
+
+    inventoryContainedSourceLabel(item: PersistedInventoryEntry): string | undefined {
+        return this.catalogLookup.get(item.name.trim().toLowerCase())?.sourceLabel?.trim() || undefined;
+    }
+
+    toggleInventoryManagerSection(sectionKey: string): void {
+        this.inventoryManagerExpandedSections.update((expanded) => {
+            const next = new Set(expanded);
+            if (next.has(sectionKey)) {
+                next.delete(sectionKey);
+            } else {
+                next.add(sectionKey);
+            }
+            return next;
+        });
+    }
+
+    isInventoryManagerSectionExpanded(sectionKey: string): boolean {
+        return this.inventoryManagerExpandedSections().has(sectionKey);
+    }
+
+    inventoryManagerContainerItemCount(row: { entry: PersistedInventoryEntry }): number {
+        return (row.entry.containedItems ?? []).reduce((sum, item) => sum + Math.max(1, item.quantity || 1), 0);
+    }
+
+    inventoryManagerContainerWeight(row: { entry: PersistedInventoryEntry }): string {
+        const totalWeight = this.getInventoryEntryWeight(row.entry);
+        return totalWeight > 0
+            ? `${Number.isInteger(totalWeight) ? totalWeight : totalWeight.toFixed(1)} lb.`
+            : '0 lb.';
+    }
+
+    inventoryCatalogSummaryText(item: (typeof equipmentCatalog)[number]): string {
+        return item.summary?.trim() || item.notes?.trim() || 'No additional notes are available for this item yet.';
+    }
+
+    inventoryCatalogRulesText(item: (typeof equipmentCatalog)[number]): string | null {
+        const notes = item.notes?.trim();
+        if (!notes) {
+            return null;
+        }
+
+        const summary = item.summary?.trim();
+        if (!summary) {
+            return null;
+        }
+
+        return this.normalizeInventoryDetailText(notes) === this.normalizeInventoryDetailText(summary) ? null : notes;
+    }
+
+    private normalizeInventoryDetailText(value: string): string {
+        return value
+            .trim()
+            .toLowerCase()
+            .replace(/[.,;:!?]+/g, '')
+            .replace(/\s+/g, ' ');
+    }
+
+    onInventoryDraftInputChanged(field: InventoryDraftField, value: string): void {
+        switch (field) {
+            case 'name':
+                this.inventoryDraftName.set(value);
+                return;
+            case 'category':
+                this.inventoryDraftCategory.set(value);
+                return;
+            case 'quantity':
+                this.inventoryDraftQuantity.set(value);
+                return;
+            case 'weight':
+                this.inventoryDraftWeight.set(value);
+                return;
+            case 'costGp':
+                this.inventoryDraftCostGp.set(value);
+                return;
+            case 'notes':
+                this.inventoryDraftNotes.set(value);
+                return;
+        }
+    }
+
+    async addInventoryEntryFromDraft(): Promise<void> {
+        const char = this.character();
+        if (!char?.canEdit) {
+            return;
+        }
+
+        const name = this.inventoryDraftName().trim();
+        if (!name) {
+            return;
+        }
+
+        const category = this.inventoryDraftCategory().trim() || 'Adventuring Gear';
+        const quantity = Math.max(1, this.parseInteger(this.inventoryDraftQuantity()));
+        const weight = this.parseOptionalNumber(this.inventoryDraftWeight());
+        const costGp = this.parseOptionalNumber(this.inventoryDraftCostGp());
+        const notes = this.inventoryDraftNotes().trim();
+        const isContainer = this.isContainerItemName(name);
+
+        const entry: PersistedInventoryEntry = this.normalizeInventoryEntry({
+            name,
+            category,
+            quantity,
+            weight: weight ?? undefined,
+            costGp: costGp ?? undefined,
+            notes: notes || undefined,
+            isContainer,
+            containedItems: [],
+            maxCapacity: isContainer ? this.getContainerCapacity(name) : undefined
+        });
+
+        const target = this.inventoryDraftAddTarget();
+        await this.persistInventoryEntries(this.addInventoryEntryToTarget(this.normalizedInventoryEntries(), entry, target));
+
+        this.resetInventoryDraft();
+        this.inventoryDraftAddTarget.set('equipment');
+    }
+
+    async addInventoryCatalogItem(item: (typeof equipmentCatalog)[number], target = 'equipment'): Promise<void> {
+        const char = this.character();
+        if (!char?.canEdit) {
+            return;
+        }
+
+        const name = item.name.trim();
+        if (!name) {
+            return;
+        }
+
+        const isContainer = this.isContainerItemName(name);
+        const entry: PersistedInventoryEntry = this.normalizeInventoryEntry({
+            name,
+            category: item.category,
+            quantity: 1,
+            weight: typeof item.weight === 'number' ? item.weight : undefined,
+            costGp: typeof item.costGp === 'number' ? item.costGp : undefined,
+            notes: item.notes?.trim() || item.summary?.trim() || undefined,
+            isContainer,
+            containedItems: [],
+            maxCapacity: isContainer ? this.getContainerCapacity(name) : undefined
+        });
+
+        await this.persistInventoryEntries(this.addInventoryEntryToTarget(this.normalizedInventoryEntries(), entry, target));
+    }
+
+    private addInventoryEntryToTarget(entries: PersistedInventoryEntry[], entry: PersistedInventoryEntry, target: string): PersistedInventoryEntry[] {
+        const destination = this.parseInventoryMoveTarget(target);
+        if (!destination || destination.kind === 'equipment') {
+            return [...entries, entry];
+        }
+
+        const destinationIndex = destination.containerIndex;
+        if (destinationIndex < 0 || destinationIndex >= entries.length) {
+            return [...entries, entry];
+        }
+
+        return entries.map((currentEntry, currentIndex) => {
+            if (currentIndex !== destinationIndex) {
+                return currentEntry;
+            }
+
+            return {
+                ...currentEntry,
+                isContainer: true,
+                containedItems: this.mergeDuplicateContainedItems([
+                    ...(currentEntry.containedItems ?? []),
+                    entry
+                ]),
+                maxCapacity: currentEntry.maxCapacity ?? this.getContainerCapacity(currentEntry.name)
+            };
+        });
+    }
+
+    async removeInventoryEntryByIndex(index: number): Promise<void> {
+        const char = this.character();
+        if (!char?.canEdit) {
+            return;
+        }
+
+        const current = this.normalizedInventoryEntries();
+        if (index < 0 || index >= current.length) {
+            return;
+        }
+
+        await this.persistInventoryEntries(current.filter((_, currentIndex) => currentIndex !== index));
+    }
+
+    async adjustInventoryEntryQuantity(index: number, delta: number): Promise<void> {
+        const current = this.normalizedInventoryEntries();
+        if (index < 0 || index >= current.length) {
+            return;
+        }
+
+        const currentQuantity = Math.max(1, Math.trunc(Number(current[index].quantity) || 1));
+        const nextQuantity = Math.max(1, currentQuantity + Math.trunc(delta || 0));
+        if (nextQuantity === currentQuantity) {
+            return;
+        }
+
+        await this.persistInventoryEntries(
+            current.map((entry, entryIndex) => entryIndex === index ? { ...entry, quantity: nextQuantity } : entry)
+        );
+    }
+
+    async setInventoryEntryQuantity(index: number, value: string): Promise<void> {
+        const current = this.normalizedInventoryEntries();
+        if (index < 0 || index >= current.length) {
+            return;
+        }
+
+        const currentQuantity = Math.max(1, Math.trunc(Number(current[index].quantity) || 1));
+        const nextQuantity = Math.max(1, Math.trunc(Number(value) || 1));
+        if (nextQuantity === currentQuantity) {
+            return;
+        }
+
+        await this.persistInventoryEntries(
+            current.map((entry, entryIndex) => entryIndex === index ? { ...entry, quantity: nextQuantity } : entry)
+        );
+    }
+
+    private async moveInventoryEntry(index: number, target: string): Promise<void> {
+        const char = this.character();
+        if (!char?.canEdit) {
+            return;
+        }
+
+        const destination = this.parseInventoryMoveTarget(target);
+        if (!destination || destination.kind === 'equipment') {
+            return;
+        }
+
+        const current = this.normalizedInventoryEntries();
+        if (index < 0 || index >= current.length) {
+            return;
+        }
+
+        const sourceItem = this.normalizeInventoryEntry(current[index]);
+        const destinationIndex = destination.containerIndex;
+        if (destinationIndex < 0 || destinationIndex >= current.length || destinationIndex === index) {
+            return;
+        }
+
+        const entriesWithoutSource = current.filter((_, currentIndex) => currentIndex !== index);
+        const adjustedDestinationIndex = destinationIndex > index ? destinationIndex - 1 : destinationIndex;
+        if (adjustedDestinationIndex < 0 || adjustedDestinationIndex >= entriesWithoutSource.length) {
+            return;
+        }
+
+        const updatedEntries = entriesWithoutSource.map((entry, entryIndex) => {
+            if (entryIndex !== adjustedDestinationIndex) {
+                return entry;
+            }
+
+            const nextContained = this.mergeDuplicateContainedItems([
+                ...(entry.containedItems ?? []),
+                sourceItem
+            ]);
+
+            return {
+                ...entry,
+                isContainer: true,
+                containedItems: nextContained,
+                maxCapacity: entry.maxCapacity ?? this.getContainerCapacity(entry.name)
+            };
+        });
+
+        await this.persistInventoryEntries(updatedEntries);
+    }
+
+    async removeContainedInventoryEntry(containerIndex: number, containedIndex: number): Promise<void> {
+        const char = this.character();
+        if (!char?.canEdit) {
+            return;
+        }
+
+        const current = this.normalizedInventoryEntries();
+        if (containerIndex < 0 || containerIndex >= current.length) {
+            return;
+        }
+
+        const container = current[containerIndex];
+        const containedItems = container.containedItems ?? [];
+        if (containedIndex < 0 || containedIndex >= containedItems.length) {
+            return;
+        }
+
+        const updatedEntries = current.map((entry, entryIndex) => {
+            if (entryIndex !== containerIndex) {
+                return entry;
+            }
+
+            return {
+                ...entry,
+                containedItems: containedItems.filter((_, itemIndex) => itemIndex !== containedIndex)
+            };
+        });
+
+        await this.persistInventoryEntries(updatedEntries);
+    }
+
+    async adjustContainedInventoryEntryQuantity(containerIndex: number, containedIndex: number, delta: number): Promise<void> {
+        const current = this.normalizedInventoryEntries();
+        if (containerIndex < 0 || containerIndex >= current.length) {
+            return;
+        }
+
+        const container = current[containerIndex];
+        const containedItems = container.containedItems ?? [];
+        if (containedIndex < 0 || containedIndex >= containedItems.length) {
+            return;
+        }
+
+        const currentQuantity = Math.max(1, Math.trunc(Number(containedItems[containedIndex].quantity) || 1));
+        const nextQuantity = Math.max(1, currentQuantity + Math.trunc(delta || 0));
+        if (nextQuantity === currentQuantity) {
+            return;
+        }
+
+        const updatedEntries = current.map((entry, entryIndex) => {
+            if (entryIndex !== containerIndex) {
+                return entry;
+            }
+
+            return {
+                ...entry,
+                containedItems: containedItems.map((item, itemIndex) => itemIndex === containedIndex ? { ...item, quantity: nextQuantity } : item)
+            };
+        });
+
+        await this.persistInventoryEntries(updatedEntries);
+    }
+
+    async setContainedInventoryEntryQuantity(containerIndex: number, containedIndex: number, value: string): Promise<void> {
+        const current = this.normalizedInventoryEntries();
+        if (containerIndex < 0 || containerIndex >= current.length) {
+            return;
+        }
+
+        const container = current[containerIndex];
+        const containedItems = container.containedItems ?? [];
+        if (containedIndex < 0 || containedIndex >= containedItems.length) {
+            return;
+        }
+
+        const currentQuantity = Math.max(1, Math.trunc(Number(containedItems[containedIndex].quantity) || 1));
+        const nextQuantity = Math.max(1, Math.trunc(Number(value) || 1));
+        if (nextQuantity === currentQuantity) {
+            return;
+        }
+
+        const updatedEntries = current.map((entry, entryIndex) => {
+            if (entryIndex !== containerIndex) {
+                return entry;
+            }
+
+            return {
+                ...entry,
+                containedItems: containedItems.map((item, itemIndex) => itemIndex === containedIndex ? { ...item, quantity: nextQuantity } : item)
+            };
+        });
+
+        await this.persistInventoryEntries(updatedEntries);
+    }
+
+    private async moveContainedInventoryEntry(containerIndex: number, containedIndex: number, target: string): Promise<void> {
+        const char = this.character();
+        if (!char?.canEdit) {
+            return;
+        }
+
+        const destination = this.parseInventoryMoveTarget(target);
+        if (!destination) {
+            return;
+        }
+
+        const current = this.normalizedInventoryEntries();
+        if (containerIndex < 0 || containerIndex >= current.length) {
+            return;
+        }
+
+        const sourceContainer = current[containerIndex];
+        const sourceContainedItems = sourceContainer.containedItems ?? [];
+        if (containedIndex < 0 || containedIndex >= sourceContainedItems.length) {
+            return;
+        }
+
+        const movedItem = this.normalizeInventoryEntry(sourceContainedItems[containedIndex]);
+
+        if (destination.kind === 'container' && destination.containerIndex === containerIndex) {
+            return;
+        }
+
+        const entriesWithoutContained = current.map((entry, entryIndex) => {
+            if (entryIndex !== containerIndex) {
+                return entry;
+            }
+
+            return {
+                ...entry,
+                containedItems: sourceContainedItems.filter((_, itemIndex) => itemIndex !== containedIndex)
+            };
+        });
+
+        if (destination.kind === 'equipment') {
+            await this.persistInventoryEntries(this.addToEquipmentEntries(entriesWithoutContained, movedItem));
+            return;
+        }
+
+        const destinationIndex = destination.containerIndex;
+        if (destinationIndex < 0 || destinationIndex >= entriesWithoutContained.length) {
+            return;
+        }
+
+        const updatedEntries = entriesWithoutContained.map((entry, entryIndex) => {
+            if (entryIndex !== destinationIndex) {
+                return entry;
+            }
+
+            const nextContained = this.mergeDuplicateContainedItems([
+                ...(entry.containedItems ?? []),
+                movedItem
+            ]);
+
+            return {
+                ...entry,
+                isContainer: true,
+                containedItems: nextContained,
+                maxCapacity: entry.maxCapacity ?? this.getContainerCapacity(entry.name)
+            };
+        });
+
+        await this.persistInventoryEntries(updatedEntries);
+    }
+
+    private parseInventoryMoveTarget(value: string): { kind: 'equipment' } | { kind: 'container'; containerIndex: number } | null {
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return null;
+        }
+
+        if (trimmed === 'equipment') {
+            return { kind: 'equipment' };
+        }
+
+        if (!trimmed.startsWith('container:')) {
+            return null;
+        }
+
+        const containerIndex = Number(trimmed.slice('container:'.length));
+        if (!Number.isInteger(containerIndex) || containerIndex < 0) {
+            return null;
+        }
+
+        return { kind: 'container', containerIndex };
+    }
+
+    private addToEquipmentEntries(entries: PersistedInventoryEntry[], item: PersistedInventoryEntry): PersistedInventoryEntry[] {
+        const existingIndex = entries.findIndex((entry) =>
+            !entry.isContainer && this.hasSameInventoryIdentity(entry, item)
+        );
+
+        if (existingIndex < 0) {
+            return [...entries, item];
+        }
+
+        return entries.map((entry, entryIndex) => {
+            if (entryIndex !== existingIndex) {
+                return entry;
+            }
+
+            const mergedChildren = this.mergeDuplicateContainedItems([
+                ...(entry.containedItems ?? []),
+                ...(item.containedItems ?? [])
+            ]);
+
+            return {
+                ...entry,
+                quantity: entry.quantity + item.quantity,
+                weight: entry.weight ?? item.weight,
+                costGp: entry.costGp ?? item.costGp,
+                notes: entry.notes ?? item.notes,
+                containedItems: mergedChildren,
+                isContainer: entry.isContainer || item.isContainer || mergedChildren.length > 0,
+                maxCapacity: entry.maxCapacity ?? item.maxCapacity
+            };
+        });
+    }
+
+    private hasSameInventoryIdentity(left: PersistedInventoryEntry, right: PersistedInventoryEntry): boolean {
+        return left.name.trim().toLowerCase() === right.name.trim().toLowerCase()
+            && left.category.trim().toLowerCase() === right.category.trim().toLowerCase();
+    }
+
     openCurrencyManager(): void {
         const char = this.character();
         if (!char) {
@@ -3590,6 +5072,7 @@ export class CharacterDetailPageComponent {
 
         this.activeDetailDrawer.set(null);
         this.hpManagerOpen.set(false);
+        this.inventoryManagerOpen.set(false);
         this.coinAdjustInput.set(this.createEmptyCurrencyState());
         this.partyCoinAdjustInput.set(this.createEmptyCurrencyState());
         this.coinLifestyleExpanded.set(false);
@@ -4312,24 +5795,20 @@ export class CharacterDetailPageComponent {
             return { cleanedNotes: '', state: null };
         }
 
-        const start = raw.indexOf(this.builderStateStartTag);
-        const end = raw.indexOf(this.builderStateEndTag);
-
-        if (start === -1 || end === -1 || end < start) {
+        const blockPattern = /\[DK_BUILDER_STATE_START\]([\s\S]*?)\[DK_BUILDER_STATE_END\]/g;
+        const matches = [...raw.matchAll(blockPattern)];
+        if (matches.length === 0) {
             return { cleanedNotes: raw, state: null };
         }
 
-        const jsonStart = start + this.builderStateStartTag.length;
-        const jsonText = raw.slice(jsonStart, end).trim();
-        const before = raw.slice(0, start).trimEnd();
-        const after = raw.slice(end + this.builderStateEndTag.length).trimStart();
-        const cleanedNotes = [before, after].filter((part) => part.length > 0).join('\n\n').trim();
+        const latestJsonText = (matches[matches.length - 1][1] ?? '').trim();
+        const cleanedNotes = raw.replace(blockPattern, '').replace(/\n{3,}/g, '\n\n').trim();
 
         try {
-            const parsed = JSON.parse(jsonText) as PersistedBuilderState;
+            const parsed = JSON.parse(latestJsonText) as PersistedBuilderState;
             return { cleanedNotes, state: parsed };
         } catch {
-            return { cleanedNotes: raw, state: null };
+            return { cleanedNotes, state: null };
         }
     }
 

@@ -451,7 +451,8 @@
                         @for (row of otherSpellRows(); track row.name) {
                         <span class="spell-chip detail-trigger" role="button" tabindex="0" (click)="openSpellDetail(row)" (keydown.enter)="openSpellDetail(row)" (keydown.space)="openSpellDetail(row)">
                             <span class="spell-chip-name">{{ row.name }}</span>
-                            <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (row.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}@if (row.ritual && isSpellPrepared(row.name)) {<span class="spell-icon spell-icon--p" title="Prepared">P</span>}</span>
+                            <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (row.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}@if (row.ritual && isSpellPrepared(row.name))
+                                {<span class="spell-icon spell-icon--p" title="Prepared">P</span>}</span>
                         </span>
                         }
                     </div>
@@ -491,7 +492,8 @@
                         </div>
                         @for (spellRow of spellCantrips(); track spellRow.name) {
                         <div class="actions-row detail-trigger-row" (click)="openSpellDetail(spellRow)">
-                            <span class="spell-name-cell">{{ spellRow.name }}@if (spellRow.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (spellRow.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}@if (spellRow.ritual && isSpellPrepared(spellRow.name)) {<span class="spell-icon spell-icon--p" title="Prepared">P</span>}</span>
+                            <span class="spell-name-cell">{{ spellRow.name }}@if (spellRow.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (spellRow.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}@if (spellRow.ritual &&
+                                isSpellPrepared(spellRow.name)) {<span class="spell-icon spell-icon--p" title="Prepared">P</span>}</span>
                             <span>{{ spellRow.castingTime }}</span>
                             <span>{{ spellRow.range }}</span>
                             <span>{{ spellRow.hitDcLabel }}</span>
@@ -535,7 +537,8 @@
                         </div>
                         @for (spellRow of group.spells; track spellRow.name) {
                         <div class="actions-row detail-trigger-row" (click)="openSpellDetail(spellRow)">
-                            <span class="spell-name-cell">{{ spellRow.name }}@if (spellRow.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (spellRow.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}@if (spellRow.ritual && isSpellPrepared(spellRow.name)) {<span class="spell-icon spell-icon--p" title="Prepared">P</span>}</span>
+                            <span class="spell-name-cell">{{ spellRow.name }}@if (spellRow.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (spellRow.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}@if (spellRow.ritual &&
+                                isSpellPrepared(spellRow.name)) {<span class="spell-icon spell-icon--p" title="Prepared">P</span>}</span>
                             <span>{{ spellRow.castingTime }}</span>
                             <span>{{ spellRow.range }}</span>
                             <span>{{ spellRow.hitDcLabel }}</span>
@@ -589,7 +592,7 @@
                 </div>
                 <div class="actions-meta-row">
                     <input class="inventory-search-input" type="search" placeholder="Search Item Names, Types, Rarities, or Tags" [value]="inventorySearchTerm()" (input)="onInventorySearchChanged($any($event.target).value)" />
-                    <span class="manage-custom">Manage Inventory</span>
+                    <button type="button" class="manage-custom" [class.is-loading]="inventoryManagerOpening()" [disabled]="!char.canEdit || inventoryManagerOpening()" (click)="openInventoryManagerPopup()"><span class="manage-custom-label">Manage Inventory</span></button>
                 </div>
                 <div class="action-filter-row">
                     @for (filter of inventoryFilters(); track filter.key) {
@@ -633,7 +636,7 @@
                     <div class="container-item">
                         <button type="button" class="container-header" [class.expanded]="isContainerExpanded(containerItem.entry.name + '_' + containerItem.index)" (click)="toggleContainerExpanded(containerItem.entry.name + '_' + containerItem.index)">
                             <i class="fa-duotone fa-thin" [ngClass]="isContainerExpanded(containerItem.entry.name + '_' + containerItem.index) ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
-                            <span class="container-name">{{ containerItem.entry.name }}</span>
+                            <span class="container-name">{{ containerInventoryDisplayName(containerItem) }}</span>
                             <span class="container-count">{{ (containerItem.entry.containedItems || []).length }} items</span>
                             @if (containerItem.entry.maxCapacity) {
                             <span class="container-capacity">{{ containerItem.entry.maxCapacity }} lb capacity</span>
@@ -722,10 +725,11 @@
                 @if (activeBackgroundFilter() === 'all' || activeBackgroundFilter() === 'background') {
                 <div class="info-rows">
                     @for (item of basicIdentityRows(); track item.label) {
-                    <div class="info-row">
+                    <button type="button" class="info-row info-row--clickable" (click)="openBackgroundRowDetail(item.label, item.value)">
                         <span class="label">{{ item.label }}</span>
                         <span class="value">{{ item.value }}</span>
-                    </div>
+                        <i class="fa-duotone fa-thin fa-circle-info info-row-icon"></i>
+                    </button>
                     }
                 </div>
                 }
@@ -755,10 +759,11 @@
                 </div>
                 <div class="info-rows">
                     @for (item of appearanceRows(); track item.label) {
-                    <div class="info-row">
+                    <button type="button" class="info-row info-row--clickable" (click)="openBackgroundRowDetail(item.label, item.value)">
                         <span class="label">{{ item.label }}</span>
                         <span class="value">{{ item.value }}</span>
-                    </div>
+                        <i class="fa-duotone fa-thin fa-circle-info info-row-icon"></i>
+                    </button>
                     }
                 </div>
                 }
@@ -1139,6 +1144,345 @@
     </aside>
     }
 
+    @if (inventoryManagerOpen()) {
+    <aside class="panel inventory-popup" role="dialog" aria-label="Manage Inventory Popup">
+        <header class="spell-popup-header">
+            <h3>Manage Inventory</h3>
+            <button type="button" class="ghost-button" (click)="closeInventoryManagerPopup()">Close</button>
+        </header>
+
+        <div class="spell-popup-controls">
+            <input class="inventory-search-input" type="search" placeholder="Search inventory items" [value]="inventoryManagerSearch()" (input)="onInventoryManagerSearchChanged($any($event.target).value)" />
+        </div>
+
+        <section class="inventory-manager-add">
+            <button type="button" class="inventory-manager-add-toggle" (click)="inventoryCustomItemExpanded.set(!inventoryCustomItemExpanded())">
+                <span>Add Custom Item</span>
+                <i class="fa-duotone fa-thin" [class.fa-chevron-down]="!inventoryCustomItemExpanded()" [class.fa-chevron-up]="inventoryCustomItemExpanded()"></i>
+            </button>
+            @if (inventoryCustomItemExpanded()) {
+            <div class="inventory-manager-add-grid">
+                <label>
+                    <span>Name</span>
+                    <input type="text" [value]="inventoryDraftName()" (input)="onInventoryDraftInputChanged('name', $any($event.target).value)" />
+                </label>
+                <label>
+                    <span>Category</span>
+                    <input type="text" [value]="inventoryDraftCategory()" (input)="onInventoryDraftInputChanged('category', $any($event.target).value)" />
+                </label>
+                <label>
+                    <span>Quantity</span>
+                    <input type="number" min="1" [value]="inventoryDraftQuantity()" (input)="onInventoryDraftInputChanged('quantity', $any($event.target).value)" />
+                </label>
+                <label>
+                    <span>Weight (lb)</span>
+                    <input type="number" min="0" step="0.1" [value]="inventoryDraftWeight()" (input)="onInventoryDraftInputChanged('weight', $any($event.target).value)" />
+                </label>
+                <label>
+                    <span>Cost (GP)</span>
+                    <input type="number" min="0" step="0.1" [value]="inventoryDraftCostGp()" (input)="onInventoryDraftInputChanged('costGp', $any($event.target).value)" />
+                </label>
+                <label class="inventory-manager-add-grid__wide">
+                    <span>Notes</span>
+                    <input type="text" [value]="inventoryDraftNotes()" (input)="onInventoryDraftInputChanged('notes', $any($event.target).value)" />
+                </label>
+                <label class="inventory-manager-add-grid__wide">
+                    <span>Add To</span>
+                    <app-dropdown [value]="inventoryDraftAddTarget()" [options]="inventoryAddOptions()" [placeholder]="'Choose destination...'" size="wide" appearance="chip" [panelMinWidth]="240" (changed)="setInventoryDraftAddTarget($event)"></app-dropdown>
+                </label>
+            </div>
+            <button type="button" class="manage-custom" [disabled]="!inventoryDraftName().trim()" (click)="addInventoryEntryFromDraft()">Add Item</button>
+            }
+        </section>
+
+        <section class="inventory-manager-catalog">
+            <button type="button" class="inventory-manager-catalog-toggle" (click)="inventoryCatalogExpanded.set(!inventoryCatalogExpanded())">
+                <span>Add From Item List</span>
+                <i class="fa-duotone fa-thin" [class.fa-chevron-down]="!inventoryCatalogExpanded()" [class.fa-chevron-up]="inventoryCatalogExpanded()"></i>
+            </button>
+            @if (inventoryCatalogExpanded()) {
+            <div class="action-filter-row">
+                @for (category of inventoryCatalogCategories(); track category) {
+                <button type="button" class="action-filter" [class.active]="inventoryCatalogCategory() === category" (click)="setInventoryCatalogCategory(category)">
+                    {{ category }}
+                </button>
+                }
+            </div>
+            <div class="inventory-popup-list">
+                @for (item of filteredInventoryCatalogItems(); track item.name) {
+                <article class="inventory-popup-row" [class.inventory-popup-row--expanded]="inventoryCatalogExpandedItem() === item.name">
+                    <div class="inventory-popup-main">
+                        <button type="button" class="spell-popup-name-btn" (click)="toggleInventoryCatalogItemDetail(item.name)">
+                            <span class="spell-expand-icon">{{ inventoryCatalogExpandedItem() === item.name ? '▾' : '▸' }}</span>
+                            <span class="spell-popup-name-text">
+                                <strong>{{ item.name }}</strong>
+                                <span class="spell-popup-meta">{{ item.category }}</span>
+                            </span>
+                        </button>
+                    </div>
+                    <div class="inventory-catalog-add-dropdown">
+                        <app-dropdown value="" [options]="inventoryAddOptions()" [placeholder]="'Add'" size="narrow" appearance="chip" [minWidth]="64" [panelMinWidth]="240" (changed)="onInventoryCatalogAddTargetChanged(item, $event)"></app-dropdown>
+                    </div>
+                    <div class="spell-detail-pane" [class.spell-detail-pane--open]="inventoryCatalogExpandedItem() === item.name" [attr.aria-hidden]="inventoryCatalogExpandedItem() !== item.name">
+                        @if (item.rarity || item.attunement) {
+                        <div class="spell-detail-tags">
+                            @if (item.rarity) {
+                            <span class="spell-tag">{{ item.rarity }}</span>
+                            }
+                            @if (item.attunement) {
+                            <span class="spell-tag">Attunement: {{ item.attunement }}</span>
+                            }
+                        </div>
+                        }
+                        @if (item.summary || item.notes) {
+                        <div class="item-detail-section">
+                            <p class="item-detail-section-title">Description</p>
+                            <p class="item-description">{{ inventoryCatalogSummaryText(item) }}</p>
+                        </div>
+                        }
+                        @if (item.detailLines && item.detailLines.length > 0) {
+                        <div class="item-detail-section">
+                            <p class="item-detail-section-title">Highlights</p>
+                            <ul class="item-detail-highlights">
+                                @for (line of item.detailLines; track line) {
+                                <li>{{ line }}</li>
+                                }
+                            </ul>
+                        </div>
+                        }
+                        <dl class="item-detail-facts">
+                            <div>
+                                <dt>Weight</dt>
+                                <dd>{{ item.weight != null ? (item.weight + ' lb.') : '—' }}</dd>
+                            </div>
+                            <div>
+                                <dt>Cost</dt>
+                                <dd>{{ item.costGp != null ? (item.costGp + ' gp') : '—' }}</dd>
+                            </div>
+                            @if (item.sourceUrl) {
+                            <div class="item-detail-facts__source">
+                                <dt>Source</dt>
+                                <dd><a [href]="item.sourceUrl" target="_blank" rel="noopener noreferrer" class="item-source-link">{{ item.sourceLabel || 'View details' }}</a></dd>
+                            </div>
+                            }
+                        </dl>
+                        @if (inventoryCatalogRulesText(item); as rulesText) {
+                        <p class="item-description item-description--rules">{{ rulesText }}</p>
+                        }
+                    </div>
+                </article>
+                }
+                @if (filteredInventoryCatalogItems().length === 0) {
+                <p class="coin-party-note">No catalog items match your filter.</p>
+                }
+            </div>
+            }
+        </section>
+
+        <section class="inventory-manager-current">
+            <button type="button" class="inventory-manager-current-toggle" (click)="inventoryCurrentExpanded.set(!inventoryCurrentExpanded())">
+                <span>My Inventory</span>
+                <i class="fa-duotone fa-thin" [class.fa-chevron-down]="!inventoryCurrentExpanded()" [class.fa-chevron-up]="inventoryCurrentExpanded()"></i>
+            </button>
+            @if (inventoryCurrentExpanded()) {
+            <div class="inventory-manager-current-list">
+                <button type="button" class="inventory-manager-bucket" (click)="toggleInventoryManagerSection('equipment')">
+                    <strong>Equipment ({{ inventoryManagerEquipmentRows().length }})</strong>
+                    <i class="fa-duotone fa-thin" [class.fa-chevron-down]="isInventoryManagerSectionExpanded('equipment')" [class.fa-chevron-right]="!isInventoryManagerSectionExpanded('equipment')"></i>
+                </button>
+                @if (isInventoryManagerSectionExpanded('equipment')) {
+                <div class="inventory-manager-bucket-content">
+                    @if (inventoryManagerEquipmentRows().length > 0) {
+                    <div class="inventory-popup-list inventory-popup-list--contained">
+                        @for (row of inventoryManagerEquipmentRows(); track row.index) {
+                        @let itemKey = 'equipment_' + row.index;
+                        <article class="inventory-popup-row" [class.inventory-popup-row--expanded]="inventoryManagerContainedExpandedItem() === itemKey">
+                            <div class="inventory-popup-main">
+                                <button type="button" class="spell-popup-name-btn" (click)="toggleInventoryManagerContainedItemDetail(itemKey)">
+                                    <span class="spell-expand-icon">{{ inventoryManagerContainedExpandedItem() === itemKey ? '▾' : '▸' }}</span>
+                                    <span class="spell-popup-name-text">
+                                        <strong>{{ row.entry.name }}</strong>
+                                        <span class="spell-popup-meta">Qty {{ row.entry.quantity }}</span>
+                                    </span>
+                                </button>
+                            </div>
+                            <button type="button" class="action-filter inventory-manager-remove" [disabled]="!character()?.canEdit" (click)="$event.stopPropagation(); removeInventoryEntryByIndex(row.index)">Remove</button>
+                            <div class="spell-detail-pane" [class.spell-detail-pane--open]="inventoryManagerContainedExpandedItem() === itemKey" [attr.aria-hidden]="inventoryManagerContainedExpandedItem() !== itemKey">
+                                @if (inventoryContainedRarity(row.entry) || inventoryContainedAttunement(row.entry)) {
+                                <div class="spell-detail-tags">
+                                    @if (inventoryContainedRarity(row.entry); as rarity) {
+                                    <span class="spell-tag">{{ rarity }}</span>
+                                    }
+                                    @if (inventoryContainedAttunement(row.entry); as attunement) {
+                                    <span class="spell-tag">Attunement: {{ attunement }}</span>
+                                    }
+                                </div>
+                                }
+                                <div class="item-detail-section">
+                                    <p class="item-detail-section-title">Description</p>
+                                    <p class="item-description">{{ inventoryContainedSummaryText(row.entry) }}</p>
+                                </div>
+                                @if (inventoryContainedHighlights(row.entry).length > 0) {
+                                <div class="item-detail-section">
+                                    <p class="item-detail-section-title">Highlights</p>
+                                    <ul class="item-detail-highlights">
+                                        @for (line of inventoryContainedHighlights(row.entry); track line) {
+                                        <li>{{ line }}</li>
+                                        }
+                                    </ul>
+                                </div>
+                                }
+                                <dl class="item-detail-facts">
+                                    <div>
+                                        <dt>Weight</dt>
+                                        <dd>{{ row.entry.weight != null ? (row.entry.weight + ' lb.') : '—' }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Cost</dt>
+                                        <dd>{{ row.entry.costGp != null ? (row.entry.costGp + ' gp') : '—' }}</dd>
+                                    </div>
+                                    @if (inventoryContainedSourceUrl(row.entry); as sourceUrl) {
+                                    <div class="item-detail-facts__source">
+                                        <dt>Source</dt>
+                                        <dd><a [href]="sourceUrl" target="_blank" rel="noopener noreferrer" class="item-source-link">{{ inventoryContainedSourceLabel(row.entry) || 'View details' }}</a></dd>
+                                    </div>
+                                    }
+                                </dl>
+                                @if (inventoryContainedRulesText(row.entry); as rulesText) {
+                                <p class="item-description item-description--rules">{{ rulesText }}</p>
+                                }
+                                <div class="inventory-item-controls">
+                                    <div class="inventory-item-quantity">
+                                        <span>Quantity</span>
+                                        <div class="inventory-item-stepper">
+                                            <button type="button" class="inventory-item-stepper-btn" [disabled]="!character()?.canEdit || row.entry.quantity <= 1" (click)="$event.stopPropagation(); adjustInventoryEntryQuantity(row.index, -1)">-</button>
+                                            <input type="number" class="inventory-item-stepper-input" min="1" [value]="row.entry.quantity" [disabled]="!character()?.canEdit" (click)="$event.stopPropagation()"
+                                                (input)="$event.stopPropagation(); setInventoryEntryQuantity(row.index, $any($event.target).value)" />
+                                            <button type="button" class="inventory-item-stepper-btn" [disabled]="!character()?.canEdit" (click)="$event.stopPropagation(); adjustInventoryEntryQuantity(row.index, 1)">+</button>
+                                        </div>
+                                    </div>
+                                    <div class="inventory-item-move">
+                                        <span>Move</span>
+                                        <div class="inventory-item-move-actions">
+                                            <div class="inventory-item-move-dropdown">
+                                                <app-dropdown [value]="inventoryMoveTarget(itemKey, null)" [options]="inventoryMoveOptions(null)" [placeholder]="'Choose container...'" size="narrow" appearance="chip" [minWidth]="96" [panelMinWidth]="240"
+                                                    (changed)="onInventoryMoveTargetChanged(row.index, itemKey, $event)"></app-dropdown>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                        }
+                    </div>
+                    } @else {
+                    <p class="coin-party-note">No equipment items found.</p>
+                    }
+                </div>
+                }
+
+                @for (row of inventoryManagerContainerBuckets(); track row.sourceIndex + '_' + row.copyIndex) {
+                <button type="button" class="inventory-manager-bucket" (click)="toggleInventoryManagerSection('container_' + row.sourceIndex + '_' + row.copyIndex)">
+                    <strong>{{ containerBucketDisplayName(row) }} ({{ inventoryManagerContainerItemCount(row) }})</strong>
+                    <i class="fa-duotone fa-thin" [class.fa-chevron-down]="isInventoryManagerSectionExpanded('container_' + row.sourceIndex + '_' + row.copyIndex)" [class.fa-chevron-right]="!isInventoryManagerSectionExpanded('container_' + row.sourceIndex + '_' + row.copyIndex)"></i>
+                </button>
+                @if (isInventoryManagerSectionExpanded('container_' + row.sourceIndex + '_' + row.copyIndex)) {
+                <div class="inventory-manager-bucket-content">
+                    @if ((row.entry.containedItems || []).length > 0) {
+                    <div class="inventory-popup-list inventory-popup-list--contained">
+                        @for (item of row.entry.containedItems || []; track item.name + '_' + item.category; let itemIndex = $index) {
+                        @let itemKey = inventoryContainedItemKey(row.sourceIndex, row.copyIndex, itemIndex);
+                        <article class="inventory-popup-row" [class.inventory-popup-row--expanded]="inventoryManagerContainedExpandedItem() === itemKey">
+                            <div class="inventory-popup-main">
+                                <button type="button" class="spell-popup-name-btn" (click)="toggleInventoryManagerContainedItemDetail(itemKey)">
+                                    <span class="spell-expand-icon">{{ inventoryManagerContainedExpandedItem() === itemKey ? '▾' : '▸' }}</span>
+                                    <span class="spell-popup-name-text">
+                                        <strong>{{ item.name }}</strong>
+                                        <span class="spell-popup-meta">Qty {{ item.quantity }}</span>
+                                    </span>
+                                </button>
+                            </div>
+                            <button type="button" class="action-filter inventory-manager-remove" [disabled]="!character()?.canEdit" (click)="$event.stopPropagation(); removeContainedInventoryEntry(row.sourceIndex, itemIndex)">Remove</button>
+                            <div class="spell-detail-pane" [class.spell-detail-pane--open]="inventoryManagerContainedExpandedItem() === itemKey" [attr.aria-hidden]="inventoryManagerContainedExpandedItem() !== itemKey">
+                                @if (inventoryContainedRarity(item) || inventoryContainedAttunement(item)) {
+                                <div class="spell-detail-tags">
+                                    @if (inventoryContainedRarity(item); as rarity) {
+                                    <span class="spell-tag">{{ rarity }}</span>
+                                    }
+                                    @if (inventoryContainedAttunement(item); as attunement) {
+                                    <span class="spell-tag">Attunement: {{ attunement }}</span>
+                                    }
+                                </div>
+                                }
+                                <div class="item-detail-section">
+                                    <p class="item-detail-section-title">Description</p>
+                                    <p class="item-description">{{ inventoryContainedSummaryText(item) }}</p>
+                                </div>
+                                @if (inventoryContainedHighlights(item).length > 0) {
+                                <div class="item-detail-section">
+                                    <p class="item-detail-section-title">Highlights</p>
+                                    <ul class="item-detail-highlights">
+                                        @for (line of inventoryContainedHighlights(item); track line) {
+                                        <li>{{ line }}</li>
+                                        }
+                                    </ul>
+                                </div>
+                                }
+                                <dl class="item-detail-facts">
+                                    <div>
+                                        <dt>Weight</dt>
+                                        <dd>{{ item.weight != null ? (item.weight + ' lb.') : '—' }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Cost</dt>
+                                        <dd>{{ item.costGp != null ? (item.costGp + ' gp') : '—' }}</dd>
+                                    </div>
+                                    @if (inventoryContainedSourceUrl(item); as sourceUrl) {
+                                    <div class="item-detail-facts__source">
+                                        <dt>Source</dt>
+                                        <dd><a [href]="sourceUrl" target="_blank" rel="noopener noreferrer" class="item-source-link">{{ inventoryContainedSourceLabel(item) || 'View details' }}</a></dd>
+                                    </div>
+                                    }
+                                </dl>
+                                @if (inventoryContainedRulesText(item); as rulesText) {
+                                <p class="item-description item-description--rules">{{ rulesText }}</p>
+                                }
+                                <div class="inventory-item-controls">
+                                    <div class="inventory-item-quantity">
+                                        <span>Quantity</span>
+                                        <div class="inventory-item-stepper">
+                                            <button type="button" class="inventory-item-stepper-btn" [disabled]="!character()?.canEdit || item.quantity <= 1" (click)="$event.stopPropagation(); adjustContainedInventoryEntryQuantity(row.sourceIndex, itemIndex, -1)">-</button>
+                                            <input type="number" class="inventory-item-stepper-input" min="1" [value]="item.quantity" [disabled]="!character()?.canEdit" (click)="$event.stopPropagation()"
+                                                (input)="$event.stopPropagation(); setContainedInventoryEntryQuantity(row.sourceIndex, itemIndex, $any($event.target).value)" />
+                                            <button type="button" class="inventory-item-stepper-btn" [disabled]="!character()?.canEdit" (click)="$event.stopPropagation(); adjustContainedInventoryEntryQuantity(row.sourceIndex, itemIndex, 1)">+</button>
+                                        </div>
+                                    </div>
+                                    <div class="inventory-item-move">
+                                        <span>Move</span>
+                                        <div class="inventory-item-move-actions">
+                                            <div class="inventory-item-move-dropdown">
+                                                <app-dropdown [value]="inventoryMoveTarget(itemKey, row.sourceIndex)" [options]="inventoryMoveOptions(row.sourceIndex)" [placeholder]="'Choose container...'" size="narrow" appearance="chip" [minWidth]="96" [panelMinWidth]="240"
+                                                    (changed)="onContainedInventoryMoveTargetChanged(row.sourceIndex, itemIndex, itemKey, $event)"></app-dropdown>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                        }
+                    </div>
+                    } @else {
+                    <p class="empty-container">This container is empty</p>
+                    }
+                </div>
+                }
+                }
+            </div>
+            }
+        </section>
+    </aside>
+    }
+
     @if (activeDetailDrawer(); as detail) {
     <aside class="panel detail-popup" role="dialog" [attr.aria-label]="detail.title">
         <header class="detail-drawer-header">
@@ -1150,6 +1494,57 @@
             <button type="button" class="ghost-button" (click)="closeDetailDrawer()">Close</button>
         </header>
 
+        @if (detail.variant === 'inventory-item') {
+        @if (detail.metaLine) {
+        <p class="detail-item-meta-line">{{ detail.metaLine }}</p>
+        }
+
+        @if (detail.profileTags && detail.profileTags.length > 0) {
+        <div class="detail-item-tags-row">
+            <span class="detail-item-tags-label">PROFILE:</span>
+            @for (tag of detail.profileTags; track tag) {
+            <span class="detail-item-tag">{{ tag }}</span>
+            }
+        </div>
+        }
+
+        <hr class="detail-item-divider" />
+        <p class="detail-item-summary">{{ detail.description }}</p>
+
+        @if (detail.bullets && detail.bullets.length > 0) {
+        <div class="detail-item-highlights">
+            <p class="detail-item-section-title">Highlights</p>
+            <ul>
+                @for (bullet of detail.bullets; track bullet) {
+                <li>{{ bullet }}</li>
+                }
+            </ul>
+        </div>
+        }
+
+        @if (detail.facts && detail.facts.length > 0) {
+        <hr class="detail-item-divider" />
+        <dl class="detail-item-facts">
+            @for (fact of detail.facts; track fact.label) {
+            <div>
+                <dt>{{ fact.label }}:</dt>
+                <dd>
+                    @if (fact.linkUrl && fact.linkLabel) {
+                    <a [href]="fact.linkUrl" target="_blank" rel="noopener noreferrer">{{ fact.linkLabel }}</a>
+                    } @else {
+                    {{ fact.value || '—' }}
+                    }
+                </dd>
+            </div>
+            }
+        </dl>
+        }
+
+        @if (detail.rulesText) {
+        <hr class="detail-item-divider" />
+        <p class="detail-item-rules">{{ detail.rulesText }}</p>
+        }
+        } @else {
         @if (detail.lineItems && detail.lineItems.length > 0) {
         <div class="detail-breakdown-list">
             @for (item of detail.lineItems; track item.label) {
@@ -1162,7 +1557,7 @@
         }
 
         @if (detail.secondaryHeading) {
-        <button type="button" class="detail-secondary-toggle" aria-expanded="true">
+        <button type="button" class="detail-secondary-toggle" [class.is-expanded]="detailSecondaryExpanded()" [attr.aria-expanded]="detailSecondaryExpanded()" (click)="toggleDetailSecondary()">
             <span>{{ detail.secondaryHeading }}</span>
             <i class="fa-duotone fa-thin fa-chevron-down"></i>
         </button>
@@ -1170,12 +1565,13 @@
 
         <p class="detail-drawer-description">{{ detail.description }}</p>
 
-        @if (detail.bullets && detail.bullets.length > 0) {
+        @if (detail.bullets && detail.bullets.length > 0 && (!detail.secondaryHeading || detailSecondaryExpanded())) {
         <ul class="detail-drawer-list">
             @for (bullet of detail.bullets; track bullet) {
             <li>{{ bullet }}</li>
             }
         </ul>
+        }
         }
     </aside>
     }

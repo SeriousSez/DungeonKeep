@@ -351,6 +351,28 @@ export class NewCharacterStandardPageComponent {
         return ['/characters/new/standard', step];
     }
 
+    readonly activeStepIndex = computed(() => {
+        const activeStep = this.activeStandardStep();
+        const index = this.standardSteps.findIndex((step) => step.key === activeStep);
+        return index < 0 ? 0 : index;
+    });
+
+    readonly canGoToPreviousStep = computed(() => this.activeStepIndex() > 0);
+
+    readonly canGoToNextStep = computed(() => this.activeStepIndex() < this.standardSteps.length - 1);
+
+    async goToAdjacentStep(direction: -1 | 1): Promise<void> {
+        const targetIndex = this.activeStepIndex() + direction;
+        if (targetIndex < 0 || targetIndex >= this.standardSteps.length) {
+            return;
+        }
+
+        const target = this.standardSteps[targetIndex];
+        await this.router.navigate(this.getBuilderStepRoute(target.key), {
+            queryParamsHandling: 'preserve'
+        });
+    }
+
     readonly activeInfoModal = signal<ActiveInfoModal | null>(null);
     readonly activeItemDetailModal = signal<InventoryEntry | null>(null);
     readonly selectedClass = signal<string>('');
@@ -419,7 +441,17 @@ export class NewCharacterStandardPageComponent {
     readonly backstoryGenerationError = signal('');
     readonly isSavingGeneratedBackstory = signal(false);
     readonly backstorySaveMessage = signal('');
-    readonly backstoryTargetCharacter = computed(() => this.store.selectedParty()[0] ?? null);
+    readonly backstoryTargetCharacter = computed(() => {
+        const activeBuilderCharacterId = this.activeBuilderCharacterId();
+        if (activeBuilderCharacterId) {
+            const activeBuilderCharacter = this.store.characters().find((entry) => entry.id === activeBuilderCharacterId) ?? null;
+            if (activeBuilderCharacter) {
+                return activeBuilderCharacter;
+            }
+        }
+
+        return this.store.selectedParty()[0] ?? null;
+    });
 
     readonly standardSteps: ReadonlyArray<{ key: StandardStep; label: string; shortLabel?: string }> = [
         { key: 'home', label: 'Home' },
@@ -6774,16 +6806,24 @@ export class NewCharacterStandardPageComponent {
         }
 
         const traits = this.personalityTraits().slice(0, 3);
-        lines.push(`Emphasize these personality traits: ${traits.length > 0 ? traits.join('; ') : 'none provided'}`);
+        if (traits.length > 0) {
+            lines.push(`Emphasize these personality traits: ${traits.join('; ')}`);
+        }
 
         const ideals = this.ideals().slice(0, 2);
-        lines.push(`Include these ideals: ${ideals.length > 0 ? ideals.join('; ') : 'none provided'}`);
+        if (ideals.length > 0) {
+            lines.push(`Include these ideals: ${ideals.join('; ')}`);
+        }
 
         const bonds = this.bonds().slice(0, 2);
-        lines.push(`Include these bonds: ${bonds.length > 0 ? bonds.join('; ') : 'none provided'}`);
+        if (bonds.length > 0) {
+            lines.push(`Include these bonds: ${bonds.join('; ')}`);
+        }
 
         const flaws = this.flaws().slice(0, 2);
-        lines.push(`Reflect these flaws: ${flaws.length > 0 ? flaws.join('; ') : 'none provided'}`);
+        if (flaws.length > 0) {
+            lines.push(`Reflect these flaws: ${flaws.join('; ')}`);
+        }
 
         lines.push('Keep details grounded in campaign play and avoid contradicting known notes.');
 

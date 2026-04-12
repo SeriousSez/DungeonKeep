@@ -15,7 +15,8 @@ export interface DropdownOption {
     imports: [CommonModule],
     host: {
         '[class.app-dropdown-host--open]': 'isOpen()',
-        '[class.app-dropdown-host--dense-options]': "optionDensity() === 'dense'"
+        '[class.app-dropdown-host--dense-options]': "optionDensity() === 'dense'",
+        '[class.app-dropdown-host--chip]': "appearance() === 'chip'"
     },
     templateUrl: './dropdown.component.html',
     styleUrl: './dropdown.component.scss',
@@ -38,6 +39,7 @@ export class DropdownComponent {
     readonly minWidth = input<number | null>(null);
     readonly panelMinWidth = input<number | null>(null);
     readonly size = input<'wide' | 'compact' | 'narrow'>('compact');
+    readonly appearance = input<'default' | 'chip'>('default');
     readonly optionDensity = input<'regular' | 'dense'>('regular');
     readonly showOptionDescriptions = input<boolean>(true);
     readonly showSelectedDescription = input<boolean>(true);
@@ -138,12 +140,12 @@ export class DropdownComponent {
                 // Keep the dropdown panel within available viewport space.
                 this.panelMaxHeight.set(Math.max(120, Math.min(this.defaultPanelMaxHeight, availableSpace)));
 
-                if (endOverflow > 0 && startOverflow <= 0) {
+                if (startOverflow > 0 && endOverflow <= 0) {
                     this.panelAlignment.set('end');
-                } else if (startOverflow > 0 && endOverflow <= 0) {
+                } else if (endOverflow > 0 && startOverflow <= 0) {
                     this.panelAlignment.set('start');
                 } else {
-                    this.panelAlignment.set(startOverflow < endOverflow ? 'end' : 'start');
+                    this.panelAlignment.set(startOverflow < endOverflow ? 'start' : 'end');
                 }
 
                 const availableWidth = this.panelAlignment() === 'end' ? availableLeft : availableRight;

@@ -253,6 +253,15 @@ export class DungeonStoreService {
 
     async updateCharacter(characterId: string, draft: CharacterDraft): Promise<Character | null> {
         const playerName = draft.playerName?.trim() || this.session.currentUser()?.displayName || 'Player';
+        const currentCharacter = this.characters().find((character) => character.id === characterId);
+        const currentNotes = currentCharacter?.notes?.trim() ?? '';
+        const requestedNotes = draft.notes?.trim() ?? '';
+
+        const notesForSave = this.hasBuilderStateBlock(requestedNotes)
+            ? requestedNotes
+            : this.hasBuilderStateBlock(currentNotes)
+                ? this.mergeVisibleNotesWithBuilderState(currentNotes, requestedNotes)
+                : (requestedNotes || 'No field notes yet.');
 
         if (!draft.name || !draft.className) {
             return null;
@@ -267,7 +276,7 @@ export class DungeonStoreService {
                 className: draft.className,
                 level: Math.max(1, draft.level),
                 background: draft.background || 'Freshly arrived adventurer',
-                notes: draft.notes || 'No field notes yet.',
+                notes: notesForSave,
                 campaignId: campaignIds?.[0],
                 campaignIds,
                 species: draft.race,
@@ -294,7 +303,15 @@ export class DungeonStoreService {
                 sessionHistory: draft.sessionHistory
             });
 
-            const character = this.mapCharacterFromApi(updated, draft);
+            const draftForMapping: CharacterDraft = {
+                ...draft,
+                notes: notesForSave,
+                maxHitPoints: typeof draft.maxHitPoints === 'number'
+                    ? draft.maxHitPoints
+                    : currentCharacter?.maxHitPoints
+            };
+
+            const character = this.mapCharacterFromApi(updated, draftForMapping);
             this.characters.update((characters) =>
                 characters.map((c) => (c.id === characterId ? character : c))
             );
@@ -1430,7 +1447,11 @@ export class DungeonStoreService {
             : this.calculateAC(character.className, abilityScores.dexterity);
         const fallbackHitPoints = this.calculateHitPoints(character.className, Math.max(character.level, 1), abilityScores.constitution);
         const persistedMaxHpOverride = this.extractPersistedHpMaxOverride(resolvedNotes);
-        const draftMaxHitPoints = draft?.maxHitPoints ?? draft?.hitPoints;
+        const draftMaxHitPoints = typeof draft?.maxHitPoints === 'number' && Number.isFinite(draft.maxHitPoints)
+            ? draft.maxHitPoints
+            : (typeof draft?.hitPoints === 'number' && Number.isFinite(draft.hitPoints) && draft.hitPoints > 0
+                ? draft.hitPoints
+                : undefined);
         const maxHitPoints = Number.isFinite(draftMaxHitPoints)
             ? Math.max(1, Math.trunc(draftMaxHitPoints as number))
             : Number.isFinite(persistedMaxHpOverride)
@@ -2121,6 +2142,8 @@ export class DungeonStoreService {
     private resolveCharacterNotes(character: ApiCharacterDto, previousNotes?: string): string {
         const notes = character.notes?.trim() ?? '';
         const backstory = character.backstory?.trim() ?? '';
+        const previous = previousNotes?.trim() ?? '';
+        const hasPreviousBuilderState = previous.length > 0 && this.hasBuilderStateBlock(previous);
 
         if (this.hasBuilderStateBlock(notes)) {
             return notes;
@@ -2131,18 +2154,22 @@ export class DungeonStoreService {
         }
 
         if (notes) {
+            if (hasPreviousBuilderState) {
+                return this.mergeVisibleNotesWithBuilderState(previous, notes);
+            }
+
             return notes;
         }
 
         if (backstory) {
-            if (previousNotes && this.hasBuilderStateBlock(previousNotes)) {
-                return this.mergeVisibleNotesWithBuilderState(previousNotes, backstory);
+            if (hasPreviousBuilderState) {
+                return this.mergeVisibleNotesWithBuilderState(previous, backstory);
             }
 
             return backstory;
         }
 
-        return previousNotes?.trim() || 'No field notes yet.';
+        return previous || 'No field notes yet.';
     }
 
     private hasBuilderStateBlock(text: string): boolean {
