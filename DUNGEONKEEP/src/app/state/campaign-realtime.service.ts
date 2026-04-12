@@ -16,6 +16,16 @@ export interface CampaignMapVisionResetEvent {
     summary: string;
 }
 
+export interface CampaignActiveMapChangedEvent {
+    campaignId: string;
+    previousActiveMapId: string;
+    previousActiveMapName: string;
+    activeMapId: string;
+    activeMapName: string;
+    initiatedByUserId: string;
+    summary: string;
+}
+
 export interface CampaignMapTokenMovedEvent extends ApiCampaignMapTokenMovedDto { }
 export interface CampaignMapVisionUpdatedEvent extends ApiCampaignMapVisionUpdatedDto { }
 
@@ -29,10 +39,12 @@ export class CampaignRealtimeService {
     private connectionToken = '';
     private readonly routeCampaignId = signal(this.extractCampaignId(this.router.url));
     private readonly _campaignMapTokenMoved = new Subject<CampaignMapTokenMovedEvent>();
+    private readonly _campaignActiveMapChanged = new Subject<CampaignActiveMapChangedEvent>();
     private readonly _campaignMapVisionReset = new Subject<CampaignMapVisionResetEvent>();
     private readonly _campaignMapVisionUpdated = new Subject<CampaignMapVisionUpdatedEvent>();
 
     readonly campaignMapTokenMoved$ = this._campaignMapTokenMoved.asObservable();
+    readonly campaignActiveMapChanged$ = this._campaignActiveMapChanged.asObservable();
     readonly campaignMapVisionReset$ = this._campaignMapVisionReset.asObservable();
     readonly campaignMapVisionUpdated$ = this._campaignMapVisionUpdated.asObservable();
 
@@ -79,6 +91,12 @@ export class CampaignRealtimeService {
 
         connection.on('CampaignMapUpdated', (campaign: ApiCampaignDto) => {
             this.store.applyCampaignRealtimeUpdate(campaign);
+        });
+
+        connection.on('CampaignActiveMapChanged', (event: CampaignActiveMapChangedEvent) => {
+            this.logSignalrEvent('CampaignActiveMapChanged', event);
+            this._campaignActiveMapChanged.next(event);
+            void this.redirectToActiveMap(event);
         });
 
         connection.on('CampaignMapTokenMoved', (event: ApiCampaignMapTokenMovedDto) => {
@@ -218,6 +236,56 @@ export class CampaignRealtimeService {
     private extractCampaignId(url: string): string {
         const match = url.match(/\/campaigns\/([^/?#]+)/i);
         return match?.[1]?.trim() ?? '';
+    }
+
+    private async redirectToActiveMap(event: CampaignActiveMapChangedEvent): Promise<void> {
+        const route = this.extractMapRoute(this.router.url);
+        if (!route || route.campaignId !== event.campaignId || !route.mapId || route.mapId === 'new') {
+            return;
+        }
+
+        if (route.mapId === event.activeMapId) {
+            return;
+        }
+
+        await this.navigateToMapViewWithFallback(event.campaignId, event.activeMapId);
+    }
+
+    private async navigateToMapViewWithFallback(campaignId: string, mapId: string): Promise<void> {
+        const targetRoute = ['/campaigns', campaignId, 'maps', mapId];
+
+        try {
+            const navigated = await this.router.navigate(targetRoute, { replaceUrl: true });
+            if (navigated) {
+                return;
+            }
+        } catch {
+            // Fall back to hard navigation if the router rejects the transition.
+        }
+
+        const targetUrl = this.router.serializeUrl(this.router.createUrlTree(targetRoute));
+        globalThis.location.assign(targetUrl);
+    }
+
+    private extractMapRoute(url: string): { campaignId: string; mapId: string; isEditRoute: boolean } | null {
+        const match = url.match(/\/campaigns\/([^/?#]+)\/maps\/([^/?#]+)(\/edit)?/i);
+        if (!match) {
+            return null;
+        }
+
+        return {
+            campaignId: match[1]?.trim() ?? '',
+            mapId: match[2]?.trim() ?? '',
+            isEditRoute: !!match[3]
+        };
+    }
+
+    private logSignalrEvent(eventName: string, payload: unknown): void {
+        if (environment.production) {
+            return;
+        }
+
+        console.info('[SignalR]', eventName, payload);
     }
 
 }

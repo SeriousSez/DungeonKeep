@@ -285,15 +285,7 @@
 }
 
 .campaign-link {
-    color: var(--accent-primary);
-    text-decoration: none;
     font-weight: 600;
-    transition: opacity 0.18s ease;
-
-    &:hover {
-        opacity: 0.82;
-        text-decoration: underline;
-    }
 }
 
 .campaign-assignment-controls {
@@ -306,7 +298,7 @@
     margin-top: 0;
     position: relative;
     z-index: 45;
-}
+}   
 
 .campaign-assignment-controls app-dropdown {
     width: 100%;
@@ -2662,13 +2654,7 @@
 }
 
 .item-source-link {
-    color: var(--accent-primary);
-    text-decoration: none;
     font-size: 0.82rem;
-
-    &:hover {
-        text-decoration: underline;
-    }
 }
 
 .inventory-item-controls {

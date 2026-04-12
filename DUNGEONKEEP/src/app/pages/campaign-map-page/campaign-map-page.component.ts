@@ -358,16 +358,7 @@ export class CampaignMapPageComponent {
             return false;
         }
 
-        if (campaign.currentUserRole === 'Owner') {
-            return true;
-        }
-
-        const currentUserId = this.currentUserId();
-        if (!currentUserId || !campaign.members?.length) {
-            return false;
-        }
-
-        return campaign.members.some((member) => member.userId === currentUserId && member.status === 'Active' && member.role === 'Owner');
+        return campaign.currentUserRole === 'Owner';
     });
     readonly isEditorMode = computed(() => this.routeMode() === 'edit');
     readonly isEditorLocked = computed(() => this.isAiArtGenerating());
@@ -920,6 +911,25 @@ export class CampaignMapPageComponent {
                 this.applyRealtimeTokenMoved(event);
             });
 
+        this.campaignRealtime.campaignActiveMapChanged$
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe((event) => {
+                if (event.campaignId !== this.campaignId()) {
+                    return;
+                }
+
+                this.showMapNotice(event.summary || `Active map changed to ${event.activeMapName}.`);
+
+                const displayedMapId = this.routeMapId() || this.currentMapId();
+                if (displayedMapId
+                    && displayedMapId !== 'new'
+                    && displayedMapId !== event.activeMapId) {
+                    void this.navigateToMapViewWithFallback(event.campaignId, event.activeMapId);
+                }
+
+                this.cdr.detectChanges();
+            });
+
         this.route.paramMap
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe((params) => {
@@ -973,6 +983,17 @@ export class CampaignMapPageComponent {
             const maps = campaign.maps.length > 0
                 ? campaign.maps.map((map) => this.cloneMapBoard(map))
                 : [this.createEmptyMapBoard('Main Map', campaign.map.background)];
+
+            const nextActiveMap = maps.find((map) => map.id === campaign.activeMapId) ?? maps[0] ?? null;
+            const displayedMapId = routeMapId || this.currentMapId();
+            if (displayedMapId
+                && displayedMapId !== 'new'
+                && nextActiveMap
+                && displayedMapId !== nextActiveMap.id) {
+                void this.navigateToMapViewWithFallback(campaign.id, nextActiveMap.id);
+                this.showMapNotice(`The active map changed to ${nextActiveMap.name}.`);
+                return;
+            }
 
             if (routeMapId === 'new') {
                 if (!this.canEdit()) {
@@ -3864,7 +3885,9 @@ export class CampaignMapPageComponent {
         const saveRevision = this.localChangeRevision;
         const snapshot = this.cloneMap(this.workingMap());
         const maps = this.mapBoards().map((map) => map.id === currentMap.id ? { ...map, name: this.mapNameDraft().trim() || map.name, ...snapshot } : this.cloneMapBoard(map));
-        const activeMapId = this.currentMapId() || currentMap.id;
+        // Editing/saving a map must not implicitly change which map is active.
+        // Only the explicit "Set Active" action should switch activeMapId.
+        const activeMapId = campaign.activeMapId || this.currentMapId() || currentMap.id;
         this.saveState.set('saving');
         this.saveMessage.set('Saving changes...');
 
@@ -4381,6 +4404,22 @@ export class CampaignMapPageComponent {
 
     private mapViewRoute(campaignId: string, mapId: string): string[] {
         return ['/campaigns', campaignId, 'maps', mapId];
+    }
+
+    private async navigateToMapViewWithFallback(campaignId: string, mapId: string): Promise<void> {
+        const targetRoute = this.mapViewRoute(campaignId, mapId);
+
+        try {
+            const navigated = await this.router.navigate(targetRoute, { replaceUrl: true });
+            if (navigated) {
+                return;
+            }
+        } catch {
+            // Fall back to hard navigation if the router rejects the transition.
+        }
+
+        const targetUrl = this.router.serializeUrl(this.router.createUrlTree(targetRoute));
+        globalThis.location.assign(targetUrl);
     }
 
     private mapEditRoute(campaignId: string, mapId: string): string[] {

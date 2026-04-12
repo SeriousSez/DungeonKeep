@@ -158,16 +158,24 @@ export class DungeonStoreService {
             .map((character) => character.id);
 
         this.campaigns.update((campaigns) => {
-            const mapped = this.mapCampaignFromApi(updated, partyCharacterIds);
-            this.syncKnownTokenMoveRevisions(mapped);
             const existingIndex = campaigns.findIndex((campaign) => campaign.id === updated.id);
+            const existingCampaign = existingIndex >= 0 ? campaigns[existingIndex] : null;
+            const mapped = this.mapCampaignFromApi(updated, partyCharacterIds);
+            const normalized = existingCampaign
+                ? {
+                    ...mapped,
+                    currentUserRole: existingCampaign.currentUserRole ?? mapped.currentUserRole
+                }
+                : mapped;
+
+            this.syncKnownTokenMoveRevisions(normalized);
 
             if (existingIndex === -1) {
-                return [mapped, ...campaigns];
+                return [normalized, ...campaigns];
             }
 
             const next = [...campaigns];
-            next[existingIndex] = mapped;
+            next[existingIndex] = normalized;
             return next;
         });
     }

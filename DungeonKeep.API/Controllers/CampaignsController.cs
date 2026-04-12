@@ -835,6 +835,15 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             return Unauthorized();
         }
 
+        var existing = await campaignService.GetByIdAsync(campaignId, user.Id, cancellationToken);
+        if (existing is null)
+        {
+            return NotFound("Campaign was not found.");
+        }
+
+        var previousActiveMapId = existing.ActiveMapId;
+        var previousActiveMapName = existing.Maps.FirstOrDefault(map => map.Id == previousActiveMapId)?.Name ?? string.Empty;
+
         try
         {
             var updated = await campaignService.UpdateMapAsync(campaignId, request, user.Id, cancellationToken);
@@ -846,6 +855,23 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             await campaignHub.Clients
                 .Group($"campaign-{campaignId}")
                 .SendAsync("CampaignMapUpdated", updated, cancellationToken);
+
+            if (updated.ActiveMapId != previousActiveMapId)
+            {
+                var activeMapName = updated.Maps.FirstOrDefault(map => map.Id == updated.ActiveMapId)?.Name ?? "Active map";
+                await campaignHub.Clients
+                    .Group($"campaign-{campaignId}")
+                    .SendAsync("CampaignActiveMapChanged", new
+                    {
+                        campaignId = campaignId.ToString(),
+                        previousActiveMapId = previousActiveMapId.ToString(),
+                        previousActiveMapName,
+                        activeMapId = updated.ActiveMapId.ToString(),
+                        activeMapName,
+                        initiatedByUserId = user.Id.ToString(),
+                        summary = $"Active map changed to {activeMapName}."
+                    }, cancellationToken);
+            }
 
             return Ok(updated);
         }

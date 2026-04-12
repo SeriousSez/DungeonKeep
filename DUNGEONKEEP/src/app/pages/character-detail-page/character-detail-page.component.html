@@ -74,7 +74,7 @@
                         <p class="subheader">
                             {{ char.race }} {{ char.className }} · Level {{ char.level }} ·
                             @if (currentCampaign(); as campaign) {
-                            <a class="campaign-link" [routerLink]="['/campaigns', campaign.id]">{{ campaign.name }}</a>
+                            <a class="campaign-link dk-link" [routerLink]="['/campaigns', campaign.id]">{{ campaign.name }}</a>
                             } @else {
                             {{ campaignName() }}
                             }
@@ -1269,7 +1269,7 @@
                             @if (item.sourceUrl) {
                             <div class="item-detail-facts__source">
                                 <dt>Source</dt>
-                                <dd><a [href]="item.sourceUrl" target="_blank" rel="noopener noreferrer" class="item-source-link">{{ item.sourceLabel || 'View details' }}</a></dd>
+                                <dd><a [href]="item.sourceUrl" target="_blank" rel="noopener noreferrer" class="item-source-link dk-link">{{ item.sourceLabel || 'View details' }}</a></dd>
                             </div>
                             }
                         </dl>
@@ -1351,7 +1351,7 @@
                                     @if (inventoryContainedSourceUrl(row.entry); as sourceUrl) {
                                     <div class="item-detail-facts__source">
                                         <dt>Source</dt>
-                                        <dd><a [href]="sourceUrl" target="_blank" rel="noopener noreferrer" class="item-source-link">{{ inventoryContainedSourceLabel(row.entry) || 'View details' }}</a></dd>
+                                        <dd><a [href]="sourceUrl" target="_blank" rel="noopener noreferrer" class="item-source-link dk-link">{{ inventoryContainedSourceLabel(row.entry) || 'View details' }}</a></dd>
                                     </div>
                                     }
                                 </dl>
@@ -1447,7 +1447,7 @@
                                     @if (inventoryContainedSourceUrl(item); as sourceUrl) {
                                     <div class="item-detail-facts__source">
                                         <dt>Source</dt>
-                                        <dd><a [href]="sourceUrl" target="_blank" rel="noopener noreferrer" class="item-source-link">{{ inventoryContainedSourceLabel(item) || 'View details' }}</a></dd>
+                                        <dd><a [href]="sourceUrl" target="_blank" rel="noopener noreferrer" class="item-source-link dk-link">{{ inventoryContainedSourceLabel(item) || 'View details' }}</a></dd>
                                     </div>
                                     }
                                 </dl>
@@ -1537,7 +1537,7 @@
                 <dt>{{ fact.label }}:</dt>
                 <dd>
                     @if (fact.linkUrl && fact.linkLabel) {
-                    <a [href]="fact.linkUrl" target="_blank" rel="noopener noreferrer">{{ fact.linkLabel }}</a>
+                    <a class="dk-link" [href]="fact.linkUrl" target="_blank" rel="noopener noreferrer">{{ fact.linkLabel }}</a>
                     } @else {
                     {{ fact.value || '—' }}
                     }
