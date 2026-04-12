@@ -25,6 +25,8 @@ import { DungeonStoreService } from '../../state/dungeon-store.service';
 import { SessionService } from '../../state/session.service';
 import { classSpellCatalog, type ClassSpellOption, spellcastingProgressionByClass, type SpellcastingProgression } from '../../data/class-spells.data';
 import { spellDetailsMap, type SpellDetail } from '../../data/spell-details.data';
+import { normalizePreparedLeveledSpellNames } from '../../rules/spell-preparation.rules';
+import { getWizardCantripLimit, getWizardFreeLeveledSpellLimit, getWizardPreparedSpellLimit, isWizardClassName, isWizardSpellbookCantripAlwaysPrepared } from '../../rules/wizard-class.rules';
 import { deitiesList } from '../../data/deities.data';
 import { subclassFeatureProgressionByClass as sharedSubclassFeatureProgressionByClass, subclassConfigs as sharedSubclassConfigs, subclassChoiceTitles as sharedSubclassChoiceTitles, subclassOptionsByClass as sharedSubclassOptionsByClass, type SubclassConfig } from '../../data/subclass-features.data';
 import { premadeCharacters } from '../../data/premade-characters.data';
@@ -4828,15 +4830,12 @@ export class NewCharacterStandardPageComponent {
         const knownByName = new Map(this.getKnownClassSpells(className, classLevel).map((spell) => [spell.name, spell]));
         const prepared = this.classPreparedSpells()[className] ?? [];
         const preparedLimit = this.getPreparedSpellLimitForClass(className, classLevel);
-        const ritualKnownSpells = this.getKnownClassSpells(className, classLevel)
-            .filter((spell) => spell.level > 0 && this.isRitualSpell(spell.name));
 
         const mergedPreparedByName = new Map<string, ClassSpellOption>();
         prepared
             .map((spellName) => knownByName.get(spellName))
             .filter((spell): spell is ClassSpellOption => !!spell)
             .forEach((spell) => mergedPreparedByName.set(spell.name, spell));
-        ritualKnownSpells.forEach((spell) => mergedPreparedByName.set(spell.name, spell));
 
         const mergedPrepared = [...mergedPreparedByName.values()];
 
@@ -4867,8 +4866,9 @@ export class NewCharacterStandardPageComponent {
         switch (className) {
             case 'Cleric':
             case 'Druid':
-            case 'Wizard':
                 return Math.max(1, normalizedLevel + spellcastingAbilityModifier);
+            case 'Wizard':
+                return getWizardPreparedSpellLimit(normalizedLevel, spellcastingAbilityModifier);
             case 'Paladin':
                 return Math.max(1, Math.floor(normalizedLevel / 2) + spellcastingAbilityModifier);
             case 'Artificer':
@@ -4915,7 +4915,7 @@ export class NewCharacterStandardPageComponent {
     }
 
     isWizardClass(className: string): boolean {
-        return className === 'Wizard';
+        return isWizardClassName(className);
     }
 
     getWizardSpellSubTab(className: string): WizardSpellSubTab {
@@ -4942,16 +4942,7 @@ export class NewCharacterStandardPageComponent {
     }
 
     getWizardCantripLimit(classLevel: number): number {
-        const normalizedLevel = Math.min(20, Math.max(1, Math.trunc(classLevel)));
-        if (normalizedLevel >= 10) {
-            return 5;
-        }
-
-        if (normalizedLevel >= 4) {
-            return 4;
-        }
-
-        return 3;
+        return getWizardCantripLimit(classLevel);
     }
 
     getWizardLearnedCantripCount(className: string, classLevel: number): number {
@@ -4959,8 +4950,7 @@ export class NewCharacterStandardPageComponent {
     }
 
     getWizardFreeLeveledSpellLimit(classLevel: number): number {
-        const normalizedLevel = Math.min(20, Math.max(1, Math.trunc(classLevel)));
-        return 6 + ((normalizedLevel - 1) * 2);
+        return getWizardFreeLeveledSpellLimit(classLevel);
     }
 
     getWizardLevelUpLearnedSpellCount(className: string): number {
@@ -5063,19 +5053,7 @@ export class NewCharacterStandardPageComponent {
             this.addWizardLevelUpLearnedSpell(className, spellName);
         }
 
-        if (spell.level === 0) {
-            this.classPreparedSpells.update((current) => {
-                const prepared = current[className] ?? [];
-                if (prepared.includes(spellName)) {
-                    return current;
-                }
-
-                return {
-                    ...current,
-                    [className]: [...prepared, spellName]
-                };
-            });
-        }
+        // Wizard cantrips are always prepared by virtue of being in the spellbook.
     }
 
     removeFromSpellbook(className: string, spellName: string): void {
@@ -5099,18 +5077,16 @@ export class NewCharacterStandardPageComponent {
 
     isSpellPreparedForClass(className: string, spellName: string): boolean {
         const classLevel = this.multiclassList()[className] ?? 1;
-        if (this.isRitualAlwaysAvailableSpell(className, classLevel, spellName)) {
+        if (isWizardSpellbookCantripAlwaysPrepared(
+            className,
+            spellName,
+            (name) => this.isSpellInSpellbook(className, name),
+            (name) => (this.classSpellCatalog['Wizard'] ?? []).find((spell) => spell.name === name)?.level
+        )) {
             return true;
         }
 
-        if (this.isWizardClass(className) && this.isSpellInSpellbook(className, spellName)) {
-            const wizardSpell = (this.classSpellCatalog['Wizard'] ?? []).find((spell) => spell.name === spellName);
-            if (wizardSpell?.level === 0) {
-                return true;
-            }
-        }
-
-        return (this.classPreparedSpells()[className] ?? []).includes(spellName);
+        return this.getPreparedLeveledSpellNames(className, classLevel).includes(spellName);
     }
 
     prepareFromSpellbook(className: string, classLevel: number, spellName: string): void {
@@ -5124,14 +5100,7 @@ export class NewCharacterStandardPageComponent {
         }
 
         if (spell.level === 0) {
-            this.classPreparedSpells.update((current) => {
-                const prepared = current[className] ?? [];
-                if (prepared.includes(spellName)) {
-                    return current;
-                }
-
-                return { ...current, [className]: [...prepared, spellName] };
-            });
+            // Wizard cantrips are always prepared by virtue of being in the spellbook.
             return;
         }
 
@@ -5241,11 +5210,13 @@ export class NewCharacterStandardPageComponent {
     }
 
     unprepareClassSpell(className: string, spellName: string): void {
-        if (this.isWizardClass(className) && this.isSpellInSpellbook(className, spellName)) {
-            const wizardSpell = (this.classSpellCatalog['Wizard'] ?? []).find((spell) => spell.name === spellName);
-            if (wizardSpell?.level === 0) {
-                return;
-            }
+        if (isWizardSpellbookCantripAlwaysPrepared(
+            className,
+            spellName,
+            (name) => this.isSpellInSpellbook(className, name),
+            (name) => (this.classSpellCatalog['Wizard'] ?? []).find((spell) => spell.name === name)?.level
+        )) {
+            return;
         }
 
         this.classPreparedSpells.update((current) => {
@@ -6640,6 +6611,9 @@ export class NewCharacterStandardPageComponent {
             this.wizardSpellbookByClass.set(persisted.wizardSpellbookByClass ?? {});
             this.wizardLevelUpLearnedSpellsByClass.set(persisted.wizardLevelUpLearnedSpellsByClass ?? {});
             this.wizardSpellSubTabByClass.set(persisted.wizardSpellSubTabByClass ?? {});
+
+            // Re-apply class limits after persisted spell state loads.
+            this.syncPreparedSpellsForClass(character.className, resolvedLevel);
         } else {
             this.selectedFaith.set(this.extractFaithFromNotes(notes));
         }
@@ -6887,25 +6861,11 @@ export class NewCharacterStandardPageComponent {
         return Boolean(spellDetailsMap[spellName]?.ritual);
     }
 
-    isRitualAlwaysAvailableSpell(className: string, classLevel: number, spellName: string): boolean {
-        if (!this.isRitualSpell(spellName)) {
-            return false;
-        }
-
-        return this.getKnownClassSpells(className, classLevel)
-            .some((spell) => spell.name === spellName && spell.level > 0);
-    }
-
     private limitPreparedLeveledSpellsForDisplay(spells: ClassSpellOption[], preparedLimit: number): ClassSpellOption[] {
         const kept: ClassSpellOption[] = [];
         let countedPrepared = 0;
 
         for (const spell of spells) {
-            if (this.isRitualSpell(spell.name)) {
-                kept.push(spell);
-                continue;
-            }
-
             if (countedPrepared >= preparedLimit) {
                 continue;
             }
@@ -6918,12 +6878,15 @@ export class NewCharacterStandardPageComponent {
     }
 
     private getPreparedSpellCountForLimit(className: string, classLevel: number): number {
+        return this.getPreparedLeveledSpellNames(className, classLevel).length;
+    }
+
+    private getPreparedLeveledSpellNames(className: string, classLevel: number): string[] {
         const knownByName = new Map(this.getKnownClassSpells(className, classLevel).map((spell) => [spell.name, spell]));
-        return (this.classPreparedSpells()[className] ?? [])
-            .map((spellName) => knownByName.get(spellName))
-            .filter((spell): spell is ClassSpellOption => !!spell)
-            .filter((spell) => spell.level > 0 && !this.isRitualSpell(spell.name))
-            .length;
+        return normalizePreparedLeveledSpellNames(this.classPreparedSpells()[className], {
+            getSpellLevel: (spellName) => knownByName.get(spellName)?.level ?? 0,
+            includeSpell: (spellName) => knownByName.has(spellName)
+        });
     }
 
     private getTableValueForClassLevel(className: string, classLevel: number, tableValuesByLevel: ReadonlyArray<number>): number {
@@ -6952,17 +6915,11 @@ export class NewCharacterStandardPageComponent {
             if (className === 'Wizard') {
                 const spellbookByName = new Map(this.getSpellbookSpells(className, classLevel).map((spell) => [spell.name, spell]));
                 const filteredPrepared = prepared.filter((spellName) => known.has(spellName));
-                const cantripPrepared = filteredPrepared.filter((spellName) => spellbookByName.get(spellName)?.level === 0);
                 const leveledPrepared = filteredPrepared
                     .filter((spellName) => (spellbookByName.get(spellName)?.level ?? 0) > 0);
                 const leveledSlots: string[] = [];
                 let countedPrepared = 0;
                 for (const spellName of leveledPrepared) {
-                    if (this.isRitualSpell(spellName)) {
-                        leveledSlots.push(spellName);
-                        continue;
-                    }
-
                     if (countedPrepared >= preparedLimit) {
                         continue;
                     }
@@ -6970,17 +6927,12 @@ export class NewCharacterStandardPageComponent {
                     countedPrepared += 1;
                     leveledSlots.push(spellName);
                 }
-                nextPrepared = [...cantripPrepared, ...leveledSlots];
+                nextPrepared = leveledSlots;
             } else {
                 const filteredPrepared = prepared.filter((spellName) => known.has(spellName));
                 const leveledSlots: string[] = [];
                 let countedPrepared = 0;
                 for (const spellName of filteredPrepared) {
-                    if (this.isRitualSpell(spellName)) {
-                        leveledSlots.push(spellName);
-                        continue;
-                    }
-
                     if (countedPrepared >= preparedLimit) {
                         continue;
                     }

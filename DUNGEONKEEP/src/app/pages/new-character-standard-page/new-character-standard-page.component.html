@@ -475,9 +475,7 @@
                                                 </span>
                                             </button>
                                             @if (isWizardClass(className) && spell.level === 0) {
-                                            <span class="spell-prepared-badge">Always Prepared</span>
-                                            } @else if (isRitualAlwaysAvailableSpell(className, multiclassList()[className], spell.name)) {
-                                            <span class="spell-prepared-badge">Ritual Available</span>
+                                            <span class="spell-prepared-badge">Permanent</span>
                                             } @else {
                                             <button type="button" class="spell-action-btn spell-action-btn--remove" (click)="unprepareClassSpell(className, spell.name)">
                                                 Remove
@@ -577,9 +575,7 @@
                                                 </span>
                                             </button>
                                             @if (spell.level === 0) {
-                                            <span class="spell-prepared-badge">Always Prepared</span>
-                                            } @else if (isRitualAlwaysAvailableSpell(className, multiclassList()[className], spell.name)) {
-                                            <span class="spell-prepared-badge">Ritual Available</span>
+                                            <span class="spell-prepared-badge">Permanent</span>
                                             } @else if (isSpellPreparedForClass(className, spell.name)) {
                                             <span class="spell-prepared-badge">Prepared</span>
                                             } @else {

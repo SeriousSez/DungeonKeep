@@ -317,7 +317,6 @@
                 <section class="action-section">
                     <div class="action-section-header">
                         <span>ACTIONS <span class="header-meta">· Attacks per Action: {{ attacksPerAction() }}</span></span>
-                        <span class="manage-custom">Manage Custom</span>
                     </div>
                     <div class="actions-table actions-table--combat">
                         <div class="actions-head">
@@ -379,7 +378,6 @@
                 <section class="action-section">
                     <div class="action-section-header">
                         <span>Bonus Actions</span>
-                        <span class="manage-custom">Manage Custom</span>
                     </div>
                     <h4 class="action-group-label">Actions in Combat</h4>
                     <div class="action-chips">
@@ -410,7 +408,6 @@
                 <section class="action-section">
                     <div class="action-section-header">
                         <span>Reactions</span>
-                        <span class="manage-custom">Manage Custom</span>
                     </div>
                     <h4 class="action-group-label">Actions in Combat</h4>
                     <div class="action-chips">
@@ -441,7 +438,6 @@
                 <section class="action-section">
                     <div class="action-section-header">
                         <span>Other</span>
-                        <span class="manage-custom">Manage Custom</span>
                     </div>
                     <h4 class="action-group-label">Actions in Combat</h4>
                     <div class="action-chips">
@@ -455,7 +451,7 @@
                         @for (row of otherSpellRows(); track row.name) {
                         <span class="spell-chip detail-trigger" role="button" tabindex="0" (click)="openSpellDetail(row)" (keydown.enter)="openSpellDetail(row)" (keydown.space)="openSpellDetail(row)">
                             <span class="spell-chip-name">{{ row.name }}</span>
-                            <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (row.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}</span>
+                            <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (row.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}@if (row.ritual && isSpellPrepared(row.name)) {<span class="spell-icon spell-icon--p" title="Prepared">P</span>}</span>
                         </span>
                         }
                     </div>
@@ -472,7 +468,7 @@
                 </div>
                 <div class="actions-meta-row">
                     <input class="inventory-search-input" type="search" placeholder="Search Spell Names, Casting Times, Damage Types, Conditions or Tags" [value]="spellSearchTerm()" (input)="onSpellSearchChanged($any($event.target).value)" />
-                    <span class="manage-custom">Manage Spells</span>
+                    <button type="button" class="manage-custom" [disabled]="!char.canEdit" (click)="openSpellManagerPopup()">Manage Spells</button>
                 </div>
                 <div class="action-filter-row">
                     @for (filter of spellFilters; track filter.key) {
@@ -495,7 +491,7 @@
                         </div>
                         @for (spellRow of spellCantrips(); track spellRow.name) {
                         <div class="actions-row detail-trigger-row" (click)="openSpellDetail(spellRow)">
-                            <span class="spell-name-cell">{{ spellRow.name }}@if (spellRow.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (spellRow.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}</span>
+                            <span class="spell-name-cell">{{ spellRow.name }}@if (spellRow.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (spellRow.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}@if (spellRow.ritual && isSpellPrepared(spellRow.name)) {<span class="spell-icon spell-icon--p" title="Prepared">P</span>}</span>
                             <span>{{ spellRow.castingTime }}</span>
                             <span>{{ spellRow.range }}</span>
                             <span>{{ spellRow.hitDcLabel }}</span>
@@ -539,7 +535,7 @@
                         </div>
                         @for (spellRow of group.spells; track spellRow.name) {
                         <div class="actions-row detail-trigger-row" (click)="openSpellDetail(spellRow)">
-                            <span class="spell-name-cell">{{ spellRow.name }}@if (spellRow.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (spellRow.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}</span>
+                            <span class="spell-name-cell">{{ spellRow.name }}@if (spellRow.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (spellRow.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}@if (spellRow.ritual && isSpellPrepared(spellRow.name)) {<span class="spell-icon spell-icon--p" title="Prepared">P</span>}</span>
                             <span>{{ spellRow.castingTime }}</span>
                             <span>{{ spellRow.range }}</span>
                             <span>{{ spellRow.hitDcLabel }}</span>
@@ -1013,6 +1009,133 @@
             }
         </section>
         }
+    </aside>
+    }
+
+    @if (spellManagerOpen()) {
+    <aside class="panel spell-popup" role="dialog" aria-label="Manage Spells Popup">
+        <header class="spell-popup-header">
+            <h3>Manage Spells</h3>
+            <button type="button" class="ghost-button" (click)="closeSpellManagerPopup()">Close</button>
+        </header>
+
+        <div class="spell-popup-tabs" role="tablist" aria-label="Spell manager tabs">
+            <button type="button" class="spell-popup-tab" role="tab" [class.active]="spellManagerTab() === 'prepared'" [attr.aria-selected]="spellManagerTab() === 'prepared'" (click)="setSpellManagerTab('prepared')">
+                <i class="fa-duotone fa-thin fa-wand-magic-sparkles"></i>
+                <span>Prepared ({{ spellManagerPreparedCount() }})</span>
+            </button>
+            <button type="button" class="spell-popup-tab" role="tab" [class.active]="spellManagerTab() === 'spellbook'" [attr.aria-selected]="spellManagerTab() === 'spellbook'" (click)="setSpellManagerTab('spellbook')">
+                <i class="fa-duotone fa-thin" [class.fa-scroll-old]="character()?.className === 'Wizard'" [class.fa-book-open]="character()?.className !== 'Wizard'"></i>
+                <span>{{ character()?.className === 'Wizard' ? 'Spellbook' : 'Known' }} ({{ spellManagerSpellbookCount() }})</span>
+            </button>
+            <button type="button" class="spell-popup-tab" role="tab" [class.active]="spellManagerTab() === 'all'" [attr.aria-selected]="spellManagerTab() === 'all'" (click)="setSpellManagerTab('all')">
+                <i class="fa-duotone fa-thin fa-books"></i>
+                <span>All Spells ({{ spellManagerAllCount() }})</span>
+            </button>
+        </div>
+
+        <div class="spell-popup-controls">
+            <input class="inventory-search-input" type="search" placeholder="Search spells, tags, effects, or levels" [value]="spellManagerSearch()" (input)="onSpellManagerSearchChanged($any($event.target).value)" />
+            <div class="action-filter-row">
+                @for (filter of spellManagerAvailableLevelFilters(); track filter.value) {
+                <button type="button" class="action-filter" [class.active]="spellManagerLevelFilter() === filter.value" (click)="setSpellManagerLevelFilter(filter.value)">
+                    {{ filter.label }}
+                </button>
+                }
+            </div>
+        </div>
+
+        <div class="spell-popup-list">
+            @if (spellManagerTabFilteredCatalog().length === 0) {
+            <p class="coin-party-note">No spells match your filter.</p>
+            }
+
+            @for (spell of spellManagerTabFilteredCatalog(); track spell.name) {
+            <article class="spell-popup-row" [class.spell-popup-row--expanded]="isSpellManagerSpellExpanded(spell.name)">
+                <div class="spell-popup-main">
+                    <button type="button" class="spell-popup-name-btn" (click)="toggleSpellManagerSpellDetail(spell.name)">
+                        <span class="spell-expand-icon">{{ isSpellManagerSpellExpanded(spell.name) ? '▾' : '▸' }}</span>
+                        <span class="spell-popup-name-text">
+                            <span class="spell-popup-name-main">
+                                <strong>{{ spell.name }}</strong>
+                                @if (getSpellManagerSpellDetail(spell.name).concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}
+                                @if (getSpellManagerSpellDetail(spell.name).ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}
+                                @if (getSpellManagerSpellDetail(spell.name).ritual && isSpellPrepared(spell.name)) {<span class="spell-icon spell-icon--p" title="Prepared">P</span>}
+                            </span>
+                            <span class="spell-popup-meta">{{ spellLevelLabel(spell.level) }}</span>
+                        </span>
+                    </button>
+                </div>
+
+                <div class="spell-popup-actions">
+                    @if (character()?.className === 'Wizard') {
+                    <button type="button" class="action-filter" [class.active]="isSpellInSpellbook(spell.name)" [disabled]="isSpellPermanentlyPrepared(spell.name)" (click)="toggleSpellbookSpell(spell.name)">
+                        {{ isSpellPermanentlyPrepared(spell.name) ? 'Permanent' : (isSpellInSpellbook(spell.name) ? 'In Spellbook' : 'Add to Spellbook') }}
+                    </button>
+                    } @else {
+                    <button type="button" class="action-filter" [class.active]="isSpellKnown(spell.name)" (click)="toggleKnownSpell(spell.name)">
+                        {{ isSpellKnown(spell.name) ? 'Known' : 'Add Known' }}
+                    </button>
+                    }
+
+                    @if (canPrepareSpell(spell.name)) {
+                    <button type="button" class="action-filter" [class.active]="isSpellPrepared(spell.name)" [disabled]="isPrepareToggleDisabled(spell.name)" (click)="togglePreparedSpell(spell.name)">
+                        {{ isSpellPrepared(spell.name) ? 'Prepared' : (isPrepareToggleDisabled(spell.name) ? 'Max' : 'Prepare') }}
+                    </button>
+                    }
+                </div>
+
+                @if (getSpellManagerSpellDetail(spell.name); as detail) {
+                <div class="spell-detail-pane" [class.spell-detail-pane--open]="isSpellManagerSpellExpanded(spell.name)" [attr.aria-hidden]="!isSpellManagerSpellExpanded(spell.name)">
+                    <div class="spell-detail-school">{{ detail.school }}{{ detail.ritual ? ' · Ritual' : '' }}{{ detail.concentration ? ' · Concentration' : '' }}</div>
+                    <dl class="spell-detail-stats">
+                        <div>
+                            <dt>Casting Time</dt>
+                            <dd>{{ detail.castingTime }}</dd>
+                        </div>
+                        <div>
+                            <dt>Range / Area</dt>
+                            <dd>{{ detail.range }}</dd>
+                        </div>
+                        <div>
+                            <dt>Components</dt>
+                            <dd>{{ detail.components }}</dd>
+                        </div>
+                        <div>
+                            <dt>Duration</dt>
+                            <dd>{{ detail.duration }}</dd>
+                        </div>
+                        @if (detail.attackSave) {
+                        <div>
+                            <dt>Attack / Save</dt>
+                            <dd>{{ detail.attackSave }}</dd>
+                        </div>
+                        }
+                        @if (detail.damageEffect) {
+                        <div>
+                            <dt>Damage / Effect</dt>
+                            <dd>{{ detail.damageEffect }}</dd>
+                        </div>
+                        }
+                    </dl>
+                    <p class="spell-detail-desc">{{ detail.description }}</p>
+                    @if (detail.higherLevels) {
+                    <p class="spell-detail-higher"><strong>At Higher Levels.</strong> {{ detail.higherLevels }}</p>
+                    }
+                    @if (detail.tags && detail.tags.length > 0) {
+                    <div class="spell-detail-tags">
+                        @for (tag of detail.tags; track tag) {
+                        <span class="spell-tag">{{ tag }}</span>
+                        }
+                    </div>
+                    }
+                </div>
+                } @else {
+                <p class="spell-detail-missing" [class.spell-detail-missing--open]="isSpellManagerSpellExpanded(spell.name)">Full details not yet available for this spell.</p>
+                }
+            </article>
+            }
+        </div>
     </aside>
     }
 

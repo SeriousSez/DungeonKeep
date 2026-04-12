@@ -10,10 +10,12 @@ import { CharacterPortraitModalComponent } from '../../components/character-port
 import { DropdownComponent, type DropdownOption } from '../../components/dropdown/dropdown.component';
 import { classLevelOneFeatures } from '../../data/class-features.data';
 import { premadeCharacters, type PremadeCharacter } from '../../data/premade-characters.data';
-import { classSpellCatalog } from '../../data/class-spells.data';
+import { classSpellCatalog, spellcastingProgressionByClass } from '../../data/class-spells.data';
 import { races } from '../../data/races';
 import { equipmentCatalog } from '../../data/new-character-standard-page.data';
 import { spellDetailsMap } from '../../data/spell-details.data';
+import { normalizePreparedLeveledSpellNames } from '../../rules/spell-preparation.rules';
+import { getWizardPreparedSpellLimit, isWizardSpellbookCantripAlwaysPrepared } from '../../rules/wizard-class.rules';
 import type { SkillProficiencies } from '../../models/dungeon.models';
 import { DungeonApiService } from '../../state/dungeon-api.service';
 import { CampaignHubService } from '../../state/campaign-hub.service';
@@ -23,6 +25,7 @@ type AbilityKey = 'strength' | 'dexterity' | 'constitution' | 'intelligence' | '
 
 type CombatTab = 'actions' | 'spells' | 'inventory' | 'features' | 'background' | 'notes' | 'extras';
 type SpellFilter = 'all' | '0' | '1' | '2' | '3';
+type SpellManagerTab = 'prepared' | 'spellbook' | 'all';
 type ActionFilter = 'all' | 'attack' | 'action' | 'bonus-action' | 'reaction' | 'other' | 'limited-use';
 type BackgroundFilter = 'all' | 'background' | 'characteristics' | 'appearance';
 type InventoryFilter = string; // Can be 'all', 'equipment', 'other', or a container name
@@ -370,6 +373,11 @@ export class CharacterDetailPageComponent {
     readonly isSavingHp = signal(false);
     readonly heroicInspiration = signal(false);
     readonly coinManagerOpen = signal(false);
+    readonly spellManagerOpen = signal(false);
+    readonly spellManagerTab = signal<SpellManagerTab>('prepared');
+    readonly spellManagerSearch = signal('');
+    readonly spellManagerLevelFilter = signal<'all' | `${number}`>('all');
+    readonly spellManagerExpandedSpellName = signal('');
     readonly coinAdjustInput = signal<PersistedCurrencyState>({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 });
     readonly partyCoinAdjustInput = signal<PersistedCurrencyState>({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 });
     readonly coinLifestyleExpanded = signal(false);
@@ -1250,7 +1258,12 @@ export class CharacterDetailPageComponent {
 
         let selectedNames: string[];
         if (className === 'Wizard') {
-            const wizardCantrips = wizardSpellbookNames.filter((name) => this.getSpellLevelForDetails(className, name) === 0);
+            const wizardCantrips = wizardSpellbookNames.filter((name) => isWizardSpellbookCantripAlwaysPrepared(
+                className,
+                name,
+                (spellName) => wizardSpellbookNames.includes(spellName),
+                (spellName) => this.getSpellLevelForDetails(className, spellName)
+            ));
             const preparedLeveled = preparedNames.filter((name) => this.getSpellLevelForDetails(className, name) > 0);
             const ritualFromSpellbook = wizardSpellbookNames.filter((name) => this.isRitualSpell(name) && this.getSpellLevelForDetails(className, name) > 0);
             selectedNames = [...wizardCantrips, ...preparedLeveled, ...ritualFromSpellbook];
@@ -1260,7 +1273,11 @@ export class CharacterDetailPageComponent {
             selectedNames = knownNames;
         }
 
-        const uniqueNames = [...new Set(selectedNames)];
+        const maxAllowedSpellLevel = this.getMaxSpellLevelForClassLevel(className, char.level);
+        const uniqueNames = [...new Set(selectedNames)].filter((name) => {
+            const spellLevel = this.getSpellLevelForDetails(className, name);
+            return spellLevel === 0 || spellLevel <= maxAllowedSpellLevel;
+        });
         const spellBonus = this.spellAttackBonus();
         const saveDC = this.spellSaveDC();
 
@@ -1308,6 +1325,149 @@ export class CharacterDetailPageComponent {
                 .toLowerCase();
 
             return haystack.includes(term);
+        });
+    });
+
+    readonly spellManagerClassCatalog = computed(() => {
+        const char = this.character();
+        if (!char?.className) {
+            return [] as ReadonlyArray<{ name: string; level: number; source: string }>;
+        }
+
+        const maxAllowedSpellLevel = this.getMaxSpellLevelForClassLevel(char.className, char.level);
+
+        const catalog = classSpellCatalog[char.className] ?? [];
+        return [...catalog]
+            .filter((spell) => spell.level === 0 || spell.level <= maxAllowedSpellLevel)
+            .sort((left, right) => left.level - right.level || left.name.localeCompare(right.name))
+            .map((spell) => ({
+                name: spell.name,
+                level: spell.level,
+                source: spell.source
+            }));
+    });
+
+    readonly spellManagerAvailableLevelFilters = computed(() => {
+        const levels = new Set(this.spellManagerClassCatalog().map((spell) => `${spell.level}` as `${number}`));
+        const sortedLevels = [...levels].sort((left, right) => Number(left) - Number(right));
+
+        return [
+            { value: 'all' as const, label: 'All' },
+            ...sortedLevels.map((level) => ({
+                value: level,
+                label: Number(level) === 0 ? 'Cantrips' : `Level ${level}`
+            }))
+        ];
+    });
+
+    readonly spellManagerKnownNames = computed(() => {
+        const className = this.character()?.className;
+        if (!className) {
+            return new Set<string>();
+        }
+
+        return new Set(this.persistedBuilderState()?.classKnownSpellsByClass?.[className] ?? []);
+    });
+
+    readonly spellManagerPreparedNames = computed(() => {
+        const className = this.character()?.className;
+        if (!className) {
+            return new Set<string>();
+        }
+
+        return new Set(this.getPreparedLeveledSpellNames(this.persistedBuilderState()?.classPreparedSpells?.[className], className));
+    });
+
+    readonly spellManagerSpellbookNames = computed(() => {
+        const className = this.character()?.className;
+        if (!className) {
+            return new Set<string>();
+        }
+
+        return new Set(this.persistedBuilderState()?.wizardSpellbookByClass?.[className] ?? []);
+    });
+
+    readonly spellManagerFilteredCatalog = computed(() => {
+        const term = this.spellManagerSearch().trim().toLowerCase();
+        const selectedLevel = this.spellManagerLevelFilter();
+
+        return this.spellManagerClassCatalog().filter((spell) => {
+            if (selectedLevel !== 'all' && `${spell.level}` !== selectedLevel) {
+                return false;
+            }
+
+            if (!term) {
+                return true;
+            }
+
+            const details = spellDetailsMap[spell.name];
+            const haystack = [
+                spell.name,
+                spell.level === 0 ? 'cantrip' : `level ${spell.level}`,
+                spell.source,
+                details?.description ?? '',
+                details?.attackSave ?? '',
+                details?.castingTime ?? '',
+                details?.components ?? ''
+            ].join(' ').toLowerCase();
+
+            return haystack.includes(term);
+        });
+    });
+
+    readonly spellManagerPreparedCount = computed(() =>
+        this.spellManagerClassCatalog().filter((spell) => spell.level > 0 && this.spellManagerPreparedNames().has(spell.name)).length
+    );
+
+    readonly spellManagerPreparedLimit = computed(() => {
+        const char = this.character();
+        if (!char) {
+            return 0;
+        }
+
+        return this.getPreparedSpellLimitForClassLevel(char.className, char.level);
+    });
+
+    readonly spellManagerPreparedLimitReached = computed(() => {
+        const limit = this.spellManagerPreparedLimit();
+        if (limit <= 0) {
+            return true;
+        }
+
+        return this.spellManagerPreparedCount() >= limit;
+    });
+
+    readonly spellManagerSpellbookCount = computed(() => {
+        const isWizard = this.character()?.className === 'Wizard';
+        if (isWizard) {
+            return this.spellManagerClassCatalog().filter((spell) => this.spellManagerSpellbookNames().has(spell.name)).length;
+        }
+
+        return this.spellManagerClassCatalog().filter((spell) => this.spellManagerKnownNames().has(spell.name)).length;
+    });
+
+    readonly spellManagerAllCount = computed(() => this.spellManagerClassCatalog().length);
+
+    readonly spellManagerTabFilteredCatalog = computed(() => {
+        const selectedTab = this.spellManagerTab();
+        const isWizard = this.character()?.className === 'Wizard';
+
+        return this.spellManagerFilteredCatalog().filter((spell) => {
+            if (selectedTab === 'prepared') {
+                if (isWizard && spell.level === 0) {
+                    return this.isSpellInSpellbook(spell.name);
+                }
+
+                return spell.level > 0 && this.spellManagerPreparedNames().has(spell.name);
+            }
+
+            if (selectedTab === 'spellbook') {
+                return isWizard
+                    ? this.spellManagerSpellbookNames().has(spell.name)
+                    : this.spellManagerKnownNames().has(spell.name);
+            }
+
+            return true;
         });
     });
 
@@ -3112,15 +3272,20 @@ export class CharacterDetailPageComponent {
 
     openSpellDetail(spell: { name: string; castingTime?: string; range?: string; hitDcLabel?: string; damage?: string }): void {
         const details = spellDetailsMap[spell.name];
+        const castingTime = spell.castingTime ?? details?.castingTime;
+        const range = spell.range ?? details?.range;
+        const hitDcLabel = spell.hitDcLabel ?? details?.attackSave;
+        const effect = spell.damage ?? details?.damageEffect;
         this.openDetailDrawer({
             title: spell.name,
             subtitle: 'Spell Detail',
             description: details?.description ?? 'Spell details for this entry.',
             bullets: [
-                spell.castingTime ? `Casting Time: ${spell.castingTime}` : '',
-                spell.range ? `Range: ${spell.range}` : '',
-                spell.hitDcLabel ? `Hit / DC: ${spell.hitDcLabel}` : '',
-                spell.damage ? `Effect: ${spell.damage}` : '',
+                castingTime ? `Casting Time: ${castingTime}` : '',
+                range ? `Range: ${range}` : '',
+                hitDcLabel ? `Hit / DC: ${hitDcLabel}` : '',
+                effect ? `Effect: ${effect}` : '',
+                details?.duration ? `Duration: ${details.duration}` : '',
                 details?.components ? `Components: ${details.components}` : ''
             ].filter((entry) => entry.length > 0)
         });
@@ -3154,6 +3319,234 @@ export class CharacterDetailPageComponent {
 
     setSpellFilter(filter: SpellFilter): void {
         this.activeSpellFilter.set(filter);
+    }
+
+    openSpellManagerPopup(): void {
+        const char = this.character();
+        if (!char?.canEdit) {
+            return;
+        }
+
+        this.activeDetailDrawer.set(null);
+        this.hpManagerOpen.set(false);
+        this.coinManagerOpen.set(false);
+        this.spellManagerTab.set('prepared');
+        this.spellManagerSearch.set('');
+        this.spellManagerLevelFilter.set('all');
+        this.spellManagerExpandedSpellName.set('');
+        this.spellManagerOpen.set(true);
+        void this.sanitizePreparedSpellsForCurrentClass();
+    }
+
+    closeSpellManagerPopup(): void {
+        this.spellManagerOpen.set(false);
+        this.spellManagerExpandedSpellName.set('');
+    }
+
+    onSpellManagerSearchChanged(value: string): void {
+        this.spellManagerSearch.set(value);
+        this.spellManagerExpandedSpellName.set('');
+    }
+
+    setSpellManagerTab(tab: SpellManagerTab): void {
+        this.spellManagerTab.set(tab);
+        this.spellManagerExpandedSpellName.set('');
+    }
+
+    setSpellManagerLevelFilter(filter: 'all' | `${number}`): void {
+        this.spellManagerLevelFilter.set(filter);
+        this.spellManagerExpandedSpellName.set('');
+    }
+
+    getSpellManagerSpellDetail(spellName: string) {
+        return spellDetailsMap[spellName] ?? null;
+    }
+
+    isSpellManagerSpellExpanded(spellName: string): boolean {
+        return this.spellManagerExpandedSpellName() === spellName;
+    }
+
+    toggleSpellManagerSpellDetail(spellName: string): void {
+        this.spellManagerExpandedSpellName.update((current) => current === spellName ? '' : spellName);
+    }
+
+    isSpellKnown(spellName: string): boolean {
+        return this.spellManagerKnownNames().has(spellName);
+    }
+
+    isSpellPrepared(spellName: string): boolean {
+        return this.spellManagerPreparedNames().has(spellName);
+    }
+
+    isSpellInSpellbook(spellName: string): boolean {
+        return this.spellManagerSpellbookNames().has(spellName);
+    }
+
+    isSpellPermanentlyPrepared(spellName: string): boolean {
+        const char = this.character();
+        if (!char || char.className !== 'Wizard') {
+            return false;
+        }
+
+        return this.isSpellInSpellbook(spellName) && this.getSpellLevelForDetails(char.className, spellName) === 0;
+    }
+
+    canPrepareSpell(spellName: string): boolean {
+        const char = this.character();
+        if (!char) {
+            return false;
+        }
+
+        const level = this.getSpellLevelForDetails(char.className, spellName);
+        return level > 0;
+    }
+
+    isPrepareToggleDisabled(spellName: string): boolean {
+        if (!this.canPrepareSpell(spellName)) {
+            return true;
+        }
+
+        const isPrepared = this.isSpellPrepared(spellName);
+        if (isPrepared) {
+            return false;
+        }
+
+        return this.spellManagerPreparedLimitReached();
+    }
+
+    spellLevelLabel(level: number): string {
+        return level === 0 ? 'Cantrip' : `Level ${level}`;
+    }
+
+    async toggleKnownSpell(spellName: string): Promise<void> {
+        await this.persistSpellSelections((state, className) => {
+            const nextKnown = this.toggleNameInList(state.classKnownSpellsByClass?.[className], spellName, className);
+
+            const nextPrepared = this.getPreparedLeveledSpellNames(this.removeNameWhenMissing(
+                state.classPreparedSpells?.[className],
+                spellName,
+                nextKnown.includes(spellName),
+                className
+            ), className);
+
+            const nextSpellbook = this.removeNameWhenMissing(
+                state.wizardSpellbookByClass?.[className],
+                spellName,
+                nextKnown.includes(spellName),
+                className
+            );
+
+            return {
+                ...state,
+                classKnownSpellsByClass: {
+                    ...(state.classKnownSpellsByClass ?? {}),
+                    [className]: nextKnown
+                },
+                classPreparedSpells: {
+                    ...(state.classPreparedSpells ?? {}),
+                    [className]: nextPrepared
+                },
+                wizardSpellbookByClass: {
+                    ...(state.wizardSpellbookByClass ?? {}),
+                    [className]: nextSpellbook
+                }
+            };
+        });
+    }
+
+    async toggleSpellbookSpell(spellName: string): Promise<void> {
+        const char = this.character();
+        if (!char || char.className !== 'Wizard') {
+            return;
+        }
+
+        if (this.isSpellPermanentlyPrepared(spellName)) {
+            return;
+        }
+
+        await this.persistSpellSelections((state, className) => {
+            const nextSpellbook = this.toggleNameInList(state.wizardSpellbookByClass?.[className], spellName, className);
+            const hasSpell = nextSpellbook.includes(spellName);
+            const nextPrepared = this.getPreparedLeveledSpellNames(this.removeNameWhenMissing(state.classPreparedSpells?.[className], spellName, hasSpell, className), className);
+            const nextKnown = this.removeNameWhenMissing(state.classKnownSpellsByClass?.[className], spellName, hasSpell, className);
+
+            return {
+                ...state,
+                wizardSpellbookByClass: {
+                    ...(state.wizardSpellbookByClass ?? {}),
+                    [className]: nextSpellbook
+                },
+                classPreparedSpells: {
+                    ...(state.classPreparedSpells ?? {}),
+                    [className]: nextPrepared
+                },
+                classKnownSpellsByClass: {
+                    ...(state.classKnownSpellsByClass ?? {}),
+                    [className]: nextKnown
+                }
+            };
+        });
+    }
+
+    async togglePreparedSpell(spellName: string): Promise<void> {
+        const char = this.character();
+        if (!char || !this.canPrepareSpell(spellName)) {
+            return;
+        }
+
+        await this.persistSpellSelections((state, className) => {
+            const nextPrepared = this.getPreparedLeveledSpellNames(this.toggleNameInList(state.classPreparedSpells?.[className], spellName, className), className);
+
+            let nextKnown = [...(state.classKnownSpellsByClass?.[className] ?? [])];
+            let nextSpellbook = [...(state.wizardSpellbookByClass?.[className] ?? [])];
+
+            if (nextPrepared.includes(spellName)) {
+                if (!nextKnown.includes(spellName)) {
+                    nextKnown = this.sortSpellNamesForClass([...nextKnown, spellName], className);
+                }
+
+                if (className === 'Wizard' && !nextSpellbook.includes(spellName)) {
+                    nextSpellbook = this.sortSpellNamesForClass([...nextSpellbook, spellName], className);
+                }
+            }
+
+            return {
+                ...state,
+                classPreparedSpells: {
+                    ...(state.classPreparedSpells ?? {}),
+                    [className]: nextPrepared
+                },
+                classKnownSpellsByClass: {
+                    ...(state.classKnownSpellsByClass ?? {}),
+                    [className]: nextKnown
+                },
+                wizardSpellbookByClass: {
+                    ...(state.wizardSpellbookByClass ?? {}),
+                    [className]: nextSpellbook
+                }
+            };
+        });
+    }
+
+    private async sanitizePreparedSpellsForCurrentClass(): Promise<void> {
+        const char = this.character();
+        if (!char?.canEdit) {
+            return;
+        }
+
+        const currentPrepared = this.persistedBuilderState()?.classPreparedSpells?.[char.className] ?? [];
+        const normalized = this.getPreparedLeveledSpellNames(currentPrepared, char.className);
+        if (this.areStringArraysEqual(currentPrepared, normalized)) {
+            return;
+        }
+
+        await this.persistSpellSelections((state, className) => ({
+            ...state,
+            classPreparedSpells: {
+                ...(state.classPreparedSpells ?? {}),
+                [className]: this.getPreparedLeveledSpellNames(state.classPreparedSpells?.[className], className)
+            }
+        }));
     }
 
     onSpellSearchChanged(value: string): void {
@@ -3720,8 +4113,179 @@ export class CharacterDetailPageComponent {
         return 1;
     }
 
+    private getMaxSpellLevelForClassLevel(className: string, classLevel: number): number {
+        const progression = spellcastingProgressionByClass[className] ?? 'none';
+        const safeLevel = Math.max(1, Math.min(20, classLevel));
+
+        switch (progression) {
+            case 'none':
+                return 0;
+            case 'full':
+                return Math.min(9, Math.ceil(safeLevel / 2));
+            case 'half':
+                return Math.max(0, Math.min(5, Math.ceil(safeLevel / 4)));
+            case 'half-late':
+                if (safeLevel < 2) {
+                    return 0;
+                }
+
+                return Math.max(1, Math.min(5, Math.ceil((safeLevel - 1) / 4)));
+            case 'pact':
+                return this.getMaxPactSpellLevel(safeLevel);
+            default:
+                return 0;
+        }
+    }
+
+    private getMaxPactSpellLevel(level: number): number {
+        if (level >= 17) {
+            return 5;
+        }
+
+        if (level >= 9) {
+            return 5;
+        }
+
+        if (level >= 7) {
+            return 4;
+        }
+
+        if (level >= 5) {
+            return 3;
+        }
+
+        if (level >= 3) {
+            return 2;
+        }
+
+        if (level >= 1) {
+            return 1;
+        }
+
+        return 0;
+    }
+
     private isRitualSpell(spellName: string): boolean {
         return Boolean(spellDetailsMap[spellName]?.ritual);
+    }
+
+    private toggleNameInList(current: string[] | undefined, name: string, className: string): string[] {
+        const normalized = name.trim();
+        if (!normalized) {
+            return current ?? [];
+        }
+
+        const names = new Set(current ?? []);
+        if (names.has(normalized)) {
+            names.delete(normalized);
+        } else {
+            names.add(normalized);
+        }
+
+        return this.sortSpellNamesForClass([...names], className);
+    }
+
+    private removeNameWhenMissing(current: string[] | undefined, name: string, shouldKeep: boolean, className: string): string[] {
+        const names = new Set(current ?? []);
+        if (!shouldKeep) {
+            names.delete(name);
+        }
+
+        return this.sortSpellNamesForClass([...names], className);
+    }
+
+    private getPreparedLeveledSpellNames(current: string[] | undefined, className: string): string[] {
+        return normalizePreparedLeveledSpellNames(current, {
+            getSpellLevel: (spellName) => this.getSpellLevelForDetails(className, spellName),
+            sort: (left, right) => this.getSpellLevelForDetails(className, left) - this.getSpellLevelForDetails(className, right) || left.localeCompare(right)
+        });
+    }
+
+    private getPreparedSpellLimitForClassLevel(className: string, classLevel: number): number {
+        const normalizedLevel = Math.min(20, Math.max(1, Math.trunc(classLevel)));
+        const progression = spellcastingProgressionByClass[className] ?? 'none';
+        if (progression === 'none') {
+            return 0;
+        }
+
+        const spellcastingAbility = this.spellcastingAbilityByClass[className];
+        const spellcastingAbilityModifier = spellcastingAbility
+            ? this.getAbilityModifier(this.effectiveAbilityScores()?.[spellcastingAbility] ?? 10)
+            : 0;
+
+        switch (className) {
+            case 'Cleric':
+            case 'Druid':
+                return Math.max(1, normalizedLevel + spellcastingAbilityModifier);
+            case 'Wizard':
+                return getWizardPreparedSpellLimit(normalizedLevel, spellcastingAbilityModifier);
+            case 'Paladin':
+            case 'Ranger':
+                return Math.max(1, Math.floor(normalizedLevel / 2) + spellcastingAbilityModifier);
+            case 'Artificer':
+                return Math.max(1, normalizedLevel + spellcastingAbilityModifier);
+            case 'Bard':
+            case 'Sorcerer':
+            case 'Warlock':
+                return 0;
+            default:
+                if (progression === 'full' || progression === 'pact') {
+                    return normalizedLevel;
+                }
+
+                if (progression === 'half') {
+                    return Math.max(1, Math.ceil(normalizedLevel / 2));
+                }
+
+                if (normalizedLevel < 2) {
+                    return 0;
+                }
+
+                return Math.max(1, Math.floor(normalizedLevel / 2));
+        }
+    }
+
+    private areStringArraysEqual(left: string[], right: string[]): boolean {
+        if (left.length !== right.length) {
+            return false;
+        }
+
+        return left.every((value, index) => value === right[index]);
+    }
+
+    private sortSpellNamesForClass(names: string[], className: string): string[] {
+        return [...new Set(names)]
+            .sort((left, right) => this.getSpellLevelForDetails(className, left) - this.getSpellLevelForDetails(className, right) || left.localeCompare(right));
+    }
+
+    private async persistSpellSelections(
+        updater: (state: PersistedBuilderState, className: string) => PersistedBuilderState
+    ): Promise<void> {
+        const char = this.character();
+        if (!char || !char.canEdit) {
+            return;
+        }
+
+        const className = char.className;
+        const currentState: PersistedBuilderState = this.persistedBuilderState() ?? {};
+        const updatedState = updater({ ...currentState }, className);
+        const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
+
+        await this.store.updateCharacter(this.characterId, {
+            name: char.name,
+            playerName: char.playerName,
+            race: char.race,
+            className: char.className,
+            role: char.role,
+            level: char.level,
+            background: char.background,
+            notes: updatedNotes,
+            campaignId: char.campaignId,
+            hitPoints: char.hitPoints,
+            maxHitPoints: char.maxHitPoints
+        });
+
+        this.cdr.detectChanges();
     }
 
     private isContainerItemName(name: string): boolean {
