@@ -1,6 +1,6 @@
 <div [class]="'app-dropdown-menu ' + (size() === 'wide' ? 'app-dropdown--wide' : (size() === 'narrow' ? 'app-dropdown--narrow' : 'app-dropdown--compact')) + (isOpen() ? ' app-dropdown-menu--open' : '') + (opensUpward() ? ' app-dropdown-menu--up' : '') + (panelAlignment() === 'end' ? ' app-dropdown-menu--align-end' : ' app-dropdown-menu--align-start')"
     [style.min-width.px]="minWidth() ?? null">
-    <button type="button" [attr.id]="id()" [attr.aria-label]="ariaLabel()" [attr.aria-expanded]="isOpen()" [disabled]="disabled()" class="app-dropdown app-dropdown-trigger" (click)="toggleOpen()">
+    <button type="button" [attr.id]="id()" [attr.aria-label]="ariaLabel()" [attr.aria-expanded]="isOpen()" [disabled]="disabled()" class="app-dropdown app-dropdown-trigger" [style.min-height.px]="triggerMinHeight() ?? null" (click)="toggleOpen()">
         <span>{{ triggerLabel() }}</span>
         <i class="fa-duotone fa-thin fa-chevron-down" aria-hidden="true"></i>
     </button>

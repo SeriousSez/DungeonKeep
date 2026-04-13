@@ -815,10 +815,76 @@
                 } @else {
                 <h3 class="subsection-title">Extras</h3>
                 <div class="actions-meta-row">
-                    <span>Search Names, Types, or Tags</span>
-                    <span class="manage-custom">Manage Extras</span>
+                    <span></span>
+                    <button type="button" class="manage-custom" [disabled]="!char.canEdit" (click)="openExtrasManagerPopup()">Manage Extras</button>
                 </div>
-                <p class="notes-block">Extras that you add will display here.</p>
+                @if (characterExtrasEntries().length === 0) {
+                <p class="notes-block">Extras that you add will appear here. Click <strong>Manage Extras</strong> to add familiars, companions, vehicles, and more.</p>
+                } @else {
+                @for (group of characterExtrasByType(); track group.type) {
+                <section class="extras-group">
+                    <h4 class="extras-group-heading">{{ group.type }}</h4>
+                    <div class="extras-table">
+                        <div class="extras-table-header">
+                            <span class="extras-th extras-th--name">Name</span>
+                            <span class="extras-th">AC</span>
+                            <span class="extras-th">Hit Points</span>
+                            <span class="extras-th">Speed</span>
+                            <span class="extras-th">Notes</span>
+                            <span class="extras-th extras-th--action"></span>
+                        </div>
+                        @for (ex of group.entries; track ex.uid) {
+                        @let sb = extrasStatBlockForEntry(ex.name, ex.monsterStatBlockName);
+                        <div class="extras-table-row extras-table-row--interactive" role="button" tabindex="0" (click)="openExtrasStatPopup(ex)" (keydown.enter)="openExtrasStatPopup(ex)" (keydown.space)="openExtrasStatPopup(ex); $event.preventDefault()">
+                            <div class="extras-cell extras-cell--name">
+                                <div class="extras-avatar">
+                                    <i class="fa-duotone fa-thin fa-paw-claws"></i>
+                                </div>
+                                <div class="extras-name-info">
+                                    <strong>{{ ex.name }}</strong>
+                                    @if (sb) {
+                                    <span>{{ sb.size }} {{ sb.creatureType }}</span>
+                                    }
+                                </div>
+                            </div>
+                            <div class="extras-cell extras-cell--stat">
+                                @if (sb?.armorClass != null) {
+                                <span class="extras-stat-num">{{ sb!.armorClass }}</span>
+                                } @else {
+                                <span class="extras-stat-muted">—</span>
+                                }
+                            </div>
+                            <div class="extras-cell extras-cell--hp">
+                                @if (ex.maxHp != null) {
+                                <button type="button" class="extras-hp-btn" (click)="$event.stopPropagation(); decrementExtrasHp(ex.uid)" aria-label="Decrease HP">−</button>
+                                <input type="number" class="extras-hp-input" [value]="ex.currentHp ?? 0" (click)="$event.stopPropagation()" (change)="setExtrasHp(ex.uid, $any($event.target).value)" [attr.aria-label]="'Current HP for ' + ex.name" />
+                                <span class="extras-hp-sep">/ {{ ex.maxHp }}</span>
+                                <button type="button" class="extras-hp-btn" (click)="$event.stopPropagation(); incrementExtrasHp(ex.uid)" aria-label="Increase HP">+</button>
+                                } @else {
+                                <span class="extras-stat-muted">—</span>
+                                }
+                            </div>
+                            <div class="extras-cell extras-cell--speed">
+                                @if (sb?.speed) {
+                                <span class="extras-speed-text">{{ sb!.speed }}</span>
+                                } @else {
+                                <span class="extras-stat-muted">—</span>
+                                }
+                            </div>
+                            <div class="extras-cell extras-cell--notes">
+                                <input type="text" class="extras-notes-input" placeholder="Notes..." [value]="ex.customNotes ?? ''" (click)="$event.stopPropagation()" (change)="setExtrasCustomNotes(ex.uid, $any($event.target).value)" [attr.aria-label]="'Notes for ' + ex.name" />
+                            </div>
+                            <div class="extras-cell extras-cell--remove">
+                                <button type="button" class="extras-remove-btn" (click)="$event.stopPropagation(); removeExtrasEntry(ex.uid)" [attr.aria-label]="'Remove ' + ex.name">
+                                    <i class="fa-duotone fa-thin fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        }
+                    </div>
+                </section>
+                }
+                }
                 }
             </section>
         </div>
@@ -1487,6 +1553,445 @@
             </div>
             }
         </section>
+    </aside>
+    }
+
+    @if (extrasManagerOpen()) {
+    <aside class="panel extras-popup" role="dialog" aria-label="Manage Extras Popup">
+        <header class="extras-popup-header">
+            <h3>Manage Extras</h3>
+            <button type="button" class="ghost-button" (click)="closeExtrasManagerPopup()">Close</button>
+        </header>
+
+        <div class="extras-type-selector">
+            <label class="extras-type-label">Type</label>
+            <app-dropdown [value]="extrasCatalogType()" [options]="extrasCatalogTypeOptions()" placeholder="Choose type..." size="wide" [panelMinWidth]="220" [triggerMinHeight]="50" [maxPanelHeight]="500" (changed)="setExtrasCatalogType($event)">
+            </app-dropdown>
+        </div>
+
+        @if (extrasMonsterPickerEnabled()) {
+        <div class="extras-monster-filters" role="group" aria-label="Monster filters">
+            <label class="extras-filter-field extras-filter-field--search">
+                <span>Search</span>
+                <input type="text" [value]="extrasMonsterSearchTerm()" (input)="onExtrasMonsterSearchInput($any($event.target).value)" placeholder="Name, type, or source" />
+            </label>
+            <div class="extras-filter-field">
+                <span class="extras-filter-label">CR Min</span>
+                <app-dropdown [value]="extrasMonsterCrMin()" [options]="extrasCrOptions" placeholder="Any" size="compact" [triggerMinHeight]="34" [maxPanelHeight]="260" (changed)="onExtrasMonsterCrMinInput($event.toString())">
+                </app-dropdown>
+            </div>
+            <div class="extras-filter-field">
+                <span class="extras-filter-label">CR Max</span>
+                <app-dropdown [value]="extrasMonsterCrMax()" [options]="extrasCrOptions" placeholder="Any" size="compact" [triggerMinHeight]="34" [maxPanelHeight]="260" (changed)="onExtrasMonsterCrMaxInput($event.toString())">
+                </app-dropdown>
+            </div>
+        </div>
+        }
+
+        <div class="extras-popup-list extras-catalog-list">
+            @for (entry of filteredExtrasCatalogItems(); track entry.name) {
+            <article class="extras-popup-row" [class.extras-popup-row--expanded]="extrasCatalogExpandedItem() === entry.name">
+                <div class="extras-popup-main">
+                    <button type="button" class="extras-popup-name-btn" (click)="toggleExtrasCatalogItemDetail(entry.name)">
+                        <span class="extras-expand-icon">{{ extrasCatalogExpandedItem() === entry.name ? '▾' : '▸' }}</span>
+                        <span class="extras-popup-name-text">
+                            <strong>{{ entry.name }}</strong>
+                            <span class="extras-popup-meta">{{ entry.subtype }}{{ entry.source ? ' · ' + entry.source : '' }}</span>
+                        </span>
+                    </button>
+                </div>
+                <div class="extras-catalog-add-btn-wrap">
+                    <button type="button" class="extras-catalog-add-btn" (click)="addExtraToCharacter(entry)">ADD</button>
+                </div>
+                <div class="extras-detail-pane" [class.extras-detail-pane--open]="extrasCatalogExpandedItem() === entry.name" [attr.aria-hidden]="extrasCatalogExpandedItem() !== entry.name">
+                    @if (entry.cr) {
+                    <div class="extras-detail-tags">
+                        <span class="extras-tag">CR {{ entry.cr }}</span>
+                        @if (entry.size) {
+                        <span class="extras-tag">{{ entry.size }}</span>
+                        }
+                    </div>
+                    }
+                    @if (entry.summary) {
+                    <div class="item-detail-section">
+                        <p class="item-description">{{ entry.summary }}</p>
+                    </div>
+                    }
+                    @if (entry.detailLines && entry.detailLines.length > 0) {
+                    <div class="item-detail-section">
+                        <p class="item-detail-section-title">Highlights</p>
+                        <ul class="item-detail-highlights">
+                            @for (line of entry.detailLines; track line) {
+                            <li>{{ line }}</li>
+                            }
+                        </ul>
+                    </div>
+                    }
+                    @if (entry.notes) {
+                    <p class="item-description item-description--rules">{{ entry.notes }}</p>
+                    }
+                    @if (entry.sourceUrl) {
+                    <dl class="item-detail-facts">
+                        <div class="item-detail-facts__source">
+                            <dt>Source</dt>
+                            <dd><a [href]="entry.sourceUrl" target="_blank" rel="noopener noreferrer" class="item-source-link dk-link">{{ entry.source || 'View details' }}</a></dd>
+                        </div>
+                    </dl>
+                    }
+
+                    @if (extrasCreatureStatBlock(entry); as mountMonster) {
+                    <section class="extras-stat-sheet">
+                        <header class="extras-stat-sheet-header">
+                            <h4>{{ mountMonster.name }}</h4>
+                            <p>{{ extrasStatSubtitle(mountMonster) }}</p>
+                        </header>
+
+                        <div class="extras-stat-facts-grid">
+                            <article class="extras-stat-fact-card">
+                                <span>Armor Class</span>
+                                <strong>{{ mountMonster.armorClass ?? '—' }}</strong>
+                            </article>
+                            <article class="extras-stat-fact-card">
+                                <span>Hit Points</span>
+                                <strong>{{ mountMonster.hitPoints ?? '—' }}</strong>
+                            </article>
+                            <article class="extras-stat-fact-card extras-stat-fact-card--wide">
+                                <span>Speed</span>
+                                <strong>{{ mountMonster.speed || '—' }}</strong>
+                            </article>
+                        </div>
+
+                        <div class="extras-stat-abilities-grid">
+                            @for (ability of extrasAbilityRows(mountMonster); track ability.label) {
+                            <article class="extras-stat-ability-card">
+                                <span>{{ ability.label }}</span>
+                                <strong>{{ extrasStatScoreText(ability.value) }}</strong>
+                                <em>{{ extrasStatModifierText(ability.value) }}</em>
+                            </article>
+                            }
+                        </div>
+
+                        <dl class="extras-stat-detail-list">
+                            <div>
+                                <dt>Challenge:</dt>
+                                <dd>{{ mountMonster.challengeRating || '—' }}</dd>
+                            </div>
+                            <div>
+                                <dt>Senses:</dt>
+                                <dd>{{ mountMonster.senses || '—' }}</dd>
+                            </div>
+                            <div>
+                                <dt>Languages:</dt>
+                                <dd>{{ mountMonster.languages || '—' }}</dd>
+                            </div>
+                            @if (mountMonster.skills) {
+                            <div>
+                                <dt>Skills:</dt>
+                                <dd>{{ mountMonster.skills }}</dd>
+                            </div>
+                            }
+                            @if (mountMonster.sourceUrl) {
+                            <div>
+                                <dt>Stat Block:</dt>
+                                <dd><a [href]="mountMonster.sourceUrl" target="_blank" rel="noopener noreferrer" class="dk-link">{{ mountMonster.sourceLabel || 'Open source' }}</a></dd>
+                            </div>
+                            }
+                        </dl>
+
+                        <div class="extras-stat-sections">
+                            @for (section of extrasStatSections(mountMonster); track section.heading) {
+                            <section class="extras-stat-section">
+                                <h5>{{ section.heading }}</h5>
+                                @for (entrySection of section.entries; track entrySection.title + entrySection.text) {
+                                <p>
+                                    @if (entrySection.title) {
+                                    <strong><em>{{ entrySection.title }}. </em></strong>
+                                    }
+                                    <span [innerHTML]="extrasFormatStatEntryText(entrySection.text)"></span>
+                                </p>
+                                }
+                            </section>
+                            }
+                        </div>
+                    </section>
+                    }
+
+                    @if (extrasVehicleStatBlock(entry); as vehicle) {
+                    <section class="extras-stat-sheet extras-vehicle-sheet">
+                        <header class="extras-stat-sheet-header extras-vehicle-sheet-header">
+                            <h4>{{ entry.name }}</h4>
+                            <p>{{ vehicle.subtitle }}</p>
+                        </header>
+
+                        <div class="extras-stat-detail-list extras-vehicle-meta-list">
+                            @if (vehicle.travelPace) {
+                            <div>
+                                <dt>Travel Pace:</dt>
+                                <dd>{{ vehicle.travelPace }}</dd>
+                            </div>
+                            }
+                            @if (vehicle.creatureCapacity) {
+                            <div>
+                                <dt>Creature Capacity:</dt>
+                                <dd>{{ vehicle.creatureCapacity }}</dd>
+                            </div>
+                            }
+                            @if (vehicle.cargoCapacity) {
+                            <div>
+                                <dt>Cargo Capacity:</dt>
+                                <dd>{{ vehicle.cargoCapacity }}</dd>
+                            </div>
+                            }
+                        </div>
+
+                        @if (extrasVehicleAbilityRows(vehicle).length > 0) {
+                        <div class="extras-stat-abilities-grid extras-vehicle-abilities-grid">
+                            @for (ability of extrasVehicleAbilityRows(vehicle); track ability.label) {
+                            <article class="extras-stat-ability-card extras-vehicle-ability-card">
+                                <span>{{ ability.label }}</span>
+                                <strong>{{ extrasStatScoreText(ability.value) }}</strong>
+                                <em>{{ extrasStatModifierText(ability.value) }}</em>
+                            </article>
+                            }
+                        </div>
+                        }
+
+                        <div class="extras-stat-detail-list extras-vehicle-meta-list">
+                            @if (vehicle.damageImmunities) {
+                            <div>
+                                <dt>Damage Immunities:</dt>
+                                <dd>{{ vehicle.damageImmunities }}</dd>
+                            </div>
+                            }
+                            @if (vehicle.conditionImmunities) {
+                            <div>
+                                <dt>Condition Immunities:</dt>
+                                <dd>{{ vehicle.conditionImmunities }}</dd>
+                            </div>
+                            }
+                        </div>
+
+                        <div class="extras-stat-sections extras-vehicle-sections">
+                            @for (section of vehicle.sections; track section.heading) {
+                            <section class="extras-stat-section extras-vehicle-section">
+                                <h5>{{ section.heading }}</h5>
+                                @if (section.facts) {
+                                <dl class="extras-vehicle-section-facts">
+                                    @for (fact of section.facts; track fact.label + fact.value) {
+                                    <div>
+                                        <dt>{{ fact.label }}</dt>
+                                        <dd>{{ fact.value }}</dd>
+                                    </div>
+                                    }
+                                </dl>
+                                }
+                                @if (section.paragraphs) {
+                                @for (paragraph of section.paragraphs; track paragraph) {
+                                <p [innerHTML]="extrasFormatStatEntryText(paragraph)"></p>
+                                }
+                                }
+                            </section>
+                            }
+                        </div>
+                    </section>
+                    }
+                </div>
+            </article>
+            } @empty {
+            <p class="coin-party-note">No entries available for this type yet.</p>
+            }
+        </div>
+    </aside>
+    }
+
+    @if (activeExtrasStatEntry(); as extraDetail) {
+    @let entry = extrasCatalogEntryForPersisted(extraDetail);
+    <aside class="panel detail-popup extras-detail-popup" role="dialog" [attr.aria-label]="entry.name + ' stat block'">
+        <header class="detail-drawer-header">
+            <div>
+                <p class="eyebrow">Extra</p>
+                <h3>{{ entry.name }}</h3>
+                <p class="detail-drawer-subtitle">{{ entry.type }}</p>
+            </div>
+            <button type="button" class="ghost-button" (click)="closeExtrasStatPopup()">Close</button>
+        </header>
+
+        @if (entry.summary) {
+        <p class="detail-drawer-description">{{ entry.summary }}</p>
+        }
+
+        @if (extraDetail.customNotes) {
+        <div class="detail-item-highlights">
+            <p class="detail-item-section-title">Character Notes</p>
+            <p class="item-description">{{ extraDetail.customNotes }}</p>
+        </div>
+        }
+
+        @if (entry.sourceUrl) {
+        <dl class="item-detail-facts">
+            <div class="item-detail-facts__source">
+                <dt>Source</dt>
+                <dd><a [href]="entry.sourceUrl" target="_blank" rel="noopener noreferrer" class="item-source-link dk-link">{{ entry.source || 'View details' }}</a></dd>
+            </div>
+        </dl>
+        }
+
+        @if (extrasCreatureStatBlock(entry); as detailMonster) {
+        <section class="extras-stat-sheet">
+            <header class="extras-stat-sheet-header">
+                <h4>{{ detailMonster.name }}</h4>
+                <p>{{ extrasStatSubtitle(detailMonster) }}</p>
+            </header>
+
+            <div class="extras-stat-facts-grid">
+                <article class="extras-stat-fact-card">
+                    <span>Armor Class</span>
+                    <strong>{{ detailMonster.armorClass ?? '—' }}</strong>
+                </article>
+                <article class="extras-stat-fact-card">
+                    <span>Hit Points</span>
+                    <strong>{{ detailMonster.hitPoints ?? '—' }}</strong>
+                </article>
+                <article class="extras-stat-fact-card extras-stat-fact-card--wide">
+                    <span>Speed</span>
+                    <strong>{{ detailMonster.speed || '—' }}</strong>
+                </article>
+            </div>
+
+            <div class="extras-stat-abilities-grid">
+                @for (ability of extrasAbilityRows(detailMonster); track ability.label) {
+                <article class="extras-stat-ability-card">
+                    <span>{{ ability.label }}</span>
+                    <strong>{{ extrasStatScoreText(ability.value) }}</strong>
+                    <em>{{ extrasStatModifierText(ability.value) }}</em>
+                </article>
+                }
+            </div>
+
+            <dl class="extras-stat-detail-list">
+                <div>
+                    <dt>Challenge:</dt>
+                    <dd>{{ detailMonster.challengeRating || '—' }}</dd>
+                </div>
+                <div>
+                    <dt>Senses:</dt>
+                    <dd>{{ detailMonster.senses || '—' }}</dd>
+                </div>
+                <div>
+                    <dt>Languages:</dt>
+                    <dd>{{ detailMonster.languages || '—' }}</dd>
+                </div>
+                @if (detailMonster.skills) {
+                <div>
+                    <dt>Skills:</dt>
+                    <dd>{{ detailMonster.skills }}</dd>
+                </div>
+                }
+                @if (detailMonster.sourceUrl) {
+                <div>
+                    <dt>Stat Block:</dt>
+                    <dd><a [href]="detailMonster.sourceUrl" target="_blank" rel="noopener noreferrer" class="dk-link">{{ detailMonster.sourceLabel || 'Open source' }}</a></dd>
+                </div>
+                }
+            </dl>
+
+            <div class="extras-stat-sections">
+                @for (section of extrasStatSections(detailMonster); track section.heading) {
+                <section class="extras-stat-section">
+                    <h5>{{ section.heading }}</h5>
+                    @for (entrySection of section.entries; track entrySection.title + entrySection.text) {
+                    <p>
+                        @if (entrySection.title) {
+                        <strong><em>{{ entrySection.title }}. </em></strong>
+                        }
+                        <span [innerHTML]="extrasFormatStatEntryText(entrySection.text)"></span>
+                    </p>
+                    }
+                </section>
+                }
+            </div>
+        </section>
+        }
+
+        @if (extrasVehicleStatBlock(entry); as vehicle) {
+        <section class="extras-stat-sheet extras-vehicle-sheet">
+            <header class="extras-stat-sheet-header extras-vehicle-sheet-header">
+                <h4>{{ entry.name }}</h4>
+                <p>{{ vehicle.subtitle }}</p>
+            </header>
+
+            <div class="extras-stat-detail-list extras-vehicle-meta-list">
+                @if (vehicle.travelPace) {
+                <div>
+                    <dt>Travel Pace:</dt>
+                    <dd>{{ vehicle.travelPace }}</dd>
+                </div>
+                }
+                @if (vehicle.creatureCapacity) {
+                <div>
+                    <dt>Creature Capacity:</dt>
+                    <dd>{{ vehicle.creatureCapacity }}</dd>
+                </div>
+                }
+                @if (vehicle.cargoCapacity) {
+                <div>
+                    <dt>Cargo Capacity:</dt>
+                    <dd>{{ vehicle.cargoCapacity }}</dd>
+                </div>
+                }
+            </div>
+
+            @if (extrasVehicleAbilityRows(vehicle).length > 0) {
+            <div class="extras-stat-abilities-grid extras-vehicle-abilities-grid">
+                @for (ability of extrasVehicleAbilityRows(vehicle); track ability.label) {
+                <article class="extras-stat-ability-card extras-vehicle-ability-card">
+                    <span>{{ ability.label }}</span>
+                    <strong>{{ extrasStatScoreText(ability.value) }}</strong>
+                    <em>{{ extrasStatModifierText(ability.value) }}</em>
+                </article>
+                }
+            </div>
+            }
+
+            <div class="extras-stat-detail-list extras-vehicle-meta-list">
+                @if (vehicle.damageImmunities) {
+                <div>
+                    <dt>Damage Immunities:</dt>
+                    <dd>{{ vehicle.damageImmunities }}</dd>
+                </div>
+                }
+                @if (vehicle.conditionImmunities) {
+                <div>
+                    <dt>Condition Immunities:</dt>
+                    <dd>{{ vehicle.conditionImmunities }}</dd>
+                </div>
+                }
+            </div>
+
+            <div class="extras-stat-sections extras-vehicle-sections">
+                @for (section of vehicle.sections; track section.heading) {
+                <section class="extras-stat-section extras-vehicle-section">
+                    <h5>{{ section.heading }}</h5>
+                    @if (section.facts) {
+                    <dl class="extras-vehicle-section-facts">
+                        @for (fact of section.facts; track fact.label + fact.value) {
+                        <div>
+                            <dt>{{ fact.label }}</dt>
+                            <dd>{{ fact.value }}</dd>
+                        </div>
+                        }
+                    </dl>
+                    }
+                    @if (section.paragraphs) {
+                    @for (paragraph of section.paragraphs; track paragraph) {
+                    <p [innerHTML]="extrasFormatStatEntryText(paragraph)"></p>
+                    }
+                    }
+                </section>
+                }
+            </div>
+        </section>
+        }
     </aside>
     }
 

@@ -9,6 +9,7 @@ import { CharacterPortraitCropModalComponent } from '../../components/character-
 import { CharacterPortraitModalComponent } from '../../components/character-portrait-modal/character-portrait-modal.component';
 import { DropdownComponent, type DropdownOption } from '../../components/dropdown/dropdown.component';
 import { classLevelOneFeatures } from '../../data/class-features.data';
+import { monsterCatalog } from '../../data/monster-catalog.generated';
 import { premadeCharacters, type PremadeCharacter } from '../../data/premade-characters.data';
 import { classSpellCatalog, spellcastingProgressionByClass } from '../../data/class-spells.data';
 import { races } from '../../data/races';
@@ -27,9 +28,17 @@ import { spellDetailsMap } from '../../data/spell-details.data';
 import { normalizePreparedLeveledSpellNames } from '../../rules/spell-preparation.rules';
 import { getWizardPreparedSpellLimit, isWizardSpellbookCantripAlwaysPrepared } from '../../rules/wizard-class.rules';
 import type { SkillProficiencies } from '../../models/dungeon.models';
+import type { MonsterCatalogEntry } from '../../models/monster-reference.models';
 import { DungeonApiService } from '../../state/dungeon-api.service';
 import { CampaignHubService } from '../../state/campaign-hub.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
+import {
+    extrasCatalogEntries,
+    extrasTypeGroups,
+    type ExtrasCatalogEntry,
+    type ExtrasCatalogType,
+    type VehicleStatBlock
+} from '../../data/extras-catalog.data';
 
 type AbilityKey = 'strength' | 'dexterity' | 'constitution' | 'intelligence' | 'wisdom' | 'charisma';
 
@@ -76,6 +85,16 @@ interface PersistedFeatFollowUpChoice {
     abilityIncreaseAbility?: string;
 }
 
+interface PersistedExtrasEntry {
+    uid: string;
+    name: string;
+    type: ExtrasCatalogType;
+    monsterStatBlockName?: string;
+    currentHp?: number;
+    maxHp?: number;
+    customNotes?: string;
+}
+
 interface PersistedBuilderState {
     selectedBackgroundName?: string;
     selectedLanguages?: string[];
@@ -102,6 +121,7 @@ interface PersistedBuilderState {
     heroicInspiration?: boolean;
     deathSaveFailures?: number;
     deathSaveSuccesses?: number;
+    extrasEntries?: PersistedExtrasEntry[];
 }
 
 interface CombatRow {
@@ -154,6 +174,9 @@ export class CharacterDetailPageComponent {
     private readonly partyCurrencyStartTag = '[DK_PARTY_CURRENCY_START]';
     private readonly partyCurrencyEndTag = '[DK_PARTY_CURRENCY_END]';
     private readonly catalogLookup = new Map(equipmentCatalog.map((item) => [item.name.toLowerCase(), item]));
+    private readonly monsterCatalogByName = new Map<string, MonsterCatalogEntry>(
+        monsterCatalog.map((monster) => [monster.name.toLowerCase(), monster])
+    );
     private readonly premadeCharacterLookup = new Map<string, PremadeCharacter>(
         premadeCharacters.map((character) => [this.getPremadeLookupKey(character), character])
     );
@@ -379,6 +402,7 @@ export class CharacterDetailPageComponent {
     readonly usedSpellSlotsByLevel = signal<Record<number, number>>({});
     readonly expandedContainers = signal<Set<string>>(new Set());
     readonly activeDetailDrawer = signal<DetailDrawerContent | null>(null);
+    readonly activeExtrasStatEntry = signal<PersistedExtrasEntry | null>(null);
     readonly detailSecondaryExpanded = signal(true);
     readonly hpManagerOpen = signal(false);
     readonly hpHealingInput = signal('0');
@@ -418,6 +442,137 @@ export class CharacterDetailPageComponent {
     readonly inventoryDraftWeight = signal('');
     readonly inventoryDraftCostGp = signal('');
     readonly inventoryDraftNotes = signal('');
+    readonly extrasManagerOpen = signal(false);
+    readonly extrasCatalogType = signal<ExtrasCatalogType>('Familiar');
+    readonly extrasCatalogExpandedItem = signal('');
+    readonly extrasMonsterSearchTerm = signal('');
+    readonly extrasMonsterCrMin = signal('');
+    readonly extrasMonsterCrMax = signal('');
+
+    readonly extrasMonsterPickerEnabled = computed(() => {
+        const type = this.extrasCatalogType();
+        return type === 'Familiar' || type === 'Beast Companion (2014)' || type === 'Wild Shape';
+    });
+
+    readonly extrasMonsterCandidateCatalog = computed<ReadonlyArray<MonsterCatalogEntry>>(() => {
+        if (!this.extrasMonsterPickerEnabled()) {
+            return [];
+        }
+
+        const searchTerm = this.extrasMonsterSearchTerm().trim().toLowerCase();
+        const minCr = this.parseChallengeRatingValue(this.extrasMonsterCrMin());
+        const maxCr = this.parseChallengeRatingValue(this.extrasMonsterCrMax());
+
+        return monsterCatalog.filter((monster) => {
+            const challengeValue = this.parseChallengeRatingValue(monster.challengeRating);
+            if (minCr !== null && (challengeValue === null || challengeValue < minCr)) {
+                return false;
+            }
+
+            if (maxCr !== null && (challengeValue === null || challengeValue > maxCr)) {
+                return false;
+            }
+
+            if (!searchTerm) {
+                return true;
+            }
+
+            const searchable = [
+                monster.name,
+                monster.creatureType,
+                monster.creatureCategory,
+                monster.size,
+                monster.challengeRating,
+                monster.sourceLabel
+            ]
+                .map((value) => value.trim().toLowerCase())
+                .join(' ');
+
+            return searchable.includes(searchTerm);
+        });
+    });
+
+    readonly extrasCatalogTypeOptions = computed<ReadonlyArray<DropdownOption>>(() =>
+        extrasTypeGroups.flatMap((g) =>
+            g.types.map((t) => ({ value: t, label: t, group: g.group }))
+        )
+    );
+
+    readonly extrasCrOptions: ReadonlyArray<DropdownOption> = [
+        { value: '', label: 'Any' },
+        { value: '0', label: '0' },
+        { value: '1/8', label: '1/8' },
+        { value: '1/4', label: '1/4' },
+        { value: '1/2', label: '1/2' },
+        { value: '1', label: '1' },
+        { value: '2', label: '2' },
+        { value: '3', label: '3' },
+        { value: '4', label: '4' },
+        { value: '5', label: '5' },
+        { value: '6', label: '6' },
+        { value: '7', label: '7' },
+        { value: '8', label: '8' },
+        { value: '9', label: '9' },
+        { value: '10', label: '10' },
+        { value: '11', label: '11' },
+        { value: '12', label: '12' },
+        { value: '13', label: '13' },
+        { value: '14', label: '14' },
+        { value: '15', label: '15' },
+        { value: '16', label: '16' },
+        { value: '17', label: '17' },
+        { value: '18', label: '18' },
+        { value: '19', label: '19' },
+        { value: '20', label: '20' },
+        { value: '21', label: '21' },
+        { value: '22', label: '22' },
+        { value: '23', label: '23' },
+        { value: '24', label: '24' },
+        { value: '25', label: '25' },
+        { value: '26', label: '26' },
+        { value: '27', label: '27' },
+        { value: '28', label: '28' },
+        { value: '29', label: '29' },
+        { value: '30', label: '30' }
+    ];
+
+    readonly characterExtrasEntries = computed<PersistedExtrasEntry[]>(() =>
+        this.persistedBuilderState()?.extrasEntries ?? []
+    );
+
+    readonly characterExtrasByType = computed<Array<{ type: ExtrasCatalogType; entries: PersistedExtrasEntry[] }>>(() => {
+        const groups = new Map<ExtrasCatalogType, PersistedExtrasEntry[]>();
+        for (const entry of this.characterExtrasEntries()) {
+            const list = groups.get(entry.type) ?? [];
+            list.push(entry);
+            groups.set(entry.type, list);
+        }
+
+        return [...groups.entries()].map(([type, entries]) => ({ type, entries }));
+    });
+
+    readonly filteredExtrasCatalogItems = computed<ReadonlyArray<ExtrasCatalogEntry>>(() => {
+        const type = this.extrasCatalogType();
+
+        if (this.extrasMonsterPickerEnabled()) {
+            return [...this.extrasMonsterCandidateCatalog()]
+                .sort((left, right) => left.name.localeCompare(right.name))
+                .map((monster) => ({
+                    name: monster.name,
+                    type,
+                    monsterStatBlockName: monster.name,
+                    subtype: `${monster.size} ${monster.creatureType}`.trim(),
+                    source: monster.sourceLabel.trim() || undefined,
+                    sourceUrl: monster.sourceUrl.trim() || undefined,
+                    summary: `Monster catalog entry for ${type}.`,
+                    cr: monster.challengeRating || undefined,
+                    size: monster.size || undefined
+                }));
+        }
+
+        return extrasCatalogEntries.filter((e) => e.type === type);
+    });
+
     readonly coinAdjustInput = signal<PersistedCurrencyState>({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 });
     readonly partyCoinAdjustInput = signal<PersistedCurrencyState>({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 });
     readonly coinLifestyleExpanded = signal(false);
@@ -2285,6 +2440,8 @@ export class CharacterDetailPageComponent {
     private openDetailDrawer(content: DetailDrawerContent): void {
         this.hpManagerOpen.set(false);
         this.inventoryManagerOpen.set(false);
+        this.extrasManagerOpen.set(false);
+        this.activeExtrasStatEntry.set(null);
         this.detailSecondaryExpanded.set(true);
         this.activeDetailDrawer.set(content);
     }
@@ -2297,6 +2454,7 @@ export class CharacterDetailPageComponent {
 
         this.activeDetailDrawer.set(null);
         this.inventoryManagerOpen.set(false);
+        this.extrasManagerOpen.set(false);
         this.hpDraftCurrent.set(char.hitPoints);
         this.hpDraftMax.set(char.maxHitPoints);
         this.hpDraftTemp.set(this.tempHitPoints());
@@ -4102,6 +4260,7 @@ export class CharacterDetailPageComponent {
         this.hpManagerOpen.set(false);
         this.coinManagerOpen.set(false);
         this.inventoryManagerOpen.set(false);
+        this.extrasManagerOpen.set(false);
         this.spellManagerTab.set('prepared');
         this.spellManagerSearch.set('');
         this.spellManagerLevelFilter.set('all');
@@ -4408,6 +4567,7 @@ export class CharacterDetailPageComponent {
             this.hpManagerOpen.set(false);
             this.coinManagerOpen.set(false);
             this.spellManagerOpen.set(false);
+            this.extrasManagerOpen.set(false);
             this.inventoryManagerSearch.set('');
             this.inventoryCurrentExpanded.set(true);
             this.inventoryManagerExpandedSections.set(new Set());
@@ -5073,6 +5233,7 @@ export class CharacterDetailPageComponent {
         this.activeDetailDrawer.set(null);
         this.hpManagerOpen.set(false);
         this.inventoryManagerOpen.set(false);
+        this.extrasManagerOpen.set(false);
         this.coinAdjustInput.set(this.createEmptyCurrencyState());
         this.partyCoinAdjustInput.set(this.createEmptyCurrencyState());
         this.coinLifestyleExpanded.set(false);
@@ -6036,5 +6197,336 @@ export class CharacterDetailPageComponent {
 
     private formatBackstoryRichText(text: string): string {
         return marked.parse(text, { gfm: true, breaks: true }) as string;
+    }
+
+    openExtrasManagerPopup(): void {
+        const char = this.character();
+        if (!char?.canEdit) {
+            return;
+        }
+
+        this.activeExtrasStatEntry.set(null);
+        this.activeDetailDrawer.set(null);
+        this.hpManagerOpen.set(false);
+        this.coinManagerOpen.set(false);
+        this.spellManagerOpen.set(false);
+        this.inventoryManagerOpen.set(false);
+        this.extrasCatalogType.set('Familiar');
+        this.extrasCatalogExpandedItem.set('');
+        this.resetExtrasMonsterFilters();
+        this.extrasManagerOpen.set(true);
+    }
+
+    closeExtrasManagerPopup(): void {
+        this.extrasManagerOpen.set(false);
+        this.resetExtrasMonsterFilters();
+    }
+
+    openExtrasStatPopup(entry: PersistedExtrasEntry): void {
+        this.activeDetailDrawer.set(null);
+        this.hpManagerOpen.set(false);
+        this.coinManagerOpen.set(false);
+        this.spellManagerOpen.set(false);
+        this.inventoryManagerOpen.set(false);
+        this.extrasManagerOpen.set(false);
+        this.activeExtrasStatEntry.set(entry);
+    }
+
+    closeExtrasStatPopup(): void {
+        this.activeExtrasStatEntry.set(null);
+    }
+
+    setExtrasCatalogType(value: string | number): void {
+        this.extrasCatalogType.set(value as ExtrasCatalogType);
+        this.extrasCatalogExpandedItem.set('');
+        this.resetExtrasMonsterFilters();
+    }
+
+    onExtrasMonsterSearchInput(value: string): void {
+        this.extrasMonsterSearchTerm.set(value);
+        this.extrasCatalogExpandedItem.set('');
+    }
+
+    onExtrasMonsterCrMinInput(value: string): void {
+        this.extrasMonsterCrMin.set(value);
+        const newMin = this.parseChallengeRatingValue(value);
+        const currentMax = this.parseChallengeRatingValue(this.extrasMonsterCrMax());
+        if (newMin !== null && currentMax !== null && currentMax < newMin) {
+            this.extrasMonsterCrMax.set(value);
+        }
+
+        this.extrasCatalogExpandedItem.set('');
+    }
+
+    onExtrasMonsterCrMaxInput(value: string): void {
+        this.extrasMonsterCrMax.set(value);
+        const newMax = this.parseChallengeRatingValue(value);
+        const currentMin = this.parseChallengeRatingValue(this.extrasMonsterCrMin());
+        if (newMax !== null && currentMin !== null && currentMin > newMax) {
+            this.extrasMonsterCrMin.set(value);
+        }
+
+        this.extrasCatalogExpandedItem.set('');
+    }
+
+    toggleExtrasCatalogItemDetail(name: string): void {
+        this.extrasCatalogExpandedItem.set(this.extrasCatalogExpandedItem() === name ? '' : name);
+    }
+
+    async addExtraToCharacter(entry: ExtrasCatalogEntry): Promise<void> {
+        const statBlock = this.extrasCreatureStatBlock(entry);
+        const maxHp = statBlock?.hitPoints ?? undefined;
+        const newEntry: PersistedExtrasEntry = {
+            uid: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            name: entry.name,
+            type: entry.type as ExtrasCatalogType,
+            monsterStatBlockName: entry.monsterStatBlockName,
+            currentHp: maxHp,
+            maxHp,
+            customNotes: ''
+        };
+
+        await this.persistExtrasEntries([...this.characterExtrasEntries(), newEntry]);
+    }
+
+    async removeExtrasEntry(uid: string): Promise<void> {
+        await this.persistExtrasEntries(this.characterExtrasEntries().filter((e) => e.uid !== uid));
+    }
+
+    async incrementExtrasHp(uid: string): Promise<void> {
+        const updated = this.characterExtrasEntries().map((e) => {
+            if (e.uid !== uid || e.maxHp == null) {
+                return e;
+            }
+
+            return { ...e, currentHp: Math.min((e.currentHp ?? 0) + 1, e.maxHp) };
+        });
+
+        await this.persistExtrasEntries(updated);
+    }
+
+    async decrementExtrasHp(uid: string): Promise<void> {
+        const updated = this.characterExtrasEntries().map((e) => {
+            if (e.uid !== uid) {
+                return e;
+            }
+
+            return { ...e, currentHp: Math.max((e.currentHp ?? 0) - 1, 0) };
+        });
+
+        await this.persistExtrasEntries(updated);
+    }
+
+    async setExtrasHp(uid: string, rawValue: string): Promise<void> {
+        const parsed = parseInt(rawValue, 10);
+        if (!Number.isFinite(parsed)) {
+            return;
+        }
+
+        const updated = this.characterExtrasEntries().map((e) => {
+            if (e.uid !== uid) {
+                return e;
+            }
+
+            const clamped = Math.max(0, e.maxHp != null ? Math.min(parsed, e.maxHp) : parsed);
+            return { ...e, currentHp: clamped };
+        });
+
+        await this.persistExtrasEntries(updated);
+    }
+
+    async setExtrasCustomNotes(uid: string, notes: string): Promise<void> {
+        const updated = this.characterExtrasEntries().map((e) =>
+            e.uid === uid ? { ...e, customNotes: notes } : e
+        );
+
+        await this.persistExtrasEntries(updated);
+    }
+
+    extrasStatBlockForEntry(name: string, monsterStatBlockName?: string): MonsterCatalogEntry | null {
+        const candidateName = (monsterStatBlockName || name).trim().toLowerCase();
+        if (!candidateName) {
+            return null;
+        }
+
+        return this.monsterCatalogByName.get(candidateName) ?? null;
+    }
+
+    extrasCatalogEntryForPersisted(entry: PersistedExtrasEntry): ExtrasCatalogEntry {
+        const catalogEntry = extrasCatalogEntries.find((candidate) =>
+            candidate.type === entry.type
+            && (candidate.name === entry.name || (!!entry.monsterStatBlockName && candidate.monsterStatBlockName === entry.monsterStatBlockName))
+        );
+
+        if (catalogEntry) {
+            return catalogEntry;
+        }
+
+        const statBlock = this.extrasStatBlockForEntry(entry.name, entry.monsterStatBlockName);
+        return {
+            name: entry.name,
+            type: entry.type,
+            monsterStatBlockName: entry.monsterStatBlockName,
+            subtype: statBlock ? `${statBlock.size} ${statBlock.creatureType}`.trim() : undefined,
+            source: statBlock?.sourceLabel.trim() || undefined,
+            sourceUrl: statBlock?.sourceUrl.trim() || undefined,
+            summary: `Monster catalog entry for ${entry.type}.`,
+            cr: statBlock?.challengeRating || undefined,
+            size: statBlock?.size || undefined
+        };
+    }
+
+    private async persistExtrasEntries(entries: PersistedExtrasEntry[]): Promise<void> {
+        const char = this.character();
+        if (!char || !char.canEdit) {
+            return;
+        }
+
+        const currentState: PersistedBuilderState = this.persistedBuilderState() ?? {};
+        const updatedState: PersistedBuilderState = { ...currentState, extrasEntries: entries };
+        const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
+
+        await this.store.updateCharacter(this.characterId, {
+            name: char.name,
+            playerName: char.playerName,
+            race: char.race,
+            className: char.className,
+            role: char.role,
+            level: char.level,
+            background: char.background,
+            notes: updatedNotes,
+            campaignId: char.campaignId,
+            hitPoints: char.hitPoints,
+            maxHitPoints: char.maxHitPoints
+        });
+
+        this.cdr.detectChanges();
+    }
+
+    private resetExtrasMonsterFilters(): void {
+        this.extrasMonsterSearchTerm.set('');
+        this.extrasMonsterCrMin.set('');
+        this.extrasMonsterCrMax.set('');
+    }
+
+    private parseChallengeRatingValue(rawValue: string | null | undefined): number | null {
+        const normalized = (rawValue ?? '').trim().toLowerCase();
+        if (!normalized || normalized === 'none' || normalized === 'unknown' || normalized === '-') {
+            return null;
+        }
+
+        if (normalized.includes('/')) {
+            const [numeratorText, denominatorText] = normalized.split('/');
+            const numerator = Number(numeratorText);
+            const denominator = Number(denominatorText);
+            if (Number.isFinite(numerator) && Number.isFinite(denominator) && denominator !== 0) {
+                return numerator / denominator;
+            }
+        }
+
+        const numericValue = Number(normalized);
+        if (Number.isFinite(numericValue)) {
+            return numericValue;
+        }
+
+        return null;
+    }
+
+    extrasCreatureStatBlock(entry: ExtrasCatalogEntry): MonsterCatalogEntry | null {
+        const candidateName = (entry.monsterStatBlockName || entry.name).trim().toLowerCase();
+        if (!candidateName) {
+            return null;
+        }
+
+        return this.monsterCatalogByName.get(candidateName) ?? null;
+    }
+
+    extrasVehicleStatBlock(entry: ExtrasCatalogEntry): VehicleStatBlock | null {
+        if (entry.type !== 'Vehicle') {
+            return null;
+        }
+
+        return entry.vehicleStatBlock ?? null;
+    }
+
+    extrasStatSubtitle(monster: MonsterCatalogEntry): string {
+        const details = [monster.size, monster.creatureType, monster.alignment]
+            .map((value) => value.trim())
+            .filter(Boolean);
+
+        if (details.length === 0) {
+            return 'Monster reference';
+        }
+
+        const [size, type, alignment] = details;
+        return `${size} ${type}${alignment ? `, ${alignment}` : ''}`;
+    }
+
+    extrasAbilityRows(monster: MonsterCatalogEntry): Array<{ label: string; value: number | null }> {
+        return [
+            { label: 'STR', value: monster.abilityScores.strength },
+            { label: 'DEX', value: monster.abilityScores.dexterity },
+            { label: 'CON', value: monster.abilityScores.constitution },
+            { label: 'INT', value: monster.abilityScores.intelligence },
+            { label: 'WIS', value: monster.abilityScores.wisdom },
+            { label: 'CHA', value: monster.abilityScores.charisma }
+        ];
+    }
+
+    extrasVehicleAbilityRows(vehicle: VehicleStatBlock): Array<{ label: string; value: number | null }> {
+        const scores = vehicle.abilityScores;
+        if (!scores) {
+            return [];
+        }
+
+        return [
+            { label: 'STR', value: scores.strength },
+            { label: 'DEX', value: scores.dexterity },
+            { label: 'CON', value: scores.constitution },
+            { label: 'INT', value: scores.intelligence },
+            { label: 'WIS', value: scores.wisdom },
+            { label: 'CHA', value: scores.charisma }
+        ];
+    }
+
+    extrasStatSections(monster: MonsterCatalogEntry): Array<{ heading: string; entries: MonsterCatalogEntry['traits'] }> {
+        return [
+            { heading: 'Traits', entries: monster.traits },
+            { heading: 'Actions', entries: monster.actions },
+            { heading: 'Reactions', entries: monster.reactions },
+            { heading: 'Legendary Actions', entries: monster.legendaryActions }
+        ].filter((section) => section.entries.length > 0);
+    }
+
+    extrasStatScoreText(value: number | null): string {
+        return value == null ? '—' : String(value);
+    }
+
+    extrasStatModifierText(value: number | null): string {
+        if (value == null) {
+            return '—';
+        }
+
+        const modifier = Math.floor((value - 10) / 2);
+        return modifier >= 0 ? `+${modifier}` : `${modifier}`;
+    }
+
+    extrasFormatStatEntryText(value: string): string {
+        const escaped = this.extrasEscapeHtml(value);
+
+        return escaped
+            .replace(/\b(Melee or Ranged Weapon Attack)\s*:/g, '<em>$1</em>:')
+            .replace(/\b(Melee Weapon Attack)\s*:/g, '<em>$1</em>:')
+            .replace(/\b(Ranged Weapon Attack)\s*:/g, '<em>$1</em>:')
+            .replace(/\b(Hit)\s*:/g, '<em>$1</em>:');
+    }
+
+    private extrasEscapeHtml(value: string): string {
+        return value
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 }

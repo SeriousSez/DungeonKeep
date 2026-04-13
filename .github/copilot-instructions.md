@@ -94,6 +94,7 @@ private readonly destroyRef = inject(DestroyRef);
   - `https://www.dndbeyond.com/equipment`
   - `https://www.dndbeyond.com/magic-items`
   - `https://www.dndbeyond.com/monsters`
+  - `https://5e.tools/bestiary/{monster}-vgm.html`
   - `https://www.dndbeyond.com/sources/dnd/br-2024/rules-glossary`
   - `https://www.dndbeyond.com/sources/dnd/br-2024`
   - `https://roll20.net/compendium/dnd5e/BookIndex`

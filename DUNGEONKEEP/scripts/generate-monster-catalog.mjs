@@ -20,13 +20,14 @@ const baseEntries = rows
     .map((row) => mapMonsterCatalogRow(row))
     .filter((entry) => entry !== null);
 
-const entries = await mapWithConcurrency(baseEntries, 6, async (entry) => enrichFromSource(entry));
+const entries = await mapWithConcurrency(baseEntries, 3, async (entry) => enrichFromSource(entry));
+const finalizedEntries = entries.map((entry) => applyManualOverride(entry));
 
 const output = [
     "import type { MonsterCatalogEntry } from '../models/monster-reference.models';",
     '',
     'export const monsterCatalog: ReadonlyArray<MonsterCatalogEntry> = ',
-    `${JSON.stringify(entries, null, 4)} as const;`,
+    `${JSON.stringify(finalizedEntries, null, 4)} as const;`,
     ''
 ].join('\n');
 
@@ -49,58 +50,251 @@ async function mapWithConcurrency(items, concurrency, worker) {
     return results;
 }
 
+function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function enrichFromSource(entry) {
-    if (!entry.sourceUrl || !entry.sourceUrl.includes('aidedd.org')) {
+    const enrichmentUrl = resolveAideddSourceUrl(entry);
+    if (!enrichmentUrl) {
         return entry;
     }
 
-    try {
-        const response = await fetch(entry.sourceUrl, {
-            headers: {
-                'user-agent': 'DungeonKeep Monster Sync/1.0'
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        try {
+            const response = await fetch(enrichmentUrl, {
+                headers: {
+                    'user-agent': 'DungeonKeep Monster Sync/1.0'
+                }
+            });
+
+            if (!response.ok) {
+                if (attempt < maxAttempts) {
+                    await delay(attempt * 300);
+                    continue;
+                }
+                return entry;
             }
-        });
 
-        if (!response.ok) {
+            const html = await response.text();
+            if (/This creature does not exist/i.test(html)) {
+                return entry;
+            }
+
+            const stats = parseAideddStats(html);
+            if (!stats) {
+                if (attempt < maxAttempts) {
+                    await delay(attempt * 300);
+                    continue;
+                }
+                return entry;
+            }
+
+            return {
+                ...entry,
+                sourceUrl: entry.sourceUrl || enrichmentUrl,
+                armorClass: stats.armorClass ?? entry.armorClass,
+                hitPoints: stats.hitPoints ?? entry.hitPoints,
+                speed: stats.speed || entry.speed,
+                savingThrows: stats.savingThrows || entry.savingThrows,
+                skills: stats.skills || entry.skills,
+                damageVulnerabilities: stats.damageVulnerabilities || entry.damageVulnerabilities,
+                damageResistances: stats.damageResistances || entry.damageResistances,
+                damageImmunities: stats.damageImmunities || entry.damageImmunities,
+                conditionImmunities: stats.conditionImmunities || entry.conditionImmunities,
+                senses: stats.senses || entry.senses,
+                languages: stats.languages || entry.languages,
+                challengeXp: stats.challengeXp || entry.challengeXp,
+                traits: stats.traits.length ? stats.traits : entry.traits,
+                actions: stats.actions.length ? stats.actions : entry.actions,
+                reactions: stats.reactions.length ? stats.reactions : entry.reactions,
+                legendaryActions: stats.legendaryActions.length ? stats.legendaryActions : entry.legendaryActions,
+                abilityScores: {
+                    strength: stats.abilityScores.strength ?? entry.abilityScores.strength,
+                    dexterity: stats.abilityScores.dexterity ?? entry.abilityScores.dexterity,
+                    constitution: stats.abilityScores.constitution ?? entry.abilityScores.constitution,
+                    intelligence: stats.abilityScores.intelligence ?? entry.abilityScores.intelligence,
+                    wisdom: stats.abilityScores.wisdom ?? entry.abilityScores.wisdom,
+                    charisma: stats.abilityScores.charisma ?? entry.abilityScores.charisma
+                }
+            };
+        } catch {
+            if (attempt < maxAttempts) {
+                await delay(attempt * 300);
+                continue;
+            }
             return entry;
         }
+    }
 
-        const html = await response.text();
-        const stats = parseAideddStats(html);
-        if (!stats) {
-            return entry;
-        }
+    return entry;
+}
 
+function resolveAideddSourceUrl(entry) {
+    if (entry.sourceUrl && entry.sourceUrl.includes('aidedd.org')) {
+        return entry.sourceUrl;
+    }
+
+    if (!entry.slug) {
+        return null;
+    }
+
+    return `https://www.aidedd.org/dnd/monstres.php?vo=${entry.slug}`;
+}
+
+function applyManualOverride(entry) {
+    const override = getManualMonsterOverride(entry.slug);
+    if (!override) {
+        return entry;
+    }
+
+    return {
+        ...entry,
+        ...override,
+        abilityScores: {
+            ...entry.abilityScores,
+            ...(override.abilityScores ?? {})
+        },
+        traits: override.traits ?? entry.traits,
+        actions: override.actions ?? entry.actions,
+        reactions: override.reactions ?? entry.reactions,
+        legendaryActions: override.legendaryActions ?? entry.legendaryActions
+    };
+}
+
+function getManualMonsterOverride(slug) {
+    if (slug === 'abjurer') {
         return {
-            ...entry,
-            armorClass: stats.armorClass ?? entry.armorClass,
-            hitPoints: stats.hitPoints ?? entry.hitPoints,
-            speed: stats.speed || entry.speed,
-            savingThrows: stats.savingThrows || entry.savingThrows,
-            skills: stats.skills || entry.skills,
-            damageVulnerabilities: stats.damageVulnerabilities || entry.damageVulnerabilities,
-            damageResistances: stats.damageResistances || entry.damageResistances,
-            damageImmunities: stats.damageImmunities || entry.damageImmunities,
-            conditionImmunities: stats.conditionImmunities || entry.conditionImmunities,
-            senses: stats.senses || entry.senses,
-            languages: stats.languages || entry.languages,
-            challengeXp: stats.challengeXp || entry.challengeXp,
-            traits: stats.traits.length ? stats.traits : entry.traits,
-            actions: stats.actions.length ? stats.actions : entry.actions,
-            reactions: stats.reactions.length ? stats.reactions : entry.reactions,
-            legendaryActions: stats.legendaryActions.length ? stats.legendaryActions : entry.legendaryActions,
+            speed: '30 ft.',
+            savingThrows: 'Int +8, Wis +5',
+            skills: 'Arcana +8, History +8',
+            senses: 'passive Perception 11',
+            languages: 'any four languages',
+            challengeXp: '5,000 XP',
+            traits: [
+                {
+                    title: 'Spellcasting',
+                    text: 'The abjurer is a 13th-level spellcaster. Its spellcasting ability is Intelligence (spell save DC 16, +8 to hit with spell attacks). It has the following wizard spells prepared: cantrips (at will) blade ward, dancing lights, mending, message, ray of frost; 1st level (4 slots) alarm, mage armor, magic missile, shield; 2nd level (3 slots) arcane lock, invisibility; 3rd level (3 slots) counterspell, dispel magic, fireball; 4th level (3 slots) banishment, stoneskin; 5th level (2 slots) cone of cold, wall of force; 6th level (1 slot) flesh to stone, globe of invulnerability; 7th level (1 slot) symbol, teleport.'
+                },
+                {
+                    title: 'Arcane Ward',
+                    text: 'The abjurer has a magical ward with 30 hit points. Whenever it takes damage, the ward takes the damage instead. If the ward is reduced to 0 hit points, the abjurer takes any remaining damage. When the abjurer casts an abjuration spell of 1st level or higher, the ward regains a number of hit points equal to twice the level of the spell.'
+                }
+            ],
+            actions: [
+                {
+                    title: 'Quarterstaff',
+                    text: 'Melee Weapon Attack : +3 to hit, reach 5 ft., one target. Hit : 2 (1d6 - 1) bludgeoning damage, or 3 (1d8 - 1) bludgeoning damage if used with two hands.'
+                }
+            ],
             abilityScores: {
-                strength: stats.abilityScores.strength ?? entry.abilityScores.strength,
-                dexterity: stats.abilityScores.dexterity ?? entry.abilityScores.dexterity,
-                constitution: stats.abilityScores.constitution ?? entry.abilityScores.constitution,
-                intelligence: stats.abilityScores.intelligence ?? entry.abilityScores.intelligence,
-                wisdom: stats.abilityScores.wisdom ?? entry.abilityScores.wisdom,
-                charisma: stats.abilityScores.charisma ?? entry.abilityScores.charisma
+                strength: 9,
+                dexterity: 14,
+                constitution: 14,
+                intelligence: 18,
+                wisdom: 12,
+                charisma: 11
             }
         };
-    } catch {
-        return entry;
     }
+
+    if (slug === 'acolyte') {
+        return {
+            speed: '30 ft.',
+            skills: 'Medicine +4, Religion +2',
+            senses: 'passive Perception 12',
+            languages: 'any one language (usually Common)',
+            challengeXp: '50 XP',
+            traits: [
+                {
+                    title: 'Spellcasting',
+                    text: 'The acolyte is a 1st-level spellcaster. Its spellcasting ability is Wisdom (spell save DC 12, +4 to hit with spell attacks). It has the following cleric spells prepared: cantrips (at will) light, sacred flame, thaumaturgy; 1st level (3 slots) bless, cure wounds, sanctuary.'
+                }
+            ],
+            actions: [
+                {
+                    title: 'Club',
+                    text: 'Melee Weapon Attack : +2 to hit, reach 5 ft., one target. Hit : 2 (1d4) bludgeoning damage.'
+                }
+            ],
+            abilityScores: {
+                strength: 10,
+                dexterity: 10,
+                constitution: 10,
+                intelligence: 10,
+                wisdom: 14,
+                charisma: 11
+            }
+        };
+    }
+
+    if (slug === 'albino-dwarf-warrior') {
+        return {
+            speed: '25 ft.',
+            skills: 'Perception +4, Stealth +3, Survival +4',
+            senses: 'Darkvision 60 ft., passive Perception 14',
+            languages: 'Common, Dwarvilsh',
+            challengeXp: '50 XP',
+            damageResistances: 'Poison',
+            traits: [
+                {
+                    title: 'Dwarven Resilience',
+                    text: 'The dwarf has advantage on saving throws against poison.'
+                }
+            ],
+            actions: [
+                {
+                    title: 'Handaxe',
+                    text: 'Melee or Ranged Weapon Attack: +3 to hit, reach 5 ft. or range 20/60 ft., one target. Hit: 4 (1d6 + 1) slashing damage.'
+                }
+            ],
+            abilityScores: {
+                strength: 13,
+                dexterity: 13,
+                constitution: 17,
+                intelligence: 12,
+                wisdom: 14,
+                charisma: 11
+            }
+        };
+    }
+
+    if (slug === 'aldani') {
+        return {
+            speed: '20 ft., Swim 30 ft.',
+            skills: 'Perception +4, Survival +4',
+            senses: 'Darkvision 60 ft., passive Perception 14',
+            languages: 'Common',
+            challengeXp: '200 XP',
+            traits: [
+                {
+                    title: 'Amphibious',
+                    text: 'The aldani can breathe air and water.'
+                }
+            ],
+            actions: [
+                {
+                    title: 'Multiattack',
+                    text: 'The aldani makes two attacks with its claws.'
+                },
+                {
+                    title: 'Claw',
+                    text: 'Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 5 (1d8 + 1) slashing damage, and the target is grappled (escape DC 11). The aldani has two claws, each of which can grapple only one target.'
+                }
+            ],
+            abilityScores: {
+                strength: 13,
+                dexterity: 8,
+                constitution: 12,
+                intelligence: 10,
+                wisdom: 14,
+                charisma: 10
+            }
+        };
+    }
+
+    return null;
 }
 
 function parseAideddStats(html) {
@@ -108,8 +302,8 @@ function parseAideddStats(html) {
 
     const armorClassMatch = text.match(/Armor Class\s+(\d+)/i);
     const hitPointsMatch = text.match(/Hit Points\s+(\d+)/i);
-    const speedMatch = text.match(/Speed\s+(.+?)\s+STR\s*(\d+)/i);
-    const abilityMatch = text.match(/STR\s*(\d+)\s*\([^)]*\)\s*DEX\s*(\d+)\s*\([^)]*\)\s*CON\s*(\d+)\s*\([^)]*\)\s*INT\s*(\d+)\s*\([^)]*\)\s*WIS\s*(\d+)\s*\([^)]*\)\s*CHA\s*(\d+)\s*\([^)]*\)/i);
+    const speedMatch = text.match(/Speed\s+(.+?)(?=\s+STR\b|\s+Saving Throws\b|\s+Skills\b|\s+Senses\b|\s+Languages\b|\s+Challenge\b|$)/i);
+    const abilityMatch = text.match(/STR\s*(\d+)[\s\S]*?DEX\s*(\d+)[\s\S]*?CON\s*(\d+)[\s\S]*?INT\s*(\d+)[\s\S]*?WIS\s*(\d+)[\s\S]*?CHA\s*(\d+)/i);
     const challengeMatch = text.match(/Challenge\s+([^\s]+)\s*\(([^)]+)\)/i);
     const savingThrows = extractLabeledValue(text, 'Saving Throws', ['Skills', 'Damage Vulnerabilities', 'Damage Resistances', 'Damage Immunities', 'Condition Immunities', 'Senses', 'Languages', 'Challenge']);
     const skills = extractLabeledValue(text, 'Skills', ['Damage Vulnerabilities', 'Damage Resistances', 'Damage Immunities', 'Condition Immunities', 'Senses', 'Languages', 'Challenge']);

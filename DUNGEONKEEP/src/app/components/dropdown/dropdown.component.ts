@@ -37,6 +37,8 @@ export class DropdownComponent {
     readonly options = input.required<ReadonlyArray<DropdownOption>>();
     readonly placeholder = input<string>('');
     readonly minWidth = input<number | null>(null);
+    readonly triggerMinHeight = input<number | null>(null);
+    readonly maxPanelHeight = input<number | null>(null);
     readonly panelMinWidth = input<number | null>(null);
     readonly size = input<'wide' | 'compact' | 'narrow'>('compact');
     readonly appearance = input<'default' | 'chip'>('default');
@@ -52,7 +54,7 @@ export class DropdownComponent {
     readonly opensUpward = signal(false);
     readonly panelAlignment = signal<'start' | 'end'>('start');
     readonly searchTerm = signal('');
-    readonly panelMaxHeight = signal(this.defaultPanelMaxHeight);
+    readonly panelMaxHeight = signal(this.resolvePreferredPanelMaxHeight());
     readonly panelAvailableWidth = signal<number | null>(null);
 
     readonly filteredOptions = computed(() => {
@@ -101,9 +103,11 @@ export class DropdownComponent {
 
     constructor() {
         effect((onCleanup) => {
+            const preferredPanelMaxHeight = this.resolvePreferredPanelMaxHeight();
+
             if (!this.isOpen()) {
                 this.opensUpward.set(false);
-                this.panelMaxHeight.set(this.defaultPanelMaxHeight);
+                this.panelMaxHeight.set(preferredPanelMaxHeight);
                 this.panelAlignment.set('start');
                 this.panelAvailableWidth.set(null);
                 return;
@@ -125,7 +129,7 @@ export class DropdownComponent {
                 const panelGap = 6;
                 const triggerRect = trigger.getBoundingClientRect();
                 const boundsRect = this.getAvailableBounds(trigger);
-                const desiredPanelHeight = panel.offsetHeight || panel.scrollHeight || this.defaultPanelMaxHeight;
+                const desiredPanelHeight = panel.offsetHeight || panel.scrollHeight || preferredPanelMaxHeight;
                 const desiredPanelWidth = panel.offsetWidth || panel.scrollWidth || triggerRect.width;
                 const availableBelow = Math.max(0, boundsRect.bottom - triggerRect.bottom - panelGap);
                 const availableAbove = Math.max(0, triggerRect.top - boundsRect.top - panelGap);
@@ -138,7 +142,7 @@ export class DropdownComponent {
 
                 this.opensUpward.set(shouldOpenUpward);
                 // Keep the dropdown panel within available viewport space.
-                this.panelMaxHeight.set(Math.max(120, Math.min(this.defaultPanelMaxHeight, availableSpace)));
+                this.panelMaxHeight.set(Math.max(120, Math.min(preferredPanelMaxHeight, availableSpace)));
 
                 if (startOverflow > 0 && endOverflow <= 0) {
                     this.panelAlignment.set('end');
@@ -172,6 +176,15 @@ export class DropdownComponent {
                 globalThis.document.removeEventListener('scroll', updatePanelPosition, true);
             });
         });
+    }
+
+    private resolvePreferredPanelMaxHeight(): number {
+        const customHeight = this.maxPanelHeight();
+        if (customHeight == null || !Number.isFinite(customHeight)) {
+            return this.defaultPanelMaxHeight;
+        }
+
+        return Math.max(120, customHeight);
     }
 
     getOptionsMaxHeight(): number {
