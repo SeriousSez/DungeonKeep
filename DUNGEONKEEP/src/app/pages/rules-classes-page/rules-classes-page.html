@@ -1,0 +1,53 @@
+<main class="classes-page">
+
+    <section class="page-hero panel">
+        <div class="hero-copy">
+            <p class="eyebrow">Rules Library</p>
+            <h1>Classes</h1>
+            <p class="hero-text">Browse all {{ classes.length }} available classes. Click any class to explore its features, level progression, subclasses, and everything you need to make a confident choice.</p>
+        </div>
+        <div class="hero-actions">
+            <a routerLink="/rules" class="ghost-button">
+                <i class="fa-duotone fa-thin fa-arrow-left"></i>
+                Back to Rules Library
+            </a>
+        </div>
+    </section>
+
+    <section class="classes-grid">
+        @for (cls of classes; track cls.slug) {
+        <a class="class-card" [routerLink]="['/rules/classes', cls.slug]" [class]="'class-card source-' + cls.sourceCategory">
+            <div class="card-banner">
+                <span class="source-badge">{{ cls.source }}</span>
+                <div class="card-icon">
+                    <i [class]="'fa-duotone fa-thin fa-' + cls.icon"></i>
+                </div>
+            </div>
+            <div class="card-body">
+                <h2 class="class-name">{{ cls.name }}</h2>
+                <p class="class-tagline">{{ cls.tagline }}</p>
+                <p class="class-summary">{{ cls.summary }}</p>
+                <div class="class-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Primary Ability</span>
+                        <span class="stat-value">{{ cls.primaryAbility }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Hit Point Die</span>
+                        <span class="stat-value">{{ cls.hitPointDie }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Saves</span>
+                        <span class="stat-value">{{ cls.saves }}</span>
+                    </div>
+                </div>
+                <span class="view-details-btn">
+                    View {{ cls.name }} Details
+                    <i class="fa-duotone fa-thin fa-arrow-right"></i>
+                </span>
+            </div>
+        </a>
+        }
+    </section>
+
+</main>

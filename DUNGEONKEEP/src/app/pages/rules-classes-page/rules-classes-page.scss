@@ -1,0 +1,277 @@
+:host {
+    display: block;
+}
+
+.classes-page {
+    display: grid;
+    gap: 24px;
+}
+
+/* ----- Hero ----- */
+
+.panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 24px;
+    box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(18px);
+}
+
+.page-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 20px;
+    align-items: end;
+    padding: 24px;
+}
+
+.eyebrow {
+    margin: 0 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 0.72rem;
+    color: var(--text-soft);
+}
+
+.page-hero h1 {
+    margin: 0;
+    font-family: var(--display-font);
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    line-height: 1.04;
+    color: var(--text-main);
+}
+
+.hero-text {
+    margin: 10px 0 0;
+    color: var(--text-muted);
+    line-height: 1.6;
+    max-width: 68ch;
+}
+
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* ----- Grid ----- */
+
+.classes-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+}
+
+/* ----- Class Card ----- */
+
+.class-card {
+    display: flex;
+    flex-direction: column;
+    border-radius: 20px;
+    border: 1px solid var(--panel-border);
+    background: var(--panel-bg);
+    text-decoration: none;
+    color: var(--text-main);
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow: var(--panel-shadow);
+}
+
+.class-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 44px rgba(62, 39, 24, 0.18);
+    border-color: color-mix(in srgb, var(--accent-primary) 50%, var(--panel-border));
+}
+
+/* ----- Card Banner ----- */
+
+.card-banner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 130px;
+    padding: 20px;
+    overflow: hidden;
+}
+
+/* PHB → warm amber/parchment gradient */
+.source-phb .card-banner {
+    background: linear-gradient(150deg, #6b3c14 0%, #9c5b2a 40%, #c27c3a 100%);
+}
+
+/* Expanded (Artificer / Eberron) → deep blue */
+.source-expanded .card-banner {
+    background: linear-gradient(150deg, #0f2a4a 0%, #1a4272 40%, #2563a8 100%);
+}
+
+/* Critical Role (Blood Hunter) → dark crimson */
+.source-critical-role .card-banner {
+    background: linear-gradient(150deg, #3d0b0b 0%, #6b1717 40%, #a02020 100%);
+}
+
+/* Third-party (Gunslinger / Monster Hunter) → deep purple */
+.source-third-party .card-banner {
+    background: linear-gradient(150deg, #1e0a38 0%, #3b1669 40%, #5c2d91 100%);
+}
+
+:root.theme-dark .source-phb .card-banner {
+    background: linear-gradient(150deg, #3d2007 0%, #6b3c14 40%, #8a5420 100%);
+}
+
+:root.theme-dark .source-expanded .card-banner {
+    background: linear-gradient(150deg, #080f1e 0%, #0f2744 40%, #1a3d6b 100%);
+}
+
+:root.theme-dark .source-critical-role .card-banner {
+    background: linear-gradient(150deg, #240505 0%, #4a0f0f 40%, #741515 100%);
+}
+
+:root.theme-dark .source-third-party .card-banner {
+    background: linear-gradient(150deg, #120422 0%, #260950 40%, #3f1a72 100%);
+}
+
+.source-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    padding: 3px 9px;
+    border-radius: 100px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(6px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 24px);
+}
+
+.card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    border: 2px solid rgba(255, 255, 255, 0.22);
+    color: rgba(255, 255, 255, 0.95);
+
+    i {
+        font-size: 2rem;
+    }
+}
+
+/* ----- Card Body ----- */
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px;
+    flex: 1;
+}
+
+.class-name {
+    margin: 0;
+    font-family: var(--display-font);
+    font-size: 1.4rem;
+    color: var(--text-main);
+    line-height: 1.2;
+}
+
+.class-tagline {
+    margin: 0;
+    font-style: italic;
+    font-size: 0.88rem;
+    color: var(--color-primary);
+    line-height: 1.4;
+    font-weight: 500;
+}
+
+.class-summary {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.55;
+    flex: 1;
+}
+
+.class-stats {
+    display: grid;
+    gap: 6px;
+    padding: 12px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--surface-raised) 80%, transparent);
+    border: 1px solid var(--panel-border);
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 0.8rem;
+}
+
+.stat-label {
+    font-weight: 600;
+    color: var(--text-soft);
+    flex-shrink: 0;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+}
+
+.stat-value {
+    color: var(--text-main);
+    text-align: right;
+    line-height: 1.3;
+}
+
+.view-details-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 100px;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    transition: filter 0.15s ease, transform 0.15s ease;
+    margin-top: auto;
+}
+
+.class-card:hover .view-details-btn {
+    filter: brightness(1.1);
+}
+
+/* ----- Responsive ----- */
+
+@media (max-width: 1100px) {
+    .classes-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 680px) {
+    .page-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-actions {
+        justify-content: flex-start;
+    }
+
+    .classes-grid {
+        grid-template-columns: 1fr;
+    }
+}

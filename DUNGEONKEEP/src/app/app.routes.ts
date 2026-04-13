@@ -23,6 +23,8 @@ import { PublicHomePageComponent } from './pages/public-home-page/public-home-pa
 import { AuthShellComponent } from './components/auth-shell/auth-shell.component';
 import { RulesPage } from './pages/rules-page/rules-page';
 import { RulesDetailPage } from './pages/rules-detail-page/rules-detail-page';
+import { RulesClassesPage } from './pages/rules-classes-page/rules-classes-page';
+import { RulesClassDetailPage } from './pages/rules-class-detail-page/rules-class-detail-page';
 
 export const routes: Routes = [
     {
@@ -233,6 +235,16 @@ export const routes: Routes = [
         path: 'rules/monsters',
         component: MonsterReferencePageComponent,
         data: { title: 'Monster Reference', breadcrumb: 'Monsters', parentCrumbs: [{ label: 'Rules', url: '/rules' }] }
+    },
+    {
+        path: 'rules/classes',
+        component: RulesClassesPage,
+        data: { title: 'Classes', breadcrumb: 'Classes', parentCrumbs: [{ label: 'Rules', url: '/rules' }] }
+    },
+    {
+        path: 'rules/classes/:className',
+        component: RulesClassDetailPage,
+        data: { title: 'Class Detail', breadcrumb: 'Class', parentCrumbs: [{ label: 'Rules', url: '/rules' }, { label: 'Classes', url: '/rules/classes' }] }
     },
     {
         path: 'rules/:slug',

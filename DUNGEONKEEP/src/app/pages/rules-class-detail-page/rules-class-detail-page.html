@@ -1,0 +1,167 @@
+@if (cls(); as entry) {
+<main class="class-detail-page">
+
+    <!-- Hero -->
+    <section class="detail-hero panel" [class]="'detail-hero panel source-' + entry.sourceCategory">
+        <div class="hero-icon">
+            <i [class]="'fa-duotone fa-thin fa-' + entry.icon"></i>
+        </div>
+        <div class="hero-copy">
+            <span class="source-badge">{{ entry.source }}</span>
+            <h1>{{ entry.name }}</h1>
+            <p class="hero-tagline">{{ entry.tagline }}</p>
+            <div class="hero-stats">
+                <span class="hero-stat">
+                    <span class="hero-stat-label">Primary Ability</span>
+                    <span class="hero-stat-value">{{ entry.primaryAbility }}</span>
+                </span>
+                <span class="stat-divider"></span>
+                <span class="hero-stat">
+                    <span class="hero-stat-label">Hit Point Die</span>
+                    <span class="hero-stat-value">{{ entry.hitPointDie }}</span>
+                </span>
+                <span class="stat-divider"></span>
+                <span class="hero-stat">
+                    <span class="hero-stat-label">Saves</span>
+                    <span class="hero-stat-value">{{ entry.saves }}</span>
+                </span>
+            </div>
+        </div>
+        <div class="hero-nav">
+            <a routerLink="/rules/classes" class="ghost-button">
+                <i class="fa-duotone fa-thin fa-arrow-left"></i>
+                All Classes
+            </a>
+        </div>
+    </section>
+
+    <!-- Core Traits -->
+    @if (entry.coreTraits.length) {
+    <section class="section panel">
+        <div class="section-heading section-heading--stacked">
+            <p class="eyebrow">Core Profile</p>
+            <h2>Class Traits at a Glance</h2>
+        </div>
+        <div class="traits-grid">
+            @for (trait of entry.coreTraits; track trait.label) {
+            <div class="trait-card">
+                <span class="trait-label">{{ trait.label }}</span>
+                <span class="trait-value">{{ trait.value }}</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- Starting Out -->
+    @if (entry.levelOneGains.length) {
+    <section class="section panel">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">First Session</p>
+                <h2>Starting Out</h2>
+            </div>
+            <p>What to expect on your first day playing {{ entry.name }}.</p>
+        </div>
+        <ul class="gains-list">
+            @for (gain of entry.levelOneGains; track gain) {
+            <li>{{ gain }}</li>
+            }
+        </ul>
+    </section>
+    }
+
+    <!-- Subclasses -->
+    @if (entry.subclassSnapshot || entry.subclasses.length) {
+    <section class="section panel">
+        <div class="section-heading section-heading--stacked">
+            <p class="eyebrow">Specialisation</p>
+            <h2>Subclasses</h2>
+        </div>
+
+        @if (entry.subclassSnapshot) {
+        <div class="subclass-snapshot">
+            <p class="snapshot-summary">{{ entry.subclassSnapshot.summary }}</p>
+            <p class="snapshot-detail">{{ entry.subclassSnapshot.details }}</p>
+        </div>
+        }
+
+        @if (entry.subclasses.length) {
+        <div class="subclass-chips">
+            @for (sub of entry.subclasses; track sub) {
+            <span class="subclass-chip">{{ sub }}</span>
+            }
+        </div>
+        }
+    </section>
+    }
+
+    <!-- Level Progression -->
+    @if (entry.levelMilestones.length) {
+    <section class="section panel">
+        <div class="section-heading section-heading--stacked">
+            <p class="eyebrow">Level Progression</p>
+            <h2>Key Milestones</h2>
+        </div>
+        <div class="milestones-list">
+            @for (milestone of entry.levelMilestones; track milestone.title) {
+            <div class="milestone" [class.is-expanded]="expandedMilestones()[milestone.title]">
+                <button class="milestone-header" (click)="toggleMilestone(milestone.title)" type="button">
+                    <span class="milestone-level">{{ milestone.title }}</span>
+                    <span class="milestone-summary">{{ milestone.summary }}</span>
+                    <span class="milestone-toggle">
+                        <i [class]="'fa-duotone fa-thin ' + (expandedMilestones()[milestone.title] ? 'fa-chevron-up' : 'fa-chevron-down')"></i>
+                    </span>
+                </button>
+                @if (expandedMilestones()[milestone.title]) {
+                <div class="milestone-details">
+                    <p>{{ milestone.details }}</p>
+                </div>
+                }
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- Feature Notes -->
+    @if (entry.featureNotes.length) {
+    <section class="section panel">
+        <div class="section-heading section-heading--stacked">
+            <p class="eyebrow">Mechanics Spotlight</p>
+            <h2>Feature Notes</h2>
+        </div>
+        <div class="notes-grid">
+            @for (note of entry.featureNotes; track note.title) {
+            <div class="note-card" [class.is-expanded]="expandedNotes()[note.title]">
+                <button class="note-header" (click)="toggleNote(note.title)" type="button">
+                    <div class="note-header-copy">
+                        <span class="note-title">{{ note.title }}</span>
+                        <span class="note-summary">{{ note.summary }}</span>
+                    </div>
+                    <span class="note-toggle">
+                        <i [class]="'fa-duotone fa-thin ' + (expandedNotes()[note.title] ? 'fa-chevron-up' : 'fa-chevron-down')"></i>
+                    </span>
+                </button>
+                @if (expandedNotes()[note.title]) {
+                <div class="note-details">
+                    <p>{{ note.details }}</p>
+                </div>
+                }
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+</main>
+} @else {
+<main class="class-detail-page">
+    <section class="panel empty-state">
+        <p class="eyebrow">Rules Library</p>
+        <h1>Class not found.</h1>
+        <p>That class doesn't exist in the current roster.</p>
+        <a routerLink="/rules/classes" class="ghost-button">Back to Classes</a>
+    </section>
+</main>
+}
