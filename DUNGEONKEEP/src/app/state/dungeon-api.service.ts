@@ -535,6 +535,52 @@ export interface ApiDndChatNpcContext {
     isImportant: boolean;
 }
 
+export interface ApiDndChatCampaignSummaryContext {
+    id: string;
+    name: string;
+    setting: string;
+    tone: string;
+    levelRange: string;
+    summary: string;
+    sessionCount: number;
+    npcCount: number;
+    openThreadCount: number;
+    currentUserRole: string;
+}
+
+export interface ApiDndChatCharacterSummaryContext {
+    id: string;
+    name: string;
+    race: string;
+    className: string;
+    level: number;
+    status: string;
+    role: string;
+    background: string;
+}
+
+export interface ApiDndChatNpcLibrarySummaryContext {
+    id: string;
+    name: string;
+    race: string;
+    classOrRole: string;
+    faction: string;
+    currentStatus: string;
+    isAlive: boolean;
+    isImportant: boolean;
+    tags: string[];
+}
+
+export interface ApiDndChatRulesContext {
+    slug: string;
+    label: string;
+    description: string;
+    heroSummary: string;
+    quickFacts: string[];
+    highlights: string[];
+    topicList?: { slug: string; label: string; description: string }[];
+}
+
 export interface ApiDndChatPageContext {
     route: string;
     pageType: string;
@@ -542,6 +588,10 @@ export interface ApiDndChatPageContext {
     campaign?: ApiDndChatCampaignContext;
     session?: ApiDndChatSessionContext;
     npc?: ApiDndChatNpcContext;
+    campaignsList?: ApiDndChatCampaignSummaryContext[];
+    charactersList?: ApiDndChatCharacterSummaryContext[];
+    npcLibraryList?: ApiDndChatNpcLibrarySummaryContext[];
+    rules?: ApiDndChatRulesContext;
 }
 
 export interface ApiDndChatRequest {

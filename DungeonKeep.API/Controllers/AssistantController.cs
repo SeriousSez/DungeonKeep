@@ -320,6 +320,52 @@ public sealed class AssistantController : ControllerBase
             });
         }
 
+        if (context.CampaignsList is not null && context.CampaignsList.Count > 0)
+        {
+            lines.Add("Campaigns List Context:");
+            foreach (var campaign in context.CampaignsList)
+            {
+                lines.Add($"- {SanitizeForPrompt(campaign.Name)} ({SanitizeForPrompt(campaign.Setting)}; {campaign.Tone}; {campaign.LevelRange}; {campaign.SessionCount} sessions; {campaign.NpcCount} NPCs; {campaign.OpenThreadCount} open threads; Role: {FormatOptionalText(campaign.CurrentUserRole, "unknown")}; Summary: {FormatOptionalText(campaign.Summary, "none recorded")})");
+            }
+        }
+
+        if (context.CharactersList is not null && context.CharactersList.Count > 0)
+        {
+            lines.Add("Characters List Context:");
+            foreach (var character in context.CharactersList)
+            {
+                lines.Add($"- {SanitizeForPrompt(character.Name)} (Level {character.Level} {character.Race} {character.ClassName}; {character.Role}; {character.Status}; Background: {character.Background})");
+            }
+        }
+
+        if (context.NpcLibraryList is not null && context.NpcLibraryList.Count > 0)
+        {
+            lines.Add("NPC Library Context:");
+            foreach (var npc in context.NpcLibraryList)
+            {
+                lines.Add($"- {SanitizeForPrompt(npc.Name)} ({npc.Race} {npc.ClassOrRole}; Faction: {FormatOptionalText(npc.Faction, "independent")}; Status: {FormatOptionalText(npc.CurrentStatus, npc.IsAlive ? "active" : "deceased")}; Important: {(npc.IsImportant ? "yes" : "no")}; Tags: {FormatList(npc.Tags, "none")})");
+            }
+        }
+
+        if (context.Rules is not null)
+        {
+            lines.AddRange(
+            new[]
+            {
+                "Rules Context:",
+                $"- Topic: {SanitizeForPrompt(context.Rules.Label)}",
+                $"- Description: {SanitizeForPrompt(context.Rules.Description)}",
+                $"- Summary: {SanitizeForPrompt(context.Rules.HeroSummary)}",
+                $"- Key Facts: {FormatList(context.Rules.QuickFacts, "none")}",
+                $"- Highlights: {FormatList(context.Rules.Highlights, "none")}"
+            });
+
+            if (context.Rules.TopicList is not null && context.Rules.TopicList.Count > 0)
+            {
+                lines.Add($"- Available Topics: {string.Join("; ", context.Rules.TopicList.Select(t => $"{SanitizeForPrompt(t.Label)}: {SanitizeForPrompt(t.Description)}"))}");
+            }
+        }
+
         return string.Join('\n', lines);
     }
 
@@ -436,9 +482,10 @@ public sealed class AssistantController : ControllerBase
             return true;
         }
 
-        if (pageContext?.Character is not null || pageContext?.Campaign is not null || pageContext?.Session is not null || pageContext?.Npc is not null)
+        if (pageContext?.Character is not null || pageContext?.Campaign is not null || pageContext?.Session is not null || pageContext?.Npc is not null
+            || pageContext?.CampaignsList is not null || pageContext?.CharactersList is not null || pageContext?.NpcLibraryList is not null || pageContext?.Rules is not null)
         {
-            if (ContainsAny(message, new[] { "character", "campaign", "session", "party", "encounter", "portrait", "token", "map" }))
+            if (ContainsAny(message, new[] { "character", "campaign", "session", "party", "encounter", "portrait", "token", "map", "rule", "npc", "class", "spell" }))
             {
                 return true;
             }
@@ -519,7 +566,11 @@ public sealed class AssistantController : ControllerBase
         DndChatCharacterContext? Character,
         DndChatCampaignContext? Campaign,
         DndChatSessionContext? Session,
-        DndChatNpcContext? Npc);
+        DndChatNpcContext? Npc,
+        IReadOnlyList<DndChatCampaignSummaryContext>? CampaignsList,
+        IReadOnlyList<DndChatCharacterSummaryContext>? CharactersList,
+        IReadOnlyList<DndChatNpcLibrarySummaryContext>? NpcLibraryList,
+        DndChatRulesContext? Rules);
 
     public sealed record DndChatCharacterContext(
         string Id,
@@ -668,6 +719,53 @@ public sealed class AssistantController : ControllerBase
     public sealed record DndChatNpcRelationshipContext(
         string Target,
         string Type,
+        string Description);
+
+    public sealed record DndChatCampaignSummaryContext(
+        string Id,
+        string Name,
+        string Setting,
+        string Tone,
+        string LevelRange,
+        string Summary,
+        int SessionCount,
+        int NpcCount,
+        int OpenThreadCount,
+        string CurrentUserRole);
+
+    public sealed record DndChatCharacterSummaryContext(
+        string Id,
+        string Name,
+        string Race,
+        string ClassName,
+        int Level,
+        string Status,
+        string Role,
+        string Background);
+
+    public sealed record DndChatNpcLibrarySummaryContext(
+        string Id,
+        string Name,
+        string Race,
+        string ClassOrRole,
+        string Faction,
+        string CurrentStatus,
+        bool IsAlive,
+        bool IsImportant,
+        IReadOnlyList<string> Tags);
+
+    public sealed record DndChatRulesContext(
+        string Slug,
+        string Label,
+        string Description,
+        string HeroSummary,
+        IReadOnlyList<string> QuickFacts,
+        IReadOnlyList<string> Highlights,
+        IReadOnlyList<DndChatRulesTopicContext>? TopicList);
+
+    public sealed record DndChatRulesTopicContext(
+        string Slug,
+        string Label,
         string Description);
 
     public sealed record DndChatResponse(string Reply);

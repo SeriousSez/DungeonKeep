@@ -6,14 +6,19 @@ import { Router } from '@angular/router';
 import { loadCampaignNpcDrafts, loadNpcLibrary } from '../../data/campaign-npc.storage';
 import { mergeStoredNpcDrafts, sanitizeNpc } from '../../data/campaign-npc.helpers';
 import { readStoredSessionEditorDraft } from '../../data/session-editor.storage';
+import { getRulesEntryBySlug, rulesEntries } from '../../data/rules-links';
 import { Campaign, Character } from '../../models/dungeon.models';
 import { CampaignNpc } from '../../models/campaign-npc.models';
 import {
     ApiDndChatCampaignContext,
     ApiDndChatCampaignMapContext,
+    ApiDndChatCampaignSummaryContext,
     ApiDndChatCharacterContext,
+    ApiDndChatCharacterSummaryContext,
     ApiDndChatNpcContext,
+    ApiDndChatNpcLibrarySummaryContext,
     ApiDndChatPageContext,
+    ApiDndChatRulesContext,
     ApiDndChatSessionContext,
     DungeonApiService
 } from '../../state/dungeon-api.service';
@@ -130,7 +135,11 @@ export class DndChatWidgetComponent {
             character,
             campaign: this.mapCampaignContext(campaign),
             session,
-            npc
+            npc,
+            campaignsList: this.getCampaignsListContext(route),
+            charactersList: this.getCharactersListContext(route),
+            npcLibraryList: this.getNpcLibraryListContext(route),
+            rules: this.getRulesContext(route)
         };
     }
 
@@ -513,6 +522,95 @@ export class DndChatWidgetComponent {
         }
 
         return `${normalized.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
+    }
+
+    private getCampaignsListContext(route: string): ApiDndChatCampaignSummaryContext[] | undefined {
+        if (!/^\/campaigns$/.test(route)) {
+            return undefined;
+        }
+
+        return this.store.campaigns().map((c) => ({
+            id: c.id,
+            name: c.name,
+            setting: c.setting,
+            tone: c.tone,
+            levelRange: c.levelRange,
+            summary: this.truncateText(c.summary, 200),
+            sessionCount: c.sessionCount,
+            npcCount: c.npcCount,
+            openThreadCount: c.openThreadCount,
+            currentUserRole: c.currentUserRole ?? ''
+        }));
+    }
+
+    private getCharactersListContext(route: string): ApiDndChatCharacterSummaryContext[] | undefined {
+        if (!/^\/characters$/.test(route)) {
+            return undefined;
+        }
+
+        return this.store.characters().map((c) => ({
+            id: c.id,
+            name: c.name,
+            race: c.race,
+            className: c.className,
+            level: c.level,
+            status: c.status,
+            role: c.role,
+            background: c.background
+        }));
+    }
+
+    private getNpcLibraryListContext(route: string): ApiDndChatNpcLibrarySummaryContext[] | undefined {
+        if (!/^\/npcs$/.test(route)) {
+            return undefined;
+        }
+
+        const library = (loadNpcLibrary() ?? []).map((entry) => sanitizeNpc(entry));
+
+        return library.map((npc) => ({
+            id: npc.id,
+            name: npc.name,
+            race: npc.race,
+            classOrRole: npc.classOrRole,
+            faction: npc.faction,
+            currentStatus: npc.currentStatus,
+            isAlive: npc.isAlive,
+            isImportant: npc.isImportant,
+            tags: [...npc.tags]
+        }));
+    }
+
+    private getRulesContext(route: string): ApiDndChatRulesContext | undefined {
+        const detailMatch = route.match(/^\/rules\/([^/]+)$/);
+        if (detailMatch?.[1]) {
+            const entry = getRulesEntryBySlug(detailMatch[1]);
+            if (!entry) {
+                return undefined;
+            }
+
+            return {
+                slug: entry.slug,
+                label: entry.label,
+                description: entry.description,
+                heroSummary: entry.heroSummary,
+                quickFacts: entry.quickFacts.map((qf) => `${qf.label}: ${qf.value}`),
+                highlights: entry.highlights.map((h) => `${h.title}: ${h.text}`)
+            };
+        }
+
+        if (/^\/rules$/.test(route) || /^\/rules\/monsters$/.test(route)) {
+            return {
+                slug: '',
+                label: 'Rules Reference',
+                description: 'Available D&D 5e rules topics in DungeonKeep',
+                heroSummary: 'Reference index for D&D 5e rules topics.',
+                quickFacts: [],
+                highlights: [],
+                topicList: rulesEntries.map((e) => ({ slug: e.slug, label: e.label, description: e.description }))
+            };
+        }
+
+        return undefined;
     }
 
     private scheduleScrollToBottom(): void {
