@@ -1486,7 +1486,97 @@ export const classInfoMap: Record<string, BuilderInfo> = {
     Rogue: { name: 'Rogue', source: "Player's Handbook", summary: 'Precision striker focused on positioning, stealth, and utility skills.', highlights: ['Primary focus: Dexterity', 'Core feature: Sneak Attack', 'Excellent out-of-combat skill coverage'] },
     Sorcerer: { name: 'Sorcerer', source: "Player's Handbook", summary: 'Innate arcane caster with metamagic-driven spell customization.', highlights: ['Primary focus: Charisma', 'Core feature: Metamagic', 'Powerful burst casting with limited spell knowns'] },
     Warlock: { name: 'Warlock', source: "Player's Handbook", summary: 'Pact-based caster with reliable cantrip pressure and unique invocations.', highlights: ['Primary focus: Charisma', 'Core feature: Eldritch Invocations', 'Short-rest spell slots with strong at-will options'] },
-    Wizard: { name: 'Wizard', source: "Player's Handbook", summary: 'Broadest spell access with high utility and deep arcane specialization.', highlights: ['Primary focus: Intelligence', 'Core feature: Spellbook casting', 'Exceptional flexibility through spell preparation'] }
+    Wizard: { name: 'Wizard', source: "Player's Handbook", summary: 'Broadest spell access with high utility and deep arcane specialization.', highlights: ['Primary focus: Intelligence', 'Core feature: Spellbook casting', 'Exceptional flexibility through spell preparation'] },
+    Gunslinger: {
+        name: 'Gunslinger',
+        source: "Valda's Spire of Secrets",
+        summary: 'A daring Dexterity-based martial class that uses firearms, Grit, and trick shots to survive through timing, risk, and luck.',
+        highlights: ['Primary focus: Dexterity', 'Core feature: Grit (point pool for trick shots and stunts)', 'Light armor ranged skirmisher with high-risk, high-reward mechanics'],
+        details: {
+            tagline: 'The Definitive Gritty, Risk-Taking Class',
+            primaryAbility: 'Dexterity',
+            hitPointDie: 'd8 per Gunslinger level',
+            saves: 'Dexterity and Charisma',
+            levelOneGains: [
+                'Gain proficiency with light armor, simple weapons, firearms, and tinker\'s tools, establishing a ranged identity focused on mobility and preparation.',
+                'Start with Grit points equal to your Wisdom modifier (minimum 1) — your core resource for trick shots, risky maneuvers, and emergency recovery.',
+                'Choose a Combat Style at level 1 to shape whether you lean into precise long-range shooting, close-range aggression, or dual-firearm pressure.'
+            ],
+            coreTraits: [
+                { label: 'Primary Ability', value: 'Dexterity' },
+                { label: 'Hit Point Die', value: 'd8 per Gunslinger level' },
+                { label: 'Saving Throws', value: 'Dexterity and Charisma' },
+                { label: 'Armor Training', value: 'Light armor' },
+                { label: 'Weapon Proficiencies', value: 'Simple weapons and firearms' },
+                { label: 'Tool Proficiencies', value: "Tinker's Tools" },
+                { label: 'Skills', value: '2 from Acrobatics, Athletics, Deception, History, Insight, Intimidation, Perception, Persuasion, Sleight of Hand, Stealth' },
+                { label: 'Role', value: 'Ranged skirmisher using trick shots, Grit resources, and firearms to pressure and control from distance' }
+            ],
+            levelMilestones: [
+                { title: 'Level 1', summary: 'Grit and Combat Style', details: 'Your Grit pool and combat style are established at level 1, defining the resource loop and engagement range that drives the class.' },
+                { title: 'Level 2', summary: 'Lucky Break', details: 'Spend 1 Grit as a bonus action to recover hit points — a second-wind style emergency tool that rewards Grit management throughout fights.' },
+                { title: 'Level 3', summary: 'Gunslinger Style (subclass)', details: 'Choose your subclass path: Desperado (dual-firearm aggression), Deadshot (precision, range control), Spiritslinger (supernatural trick shots), Maverick, or Undertaker.' },
+                { title: 'Level 5', summary: 'Extra Attack and Snap Shot', details: 'Two attacks per action and a reaction attack when enemies approach gives you consistent offense and a soft deterrent against being rushed in melee.' },
+                { title: 'Level 7', summary: 'Quickdraw and Evasion', details: 'Initiative advantage and Evasion sharpen your positioning and survivability — especially important for a light-armor class exposing itself in line-of-fire situations.' },
+                { title: 'Level 10', summary: 'Rapid Repair', details: 'Spend 1 Grit to clear a misfired firearm as a bonus action, removing the most frustrating cost of the misfire mechanic in critical moments.' },
+                { title: 'Level 11', summary: 'Honed Shot', details: 'Your firearm attacks ignore half and three-quarters cover, stripping one of the few reliable defensive advantages enemies can use against ranged builds.' },
+                { title: 'Level 15', summary: 'Elusive', details: 'Enemies cannot have advantage on attack rolls against you unless you are incapacitated, dramatically improving your defensive profile at high levels.' },
+                { title: 'Level 18', summary: 'Lightning Reload', details: 'Reload any firearm as a bonus action, freeing your action economy from reload management and enabling sustained multi-attack rounds with full firearm power.' },
+                { title: 'Level 20', summary: 'Gunslinger Supreme', details: 'Your Grit cap increases, critical hits with firearms generate 2 Grit, and your critical hit range expands to 19–20, creating a powerful self-sustaining Grit loop.' }
+            ],
+            featureNotes: [
+                { title: 'Grit Resource Model', summary: 'Grit fuels tricks and recovers through skilled play.', details: 'You recover all Grit on a short or long rest, but also regain 1 point on critical hits and killing blows with firearms. Skilled Gunslingers create a self-sustaining loop of risk and recovery.' },
+                { title: 'Trick Shots', summary: 'Grit-fueled conditional attack effects for tactical variety.', details: 'Options include Dazing Shot, Deadeye Shot, Disarming Shot, Forceful Shot, Winging Shot, Piercing Shot, and more. Each spends 1 Grit and adds a conditional effect on a hit.' },
+                { title: 'Firearm Mechanics', summary: 'Reload and Misfire properties create tension and memorable moments.', details: 'Reload limits burst fire. Misfire (weapon jams on low rolls equal to or below the Misfire score) creates high-stakes moments. Tinker\'s Tools proficiency lets you repair jams mid-combat or craft ammunition.' },
+                { title: 'Combat Style Choice', summary: 'Style selection shapes engagement distance and weapon loadout.', details: 'Archery-adjacent options reward consistent range maintenance. Dueling options help when enemies close in. The choice is often guided by your subclass path at level 3.' },
+                { title: 'Subclass Identity', summary: 'Each Gunslinger Style produces a dramatically different playstyle.', details: 'Desperado (dual firearms, aggression), Deadshot (precision, distance mastery), and Spiritslinger (supernatural bullet effects) each create a distinct turn pattern and party niche.' }
+            ]
+        }
+    },
+    'Monster Hunter': {
+        name: 'Monster Hunter',
+        source: "Grim Hollow: Player's Guide",
+        summary: 'A skilled martial hunter who uses monster knowledge, studied strikes, and predatory instincts to identify and slay supernatural threats.',
+        highlights: ['Primary focus: Strength or Dexterity + Intelligence', 'Core feature: Monster Lore and Studied Strike', 'Medium armor striker built for targeted damage against known enemy types'],
+        details: {
+            tagline: 'Skilled Professionals Who Specialize in Identifying, Tracking, and Slaying Monsters',
+            primaryAbility: 'Strength or Dexterity; Intelligence for Monster Lore features',
+            hitPointDie: 'd10 per Monster Hunter level',
+            saves: 'Dexterity and Intelligence',
+            levelOneGains: [
+                'Gain medium armor, shields, and all weapon proficiencies at level 1, providing a strong and flexible martial baseline for any engagement style.',
+                'Monster Lore lets you use Intelligence checks before or during combat to identify creature types and learn their resistances, immunities, and vulnerabilities.',
+                'Studied Strike adds bonus damage to hits against creature types you have identified, making preparation directly rewarding through increased per-hit output.'
+            ],
+            coreTraits: [
+                { label: 'Primary Ability', value: 'Strength or Dexterity; Intelligence for Monster Lore' },
+                { label: 'Hit Point Die', value: 'd10 per Monster Hunter level' },
+                { label: 'Saving Throws', value: 'Dexterity and Intelligence' },
+                { label: 'Armor Training', value: 'Medium armor and shields' },
+                { label: 'Weapon Proficiencies', value: 'All simple and martial weapons' },
+                { label: 'Skills', value: '2 from Athletics, History, Insight, Investigation, Nature, Perception, Stealth, Survival' },
+                { label: 'Role', value: 'Frontline or skirmishing martial striker with strong emphasis on preparation, monster knowledge, and adaptive damage' }
+            ],
+            levelMilestones: [
+                { title: 'Level 1', summary: 'Monster Lore, Predator\'s Senses, Studied Strike', details: 'Your hunter identity is fully online at level 1: study enemies to exploit them, track through preparation, and deal extra damage when that knowledge converts into direct combat payoff.' },
+                { title: 'Level 2', summary: 'Fighting Style and Slayer\'s Preparation', details: 'A fighting style and preparation utility let you customize for melee or ranged, weapon types, and your preferred engagement approach against different threat levels.' },
+                { title: 'Level 3', summary: 'Hunter Order (subclass)', details: 'Order of the Inquisitor (interrogation and social pressure), Order of the Unorthodox (traps and gadgets), or Order of the Slayer (raw offensive escalation against monsters).' },
+                { title: 'Level 5', summary: 'Extra Attack', details: 'Two attacks per action significantly increases sustained output, especially when Studied Strike applies to multiple hits against an already-identified target.' },
+                { title: 'Level 6', summary: 'Preternatural Senses', details: 'Initiative advantage and cannot-be-surprised remove two of the main vulnerabilities of a medium-armor frontliner who needs to close distance or control positioning.' },
+                { title: 'Level 9', summary: 'Devastating Critical', details: 'Critical hits against studied targets roll an additional weapon die, creating powerful payoff spikes when your preparation converts into a finishing blow.' },
+                { title: 'Level 14', summary: 'Greater Monster Lore', details: 'Monster Lore checks auto-succeed against previously encountered creature types and reveal more detailed tactical information, making high-level encounters feel more like controlled hunts.' },
+                { title: 'Level 17', summary: 'Superior Hunter', details: 'Studied Strike applies to every weapon hit against a studied creature each turn rather than once, producing a dramatic per-round damage increase against priority targets.' },
+                { title: 'Level 20', summary: 'Apex Predator', details: 'Monster Lore now automatically grants advantage on attack rolls against identified creatures, and your Studied Strike die grows to d12, reinforcing your role as the most dangerous thing in any room.' }
+            ],
+            featureNotes: [
+                { title: 'Monster Lore System', summary: 'Intelligence checks unlock creature-specific tactical advantages.', details: 'A successful Monster Lore check reveals resistances, immunities, and tactical weaknesses. Studied Strike damage and later Order features are gated behind it, rewarding preparation before each encounter.' },
+                { title: 'Studied Strike Scaling', summary: 'Bonus damage die grows with your level against identified targets.', details: 'The die starts at d6 at level 1 and scales at key milestones. Combined with Extra Attack at level 5 and Superior Hunter at 17, it becomes the dominant source of your damage output in prolonged fights.' },
+                { title: 'Hunter Order Identity', summary: 'Subclass path fundamentally changes armor use, utility, and party role.', details: 'Inquisitor applies social and investigation pressure; Unorthodox uses traps, gadgets, and unconventional gear; Slayer adds pure damage escalation and direct anti-monster features at every milestone.' },
+                { title: 'Dual Stat Pressure', summary: 'Str/Dex for attacks, Intelligence for Lore creates a meaningful build constraint.', details: 'Most players favor Dexterity for finesse or ranged weapon attacks, but Intelligence investment directly improves Monster Lore accuracy and several Order features. Items or Order bonuses can offset the split.' },
+                { title: 'Armor and Defense', summary: 'Medium armor and shields provide strong mid-range protection without weight cost.', details: 'Dexterity adds to medium armor AC up to +2, letting you reach 16–18 AC relatively easily. Unlike heavy-armor classes, you remain mobile and can navigate terrain that would slow other frontliners.' }
+            ]
+        }
+    }
 };
 
 export const classDetailFallbacks: Record<string, NonNullable<BuilderInfo['details']>> = {
@@ -2572,6 +2662,14 @@ export const classSubclassSnapshots: Record<string, { summary: string; details: 
     'Blood Hunter': {
         summary: 'Published orders include Ghostslayer, Lycan, Mutant, and Profane Soul.',
         details: 'Each order changes your core loop significantly, from anti-undead focus and transformation pressure to mutagen customization or pact-style spell integration.'
+    },
+    Gunslinger: {
+        summary: "Published styles include Desperado, Deadshot, Spiritslinger, Maverick, and Undertaker.",
+        details: "Each style changes whether you play as an aggressive dual-wielder, a patient precision shooter, a supernatural marksman, a trap-and-trick hybrid, or a death-themed skirmisher who embraces risk."
+    },
+    'Monster Hunter': {
+        summary: "Published orders include Order of the Inquisitor, Order of the Unorthodox, and Order of the Slayer.",
+        details: "Order selection shapes your approach from investigative and social pressure to gadget-and-trap combat or pure high-damage monster slaying focused on direct eliminations."
     },
     Barbarian: {
         summary: 'Published paths include Berserker, Totem Warrior, Zealot, Beast, Giant, and Wild Magic.',

@@ -50,7 +50,7 @@ export const rulesEntries = [
         heroTitle: 'Classes define what your character does best every round.',
         heroSummary: 'Your class sets the tone of the character sheet: how you solve problems, what resources you manage, and where you naturally shine in the party. DungeonKeep uses this page as a practical overview, not a rules dump, so players can make fast choices before diving into a builder.',
         quickFacts: [
-            { label: 'Current roster', value: '13 commonly referenced classes, including Artificer alongside the 12 core 2024 classes.' },
+            { label: 'Current roster', value: '15 classes including all 12 core 2024 classes, Artificer, and two third-party classes: Gunslinger and Monster Hunter.' },
             { label: 'Main decision', value: 'Pick a class for role, tempo, and resource style before you worry about optimization.' },
             { label: 'Stat pressure', value: 'Primary abilities tell you which scores should lead your build.' },
             { label: 'Table impact', value: 'Classes shape your turn loop far more than gear or flavor text.' }
@@ -66,12 +66,14 @@ export const rulesEntries = [
                 intro: 'Use this as a first-pass filter before comparing subclasses or spell lists.',
                 entries: [
                     { label: 'Artificer', text: 'Inventive half-caster built around tools, item support, and utility planning.' },
+                    { label: 'Gunslinger', text: 'Grit-fueled firearm specialist from Valda\'s Spire of Secrets — punishes aggression with trick shots, quick reflexes, and explosive burst damage.' },
                     { label: 'Barbarian', text: 'Durable melee bruiser that trades finesse for pressure, toughness, and momentum.' },
                     { label: 'Bard', text: 'Flexible support caster with strong social play, control, and party-wide boosts.' },
                     { label: 'Cleric', text: 'Divine caster that can heal, defend, blast, or command the field depending on build.' },
                     { label: 'Druid', text: 'Nature-focused caster with control, summoning, scouting, and form-shifting angles.' },
                     { label: 'Fighter', text: 'Weapon master with reliable action economy and room to specialize into almost any combat lane.' },
                     { label: 'Monk', text: 'Mobile skirmisher that rewards positioning, timing, and repeated tactical pressure.' },
+                    { label: 'Monster Hunter', text: 'Intelligence-driven martial hunter from Grim Hollow \u2014 exploits monster weaknesses through preparation, monster lore, and devastating studied strikes.' },
                     { label: 'Paladin', text: 'Armored oath-bound striker who mixes defense, team support, and explosive burst.' },
                     { label: 'Ranger', text: 'Scout-hunter hybrid with mobility, exploration strength, and focused damage.' },
                     { label: 'Rogue', text: 'Skill-heavy opportunist that thrives on stealth, leverage, and precise hits.' },

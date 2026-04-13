@@ -477,39 +477,39 @@ export class NewCharacterStandardPageComponent {
     readonly classCategorySets: Readonly<Record<ClassSortMode, ReadonlyArray<{ label: string; source: string; classes: ReadonlyArray<string> }>>> = {
         'primary-ability': [
             { label: 'Strength-Based', source: 'Primary Ability', classes: ['Barbarian', 'Fighter', 'Paladin'] },
-            { label: 'Dexterity-Based', source: 'Primary Ability', classes: ['Monk', 'Ranger', 'Rogue'] },
+            { label: 'Dexterity-Based', source: 'Primary Ability', classes: ['Gunslinger', 'Monk', 'Ranger', 'Rogue'] },
             { label: 'Intelligence-Based', source: 'Primary Ability', classes: ['Artificer', 'Wizard'] },
             { label: 'Wisdom-Based', source: 'Primary Ability', classes: ['Cleric', 'Druid'] },
             { label: 'Charisma-Based', source: 'Primary Ability', classes: ['Bard', 'Sorcerer', 'Warlock'] },
-            { label: 'Flexible / Hybrid', source: 'Primary Ability', classes: ['Blood Hunter'] }
+            { label: 'Flexible / Hybrid', source: 'Primary Ability', classes: ['Blood Hunter', 'Monster Hunter'] }
         ],
         'party-role': [
             { label: 'Frontline', source: 'Party Role', classes: ['Barbarian', 'Fighter', 'Paladin'] },
-            { label: 'Skirmisher / Scout', source: 'Party Role', classes: ['Rogue', 'Monk', 'Ranger', 'Blood Hunter'] },
+            { label: 'Skirmisher / Scout', source: 'Party Role', classes: ['Gunslinger', 'Monster Hunter', 'Rogue', 'Monk', 'Ranger', 'Blood Hunter'] },
             { label: 'Support / Control Casters', source: 'Party Role', classes: ['Bard', 'Cleric', 'Druid', 'Wizard'] },
             { label: 'Blaster / Utility Casters', source: 'Party Role', classes: ['Sorcerer', 'Warlock', 'Artificer'] }
         ],
         'power-source': [
-            { label: 'Martial', source: 'Power Source', classes: ['Barbarian', 'Fighter', 'Rogue', 'Monk'] },
+            { label: 'Martial', source: 'Power Source', classes: ['Barbarian', 'Fighter', 'Gunslinger', 'Rogue', 'Monk'] },
             { label: 'Divine', source: 'Power Source', classes: ['Cleric', 'Paladin'] },
             { label: 'Primal', source: 'Power Source', classes: ['Druid', 'Ranger'] },
             { label: 'Arcane', source: 'Power Source', classes: ['Wizard', 'Sorcerer', 'Bard', 'Warlock', 'Artificer'] },
-            { label: 'Occult / Hunter', source: 'Power Source', classes: ['Blood Hunter'] }
+            { label: 'Occult / Hunter', source: 'Power Source', classes: ['Blood Hunter', 'Monster Hunter'] }
         ],
         'complexity': [
             { label: 'Beginner-Friendly', source: 'Complexity', classes: ['Fighter', 'Barbarian', 'Rogue'] },
-            { label: 'Intermediate', source: 'Complexity', classes: ['Ranger', 'Paladin', 'Warlock', 'Sorcerer', 'Bard', 'Blood Hunter'] },
+            { label: 'Intermediate', source: 'Complexity', classes: ['Gunslinger', 'Monster Hunter', 'Ranger', 'Paladin', 'Warlock', 'Sorcerer', 'Bard', 'Blood Hunter'] },
             { label: 'Advanced', source: 'Complexity', classes: ['Cleric', 'Druid', 'Wizard', 'Artificer', 'Monk'] }
         ],
         'spellcasting': [
-            { label: 'Non / Low Caster', source: 'Spellcasting Type', classes: ['Barbarian', 'Fighter', 'Rogue', 'Monk', 'Blood Hunter'] },
+            { label: 'Non / Low Caster', source: 'Spellcasting Type', classes: ['Barbarian', 'Fighter', 'Gunslinger', 'Monster Hunter', 'Rogue', 'Monk', 'Blood Hunter'] },
             { label: 'Half Caster', source: 'Spellcasting Type', classes: ['Paladin', 'Ranger', 'Artificer'] },
             { label: 'Full Caster', source: 'Spellcasting Type', classes: ['Bard', 'Cleric', 'Druid', 'Sorcerer', 'Warlock', 'Wizard'] }
         ],
         'armor': [
             { label: 'Heavy / Very Durable', source: 'Armor & Survivability', classes: ['Fighter', 'Paladin', 'Cleric'] },
-            { label: 'Medium / Mobile', source: 'Armor & Survivability', classes: ['Barbarian', 'Ranger', 'Artificer', 'Blood Hunter', 'Druid'] },
-            { label: 'Light / Unarmored', source: 'Armor & Survivability', classes: ['Rogue', 'Monk', 'Bard', 'Sorcerer', 'Warlock', 'Wizard'] }
+            { label: 'Medium / Mobile', source: 'Armor & Survivability', classes: ['Barbarian', 'Monster Hunter', 'Ranger', 'Artificer', 'Blood Hunter', 'Druid'] },
+            { label: 'Light / Unarmored', source: 'Armor & Survivability', classes: ['Gunslinger', 'Rogue', 'Monk', 'Bard', 'Sorcerer', 'Warlock', 'Wizard'] }
         ]
     };
     readonly classCategories = computed(() => this.classCategorySets[this.selectedClassSortMode()]);

@@ -16,7 +16,7 @@ export interface ClassFeaturesForLevel {
 
 export const classOptions: ReadonlyArray<string> = [
     'Artificer', 'Barbarian', 'Blood Hunter', 'Bard', 'Cleric', 'Druid', 'Fighter',
-    'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard'
+    'Gunslinger', 'Monk', 'Monster Hunter', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard'
 ];
 
 const paladinWeaponMasteryOptions: ReadonlyArray<string> = [
@@ -1584,6 +1584,81 @@ export const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
                 { name: 'Signature Spells', level: 20, description: 'Gain your Wizard capstone feature.' }
             ]
         }
+    ],
+    Gunslinger: [
+        {
+            level: 1, features: [
+                {
+                    name: 'Core Gunslinger Traits',
+                    level: 1,
+                    description: 'Gain proficiency with light armor, simple weapons, firearms, and tinker\'s tools.',
+                    choices: {
+                        title: 'Choose 2 Skill Proficiencies',
+                        count: 2,
+                        options: ['Acrobatics', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation', 'Perception', 'Persuasion', 'Sleight of Hand', 'Stealth']
+                    }
+                },
+                { name: 'Grit', level: 1, description: 'Gain Grit points equal to your Wisdom modifier (minimum 1). Spend Grit to perform trick shots and daring maneuvers. Recover 1 Grit on a critical hit or killing blow with a firearm; recover all on a short or long rest.' },
+                { name: 'Combat Style', level: 1, description: 'Choose a fighting style (Archery, Dueling, or Two-Weapon Fighting) that defines your approach to ranged and close combat.' }
+            ]
+        },
+        { level: 2, features: [{ name: 'Lucky Break', level: 2, description: 'Spend 1 Grit to regain 1d10 + your Gunslinger level in hit points as a bonus action.' }] },
+        { level: 3, features: [{ name: 'Gunslinger Style', level: 3, description: 'Choose your Gunslinger Style subclass, which defines your combat identity through level 20.' }] },
+        { level: 4, features: [{ name: 'Ability Score Improvement', level: 4, description: 'Increase your ability scores or take a feat.' }] },
+        { level: 5, features: [{ name: 'Extra Attack', level: 5, description: 'You can attack twice when you take the Attack action.' }, { name: 'Snap Shot', level: 5, description: 'When a creature moves within 5 feet of you, you can use your reaction to make one firearm attack against it.' }] },
+        { level: 6, features: [{ name: 'Subclass Feature', level: 6, description: 'Gain a feature from your Gunslinger Style subclass.' }] },
+        { level: 7, features: [{ name: 'Quickdraw', level: 7, description: 'Add your proficiency bonus to initiative rolls. You can also stow and draw a firearm as a single object interaction.' }, { name: 'Evasion', level: 7, description: 'When you succeed on a Dexterity saving throw against an effect that deals half damage on a success, you take no damage instead.' }] },
+        { level: 8, features: [{ name: 'Ability Score Improvement', level: 8, description: 'Increase your ability scores or take a feat.' }] },
+        { level: 9, features: [{ name: 'Grit Die Growth', level: 9, description: 'Your Grit pool increases and trick shot options expand.' }] },
+        { level: 10, features: [{ name: 'Rapid Repair', level: 10, description: 'Spend 1 Grit to attempt to clear a misfired firearm as a bonus action.' }] },
+        { level: 11, features: [{ name: 'Honed Shot', level: 11, description: 'Your firearm attacks ignore half cover and three-quarters cover bonuses.' }] },
+        { level: 12, features: [{ name: 'Ability Score Improvement', level: 12, description: 'Increase your ability scores or take a feat.' }] },
+        { level: 13, features: [{ name: 'Uncanny Dodge', level: 13, description: 'When an attacker you can see hits you, use your reaction to halve the attack\'s damage.' }] },
+        { level: 14, features: [{ name: 'Subclass Feature', level: 14, description: 'Gain a feature from your Gunslinger Style subclass.' }] },
+        { level: 15, features: [{ name: 'Elusive', level: 15, description: 'Enemies cannot gain advantage on attack rolls against you unless you are incapacitated.' }] },
+        { level: 16, features: [{ name: 'Ability Score Improvement', level: 16, description: 'Increase your ability scores or take a feat.' }] },
+        { level: 17, features: [{ name: 'Subclass Feature', level: 17, description: 'Gain a feature from your Gunslinger Style subclass.' }, { name: 'One Last Bullet', level: 17, description: 'When you are reduced to 0 hit points, you can spend all remaining Grit to make one firearm attack before falling unconscious.' }] },
+        { level: 18, features: [{ name: 'Lightning Reload', level: 18, description: 'You can reload any firearm as a bonus action.' }] },
+        { level: 19, features: [{ name: 'Ability Score Improvement', level: 19, description: 'Increase your ability scores or take a feat.' }] },
+        { level: 20, features: [{ name: 'Gunslinger Supreme', level: 20, description: 'Your Grit cap increases by 2, you regain 2 Grit whenever you score a critical hit with a firearm, and your firearm attacks score criticals on a 19 or 20.' }] }
+    ],
+    'Monster Hunter': [
+        {
+            level: 1, features: [
+                {
+                    name: 'Core Monster Hunter Traits',
+                    level: 1,
+                    description: 'Gain proficiency with medium armor, shields, and all simple and martial weapons.',
+                    choices: {
+                        title: 'Choose 2 Skill Proficiencies',
+                        count: 2,
+                        options: ['Athletics', 'History', 'Insight', 'Investigation', 'Nature', 'Perception', 'Stealth', 'Survival']
+                    }
+                },
+                { name: 'Monster Lore', level: 1, description: 'Make an Intelligence check to identify a monster type and learn its resistances, immunities, and key vulnerabilities before or during an encounter.' },
+                { name: 'Predator\'s Senses', level: 1, description: 'Gain advantage on Perception and Survival checks made to track or detect monsters.' },
+                { name: 'Studied Strike', level: 1, description: 'Once per turn when you hit a creature you have successfully identified with Monster Lore, deal an extra 1d6 damage. This die grows as you level.' }
+            ]
+        },
+        { level: 2, features: [{ name: 'Fighting Style', level: 2, description: 'Choose a fighting style: Archery, Defense, Dueling, or Two-Weapon Fighting.' }, { name: 'Slayer\'s Preparation', level: 2, description: 'During a short or long rest you can prepare information on a specific creature type, granting advantage on your first Monster Lore check against it.' }] },
+        { level: 3, features: [{ name: 'Hunter Order', level: 3, description: 'Choose your Hunter Order subclass, which defines your specialized approach to monster slaying through level 20.' }] },
+        { level: 4, features: [{ name: 'Ability Score Improvement', level: 4, description: 'Increase your ability scores or take a feat.' }] },
+        { level: 5, features: [{ name: 'Extra Attack', level: 5, description: 'You can attack twice when you take the Attack action.' }] },
+        { level: 6, features: [{ name: 'Preternatural Senses', level: 6, description: 'Gain advantage on initiative rolls. You cannot be surprised while conscious.' }] },
+        { level: 7, features: [{ name: 'Subclass Feature', level: 7, description: 'Gain a feature from your Hunter Order subclass.' }] },
+        { level: 8, features: [{ name: 'Ability Score Improvement', level: 8, description: 'Increase your ability scores or take a feat.' }] },
+        { level: 9, features: [{ name: 'Devastating Critical', level: 9, description: 'When you score a critical hit against a creature you have identified with Monster Lore, roll one additional weapon die.' }] },
+        { level: 10, features: [{ name: 'Subclass Feature', level: 10, description: 'Gain a feature from your Hunter Order subclass.' }] },
+        { level: 11, features: [{ name: 'Monster Slayer Preparation', level: 11, description: 'You can use Slayer\'s Preparation as a free action once per short rest, allowing quicker setup against priority targets.' }] },
+        { level: 12, features: [{ name: 'Ability Score Improvement', level: 12, description: 'Increase your ability scores or take a feat.' }] },
+        { level: 13, features: [{ name: 'Subclass Feature', level: 13, description: 'Gain a feature from your Hunter Order subclass.' }] },
+        { level: 14, features: [{ name: 'Greater Monster Lore', level: 14, description: 'Monster Lore checks automatically succeed against creature types you have encountered before, and reveal additional tactical information.' }] },
+        { level: 15, features: [{ name: 'Relentless', level: 15, description: 'When you are reduced to 0 hit points during combat, you can make one weapon attack before falling unconscious.' }] },
+        { level: 16, features: [{ name: 'Ability Score Improvement', level: 16, description: 'Increase your ability scores or take a feat.' }] },
+        { level: 17, features: [{ name: 'Superior Hunter', level: 17, description: 'Studied Strike now applies to all weapon attacks against a studied creature, not just once per turn.' }] },
+        { level: 18, features: [{ name: 'Subclass Feature', level: 18, description: 'Gain a feature from your Hunter Order subclass.' }] },
+        { level: 19, features: [{ name: 'Ability Score Improvement', level: 19, description: 'Increase your ability scores or take a feat.' }] },
+        { level: 20, features: [{ name: 'Apex Predator', level: 20, description: 'Monster Lore now automatically grants advantage on attack rolls against identified creatures. Your Studied Strike die becomes d12.' }] }
     ]
 };
 
