@@ -199,6 +199,113 @@
     margin-top: 2px;
 }
 
+/* ----- Progression Table ----- */
+
+.modal-progression-wrap {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--panel-border);
+}
+
+.modal-progression-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.68rem;
+
+    thead tr {
+        background: color-mix(in srgb, var(--accent-primary) 10%, var(--surface-raised));
+        border-bottom: 2px solid var(--panel-border);
+    }
+
+    th {
+        padding: 5px 8px;
+        text-align: left;
+        font-weight: 700;
+        font-size: 0.6rem;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--text-soft);
+        white-space: nowrap;
+    }
+
+    td {
+        padding: 4px 8px;
+        color: var(--text-muted);
+        border-bottom: 1px solid color-mix(in srgb, var(--panel-border) 60%, transparent);
+        vertical-align: middle;
+    }
+
+    tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    tbody tr:nth-child(even) {
+        background: color-mix(in srgb, var(--surface-raised) 40%, transparent);
+    }
+
+    tbody tr.prof-milestone {
+        background: color-mix(in srgb, var(--accent-primary) 8%, var(--surface-raised));
+
+        .col-level {
+            font-weight: 700;
+            color: var(--color-primary);
+        }
+
+        .col-prof {
+            font-weight: 700;
+            color: var(--text-main);
+        }
+    }
+
+    .col-level {
+        font-weight: 600;
+        color: var(--text-main);
+        text-align: center;
+        width: 42px;
+    }
+
+    th.col-level,
+    th.col-prof {
+        text-align: center;
+    }
+
+    .col-prof {
+        color: var(--text-main);
+        text-align: center;
+        width: 50px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .col-features {
+        color: var(--color-primary);
+        min-width: 140px;
+    }
+
+    .col-resource {
+        text-align: center;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-main);
+        font-weight: 500;
+    }
+
+    th.col-resource {
+        text-align: center;
+    }
+
+    th.col-group {
+        text-align: center;
+        font-style: italic;
+        font-weight: 600;
+        color: var(--color-primary);
+        font-size: 0.58rem;
+        letter-spacing: 0.06em;
+        border-bottom: 1px solid var(--panel-border);
+        background: color-mix(in srgb, var(--accent-primary) 6%, transparent);
+        white-space: nowrap;
+    }
+}
+
 .fact-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

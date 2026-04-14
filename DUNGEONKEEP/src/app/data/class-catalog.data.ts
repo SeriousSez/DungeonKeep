@@ -1,8 +1,12 @@
 import type { BuilderInfo } from './new-character-standard-page.types';
 import { classInfoMap, classDetailFallbacks, classSubclassSnapshots } from './new-character-standard-page.data';
 import { subclassOptionsByClass } from './subclass-features.data';
+import { classLevelOneFeatures } from './class-features.data';
+import { type ClassProgressionColumn, classProgressionColumns } from './class-progression.data';
 
-export type ClassSourceCategory = 'phb' | 'expanded' | 'critical-role' | 'third-party';
+export type { ClassProgressionColumn };
+
+export type ClassSourceCategory = 'phb' | 'expanded' | 'critical-role' | 'third-party' | 'nature' | 'divine' | 'arcane-fire' | 'shadow' | 'eldritch' | 'primal' | 'performance' | 'iron' | 'ki' | 'wilds';
 
 export interface ClassCatalogEntry {
     name: string;
@@ -21,6 +25,10 @@ export interface ClassCatalogEntry {
     featureNotes: Array<{ title: string; summary: string; details: string }>;
     subclasses: ReadonlyArray<string>;
     subclassSnapshot: { summary: string; details: string } | null;
+    /** Feature names per level (20 items, index 0 = level 1). "Core X Traits" entries excluded. */
+    levelFeatureNames: readonly string[][];
+    /** Class-specific resource columns for the level progression table. */
+    progressionColumns: readonly ClassProgressionColumn[];
 }
 
 const classIconMap: Record<string, string> = {
@@ -44,6 +52,18 @@ const classIconMap: Record<string, string> = {
 
 const classSourceCategoryMap: Record<string, ClassSourceCategory> = {
     Artificer: 'expanded',
+    Wizard: 'expanded',
+    Barbarian: 'primal',
+    Bard: 'performance',
+    Fighter: 'iron',
+    Monk: 'ki',
+    Ranger: 'wilds',
+    Druid: 'nature',
+    Cleric: 'divine',
+    Paladin: 'divine',
+    Sorcerer: 'arcane-fire',
+    Rogue: 'shadow',
+    Warlock: 'eldritch',
     'Blood Hunter': 'critical-role',
     Gunslinger: 'third-party',
     'Monster Hunter': 'third-party',
@@ -55,6 +75,17 @@ export function classNameToSlug(name: string): string {
 
 type ClassDetails = NonNullable<BuilderInfo['details']>;
 const detailFallbacks = classDetailFallbacks as Record<string, ClassDetails | undefined>;
+
+function buildLevelFeatureNames(name: string): string[][] {
+    const levels = classLevelOneFeatures[name] ?? [];
+    const byLevel: Record<number, string[]> = {};
+    for (const entry of levels) {
+        byLevel[entry.level] = entry.features
+            .filter(f => !f.name.startsWith('Core '))
+            .map(f => f.name);
+    }
+    return Array.from({ length: 20 }, (_, i) => byLevel[i + 1] ?? []);
+}
 
 export const classCatalogEntries: ClassCatalogEntry[] = Object.keys(classInfoMap)
     .sort()
@@ -78,6 +109,8 @@ export const classCatalogEntries: ClassCatalogEntry[] = Object.keys(classInfoMap
             featureNotes: details?.featureNotes ?? [],
             subclasses: subclassOptionsByClass[name] ?? [],
             subclassSnapshot: classSubclassSnapshots[name] ?? null,
+            levelFeatureNames: buildLevelFeatureNames(name),
+            progressionColumns: classProgressionColumns[name] ?? [],
         };
     });
 

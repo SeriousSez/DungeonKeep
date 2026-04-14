@@ -43,8 +43,62 @@
                 </div>
             </section>
 
+            @if (progressionRows().length) {
             <section class="details-block">
-                <h4>Progression Highlights</h4>
+                <h4>{{ details.tagline }} Features</h4>
+                <div class="modal-progression-wrap">
+                    <table class="modal-progression-table">
+                        <thead>
+                            @if (progressionGroupHeader(); as groups) {
+                            <tr>
+                                <th class="col-level" rowspan="2">Level</th>
+                                <th class="col-prof" rowspan="2">Prof.</th>
+                                <th class="col-features" rowspan="2">Features</th>
+                                @for (col of classEntry()!.progressionColumns; track col.label) {
+                                @if (!col.group) {
+                                <th class="col-resource" rowspan="2">{{ col.label }}</th>
+                                }
+                                }
+                                @for (group of groups; track group.label) {
+                                <th class="col-group" [attr.colspan]="group.count">— {{ group.label }} —</th>
+                                }
+                            </tr>
+                            <tr>
+                                @for (col of classEntry()!.progressionColumns; track col.label) {
+                                @if (col.group) {
+                                <th class="col-resource">{{ col.label }}</th>
+                                }
+                                }
+                            </tr>
+                            } @else {
+                            <tr>
+                                <th class="col-level">Level</th>
+                                <th class="col-prof">Prof.</th>
+                                <th class="col-features">Features</th>
+                                @for (col of classEntry()!.progressionColumns; track col.label) {
+                                <th class="col-resource">{{ col.label }}</th>
+                                }
+                            </tr>
+                            }
+                        </thead>
+                        <tbody>
+                            @for (row of progressionRows(); track row.level) {
+                            <tr [class.prof-milestone]="row.level === 5 || row.level === 9 || row.level === 13 || row.level === 17">
+                                <td class="col-level">{{ row.level }}</td>
+                                <td class="col-prof">{{ row.profBonus }}</td>
+                                <td class="col-features">{{ row.features }}</td>
+                                @for (val of row.colValues; track $index) {
+                                <td class="col-resource">{{ val }}</td>
+                                }
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            }
+
+            <section class="details-block">
                 <p class="section-meta">
                     Showing {{ visibleMilestoneCount(details.levelMilestones.length) }} of {{ details.levelMilestones.length }}. Click a row to view more details.
                 </p>

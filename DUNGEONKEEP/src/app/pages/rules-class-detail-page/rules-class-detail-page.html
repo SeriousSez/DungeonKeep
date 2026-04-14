@@ -96,7 +96,64 @@
     </section>
     }
 
-    <!-- Level Progression -->
+    <!-- Level Progression Table -->
+    <section class="section panel">
+        <div class="section-heading section-heading--stacked">
+            <p class="eyebrow">Features Table</p>
+            <h2>{{ entry.name }} Features</h2>
+        </div>
+        <div class="progression-table-wrap">
+            <table class="progression-table">
+                <thead>
+                    @if (progressionGroupHeader(); as groups) {
+                    <tr>
+                        <th class="col-level" rowspan="2">Level</th>
+                        <th class="col-prof" rowspan="2">Proficiency Bonus</th>
+                        <th class="col-features" rowspan="2">Class Features</th>
+                        @for (col of entry.progressionColumns; track col.label) {
+                        @if (!col.group) {
+                        <th class="col-resource" rowspan="2">{{ col.label }}</th>
+                        }
+                        }
+                        @for (group of groups; track group.label) {
+                        <th class="col-group" [attr.colspan]="group.count">— {{ group.label }} —</th>
+                        }
+                    </tr>
+                    <tr>
+                        @for (col of entry.progressionColumns; track col.label) {
+                        @if (col.group) {
+                        <th class="col-resource">{{ col.label }}</th>
+                        }
+                        }
+                    </tr>
+                    } @else {
+                    <tr>
+                        <th class="col-level">Level</th>
+                        <th class="col-prof">Proficiency Bonus</th>
+                        <th class="col-features">Class Features</th>
+                        @for (col of entry.progressionColumns; track col.label) {
+                        <th class="col-resource">{{ col.label }}</th>
+                        }
+                    </tr>
+                    }
+                </thead>
+                <tbody>
+                    @for (row of progressionRows(); track row.level) {
+                    <tr [class.prof-milestone]="row.level === 5 || row.level === 9 || row.level === 13 || row.level === 17">
+                        <td class="col-level">{{ row.level }}</td>
+                        <td class="col-prof">{{ row.profBonus }}</td>
+                        <td class="col-features">{{ row.features }}</td>
+                        @for (val of row.colValues; track $index) {
+                        <td class="col-resource">{{ val }}</td>
+                        }
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Level Milestones -->
     @if (entry.levelMilestones.length) {
     <section class="section panel">
         <div class="section-heading section-heading--stacked">

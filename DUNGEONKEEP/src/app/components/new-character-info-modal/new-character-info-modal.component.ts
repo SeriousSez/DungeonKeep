@@ -1,7 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, output, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, output, input, signal, computed } from '@angular/core';
 
 import type { ActiveInfoModal } from '../../data/new-character-standard-page.types';
+import { classCatalogEntries, type ClassCatalogEntry } from '../../data/class-catalog.data';
+import { proficiencyBonusByLevel } from '../../data/class-progression.data';
+
+export interface ModalProgressionRow {
+    level: number;
+    profBonus: string;
+    features: string;
+    colValues: string[];
+}
 
 @Component({
     selector: 'app-new-character-info-modal',
@@ -18,6 +27,36 @@ export class NewCharacterInfoModalComponent {
     readonly showExtendedInfo = signal(false);
     readonly expandedMilestoneIndexes = signal<Set<number>>(new Set<number>());
     readonly expandedFeatureNoteIndexes = signal<Set<number>>(new Set<number>());
+
+    readonly classEntry = computed<ClassCatalogEntry | null>(() => {
+        const m = this.modal();
+        if (m.type !== 'class') return null;
+        return classCatalogEntries.find(c => c.name === m.info.name) ?? null;
+    });
+
+    readonly progressionRows = computed<ModalProgressionRow[]>(() => {
+        const entry = this.classEntry();
+        if (!entry) return [];
+        return entry.levelFeatureNames.map((featureNames, i) => ({
+            level: i + 1,
+            profBonus: proficiencyBonusByLevel[i],
+            features: featureNames.length ? featureNames.join(', ') : '—',
+            colValues: entry.progressionColumns.map(col => col.values[i]),
+        }));
+    });
+
+    readonly progressionGroupHeader = computed(() => {
+        const entry = this.classEntry();
+        if (!entry || !entry.progressionColumns.some(c => c.group)) return null;
+        const groups: { label: string; count: number }[] = [];
+        for (const col of entry.progressionColumns) {
+            if (!col.group) continue;
+            const last = groups.at(-1);
+            if (last && last.label === col.group) last.count++;
+            else groups.push({ label: col.group, count: 1 });
+        }
+        return groups;
+    });
 
     close(): void {
         this.closed.emit();

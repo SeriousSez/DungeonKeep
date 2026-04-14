@@ -1393,7 +1393,6 @@ export const classInfoMap: Record<string, BuilderInfo> = {
                 { title: 'Level 1', summary: 'Magical Tinkering, Spellcasting foundation', details: 'You begin as a utility-focused caster with practical magical effects and a strong baseline for problem-solving through tools.' },
                 { title: 'Level 2', summary: 'Infuse Item, replicated item access', details: 'Infusions become your signature system, letting you turn ordinary gear into reliable magic-enhanced equipment for yourself or allies.' },
                 { title: 'Level 3', summary: 'Artificer Specialist, The Right Tool for the Job', details: 'Subclass identity starts here (Alchemist, Armorer, Artillerist, or Battle Smith), shaping whether you lean support, durability, or offense.' },
-                { title: 'Level 4', summary: 'Ability Score Improvement', details: 'First major optimization point: usually Intelligence scaling, concentration resilience, or feat-based utility.' },
                 { title: 'Level 5', summary: '2nd-level spells, specialist feature', details: 'Core power jump with stronger spell options and subclass scaling that defines your round-to-round impact.' },
                 { title: 'Level 6', summary: 'Tool Expertise', details: 'Double proficiency on chosen tool checks significantly improves downtime, crafting, and technical problem-solving.' },
                 { title: 'Level 7', summary: 'Flash of Genius', details: 'You can add Intelligence modifier to key ability checks or saving throws, creating high-impact clutch support moments.' },
@@ -1445,16 +1444,14 @@ export const classInfoMap: Record<string, BuilderInfo> = {
                 { title: 'Level 1', summary: 'Rage (2/day), Unarmored Defense', details: 'You enter Rage as a bonus action and become much tougher in melee; Unarmored Defense uses Dexterity and Constitution to set AC when unarmored.' },
                 { title: 'Level 2', summary: 'Reckless Attack, Danger Sense', details: 'You can choose high-risk advantage on Strength melee attacks, and gain better Dex-save survivability against visible threats.' },
                 { title: 'Level 3', summary: 'Primal Path (subclass), Rage 3/day', details: 'Subclass identity begins here; many path features continue at 6, 10, and 14.' },
-                { title: 'Level 4', summary: 'Ability Score Improvement', details: 'First major stat/feat breakpoint for build direction.' },
                 { title: 'Level 5', summary: 'Extra Attack, Fast Movement', details: 'Two attacks per Attack action plus movement bonus create a strong frontline power spike.' },
                 { title: 'Level 7', summary: 'Feral Instinct (and optional Instinctive Pounce)', details: 'Initiative improves and your opening turns become more explosive, especially when entering Rage.' },
-                { title: 'Level 9', summary: 'Brutal Critical (1 extra die), Rage damage +3', details: 'Critical hits scale upward and your baseline Rage offense improves.' },
+                { title: 'Level 9', summary: 'Brutal Strike', details: 'You can forgo advantage on a Strength attack to apply a Brutal Strike effect — Hamstring Blow (halved movement) or Staggering Blow (disadvantage on saves) — adding tactical control to your attacks.' },
                 { title: 'Level 11', summary: 'Relentless Rage', details: 'When dropped to 0 HP while raging, you can make a Con save to stay at 1 HP instead.' },
-                { title: 'Level 13', summary: 'Brutal Critical (2 extra dice)', details: 'Critical hit scaling increases again for larger burst turns.' },
+                { title: 'Level 13', summary: 'Improved Brutal Strike', details: 'Brutal Strike upgrades: your strikes now deal +2d10 damage and you can apply two of the available strike effects on the same hit.' },
                 { title: 'Level 15', summary: 'Persistent Rage', details: 'Rage becomes harder to lose early, improving consistency in drawn-out encounters.' },
-                { title: 'Level 17', summary: 'Brutal Critical (3 extra dice), Rage damage +4', details: 'Top-end offense rises again through both crit scaling and Rage bonus damage.' },
+                { title: 'Level 17', summary: 'Improved Brutal Strike (tier 2)', details: 'Brutal Strike effects increase to +3d10 damage, and you choose from the expanded strike effects list, further deepening tactical variety.' },
                 { title: 'Level 18', summary: 'Indomitable Might', details: 'Very low Strength-check outcomes are smoothed out, making physical checks highly reliable.' },
-                { title: 'Level 19', summary: 'Ability Score Improvement', details: 'Final major customization point before capstone.' },
                 { title: 'Level 20', summary: 'Primal Champion, unlimited Rage', details: 'Strength and Constitution increase by 4 each (up to 24), and Rage uses are no longer limited.' }
             ],
             featureNotes: [
@@ -1807,8 +1804,8 @@ export const classDetailFallbacks: Record<string, NonNullable<BuilderInfo['detai
             },
             {
                 title: 'Level 8',
-                summary: 'Domain scaling and ASI rhythm',
-                details: 'Subclass identity becomes more pronounced while your stat progression supports improved save DCs, concentration uptime, or frontline durability.'
+                summary: 'Potent Spellcasting or Divine Strike',
+                details: 'Domain determines whether you gain bonus cantrip damage or bonus weapon damage on hits, sharpening your offensive identity in a way that defines your role for the rest of the campaign.'
             },
             {
                 title: 'Level 10',
@@ -1895,8 +1892,8 @@ export const classDetailFallbacks: Record<string, NonNullable<BuilderInfo['detai
             },
             {
                 title: 'Level 8',
-                summary: 'Mobility and stat progression tier',
-                details: 'Ability improvements and subclass scaling help refine whether you lean caster-centric, form-centric, or hybrid play patterns.'
+                summary: 'Major Circle feature tier',
+                details: 'Subclass scaling at level 8 often produces a defining turn-pattern upgrade — whether that is stronger Wild Shape form access, enhanced control, or improved damage output from your Circle.'
             },
             {
                 title: 'Level 10',
@@ -2589,38 +2586,68 @@ export const classDetailFallbacks: Record<string, NonNullable<BuilderInfo['detai
         levelMilestones: [
             {
                 title: 'Level 1',
-                summary: 'Spellbook and Arcane Recovery',
-                details: 'Wizard opens with broad answer potential and early resource smoothing that supports long-day consistency.'
+                summary: 'Spellcasting, Ritual Adept, Arcane Recovery',
+                details: 'Wizard opens with the broadest answer potential in the game — a large spellbook, ritual flexibility, and short-rest recovery that smooths long adventuring days.'
             },
             {
                 title: 'Level 2',
-                summary: 'Arcane Tradition',
-                details: 'Subclass specialization shapes your tactical priorities and often influences spell preparation strategy throughout the campaign.'
+                summary: 'Scholar',
+                details: 'You gain Expertise in two skills and proficiency in one additional skill, sharpening the non-combat utility identity that makes you indispensable outside combat.'
+            },
+            {
+                title: 'Level 3',
+                summary: 'Wizard Subclass',
+                details: 'Subclass choice here shapes your entire tactical personality — whether you lean toward control, blasting, utility, or specialized niche pressure.'
             },
             {
                 title: 'Level 5',
-                summary: '3rd-level spell breakpoint',
-                details: 'A major power jump where wizard gains iconic high-impact options for control, defense, and encounter manipulation.'
+                summary: 'Memorize Spell, 3rd-level spells',
+                details: 'A major power jump: 3rd-level slots unlock iconic high-impact options, and Memorize Spell lets you recover one prepared spell per short rest, improving endurance further.'
+            },
+            {
+                title: 'Level 6',
+                summary: 'Subclass feature',
+                details: 'First subclass scaling tier arrives, often adding a meaningful passive, resource, or encounter-shaping tool that reinforces your chosen specialisation.'
+            },
+            {
+                title: 'Level 9',
+                summary: '5th-level spells',
+                details: 'Some of the most powerful spells in the game become available, and the prepared spell count continues expanding with your level and Intelligence modifier.'
             },
             {
                 title: 'Level 10',
-                summary: 'Tradition feature maturity',
-                details: 'Subclass toolkit becomes more defined, often improving reliability, efficiency, or specialized tactical pressure.'
+                summary: 'Subclass feature',
+                details: 'Second subclass tier deepens your specialisation, often improving efficiency, versatility, or adding a more powerful active ability.'
+            },
+            {
+                title: 'Level 13',
+                summary: '7th-level spells',
+                details: 'High-tier arcane effects reach new heights; this tier signals the Wizard entering late-game dominance over encounter shaping and strategic problem-solving.'
             },
             {
                 title: 'Level 14',
-                summary: 'High-tier tradition cap',
-                details: 'Late subclass features can significantly change encounter approach and raise the class tactical ceiling.'
+                summary: 'Subclass feature',
+                details: 'The penultimate subclass tier frequently delivers the most defining passive or active ability for your school or tradition.'
             },
             {
                 title: 'Level 17',
-                summary: 'Top spell tier access',
-                details: 'Wizard reaches top-end arcane influence with powerful options for broad encounter control and decisive outcomes.'
+                summary: '9th-level spells',
+                details: 'The pinnacle of arcane magic becomes accessible, with the most powerful spells across control, damage, and reality-altering utility.'
+            },
+            {
+                title: 'Level 18',
+                summary: 'Spell Mastery',
+                details: 'One 1st-level and one 2nd-level spell from your book can be cast at their lowest level without expending a slot, providing exceptional sustained pressure at no resource cost.'
+            },
+            {
+                title: 'Level 19',
+                summary: 'Epic Boon',
+                details: 'A powerful capstone-adjacent feat-like benefit that significantly boosts your character — often through an ability score increase to 22 or a powerful passive.'
             },
             {
                 title: 'Level 20',
-                summary: 'Signature Spell profile',
-                details: 'Capstone-level efficiency supports sustained high-impact casting without exhausting critical resources too quickly.'
+                summary: 'Signature Spells',
+                details: 'Two 3rd-level spells become always prepared and can each be cast once per short rest without a slot, ensuring reliable access to your most versatile mid-tier tools regardless of daily resource state.'
             }
         ],
         featureNotes: [

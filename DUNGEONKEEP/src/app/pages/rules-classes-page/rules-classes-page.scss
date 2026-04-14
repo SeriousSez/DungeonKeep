@@ -5,6 +5,7 @@
 .classes-page {
     display: grid;
     gap: 24px;
+    padding-bottom: 48px;
 }
 
 /* ----- Hero ----- */
@@ -130,6 +131,96 @@
 
 :root.theme-dark .source-third-party .card-banner {
     background: linear-gradient(150deg, #120422 0%, #260950 40%, #3f1a72 100%);
+}
+
+/* Nature (Druid) → deep forest green */
+.source-nature .card-banner {
+    background: linear-gradient(150deg, #0d2b12 0%, #1a5227 40%, #2e7d44 100%);
+}
+
+:root.theme-dark .source-nature .card-banner {
+    background: linear-gradient(150deg, #071508 0%, #0f3318 40%, #1c5530 100%);
+}
+
+/* Divine (Cleric, Paladin) → radiant holy gold */
+.source-divine .card-banner {
+    background: linear-gradient(150deg, #2a1a00 0%, #7a5c00 40%, #e8c020 100%);
+}
+
+:root.theme-dark .source-divine .card-banner {
+    background: linear-gradient(150deg, #1a1000 0%, #4a3800 40%, #8a6c00 100%);
+}
+
+/* Arcane Fire (Sorcerer) → deep crimson-red */
+.source-arcane-fire .card-banner {
+    background: linear-gradient(150deg, #3d0a10 0%, #6b1520 40%, #a01c30 100%);
+}
+
+:root.theme-dark .source-arcane-fire .card-banner {
+    background: linear-gradient(150deg, #240408 0%, #450d14 40%, #741525 100%);
+}
+
+/* Shadow (Rogue) → dark grey-slate */
+.source-shadow .card-banner {
+    background: linear-gradient(150deg, #1a1a22 0%, #2e2e3e 40%, #48485e 100%);
+}
+
+:root.theme-dark .source-shadow .card-banner {
+    background: linear-gradient(150deg, #0e0e14 0%, #1c1c28 40%, #2e2e3e 100%);
+}
+
+/* Eldritch (Warlock) → void amethyst */
+.source-eldritch .card-banner {
+    background: linear-gradient(150deg, #2a0a4a 0%, #44107a 40%, #5a1a8a 100%);
+}
+
+:root.theme-dark .source-eldritch .card-banner {
+    background: linear-gradient(150deg, #18052e 0%, #2e0a52 40%, #420f6e 100%);
+}
+
+/* Primal (Barbarian) → volcanic ember-orange */
+.source-primal .card-banner {
+    background: linear-gradient(150deg, #3d1500 0%, #7a2e00 40%, #cc5500 100%);
+}
+
+:root.theme-dark .source-primal .card-banner {
+    background: linear-gradient(150deg, #220b00 0%, #4d1c00 40%, #8a3a00 100%);
+}
+
+/* Performance (Bard) → peacock teal */
+.source-performance .card-banner {
+    background: linear-gradient(150deg, #0a2a2a 0%, #155555 40%, #2a9090 100%);
+}
+
+:root.theme-dark .source-performance .card-banner {
+    background: linear-gradient(150deg, #041414 0%, #0a3030 40%, #1a6060 100%);
+}
+
+/* Iron (Fighter) → cold steel blue-grey */
+.source-iron .card-banner {
+    background: linear-gradient(150deg, #0e1e2e 0%, #1e3d58 40%, #2e5578 100%);
+}
+
+:root.theme-dark .source-iron .card-banner {
+    background: linear-gradient(150deg, #060e18 0%, #10243a 40%, #1e3d58 100%);
+}
+
+/* Ki (Monk) → deep jade */
+.source-ki .card-banner {
+    background: linear-gradient(150deg, #0a1e18 0%, #145530 40%, #25a060 100%);
+}
+
+:root.theme-dark .source-ki .card-banner {
+    background: linear-gradient(150deg, #04100c 0%, #0a3320 40%, #156840 100%);
+}
+
+/* Wilds (Ranger) → earthy amber-brown */
+.source-wilds .card-banner {
+    background: linear-gradient(150deg, #2a1800 0%, #5a3400 40%, #8a5a20 100%);
+}
+
+:root.theme-dark .source-wilds .card-banner {
+    background: linear-gradient(150deg, #170d00 0%, #361e00 40%, #5a3a10 100%);
 }
 
 .source-badge {
