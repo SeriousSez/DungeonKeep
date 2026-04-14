@@ -1,0 +1,100 @@
+<main class="spells-page">
+
+    <section class="page-hero panel">
+        <div class="hero-copy">
+            <p class="eyebrow">Rules Library</p>
+            <h1>Spells</h1>
+            <p class="hero-text">
+                Browse all {{ allSpells.length }} spells. Filter by level, school, or search by name.
+                Spells span from at-will cantrips through 9th-level devastation.
+            </p>
+        </div>
+        <div class="hero-actions">
+            <a routerLink="/rules" class="ghost-button">
+                <i class="fa-duotone fa-thin fa-arrow-left"></i>
+                Back to Rules Library
+            </a>
+        </div>
+    </section>
+
+    <section class="filter-panel panel">
+        <!-- Search -->
+        <div class="filter-row">
+            <div class="search-wrap">
+                <i class="fa-duotone fa-thin fa-magnifying-glass search-icon"></i>
+                <input type="text" class="search-input" placeholder="Search spells…" [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" />
+                @if (searchTerm()) {
+                <button class="clear-search" (click)="clearSearch()" aria-label="Clear search">
+                    <i class="fa-duotone fa-thin fa-xmark"></i>
+                </button>
+                }
+            </div>
+        </div>
+        <!-- Level chips -->
+        <div class="filter-row">
+            <span class="filter-label">Level</span>
+            <div class="chip-group">
+                @for (filter of levelFilters; track filter.id) {
+                <button class="filter-chip" [class.active]="levelFilter() === filter.id" (click)="setLevelFilter(filter.id)">
+                    {{ filter.label }}
+                </button>
+                }
+            </div>
+        </div>
+        <!-- School chips -->
+        <div class="filter-row">
+            <span class="filter-label">School</span>
+            <div class="chip-group">
+                @for (filter of schoolFilters; track filter.id) {
+                <button class="filter-chip" [class.active]="schoolFilter() === filter.id" (click)="setSchoolFilter(filter.id)">
+                    {{ filter.label }}
+                </button>
+                }
+            </div>
+        </div>
+    </section>
+
+    @if (filteredSpells().length === 0) {
+    <div class="empty-state panel">
+        <i class="fa-duotone fa-thin fa-wand-magic-sparkles empty-icon"></i>
+        <p class="empty-title">No spells found</p>
+        <p class="empty-sub">Try adjusting your search or filters.</p>
+    </div>
+    } @else {
+    <p class="results-count">{{ filteredSpells().length }} spell{{ filteredSpells().length === 1 ? '' : 's' }}</p>
+    <section class="spells-grid">
+        @for (spell of filteredSpells(); track spell.slug) {
+        <a class="spell-card" [routerLink]="['/rules/spells', spell.slug]">
+            <div class="card-top">
+                <span class="level-badge">{{ levelLabel(spell.level) }}</span>
+                <span class="school-dot" [class]="schoolColor(spell.school)" [title]="spell.school"></span>
+            </div>
+            <h2 class="spell-name">{{ spell.name }}</h2>
+            <p class="spell-school">{{ spell.school }}</p>
+            <div class="spell-meta">
+                <span class="meta-item" title="Casting time">
+                    <i class="fa-duotone fa-thin fa-clock"></i>
+                    {{ spell.castingTime }}
+                </span>
+                <span class="meta-item" title="Range">
+                    <i class="fa-duotone fa-thin fa-bullseye-arrow"></i>
+                    {{ spell.range }}
+                </span>
+            </div>
+            <div class="spell-tags">
+                @if (spell.concentration) {
+                <span class="tag tag-concentration">C</span>
+                }
+                @if (spell.ritual) {
+                <span class="tag tag-ritual">R</span>
+                }
+                @if (spell.damageEffect) {
+                <span class="tag tag-damage">{{ spell.damageEffect }}</span>
+                }
+            </div>
+        </a>
+        }
+    </section>
+    }
+
+</main>

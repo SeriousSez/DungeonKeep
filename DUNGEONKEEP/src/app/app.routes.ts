@@ -25,6 +25,14 @@ import { RulesPage } from './pages/rules-page/rules-page';
 import { RulesDetailPage } from './pages/rules-detail-page/rules-detail-page';
 import { RulesClassesPage } from './pages/rules-classes-page/rules-classes-page';
 import { RulesClassDetailPage } from './pages/rules-class-detail-page/rules-class-detail-page';
+import { RulesSpeciesPage } from './pages/rules-species-page/rules-species-page';
+import { RulesSpeciesDetailPage } from './pages/rules-species-detail-page/rules-species-detail-page';
+import { RulesBackgroundsPage } from './pages/rules-backgrounds-page/rules-backgrounds-page';
+import { RulesBackgroundsDetailPage } from './pages/rules-backgrounds-detail-page/rules-backgrounds-detail-page';
+import { RulesFeatsPage } from './pages/rules-feats-page/rules-feats-page';
+import { RulesFeatsDetailPage } from './pages/rules-feats-detail-page/rules-feats-detail-page';
+import { RulesSpellsPage } from './pages/rules-spells-page/rules-spells-page';
+import { RulesSpellDetailPage } from './pages/rules-spell-detail-page/rules-spell-detail-page';
 
 export const routes: Routes = [
     {
@@ -245,6 +253,46 @@ export const routes: Routes = [
         path: 'rules/classes/:className',
         component: RulesClassDetailPage,
         data: { title: 'Class Detail', breadcrumb: 'Class', parentCrumbs: [{ label: 'Rules', url: '/rules' }, { label: 'Classes', url: '/rules/classes' }] }
+    },
+    {
+        path: 'rules/species',
+        component: RulesSpeciesPage,
+        data: { title: 'Species', breadcrumb: 'Species', parentCrumbs: [{ label: 'Rules', url: '/rules' }] }
+    },
+    {
+        path: 'rules/species/:speciesName',
+        component: RulesSpeciesDetailPage,
+        data: { title: 'Species Detail', breadcrumb: 'Species', parentCrumbs: [{ label: 'Rules', url: '/rules' }, { label: 'Species', url: '/rules/species' }] }
+    },
+    {
+        path: 'rules/backgrounds',
+        component: RulesBackgroundsPage,
+        data: { title: 'Backgrounds', breadcrumb: 'Backgrounds', parentCrumbs: [{ label: 'Rules', url: '/rules' }] }
+    },
+    {
+        path: 'rules/backgrounds/:backgroundName',
+        component: RulesBackgroundsDetailPage,
+        data: { title: 'Background Detail', breadcrumb: 'Background', parentCrumbs: [{ label: 'Rules', url: '/rules' }, { label: 'Backgrounds', url: '/rules/backgrounds' }] }
+    },
+    {
+        path: 'rules/feats',
+        component: RulesFeatsPage,
+        data: { title: 'Feats', breadcrumb: 'Feats', parentCrumbs: [{ label: 'Rules', url: '/rules' }] }
+    },
+    {
+        path: 'rules/feats/:featSlug',
+        component: RulesFeatsDetailPage,
+        data: { title: 'Feat Detail', breadcrumb: 'Feat', parentCrumbs: [{ label: 'Rules', url: '/rules' }, { label: 'Feats', url: '/rules/feats' }] }
+    },
+    {
+        path: 'rules/spells',
+        component: RulesSpellsPage,
+        data: { title: 'Spells', breadcrumb: 'Spells', parentCrumbs: [{ label: 'Rules', url: '/rules' }] }
+    },
+    {
+        path: 'rules/spells/:spellSlug',
+        component: RulesSpellDetailPage,
+        data: { title: 'Spell Detail', breadcrumb: 'Spell', parentCrumbs: [{ label: 'Rules', url: '/rules' }, { label: 'Spells', url: '/rules/spells' }] }
     },
     {
         path: 'rules/:slug',

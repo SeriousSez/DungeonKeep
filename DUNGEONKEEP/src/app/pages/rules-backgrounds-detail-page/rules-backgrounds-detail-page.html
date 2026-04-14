@@ -1,0 +1,153 @@
+@if (background(); as bg) {
+<main class="background-detail-page">
+
+    <!-- Hero -->
+    <section class="detail-hero panel">
+        <div class="hero-icon">
+            <i [class]="'fa-duotone fa-thin fa-' + bg.icon"></i>
+        </div>
+        <div class="hero-copy">
+            <span class="source-badge">{{ bg.source }}</span>
+            <h1>{{ bg.name }}</h1>
+            @if (bg.description) {
+            <p class="hero-description">{{ bg.description }}</p>
+            }
+        </div>
+        <div class="hero-nav">
+            <a routerLink="/rules/backgrounds" class="ghost-button">
+                <i class="fa-duotone fa-thin fa-arrow-left"></i>
+                All Backgrounds
+            </a>
+        </div>
+    </section>
+
+    <!-- 2024 Rules Block (ability scores / feat / equipment) -->
+    @if (bg.abilityScores || bg.feat || bg.equipment) {
+    <section class="section panel phb24-panel">
+        <div class="section-heading">
+            <p class="eyebrow">2024 Player's Handbook</p>
+            <h2>Character Creation Details</h2>
+        </div>
+        <div class="phb24-grid">
+            @if (bg.abilityScores) {
+            <div class="phb24-row">
+                <span class="phb24-label"><i class="fa-duotone fa-thin fa-chart-bar"></i> Ability Scores</span>
+                <span class="phb24-value">{{ bg.abilityScores }}</span>
+            </div>
+            }
+            @if (bg.feat) {
+            <div class="phb24-row">
+                <span class="phb24-label"><i class="fa-duotone fa-thin fa-star"></i> Feat</span>
+                <span class="phb24-value feat-value">{{ bg.feat }}</span>
+            </div>
+            }
+            @if (bg.equipment) {
+            <div class="phb24-row phb24-equipment">
+                <span class="phb24-label"><i class="fa-duotone fa-thin fa-backpack"></i> Equipment</span>
+                <span class="phb24-value">{{ bg.equipment }}</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- Quick Facts -->
+    <section class="section panel">
+        <div class="section-heading">
+            <p class="eyebrow">Proficiencies &amp; Languages</p>
+            <h2>Starting Benefits</h2>
+        </div>
+        <div class="facts-grid">
+            @if (bg.skills) {
+            <div class="fact-card">
+                <div class="fact-icon"><i class="fa-duotone fa-thin fa-book-sparkles"></i></div>
+                <div class="fact-content">
+                    <span class="fact-label">Skill Proficiencies</span>
+                    <span class="fact-value">{{ bg.skills }}</span>
+                </div>
+            </div>
+            }
+            @if (bg.tools && bg.tools !== 'None') {
+            <div class="fact-card">
+                <div class="fact-icon"><i class="fa-duotone fa-thin fa-hammer"></i></div>
+                <div class="fact-content">
+                    <span class="fact-label">Tool Proficiencies</span>
+                    <span class="fact-value">{{ bg.tools }}</span>
+                </div>
+            </div>
+            }
+            @if (bg.languages && bg.languages !== 'None') {
+            <div class="fact-card">
+                <div class="fact-icon"><i class="fa-duotone fa-thin fa-language"></i></div>
+                <div class="fact-content">
+                    <span class="fact-label">Languages</span>
+                    <span class="fact-value">{{ bg.languages }}</span>
+                </div>
+            </div>
+            }
+        </div>
+    </section>
+
+    <!-- Choices (if available) -->
+    @if (choices().length) {
+    <section class="section panel">
+        <div class="section-heading">
+            <p class="eyebrow">Customisation</p>
+            <h2>Background Choices</h2>
+        </div>
+        <div class="choices-list">
+            @for (choice of choices(); track choice.key) {
+            <div class="choice-row" [class.is-expanded]="expandedChoices()[choice.key]">
+                <button class="choice-header" (click)="toggleChoice(choice.key)" type="button">
+                    <div class="choice-header-copy">
+                        <span class="choice-title">{{ choice.title }}</span>
+                        <span class="choice-subtitle">{{ choice.subtitle }}</span>
+                    </div>
+                    <span class="choice-toggle">
+                        <i [class]="'fa-duotone fa-thin ' + (expandedChoices()[choice.key] ? 'fa-chevron-up' : 'fa-chevron-down')"></i>
+                    </span>
+                </button>
+                @if (expandedChoices()[choice.key]) {
+                <div class="choice-body">
+                    @if (choice.description) {
+                    <p class="choice-description">{{ choice.description }}</p>
+                    }
+                    <ul class="choice-options">
+                        @for (option of choice.options; track option) {
+                        <li>{{ option }}</li>
+                        }
+                    </ul>
+                </div>
+                }
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- External Reference -->
+    <section class="section panel reference-panel">
+        <div class="section-heading">
+            <p class="eyebrow">Learn More</p>
+            <h2>Reference Material</h2>
+        </div>
+        <p class="reference-text">For the full background description, equipment package, and suggested characteristics, visit the official wiki entry.</p>
+        <a [href]="bg.wikiUrl" target="_blank" rel="noopener noreferrer" class="primary-button">
+            <i class="fa-duotone fa-thin fa-arrow-up-right-from-square"></i>
+            View Full Background on D&D Wiki
+        </a>
+    </section>
+
+</main>
+} @else {
+<main class="background-detail-page">
+    <section class="not-found panel">
+        <i class="fa-duotone fa-thin fa-scroll not-found-icon"></i>
+        <p class="not-found-title">Background not found</p>
+        <a routerLink="/rules/backgrounds" class="ghost-button">
+            <i class="fa-duotone fa-thin fa-arrow-left"></i>
+            Back to Backgrounds
+        </a>
+    </section>
+</main>
+}

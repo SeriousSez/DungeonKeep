@@ -1,0 +1,128 @@
+@if (spell(); as s) {
+<main class="spell-detail-page">
+
+    <!-- Hero -->
+    <section class="detail-hero panel" [class]="schoolColorClass(s.school)">
+        <div class="hero-icon">
+            <i [class]="'fa-duotone fa-thin ' + schoolIcon(s.school)"></i>
+        </div>
+        <div class="hero-copy">
+            <div class="hero-badges">
+                <span class="level-badge">{{ levelLabel(s.level) }}</span>
+                <span class="school-badge">{{ s.school }}</span>
+                @if (s.concentration) {
+                <span class="prop-badge">Concentration</span>
+                }
+                @if (s.ritual) {
+                <span class="prop-badge prop-ritual">Ritual</span>
+                }
+            </div>
+            <h1>{{ s.name }}</h1>
+        </div>
+        <div class="hero-nav">
+            <a routerLink="/rules/spells" class="ghost-button">
+                <i class="fa-duotone fa-thin fa-arrow-left"></i>
+                All Spells
+            </a>
+        </div>
+    </section>
+
+    <!-- Stats block -->
+    <section class="section panel">
+        <div class="section-heading">
+            <p class="eyebrow">Spell Properties</p>
+            <h2>At a Glance</h2>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-duotone fa-thin fa-clock"></i></div>
+                <div class="stat-content">
+                    <span class="stat-label">Casting Time</span>
+                    <span class="stat-value">{{ s.castingTime }}</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-duotone fa-thin fa-bullseye-arrow"></i></div>
+                <div class="stat-content">
+                    <span class="stat-label">Range</span>
+                    <span class="stat-value">{{ s.range }}</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-duotone fa-thin fa-hand-sparkles"></i></div>
+                <div class="stat-content">
+                    <span class="stat-label">Components</span>
+                    <span class="stat-value">{{ s.components }}</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-duotone fa-thin fa-hourglass-half"></i></div>
+                <div class="stat-content">
+                    <span class="stat-label">Duration</span>
+                    <span class="stat-value">{{ s.duration }}</span>
+                </div>
+            </div>
+            @if (s.attackSave) {
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-duotone fa-thin fa-sword"></i></div>
+                <div class="stat-content">
+                    <span class="stat-label">Attack / Save</span>
+                    <span class="stat-value">{{ s.attackSave }}</span>
+                </div>
+            </div>
+            }
+            @if (s.damageEffect) {
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-duotone fa-thin fa-burst"></i></div>
+                <div class="stat-content">
+                    <span class="stat-label">Damage / Effect</span>
+                    <span class="stat-value">{{ s.damageEffect }}</span>
+                </div>
+            </div>
+            }
+        </div>
+    </section>
+
+    <!-- Description -->
+    <section class="section panel">
+        <div class="section-heading">
+            <p class="eyebrow">Spell Description</p>
+            <h2>Effect</h2>
+        </div>
+        <p class="description-text">{{ s.description }}</p>
+    </section>
+
+    <!-- Higher Levels -->
+    @if (s.higherLevels) {
+    <section class="section panel higher-levels-section">
+        <div class="section-heading">
+            <p class="eyebrow">Scaling</p>
+            <h2>Using a Higher-Level Slot</h2>
+        </div>
+        <p class="description-text">{{ s.higherLevels }}</p>
+    </section>
+    }
+
+    <!-- Tags -->
+    @if (s.tags && s.tags.length) {
+    <section class="section panel">
+        <div class="section-heading">
+            <p class="eyebrow">Classification</p>
+            <h2>Tags</h2>
+        </div>
+        <div class="tags-row">
+            @for (tag of s.tags; track tag) {
+            <span class="spell-tag">{{ tag }}</span>
+            }
+        </div>
+    </section>
+    }
+
+</main>
+} @else {
+<div class="not-found panel">
+    <i class="fa-duotone fa-thin fa-circle-exclamation"></i>
+    <p>Spell not found.</p>
+    <a routerLink="/rules/spells" class="ghost-button">Back to Spells</a>
+</div>
+}

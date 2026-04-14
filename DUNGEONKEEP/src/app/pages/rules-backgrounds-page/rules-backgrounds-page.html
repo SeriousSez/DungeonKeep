@@ -1,0 +1,83 @@
+<main class="backgrounds-page">
+
+    <section class="page-hero panel">
+        <div class="hero-copy">
+            <p class="eyebrow">Rules Library</p>
+            <h1>Backgrounds</h1>
+            <p class="hero-text">
+                Browse all {{ allBackgrounds.length }} backgrounds across every official sourcebook.
+                Your background shapes your character's history, skills, and starting equipment.
+            </p>
+        </div>
+        <div class="hero-actions">
+            <a routerLink="/rules" class="ghost-button">
+                <i class="fa-duotone fa-thin fa-arrow-left"></i>
+                Back to Rules Library
+            </a>
+        </div>
+    </section>
+
+    <section class="filter-bar panel">
+        <div class="search-wrap">
+            <i class="fa-duotone fa-thin fa-magnifying-glass search-icon"></i>
+            <input type="text" class="search-input" placeholder="Search backgrounds…" [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" />
+            @if (searchTerm()) {
+            <button class="clear-search" (click)="clearSearch()" aria-label="Clear search">
+                <i class="fa-duotone fa-thin fa-xmark"></i>
+            </button>
+            }
+        </div>
+        <div class="source-filters">
+            @for (filter of sourceFilters; track filter.id) {
+            <button class="filter-chip" [class.active]="sourceFilter() === filter.id" [class]="'filter-chip filter-' + filter.id + (sourceFilter() === filter.id ? ' active' : '')" (click)="setSourceFilter(filter.id)">{{ filter.label }}</button>
+            }
+        </div>
+    </section>
+
+    @if (filteredBackgrounds().length === 0) {
+    <div class="empty-state panel">
+        <i class="fa-duotone fa-thin fa-scroll empty-icon"></i>
+        <p class="empty-title">No backgrounds found</p>
+        <p class="empty-sub">Try adjusting your search or filter.</p>
+    </div>
+    } @else {
+    <p class="results-count">{{ filteredBackgrounds().length }} background{{ filteredBackgrounds().length === 1 ? '' : 's' }}</p>
+    <section class="backgrounds-grid">
+        @for (bg of filteredBackgrounds(); track bg.slug) {
+        <a class="bg-card" [routerLink]="['/rules/backgrounds', bg.slug]">
+            <div class="card-body">
+                <span class="card-source">{{ bg.source }}</span>
+                <h2 class="bg-name">{{ bg.name }}</h2>
+                @if (bg.skills) {
+                <div class="bg-traits">
+                    <div class="trait-row">
+                        <span class="trait-label">Skills</span>
+                        <span class="trait-value">{{ bg.skills }}</span>
+                    </div>
+                    @if (bg.tools && bg.tools !== 'None') {
+                    <div class="trait-row">
+                        <span class="trait-label">Tools</span>
+                        <span class="trait-value">{{ bg.tools }}</span>
+                    </div>
+                    }
+                    @if (bg.languages && bg.languages !== 'None') {
+                    <div class="trait-row">
+                        <span class="trait-label">Languages</span>
+                        <span class="trait-value">{{ bg.languages }}</span>
+                    </div>
+                    }
+                </div>
+                }
+                @if (bg.hasChoices) {
+                <span class="choices-badge">
+                    <i class="fa-duotone fa-thin fa-list-check"></i>
+                    Has choices
+                </span>
+                }
+            </div>
+        </a>
+        }
+    </section>
+    }
+
+</main>

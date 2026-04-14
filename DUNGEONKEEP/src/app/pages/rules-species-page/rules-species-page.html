@@ -1,0 +1,58 @@
+<main class="species-page">
+
+    <section class="page-hero panel">
+        <div class="hero-copy">
+            <p class="eyebrow">Rules Library</p>
+            <h1>Species</h1>
+            <p class="hero-text">Browse all {{ species.length }} available species. Click any species to explore its traits, key features, and what it brings to your adventuring party.</p>
+        </div>
+        <div class="hero-actions">
+            <a routerLink="/rules" class="ghost-button">
+                <i class="fa-duotone fa-thin fa-arrow-left"></i>
+                Back to Rules Library
+            </a>
+        </div>
+    </section>
+
+    <section class="species-grid">
+        @for (sp of species; track sp.slug) {
+        <a class="species-card" [routerLink]="['/rules/species', sp.slug]" [class]="'species-card source-' + sp.sourceCategory">
+            <div class="card-banner">
+                @if (speciesImagePath(sp.slug); as imgSrc) {
+                <img class="banner-img" [ngClass]="sp.slug" [src]="imgSrc" [alt]="sp.name" loading="lazy" />
+                <div class="banner-overlay"></div>
+                } @else {
+                <div class="card-icon">
+                    <i [class]="'fa-duotone fa-thin fa-' + sp.icon"></i>
+                </div>
+                }
+                <span class="source-badge">{{ sp.source }}</span>
+            </div>
+            <div class="card-body">
+                <h2 class="species-name">{{ sp.name }}</h2>
+                <p class="species-tagline">{{ sp.tagline }}</p>
+                <p class="species-summary">{{ sp.summary }}</p>
+                <div class="species-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Size</span>
+                        <span class="stat-value">{{ sp.size }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Speed</span>
+                        <span class="stat-value">{{ sp.speed }} ft.</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Darkvision</span>
+                        <span class="stat-value">{{ sp.darkvision ? sp.darkvision + ' ft.' : 'None' }}</span>
+                    </div>
+                </div>
+                <span class="view-details-btn">
+                    View {{ sp.name }} Details
+                    <i class="fa-duotone fa-thin fa-arrow-right"></i>
+                </span>
+            </div>
+        </a>
+        }
+    </section>
+
+</main>

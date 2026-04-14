@@ -3718,9 +3718,12 @@ export const backgroundLanguagesFallbacks: Readonly<Record<string, string>> = {
 export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 'sourceUrl'>> = {
     Acolyte: {
         description: 'You served in a temple or sacred order, acting as an intermediary between the divine and the mortal world through rites, devotion, and study.',
+        abilityScores: 'Intelligence, Wisdom, Charisma',
+        feat: 'Magic Initiate (Cleric)',
         skillProficiencies: 'Insight, Religion',
-        toolProficiencies: 'Calligrapher\'s supplies',
+        toolProficiencies: 'Calligrapher\'s Supplies',
         languages: 'Two of your choice',
+        equipment: '(A) Calligrapher\'s Supplies, Book (prayers), Holy Symbol, Parchment (10 sheets), Robe, 8 GP; or (B) 50 GP',
         choices: [
             {
                 key: 'magic-initiate-ability',
@@ -3747,9 +3750,12 @@ export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 's
     },
     Criminal: {
         description: 'You survived by working in the underworld, developing illicit contacts and practical methods for theft, deception, and evasion.',
-        skillProficiencies: 'Stealth, Sleight of Hand',
+        abilityScores: 'Dexterity, Constitution, Intelligence',
+        feat: 'Alert',
+        skillProficiencies: 'Sleight of Hand, Stealth',
         toolProficiencies: 'Thieves\' Tools',
         languages: 'None',
+        equipment: '(A) 2 Daggers, Thieves\' Tools, Crowbar, 2 Pouches, Traveler\'s Clothes, 16 GP; or (B) 50 GP',
         choices: [
             {
                 key: 'criminal-specialty',
@@ -3776,9 +3782,12 @@ export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 's
     },
     Noble: {
         description: 'You come from a family with title, wealth, and political influence, and your background is tied to obligations, reputation, and social privilege.',
+        abilityScores: 'Strength, Intelligence, Charisma',
+        feat: 'Skilled',
         skillProficiencies: 'History, Persuasion',
         toolProficiencies: 'One type of gaming set',
         languages: 'One of your choice',
+        equipment: '(A) Gaming Set (one of your choice), Fine Clothes, Signet Ring, Purse (25 GP); or (B) 75 GP',
         choices: [
             {
                 key: 'gaming-set',
@@ -3803,9 +3812,12 @@ export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 's
     },
     Charlatan: {
         description: 'You learned to survive on forged identities, clever lies, and quick sleight of hand in crowded streets and dangerous courts.',
+        abilityScores: 'Dexterity, Constitution, Charisma',
+        feat: 'Skilled',
         skillProficiencies: 'Deception, Sleight of Hand',
-        toolProficiencies: 'Disguise Kit, Forgery Kit',
+        toolProficiencies: 'Forgery Kit',
         languages: 'None',
+        equipment: '(A) Forgery Kit, Costume, 15 GP; or (B) 50 GP',
         choices: [
             {
                 key: 'charlatan-favorite-scam',
@@ -3829,9 +3841,12 @@ export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 's
     },
     Entertainer: {
         description: 'You performed for crowds, blending artistry, confidence, and social instinct to captivate any room.',
+        abilityScores: 'Strength, Dexterity, Charisma',
+        feat: 'Musician',
         skillProficiencies: 'Acrobatics, Performance',
-        toolProficiencies: 'Disguise Kit, One Musical Instrument',
+        toolProficiencies: 'Musical Instrument (one of your choice)',
         languages: 'None',
+        equipment: '(A) Musical Instrument (one of your choice), Costume, 11 GP; or (B) 50 GP',
         choices: [
             {
                 key: 'entertainer-routine',
@@ -3855,9 +3870,12 @@ export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 's
     },
     Gladiator: {
         description: 'You earned fame and coin in brutal arenas, turning athletic spectacle into survival and reputation.',
+        abilityScores: 'Strength, Dexterity, Charisma',
+        feat: 'Savage Attacker',
         skillProficiencies: 'Acrobatics, Performance',
-        toolProficiencies: 'Disguise Kit, One Musical Instrument',
+        toolProficiencies: 'Musical Instrument (one of your choice)',
         languages: 'None',
+        equipment: '(A) Weapon (one of your choice worth 10+ GP), Costume, 11 GP; or (B) 50 GP',
         choices: [
             {
                 key: 'gladiator-style',
@@ -3881,9 +3899,12 @@ export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 's
     },
     'Folk Hero': {
         description: 'You rose from ordinary roots through bravery and practical service, becoming a trusted champion of common people.',
+        abilityScores: 'Strength, Constitution, Wisdom',
+        feat: 'Crafter',
         skillProficiencies: 'Animal Handling, Survival',
-        toolProficiencies: 'One Artisan\'s Tools, Vehicles (Land)',
+        toolProficiencies: 'Artisan\'s Tools (one of your choice), Vehicles (Land)',
         languages: 'None',
+        equipment: '(A) Artisan\'s Tools (one of your choice), Shovel, Iron Pot, Traveler\'s Clothes, 16 GP; or (B) 50 GP',
         choices: [
             {
                 key: 'folk-hero-defining-event',
@@ -3907,9 +3928,12 @@ export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 's
     },
     'Guild Artisan': {
         description: 'You trained in a trade guild, mastering craft standards, negotiation, and professional community ties.',
+        abilityScores: 'Strength, Dexterity, Intelligence',
+        feat: 'Crafter',
         skillProficiencies: 'Insight, Persuasion',
-        toolProficiencies: 'One Artisan\'s Tools',
+        toolProficiencies: 'Artisan\'s Tools (one of your choice)',
         languages: 'One of your choice',
+        equipment: '(A) Artisan\'s Tools (one of your choice), Letter of Introduction from Guild, Traveler\'s Clothes, 15 GP; or (B) 50 GP',
         choices: [
             {
                 key: 'guild-artisan-trade',
@@ -3933,9 +3957,12 @@ export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 's
     },
     'Guild Merchant': {
         description: 'You worked commercial routes and guild contracts, turning market knowledge into influence and profit.',
+        abilityScores: 'Constitution, Intelligence, Charisma',
+        feat: 'Lucky',
         skillProficiencies: 'Insight, Persuasion',
         toolProficiencies: 'Navigator\'s Tools',
         languages: 'One of your choice',
+        equipment: '(A) Navigator\'s Tools, 2 Pouches, Traveler\'s Clothes, 22 GP; or (B) 50 GP',
         choices: [
             {
                 key: 'guild-merchant-specialty',
@@ -3959,9 +3986,12 @@ export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 's
     },
     Hermit: {
         description: 'You withdrew from society to pursue solitude, contemplation, and truths hidden from bustling civilization.',
+        abilityScores: 'Constitution, Wisdom, Charisma',
+        feat: 'Magic Initiate (Druid)',
         skillProficiencies: 'Medicine, Religion',
         toolProficiencies: 'Herbalism Kit',
         languages: 'One of your choice',
+        equipment: '(A) Herbalism Kit, Book (nature notes), Parchment (10 sheets), Traveler\'s Clothes, 5 GP; or (B) 50 GP',
         choices: [
             {
                 key: 'hermit-discovery',
@@ -3985,9 +4015,12 @@ export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 's
     },
     Outlander: {
         description: 'You are shaped by the wilds and long travel, with practical survival instincts and regional lore.',
+        abilityScores: 'Strength, Dexterity, Wisdom',
+        feat: 'Magic Initiate (Druid)',
         skillProficiencies: 'Athletics, Survival',
-        toolProficiencies: 'One Musical Instrument',
-        languages: 'One of your choice',
+        toolProficiencies: 'Herbalism Kit',
+        languages: 'Standard language of your choice',
+        equipment: '(A) Longbow, 20 Arrows, Herbalism Kit, Traveler\'s Clothes, Quiver, 5 GP; or (B) 50 GP',
         choices: [
             {
                 key: 'outlander-origin',
@@ -4011,9 +4044,12 @@ export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 's
     },
     Sage: {
         description: 'You dedicated your life to study, archives, and difficult questions, building deep expertise in lore.',
+        abilityScores: 'Constitution, Intelligence, Wisdom',
+        feat: 'Magic Initiate (Wizard)',
         skillProficiencies: 'Arcana, History',
-        toolProficiencies: 'None',
+        toolProficiencies: 'Calligrapher\'s Supplies',
         languages: 'Two of your choice',
+        equipment: '(A) Calligrapher\'s Supplies, Book (history of a foreign land), Parchment (8 sheets), Robe, 5 GP; or (B) 50 GP',
         choices: [
             {
                 key: 'sage-specialty',
@@ -4037,9 +4073,12 @@ export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 's
     },
     Sailor: {
         description: 'You spent your life at sea, mastering ship routines, weather intuition, and maritime discipline.',
+        abilityScores: 'Strength, Dexterity, Wisdom',
+        feat: 'Tavern Brawler',
         skillProficiencies: 'Athletics, Perception',
         toolProficiencies: 'Navigator\'s Tools, Vehicles (Water)',
         languages: 'None',
+        equipment: '(A) Dagger, Rope (50 feet, hempen), Traveler\'s Clothes, 20 GP; or (B) 50 GP',
         choices: [
             {
                 key: 'sailor-role',
@@ -4063,9 +4102,12 @@ export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 's
     },
     Pirate: {
         description: 'You lived by daring raids and dangerous waters, relying on fearsome reputation and seamanship.',
+        abilityScores: 'Strength, Dexterity, Wisdom',
+        feat: 'Tavern Brawler',
         skillProficiencies: 'Athletics, Perception',
         toolProficiencies: 'Navigator\'s Tools, Vehicles (Water)',
         languages: 'None',
+        equipment: '(A) Dagger, Rope (50 feet, hempen), Traveler\'s Clothes, 20 GP; or (B) 50 GP',
         choices: [
             {
                 key: 'pirate-crew-role',
@@ -4089,9 +4131,12 @@ export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 's
     },
     Soldier: {
         description: 'You served in a military structure, trained for discipline, tactics, and life under command.',
+        abilityScores: 'Strength, Dexterity, Constitution',
+        feat: 'Savage Attacker',
         skillProficiencies: 'Athletics, Intimidation',
-        toolProficiencies: 'One type of Gaming Set, Vehicles (Land)',
+        toolProficiencies: 'Gaming Set (one of your choice), Vehicles (Land)',
         languages: 'None',
+        equipment: '(A) Spear, Shield, Handaxe (×2), Healer\'s Kit, Gaming Set (one of your choice), Traveler\'s Clothes, 14 GP; or (B) 50 GP',
         choices: [
             {
                 key: 'soldier-specialty',
@@ -4141,9 +4186,12 @@ export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 's
     },
     Urchin: {
         description: 'You grew up navigating city streets with stealth, quick hands, and hard-won neighborhood instincts.',
-        skillProficiencies: 'Sleight of Hand, Stealth',
-        toolProficiencies: 'Disguise Kit, Thieves\' Tools',
+        abilityScores: 'Dexterity, Wisdom, Charisma',
+        feat: 'Lucky',
+        skillProficiencies: 'Insight, Stealth',
+        toolProficiencies: 'Thieves\' Tools',
         languages: 'None',
+        equipment: '(A) 2 Daggers, Thieves\' Tools, Disguise Kit, Traveler\'s Clothes, 16 GP; or (B) 50 GP',
         choices: [
             {
                 key: 'urchin-city-sector',
@@ -4167,9 +4215,12 @@ export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 's
     },
     Spy: {
         description: 'You specialized in covert information work, blending misdirection, theft, and clandestine communication.',
-        skillProficiencies: 'Stealth, Sleight of Hand',
+        abilityScores: 'Dexterity, Constitution, Intelligence',
+        feat: 'Alert',
+        skillProficiencies: 'Sleight of Hand, Stealth',
         toolProficiencies: 'Thieves\' Tools',
         languages: 'None',
+        equipment: '(A) 2 Daggers, Thieves\' Tools, Crowbar, 2 Pouches, Traveler\'s Clothes, 16 GP; or (B) 50 GP',
         choices: [
             {
                 key: 'spy-specialty',
@@ -4193,9 +4244,12 @@ export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 's
     },
     Knight: {
         description: 'You are tied to landed duty and noble expectations, trained for command, protocol, and mounted service.',
+        abilityScores: 'Strength, Intelligence, Charisma',
+        feat: 'Skilled',
         skillProficiencies: 'History, Persuasion',
         toolProficiencies: 'One type of gaming set',
         languages: 'One of your choice',
+        equipment: '(A) Gaming Set (one of your choice), Fine Clothes, Signet Ring, Purse (25 GP); or (B) 75 GP',
         choices: [
             {
                 key: 'knight-order',
@@ -4214,6 +4268,2003 @@ export const backgroundDetailOverrides: Record<string, Omit<BackgroundDetail, 's
                 title: 'Ability Scores',
                 subtitle: '1 Choice',
                 options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    // ── PHB ──────────────────────────────────────────────────────────────
+    Athlete: {
+        description: 'You trained your body for competition and spectacle, relying on discipline, stamina, and hard-earned physical skill.',
+        skillProficiencies: 'Acrobatics, Athletics',
+        toolProficiencies: 'One type of artisan\'s tools',
+        languages: 'One of your choice',
+        choices: [
+            {
+                key: 'athlete-competition',
+                title: 'Competition Type',
+                subtitle: '1 Choice',
+                description: 'Select the sport or event that defined your training.',
+                options: ['Track & Field', 'Wrestling', 'Archery', 'Swimming', 'Equestrian', 'Combat Tourney']
+            },
+            {
+                key: 'athlete-feature',
+                title: 'Echoes of Victory',
+                subtitle: 'Background Feature',
+                description: 'Choose how your reputation follows you.',
+                options: ['Regional Champion', 'Fan Favourite', 'Rival Circuit Celebrity']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    // ── SCAG ─────────────────────────────────────────────────────────────
+    'City Watch': {
+        description: 'You served as a guard or constable, learning how to keep order, read trouble, and navigate the politics of the street.',
+        skillProficiencies: 'Athletics, Insight',
+        toolProficiencies: 'None',
+        languages: 'Two of your choice',
+        choices: [
+            {
+                key: 'city-watch-specialty',
+                title: 'Watch Specialty',
+                subtitle: '1 Choice',
+                description: 'Select your primary duty within the watch.',
+                options: ['Street Patrol', 'Gate Inspector', 'Criminal Investigator', 'Harbor Guard', 'Alley Informant']
+            },
+            {
+                key: 'city-watch-feature',
+                title: 'Watcher\'s Eye',
+                subtitle: 'Background Feature',
+                description: 'Choose the kind of network you built on the job.',
+                options: ['Urban Criminal Contacts', 'Guard Station Safe Haven', 'Civic Official Access']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    'Clan Crafter': {
+        description: 'You were raised in a tradition of skilled labor and clan duty, where craft, reputation, and ancestry are tightly linked.',
+        skillProficiencies: 'History, Insight',
+        toolProficiencies: 'One type of artisan\'s tools',
+        languages: 'Dwarvish (or one of your choice if already known)',
+        choices: [
+            {
+                key: 'clan-crafter-trade',
+                title: 'Craft Specialty',
+                subtitle: 'Choose your trade',
+                description: 'Select the craft your clan is renowned for.',
+                options: ['Armorsmith', 'Weaponsmith', 'Jeweler', 'Mason', 'Brewer', 'Engraver']
+            },
+            {
+                key: 'clan-crafter-feature',
+                title: 'Respect of the Stout Folk',
+                subtitle: 'Background Feature',
+                description: 'Choose how your clan connections benefit you.',
+                options: ['Clan Hospitality', 'Trade Route Access', 'Guild Master Contacts']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    'Cloistered Scholar': {
+        description: 'You lived among libraries, tutors, and quiet halls of learning, devoting yourself to study and refined knowledge.',
+        skillProficiencies: 'History, Arcana',
+        toolProficiencies: 'None',
+        languages: 'Two of your choice',
+        choices: [
+            {
+                key: 'cloistered-scholar-field',
+                title: 'Field of Study',
+                subtitle: '1 Choice',
+                description: 'Select your primary scholarly discipline.',
+                options: ['Arcane Theory', 'Ancient History', 'Natural Philosophy', 'Religious Texts', 'Linguistics', 'Astronomy']
+            },
+            {
+                key: 'cloistered-scholar-feature',
+                title: 'Library Access',
+                subtitle: 'Background Feature',
+                description: 'Choose the institution that formed your scholarly base.',
+                options: ['Great Library of Candlekeep', 'Temple Archive', 'Academy Research Collection', 'Private Arcane Tower']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    Courtier: {
+        description: 'You learned to navigate courts, etiquette, and shifting alliances, using tact and observation to survive among the powerful.',
+        skillProficiencies: 'Insight, Persuasion',
+        toolProficiencies: 'None',
+        languages: 'Two of your choice',
+        choices: [
+            {
+                key: 'courtier-role',
+                title: 'Court Role',
+                subtitle: '1 Choice',
+                description: 'Select how you served within the court.',
+                options: ['Royal Attaché', 'Diplomatic Envoy', 'Court Scribe', 'Noble Companion', 'Protocol Officer']
+            },
+            {
+                key: 'courtier-feature',
+                title: 'Court Functionary',
+                subtitle: 'Background Feature',
+                description: 'Choose the sphere of influence your court connections grant.',
+                options: ['Noble House Access', 'Trade Guild Liaison', 'Temple Hierarchy Contacts']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    'Faction Agent': {
+        description: 'You work on behalf of an organized faction, carrying its goals into the world through diplomacy, secrecy, or field work.',
+        skillProficiencies: 'Insight, and one of your choice',
+        toolProficiencies: 'None',
+        languages: 'Two of your choice',
+        choices: [
+            {
+                key: 'faction-agent-faction',
+                title: 'Faction',
+                subtitle: '1 Choice',
+                description: 'Select the organization you represent.',
+                options: ['The Harpers', 'The Zhentarim', 'Lords\' Alliance', 'Emerald Enclave', 'Order of the Gauntlet', 'Bregan D\'aerthe']
+            },
+            {
+                key: 'faction-agent-skill',
+                title: 'Secondary Skill',
+                subtitle: 'Choose 1 additional proficiency',
+                options: ['Arcana', 'Deception', 'History', 'Intimidation', 'Nature', 'Persuasion', 'Stealth', 'Survival']
+            },
+            {
+                key: 'faction-agent-feature',
+                title: 'Safe Haven',
+                subtitle: 'Background Feature',
+                description: 'Choose the form your faction support takes.',
+                options: ['Safehouse Network', 'Agent Handler Contact', 'Supply Caches']
+            }
+        ]
+    },
+    'Far Traveler': {
+        description: 'You come from lands that feel strange and distant to the people around you, carrying foreign customs and a broad perspective.',
+        skillProficiencies: 'Insight, Perception',
+        toolProficiencies: 'One musical instrument or gaming set',
+        languages: 'One of your choice',
+        choices: [
+            {
+                key: 'far-traveler-homeland',
+                title: 'Homeland',
+                subtitle: '1 Choice',
+                description: 'Select the distant land you hail from.',
+                options: ['Evermeet', 'Halruaa', 'The Moonshae Isles', 'Kara-Tur', 'Zakhara', 'Sossal', 'Maztica', 'Anchorome']
+            },
+            {
+                key: 'far-traveler-tool',
+                title: 'Instrument or Gaming Set',
+                subtitle: 'Choose 1',
+                options: ['Birdpipes', 'Ghaedal', 'Thelarr', 'Tocken', 'Three-Dragon Ante', 'Dragonchess']
+            },
+            {
+                key: 'far-traveler-feature',
+                title: 'All Eyes on You',
+                subtitle: 'Background Feature',
+                description: 'Choose how your exotic origins work in your favour.',
+                options: ['Diplomatic Immunity', 'Curiosity-Driven Hospitality', 'Trade Outsider Advantage']
+            }
+        ]
+    },
+    Inheritor: {
+        description: 'You received something precious or dangerous from the past, and your life is now tied to understanding, protecting, or using it.',
+        skillProficiencies: 'Survival, History or Arcana or Religion',
+        toolProficiencies: 'One gaming set or musical instrument',
+        languages: 'None',
+        choices: [
+            {
+                key: 'inheritor-type',
+                title: 'Inheritance',
+                subtitle: '1 Choice',
+                description: 'Select what you received.',
+                options: ['A Weapon of Legend', 'A Secret Document', 'A Promise to Someone Dead', 'A Sigil or Mark', 'A Living Creature', 'An Ancient Map']
+            },
+            {
+                key: 'inheritor-skill',
+                title: 'Secondary Skill',
+                subtitle: 'Choose 1',
+                options: ['Arcana', 'History', 'Religion']
+            },
+            {
+                key: 'inheritor-feature',
+                title: 'Inheritance Feature',
+                subtitle: 'Background Feature',
+                description: 'Choose what connects your inheritance to the wider world.',
+                options: ['Order Protectors', 'Collectors Who Want It', 'A Caretaker Network']
+            }
+        ]
+    },
+    'Investigator (SCAG)': {
+        description: 'You solve problems by following clues, reading motives, and uncovering truths hidden beneath ordinary appearances.',
+        skillProficiencies: 'Deception, Insight',
+        toolProficiencies: 'Thieves\' Tools',
+        languages: 'Two of your choice',
+        choices: [
+            {
+                key: 'investigator-scag-method',
+                title: 'Investigation Method',
+                subtitle: '1 Choice',
+                description: 'Select how you approach a case.',
+                options: ['Surveillance & Tailing', 'Interviews & Pressure', 'Document Analysis', 'Disguise & Infiltration']
+            },
+            {
+                key: 'investigator-scag-feature',
+                title: 'Inquisitive Eye',
+                subtitle: 'Background Feature',
+                description: 'Choose the kind of information network you rely on.',
+                options: ['Underworld Informants', 'Legal Authority Access', 'Civic Records Network']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    'Knight of the Order': {
+        description: 'You belong to a sworn order with ideals, obligations, and allies, and your training reflects service to a greater cause.',
+        skillProficiencies: 'Persuasion, History or Arcana or Nature or Religion',
+        toolProficiencies: 'One gaming set or musical instrument',
+        languages: 'One of your choice',
+        choices: [
+            {
+                key: 'knight-order-name',
+                title: 'Knightly Order',
+                subtitle: '1 Choice',
+                description: 'Select the order you serve.',
+                options: ['Order of the Gauntlet', 'Order of the Gilded Eye', 'Order of the Radiant Heart', 'Order of the Raven Queen', 'A Regional Knightly House']
+            },
+            {
+                key: 'knight-order-skill',
+                title: 'Secondary Skill',
+                subtitle: 'Choose 1',
+                options: ['Arcana', 'History', 'Nature', 'Religion']
+            },
+            {
+                key: 'knight-order-feature',
+                title: 'Knightly Regard',
+                subtitle: 'Background Feature',
+                description: 'Choose how your order\'s support manifests.',
+                options: ['Order Chapels & Lodges', 'Noble Patron Access', 'Squire & Supply Support']
+            }
+        ]
+    },
+    'Urban Bounty Hunter': {
+        description: 'You make your living tracking people through crowded settlements, using informants, patience, and pressure to close in on your target.',
+        skillProficiencies: 'Two from Deception, Insight, Persuasion, Stealth',
+        toolProficiencies: 'Two from gaming sets, musical instruments, or thieves\' tools',
+        languages: 'None',
+        choices: [
+            {
+                key: 'urban-bounty-hunter-skills',
+                title: 'Skill Proficiencies',
+                subtitle: 'Choose 2',
+                description: 'Select two skills from the allowed list.',
+                options: ['Deception + Insight', 'Deception + Persuasion', 'Deception + Stealth', 'Insight + Persuasion', 'Insight + Stealth', 'Persuasion + Stealth']
+            },
+            {
+                key: 'urban-bounty-hunter-target',
+                title: 'Preferred Target',
+                subtitle: '1 Choice',
+                description: 'Select the kind of quarry you typically pursue.',
+                options: ['Escaped Criminals', 'Debtors & Defaulters', 'Political Fugitives', 'Magical Law Violations', 'Guild Mark Jumpers']
+            },
+            {
+                key: 'urban-bounty-hunter-feature',
+                title: 'Ear to the Ground',
+                subtitle: 'Background Feature',
+                description: 'Choose the type of street-level network you\ve built.',
+                options: ['Criminal Informant Ring', 'Tavern & Merchant Tips', 'City Guard Liaison']
+            }
+        ]
+    },
+    'Uthgardt Tribe Member': {
+        description: 'You were raised among proud tribal traditions rooted in survival, ancestry, and the harsh strength of the frontier.',
+        skillProficiencies: 'Athletics, Survival',
+        toolProficiencies: 'One artisan\'s or musical instrument',
+        languages: 'One of your choice',
+        choices: [
+            {
+                key: 'uthgardt-tribe',
+                title: 'Tribal Ancestry',
+                subtitle: '1 Choice',
+                description: 'Select your home tribe.',
+                options: ['Bear Tribe', 'Black Lion', 'Black Raven', 'Elk Tribe', 'Gray Wolf', 'Griffon Tribe', 'Sky Pony', 'Thunderbeast', 'Tree Ghost']
+            },
+            {
+                key: 'uthgardt-feature',
+                title: 'Uthgardt Heritage',
+                subtitle: 'Background Feature',
+                description: 'Choose how your tribal ties benefit you across Faerûn.',
+                options: ['Tribal Hospitality Network', 'Sacred Site Knowledge', 'Ancestor Spirit Guidance']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    'Waterdhavian Noble': {
+        description: 'You are tied to one of Waterdeep\'s powerful families, shaped by privilege, urban politics, and public expectation.',
+        skillProficiencies: 'History, Persuasion',
+        toolProficiencies: 'One gaming set or musical instrument',
+        languages: 'One of your choice',
+        choices: [
+            {
+                key: 'waterdhavian-noble-house',
+                title: 'Noble House',
+                subtitle: '1 Choice',
+                description: 'Select your family\'s standing in Waterdeep.',
+                options: ['Merchant Lord Family', 'Old Waterdhavian Lineage', 'Ennobled Adventuring Clan', 'Sea Captain Dynasty']
+            },
+            {
+                key: 'waterdhavian-noble-tool',
+                title: 'Instrument or Gaming Set',
+                subtitle: 'Choose 1',
+                options: ['Lute', 'Viol', 'Flute', 'Dice Set', 'Dragonchess', 'Three-Dragon Ante']
+            },
+            {
+                key: 'waterdhavian-noble-feature',
+                title: 'Kept in Style',
+                subtitle: 'Background Feature',
+                description: 'Choose the social sphere your family name opens.',
+                options: ['Open Door at Lords\' Court', 'Merchant Guild Hospitality', 'Temple & Society Access']
+            }
+        ]
+    },
+    // ── Supplement Backgrounds ───────────────────────────────────────────
+    Anthropologist: {
+        description: 'You have spent years studying cultures, customs, and social rituals, learning how people live and what they value.',
+        skillProficiencies: 'Insight, Religion',
+        toolProficiencies: 'None',
+        languages: 'Two of your choice',
+        choices: [
+            {
+                key: 'anthropologist-culture',
+                title: 'Culture Studied',
+                subtitle: '1 Choice',
+                description: 'Select the society that shaped your scholarship.',
+                options: ['Tribal Nomads', 'Ancient Civilisation', 'Isolated Island Culture', 'Underground Society', 'Planar Refugees']
+            },
+            {
+                key: 'anthropologist-feature',
+                title: 'Adept Linguist',
+                subtitle: 'Background Feature',
+                description: 'Choose how your cultural fluency helps you.',
+                options: ['Rapid Language Acquisition', 'Body Language Reading', 'Cultural Mediation']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    Archaeologist: {
+        description: 'You explore ruins and lost sites, piecing together history through relics, excavation, and careful scholarship.',
+        skillProficiencies: 'History, Survival',
+        toolProficiencies: 'Cartographer\'s Tools or Navigator\'s Tools',
+        languages: 'One of your choice',
+        choices: [
+            {
+                key: 'archaeologist-specialty',
+                title: 'Dig Speciality',
+                subtitle: '1 Choice',
+                description: 'Select the kind of ruin or site you have the most experience with.',
+                options: ['Dungeon Delver', 'Tomb Raider', 'Sunken City Explorer', 'Jungle Temple Surveyor', 'Urban Excavator']
+            },
+            {
+                key: 'archaeologist-tool',
+                title: 'Survey Tool',
+                subtitle: 'Choose 1',
+                options: ['Cartographer\'s Tools', 'Navigator\'s Tools']
+            },
+            {
+                key: 'archaeologist-feature',
+                title: 'Historical Knowledge',
+                subtitle: 'Background Feature',
+                description: 'Choose how your field expertise pays off.',
+                options: ['Ruin Architecture Instinct', 'Artefact Authentication', 'Cultural Origin Reading']
+            }
+        ]
+    },
+    Faceless: {
+        description: 'You built a second life behind a crafted persona, concealing your true self behind reputation, costume, and rumor.',
+        skillProficiencies: 'Deception, Intimidation',
+        toolProficiencies: 'Disguise Kit',
+        languages: 'None',
+        choices: [
+            {
+                key: 'faceless-persona',
+                title: 'Persona Type',
+                subtitle: '1 Choice',
+                description: 'Select the nature of the identity you wear.',
+                options: ['Masked Vigilante', 'Notorious Criminal Alias', 'Celebrated Hero Persona', 'Shadowy Patron Figure']
+            },
+            {
+                key: 'faceless-feature',
+                title: 'Dual Personalities',
+                subtitle: 'Background Feature',
+                description: 'Choose how your two identities remain separate.',
+                options: ['Complete Lifestyle Separation', 'Different City Districts', 'Disguise-Based Persona Shift']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    Feylost: {
+        description: 'You were touched by the Feywild, shaped by wonder, disorientation, and memories of a place that never fully leaves you.',
+        skillProficiencies: 'Deception, Survival',
+        toolProficiencies: 'One musical instrument',
+        languages: 'One from Elvish, Gnomish, Goblin, or Sylvan',
+        choices: [
+            {
+                key: 'feylost-fey-court',
+                title: 'Fey Court Connection',
+                subtitle: '1 Choice',
+                description: 'Select which Feywild power you were touched by.',
+                options: ['Seelie Court', 'Unseelie Court', 'Archfey Domain', 'Prismeer Splinter', 'Wild Hunt']
+            },
+            {
+                key: 'feylost-instrument',
+                title: 'Musical Instrument',
+                subtitle: 'Choose 1',
+                options: ['Lute', 'Flute', 'Drum', 'Lyre', 'Hand Drum', 'Viol']
+            },
+            {
+                key: 'feylost-feature',
+                title: 'Feywild Connection',
+                subtitle: 'Background Feature',
+                description: 'Choose how the Feywild still finds you.',
+                options: ['Fey Messenger Dreams', 'Fey Creature Recognition', 'Portal Sense']
+            }
+        ]
+    },
+    Fisher: {
+        description: 'You earned your living from rivers, lakes, or coasts, developing patience, practical instincts, and a steady relationship with the water.',
+        skillProficiencies: 'History, Survival',
+        toolProficiencies: 'None',
+        languages: 'One of your choice',
+        choices: [
+            {
+                key: 'fisher-region',
+                title: 'Fishing Region',
+                subtitle: '1 Choice',
+                description: 'Select the waters you know best.',
+                options: ['Coastal Sea', 'River Delta', 'Mountain Lake', 'Underground River', 'Tidal Estuary']
+            },
+            {
+                key: 'fisher-feature',
+                title: 'Harvest the Water',
+                subtitle: 'Background Feature',
+                description: 'Choose how your fishing expertise pays off beyond food.',
+                options: ['River Route Knowledge', 'Fishing Community Hospitality', 'Aquatic Creature Familiarity']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    'Giant Foundling': {
+        description: 'Your upbringing was marked by the influence of giantkind, leaving you with stories, habits, and outlooks larger than ordinary life.',
+        skillProficiencies: 'Intimidation, Survival',
+        toolProficiencies: 'None',
+        languages: 'Giant',
+        choices: [
+            {
+                key: 'giant-foundling-kin',
+                title: 'Giant Kin',
+                subtitle: '1 Choice',
+                description: 'Select the type of giant community you were raised by or near.',
+                options: ['Cloud Giants', 'Fire Giants', 'Frost Giants', 'Hill Giants', 'Stone Giants', 'Storm Giants']
+            },
+            {
+                key: 'giant-foundling-feature',
+                title: 'Strike of the Giants',
+                subtitle: 'Background Feature (Feat)',
+                description: 'Choose the elemental or physical effect your foundling heritage grants.',
+                options: ['Cloud Strike (Thunder)', 'Fire Strike (Fire)', 'Frost Strike (Cold)', 'Hill Strike (Force)', 'Stone Strike (Bludgeoning)', 'Storm Strike (Lightning)']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    'Haunted One': {
+        description: 'You carry the weight of a terrible past and move through the world marked by dread, trauma, and the will to endure.',
+        skillProficiencies: 'Arcana, Investigation',
+        toolProficiencies: 'None',
+        languages: 'One exotic language (Abyssal, Infernal, Celestial, Deep Speech, or Undercommon)',
+        choices: [
+            {
+                key: 'haunted-one-event',
+                title: 'Harrowing Event',
+                subtitle: '1 Choice',
+                description: 'Select the trauma that defines your haunted past.',
+                options: ['Undead Awakening', 'Possession', 'Mass Death Witnessed', 'Monstrous Bargain', 'Dark Ritual Gone Wrong', 'Lost Someone to a Fiend']
+            },
+            {
+                key: 'haunted-one-language',
+                title: 'Exotic Language',
+                subtitle: 'Choose 1',
+                options: ['Abyssal', 'Celestial', 'Deep Speech', 'Infernal', 'Primordial', 'Undercommon']
+            },
+            {
+                key: 'haunted-one-feature',
+                title: 'Heart of Darkness',
+                subtitle: 'Background Feature',
+                description: 'Choose how ordinary folk respond to your bearing.',
+                options: ['Sympathy from the Frightened', 'Respect from Monster Hunters', 'Unnerving Authority over the Fearful']
+            }
+        ]
+    },
+    'House Agent': {
+        description: 'You represent the interests of a powerful house, balancing loyalty, politics, and assignments that advance your patrons.',
+        skillProficiencies: 'Investigation, Persuasion',
+        toolProficiencies: 'None',
+        languages: 'None',
+        choices: [
+            {
+                key: 'house-agent-house',
+                title: 'Dragonmarked House',
+                subtitle: '1 Choice',
+                description: 'Select your employer house.',
+                options: ['House Cannith', 'House Deneith', 'House Ghallanda', 'House Jorasco', 'House Kundarak', 'House Lyrandar', 'House Medani', 'House Orien', 'House Phiarlan', 'House Sivis', 'House Tharashk', 'House Thuranni', 'House Vadalis']
+            },
+            {
+                key: 'house-agent-role',
+                title: 'Agent Role',
+                subtitle: '1 Choice',
+                options: ['Field Inspector', 'Negotiation Specialist', 'Security Operative', 'Intelligence Courier']
+            },
+            {
+                key: 'house-agent-feature',
+                title: 'House Connections',
+                subtitle: 'Background Feature',
+                description: 'Choose how your house membership supports you.',
+                options: ['Safe Houses Across Khorvaire', 'House Resource Requisition', 'NPC Handler Network']
+            }
+        ]
+    },
+    'Investigator (VRGR)': {
+        description: 'You pursue mysteries with sharp instincts and persistence, often in places where fear and uncertainty cloud the truth.',
+        skillProficiencies: 'Insight, Investigation',
+        toolProficiencies: 'None',
+        languages: 'One of your choice',
+        choices: [
+            {
+                key: 'investigator-vrgr-method',
+                title: 'Investigation Method',
+                subtitle: '1 Choice',
+                description: 'Select your primary investigative approach.',
+                options: ['Scene Reconstruction', 'Witness Interrogation', 'Forensic Deduction', 'Pattern Recognition', 'Undercover Observation']
+            },
+            {
+                key: 'investigator-vrgr-feature',
+                title: 'Eyes for Detail',
+                subtitle: 'Background Feature',
+                description: 'Choose how your analytical eye serves you in the field.',
+                options: ['Reads Emotion Like Text', 'Crime Scene Memory Recall', 'Deception Catch Instinct']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    Marine: {
+        description: 'You served in harsh military conditions where endurance, discipline, and hard-won resilience meant the difference between survival and defeat.',
+        skillProficiencies: 'Athletics, Survival',
+        toolProficiencies: 'Navigator\'s Tools, Vehicles (Water)',
+        languages: 'None',
+        choices: [
+            {
+                key: 'marine-unit',
+                title: 'Service Branch',
+                subtitle: '1 Choice',
+                description: 'Select the type of marine unit you served with.',
+                options: ['Seaborne Assault Corps', 'Coastal Raider Squad', 'Ship Defence Detachment', 'Underwater Operations Unit']
+            },
+            {
+                key: 'marine-feature',
+                title: 'Steady',
+                subtitle: 'Background Feature',
+                description: 'Choose how your military conditioning helps beyond combat.',
+                options: ['Storm Footing (Difficult Terrain Advantage)', 'Intimidation from Military Bearing', 'Veteran Camaraderie Network']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    Rewarded: {
+        description: 'You have already been recognized for a deed of importance, and that reward continues to shape your opportunities and expectations.',
+        skillProficiencies: 'Insight, Persuasion',
+        toolProficiencies: 'None',
+        languages: 'One of your choice',
+        choices: [
+            {
+                key: 'rewarded-boon',
+                title: 'Nature of Your Reward',
+                subtitle: '1 Choice',
+                description: 'Select what kind of boon recognises your deed.',
+                options: ['Divine Blessing', 'Royal Favour', 'Legendary Reputation', 'Magical Gift', 'Noble Title']
+            },
+            {
+                key: 'rewarded-feature',
+                title: 'Fortune\'s Grace',
+                subtitle: 'Background Feature',
+                description: 'Choose how your recognised status opens doors.',
+                options: ['Revered by Common Folk', 'Court & Temple Hospitality', 'Adventuring Guild Prestige']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    Ruined: {
+        description: 'Your life was broken by catastrophe, betrayal, or loss, leaving you to rebuild yourself from whatever remained.',
+        skillProficiencies: 'Stealth, Survival',
+        toolProficiencies: 'None',
+        languages: 'None',
+        choices: [
+            {
+                key: 'ruined-cause',
+                title: 'How Were You Ruined?',
+                subtitle: '1 Choice',
+                description: 'Select the event that brought you low.',
+                options: ['Political Betrayal', 'Financial Collapse', 'Family Cursed', 'War Destroyed Your Home', 'Monstrous Attack', 'Magical Catastrophe']
+            },
+            {
+                key: 'ruined-feature',
+                title: 'Still Standing',
+                subtitle: 'Background Feature',
+                description: 'Choose what your resilience has granted you.',
+                options: ['Underworld Survival Contacts', 'Former Peer Who Still Helps', 'Hard-Earned Notoriety']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    'Rune Carver': {
+        description: 'You studied ancient runes and the craft of inscribing power into objects, blending artistry with old magical traditions.',
+        skillProficiencies: 'History, Perception',
+        toolProficiencies: 'One set of artisan\'s tools',
+        languages: 'Giant',
+        choices: [
+            {
+                key: 'rune-carver-specialty',
+                title: 'Rune Tradition',
+                subtitle: '1 Choice',
+                description: 'Select the runic tradition you apprenticed in.',
+                options: ['Storm Giant Runes', 'Stone Giant Petroglyphs', 'Frost Giant Warding Marks', 'Fire Giant Forge Runes', 'Dwarven Elder Runes']
+            },
+            {
+                key: 'rune-carver-tool',
+                title: 'Artisan\'s Tools',
+                subtitle: 'Choose 1',
+                options: ['Mason\'s Tools', 'Jeweler\'s Tools', 'Woodcarver\'s Tools', 'Smith\'s Tools']
+            },
+            {
+                key: 'rune-carver-feature',
+                title: 'Rune Shaper',
+                subtitle: 'Background Feature (Feat)',
+                description: 'Choose the rune shaper feat benefit you begin with.',
+                options: ['Cloud Rune (Deception/Sleight of Hand)', 'Fire Rune (Crafting bonus)', 'Frost Rune (Intimidation/Animal Handling)', 'Stone Rune (Insight/Darkvision)', 'Storm Rune (Arcana/initiative)']
+            }
+        ]
+    },
+    Shipwright: {
+        description: 'You know ships from keel to mast, with practical skill in construction, repair, and the rhythm of seafaring work.',
+        skillProficiencies: 'History, Perception',
+        toolProficiencies: 'Carpenter\'s Tools, Vehicles (Water)',
+        languages: 'None',
+        choices: [
+            {
+                key: 'shipwright-specialty',
+                title: 'Ship Specialty',
+                subtitle: '1 Choice',
+                description: 'Select the type of vessel you specialize in building.',
+                options: ['Warship', 'Merchant Galleon', 'River Barge', 'Coastal Schooner', 'Submersible Vessel']
+            },
+            {
+                key: 'shipwright-feature',
+                title: 'I\'ll Make It',
+                subtitle: 'Background Feature',
+                description: 'Choose how your shipwright skills serve beyond the docks.',
+                options: ['Emergency Field Repairs', 'Ship Captain Contacts', 'Port Authority Access']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    Smuggler: {
+        description: 'You moved people or goods where authorities said they should not go, relying on secrecy, nerve, and trusted routes.',
+        skillProficiencies: 'Athletics, Deception',
+        toolProficiencies: 'Vehicles (Water)',
+        languages: 'None',
+        choices: [
+            {
+                key: 'smuggler-cargo',
+                title: 'Cargo Specialty',
+                subtitle: '1 Choice',
+                description: 'Select what you typically moved.',
+                options: ['Illegal Goods', 'Fugitive Persons', 'Contraband Magic Items', 'Forbidden Texts', 'Untaxed Valuables']
+            },
+            {
+                key: 'smuggler-feature',
+                title: 'Down Low',
+                subtitle: 'Background Feature',
+                description: 'Choose how your smuggling network operates.',
+                options: ['Coastal Safe Ports', 'Underworld Fence Contacts', 'Bribed Border Officials']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    'Witchlight Hand': {
+        description: 'You traveled with the Witchlight Carnival, learning performance, misdirection, and the strange warmth of a wandering show.',
+        skillProficiencies: 'Performance, Sleight of Hand',
+        toolProficiencies: 'Disguise Kit, One musical instrument',
+        languages: 'None',
+        choices: [
+            {
+                key: 'witchlight-hand-role',
+                title: 'Carnival Role',
+                subtitle: '1 Choice',
+                description: 'Select your performance or support role in the carnival.',
+                options: ['Acrobat', 'Ticket Taker', 'Animal Tamer', 'Fortuneteller', 'Cook & Hospitality', 'Stage Illusionist']
+            },
+            {
+                key: 'witchlight-hand-instrument',
+                title: 'Musical Instrument',
+                subtitle: 'Choose 1',
+                options: ['Drum', 'Flute', 'Lute', 'Viol', 'Hurdy-Gurdy', 'Accordion']
+            },
+            {
+                key: 'witchlight-hand-feature',
+                title: 'Carnival Veteran',
+                subtitle: 'Background Feature',
+                description: 'Choose how carnival life still benefits you.',
+                options: ['Free Carnival Passage', 'Fey Creature Instinct', 'Performer Community Network']
+            }
+        ]
+    },
+    'Knight of Solamnia': {
+        description: 'You were trained in a storied chivalric tradition that prizes honor, discipline, and service to a noble ideal.',
+        skillProficiencies: 'Athletics, History',
+        toolProficiencies: 'None',
+        languages: 'None',
+        choices: [
+            {
+                key: 'knight-solamnia-order',
+                title: 'Knightly Order',
+                subtitle: '1 Choice',
+                description: 'Select the Solamnic order you belong to.',
+                options: ['Order of the Crown', 'Order of the Sword', 'Order of the Rose']
+            },
+            {
+                key: 'knight-solamnia-feature',
+                title: 'Knightly Regard',
+                subtitle: 'Background Feature',
+                description: 'Choose the form of support your order provides.',
+                options: ['Order Safe Houses', 'Supply & Mount Support', 'Diplomatic Recognition in Solamnia']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    'Mage of High Sorcery': {
+        description: 'You were shaped by an exacting magical order, where study, discipline, and allegiance define the practice of arcane power.',
+        skillProficiencies: 'Arcana, History',
+        toolProficiencies: 'None',
+        languages: 'Two of your choice',
+        choices: [
+            {
+                key: 'mage-high-sorcery-order',
+                title: 'Moon Order',
+                subtitle: '1 Choice',
+                description: 'Select the moon order that tested and accepted you.',
+                options: ['Order of the White Robes (Solinari)', 'Order of the Red Robes (Lunitari)', 'Order of the Black Robes (Nuitari)']
+            },
+            {
+                key: 'mage-high-sorcery-feat',
+                title: 'High Sorcery Feat',
+                subtitle: 'Background Feature',
+                description: 'Choose the initial arcane boon granted by your order.',
+                options: ['Initiate of High Sorcery (Cantrips of Order)', 'Omen of the Moons (Divination)', 'Tower Scholarship Access']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    Grinner: {
+        description: 'You move through society as a performer and secret ally, using charm, wit, and quiet influence to protect others.',
+        skillProficiencies: 'Deception, Performance',
+        toolProficiencies: 'One musical instrument',
+        languages: 'None',
+        choices: [
+            {
+                key: 'grinner-performance',
+                title: 'Performance Type',
+                subtitle: '1 Choice',
+                description: 'Select your public cover persona as a performer.',
+                options: ['Bard & Troubadour', 'Acrobat & Juggler', 'Street Magician', 'Comedian & Jester']
+            },
+            {
+                key: 'grinner-instrument',
+                title: 'Musical Instrument',
+                subtitle: 'Choose 1',
+                options: ['Lute', 'Drum', 'Flute', 'Viol', 'Mandolin']
+            },
+            {
+                key: 'grinner-feature',
+                title: 'Underground Network',
+                subtitle: 'Background Feature',
+                description: 'Choose how your secret resistance network operates.',
+                options: ['Safe-House Code Network', 'Prisoner Rescue Contacts', 'Resistance Supply Routes']
+            }
+        ]
+    },
+    'Volstrucker Agent': {
+        description: 'You were trained for covert service under a ruthless regime, where obedience, secrecy, and precision were essential.',
+        skillProficiencies: 'Intimidation, Stealth',
+        toolProficiencies: 'Poisoner\'s Kit',
+        languages: 'One of your choice',
+        choices: [
+            {
+                key: 'volstrucker-mission',
+                title: 'Mission Specialty',
+                subtitle: '1 Choice',
+                description: 'Select the type of covert operation you were trained for.',
+                options: ['Assassination', 'Surveillance & Reporting', 'Sabotage', 'Abduction & Interrogation']
+            },
+            {
+                key: 'volstrucker-feature',
+                title: 'Crimson Contacts',
+                subtitle: 'Background Feature',
+                description: 'Choose how your Volstrucker ties still operate.',
+                options: ['Active Handler Contact', 'Former Colleague Safe house Network', 'Dead Drop Information System']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    'Astral Drifter': {
+        description: 'You have spent time among the stars and the planes beyond, returning with a perspective shaped by cosmic distance.',
+        skillProficiencies: 'Insight, Religion',
+        toolProficiencies: 'None',
+        languages: 'Two of your choice',
+        choices: [
+            {
+                key: 'astral-drifter-origin',
+                title: 'Plane of Origin',
+                subtitle: '1 Choice',
+                description: 'Select where your drifting began or where you spent the most time.',
+                options: ['The Astral Sea', 'Mount Celestia', 'Elysium', 'Mechanus', 'Limbo', 'The Outlands']
+            },
+            {
+                key: 'astral-drifter-entity',
+                title: 'Astral Entity',
+                subtitle: 'Background Feature',
+                description: 'Choose the divine or planar force that marked you during your drift.',
+                options: ['Divine Contact (a god\'s echo)', 'Astral Haunting (attached spirit)', 'Planar Tuning (instinctive gate sense)']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    Wildspacer: {
+        description: 'You grew up amid spelljamming travel and strange horizons, comfortable with danger, wonder, and life between worlds.',
+        skillProficiencies: 'Athletics, Survival',
+        toolProficiencies: 'Navigator\'s Tools, Vehicles (Space)',
+        languages: 'None',
+        choices: [
+            {
+                key: 'wildspacer-role',
+                title: 'Crew Role',
+                subtitle: '1 Choice',
+                description: 'Select your primary role aboard a spelljammer.',
+                options: ['Gunner', 'Helmsman', 'Ship\'s Cook', 'Lookout', 'Engineer / Rigger', 'First Mate']
+            },
+            {
+                key: 'wildspacer-feature',
+                title: 'Wild Space Veteran',
+                subtitle: 'Background Feature',
+                description: 'Choose how your spelljamming experience benefits you.',
+                options: ['Astral Merchant Contacts', 'Known Name at Rock of Bral', 'Creature Familiarity in Wildspace']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    'Gate Warden': {
+        description: 'You guard thresholds between places or powers, living with duty, vigilance, and the burden of keeping danger at bay.',
+        skillProficiencies: 'Perception, Persuasion',
+        toolProficiencies: 'None',
+        languages: 'Two of your choice',
+        choices: [
+            {
+                key: 'gate-warden-assignment',
+                title: 'Gate Assignment',
+                subtitle: '1 Choice',
+                description: 'Select the planar gate you were posted to guard.',
+                options: ['The Great Foundry Gate (Mechanus)', 'The Mortuary Gate (Negative Plane)', 'The Civic Festhall Gate (Ysgard)', 'The Spire Gate (Outlands)', 'A Forgotten Portal (Unknown)']
+            },
+            {
+                key: 'gate-warden-feature',
+                title: 'Planar Infusion',
+                subtitle: 'Background Feature',
+                description: 'Choose the planar energy that has suffused you from long service.',
+                options: ['Order Infusion (Mechanus Clarity)', 'Chaos Infusion (Limbo Resilience)', 'Light Infusion (Mount Celestia calm)']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    'Planar Philosopher': {
+        description: 'Your travels and studies widened your view beyond one world, making you thoughtful, curious, and strangely hard to surprise.',
+        skillProficiencies: 'Arcana, Persuasion',
+        toolProficiencies: 'None',
+        languages: 'Two of your choice',
+        choices: [
+            {
+                key: 'planar-philosopher-faction',
+                title: 'Sigil Faction',
+                subtitle: '1 Choice',
+                description: 'Select the philosophical order you follow in Sigil.',
+                options: ['Athar (The Lost)', 'Bleak Cabal (Bleakers)', 'Dustmen', 'Fraternity of Order (Guvners)', 'Harmonium (Hardheads)', 'Mercykillers', 'Mind\'s Eye (Seekers)', 'Sign of One (Signers)', 'Society of Sensation (Sensates)', 'Transcendent Order (Ciphers)', 'Xaositects (Chaosmen)']
+            },
+            {
+                key: 'planar-philosopher-feature',
+                title: 'Philosophical Focus',
+                subtitle: 'Background Feature',
+                description: 'Choose how your faction philosophy protects or empowers you.',
+                options: ['Faction Sanctuary Access in Sigil', 'Philosophical Debate Authority', 'Faction Intel on Planar Events']
+            },
+            {
+                key: 'ability-scores',
+                title: 'Ability Scores',
+                subtitle: '1 Choice',
+                options: ['Increase three scores (+1 / +1 / +1)', 'Increase two scores (+2 / +1)']
+            }
+        ]
+    },
+    Ashari: {
+        description: 'You were raised among guardians of elemental balance, shaped by duty, restraint, and reverence for primal forces.',
+        skillProficiencies: 'Arcana, Nature',
+        toolProficiencies: 'Herbalism Kit',
+        languages: 'Primordial (Aquan, Auran, Ignan, or Terran)',
+        choices: [
+            {
+                key: 'ashari-element',
+                title: 'Elemental Affinity',
+                subtitle: '1 Choice',
+                description: 'Select which Ashari tribe you come from and which drift you guard.',
+                options: ['Air Ashari (Zephrah – Wind\'s Cradle)', 'Earth Ashari (Terrah – Crystalfen Caverns)', 'Fire Ashari (Pyrah – Cindergrove)', 'Water Ashari (Vesrah – Sea Spire)']
+            },
+            {
+                key: 'ashari-language',
+                title: 'Primordial Dialect',
+                subtitle: 'Choose 1',
+                options: ['Aquan', 'Auran', 'Ignan', 'Terran']
+            },
+            {
+                key: 'ashari-feature',
+                title: 'Ashari Heartland',
+                subtitle: 'Background Feature',
+                description: 'Choose how your elemental training benefits you beyond the drift.',
+                options: ['Elemental Plane Attunement', 'Ashari Safe Passage Network', 'Primal Beast Kinship']
+            }
+        ]
+    },
+    // ── Ravnica Guild Backgrounds ─────────────────────────────────────────
+    'Azorius Functionary': {
+        description: 'You served a vast legal bureaucracy, learning procedure, administration, and the power of systems and precedent.',
+        skillProficiencies: 'Insight, Intimidation',
+        toolProficiencies: 'None',
+        languages: 'One of your choice',
+        choices: [
+            {
+                key: 'azorius-department',
+                title: 'Department',
+                subtitle: '1 Choice',
+                description: 'Select your branch within the Azorius Senate.',
+                options: ['Lyev Column (Law Enforcement)', 'Isperia\'s Advisory (Legal Counsel)', 'Sova Column (Judicial)', 'Arbiters (Patrol)']
+            },
+            {
+                key: 'azorius-feature',
+                title: 'Legal Authority',
+                subtitle: 'Background Feature',
+                description: 'Choose how the law works in your favour.',
+                options: ['Arrest & Detain Authority', 'Legal Library Access', 'Senate Safe Passage']
+            }
+        ]
+    },
+    'Boros Legionnaire': {
+        description: 'You were forged in a militant order that values discipline, courage, and righteous action in the face of danger.',
+        skillProficiencies: 'Athletics, Intimidation',
+        toolProficiencies: 'None',
+        languages: 'One from Celestial, Draconic, or Goblin',
+        choices: [
+            {
+                key: 'boros-legion-role',
+                title: 'Legion Role',
+                subtitle: '1 Choice',
+                description: 'Select your assignment within the Boros Legion.',
+                options: ['Infantry Skyjek', 'Garrison Trooper', 'Wojek Peacekeeper', 'Scout Rider', 'Skyguard Archer']
+            },
+            {
+                key: 'boros-feature',
+                title: 'Boros Guild Benefits',
+                subtitle: 'Background Feature',
+                description: 'Choose how Legion membership supports you in Ravnica.',
+                options: ['Barracks Lodging & Supply', 'Angelic Commander Recognition', 'Boros Chaplain Contacts']
+            }
+        ]
+    },
+    'Dimir Operative': {
+        description: 'You worked in shadows and secrets, where misinformation, hidden motives, and careful manipulation are everyday tools.',
+        skillProficiencies: 'Deception, Stealth',
+        toolProficiencies: 'None',
+        languages: 'One of your choice',
+        choices: [
+            {
+                key: 'dimir-role',
+                title: 'Operative Role',
+                subtitle: '1 Choice',
+                description: 'Select your primary covert function for House Dimir.',
+                options: ['Spy & Informant', 'Memory-Thief Handler', 'Disinformation Agent', 'Infiltrator']
+            },
+            {
+                key: 'dimir-feature',
+                title: 'False Identity',
+                subtitle: 'Background Feature',
+                description: 'Choose the type of cover identity you maintain.',
+                options: ['Merchant or Artisan Cover', 'Civic Official Front', 'Itinerant Performer Alias']
+            }
+        ]
+    },
+    'Golgari Agent': {
+        description: 'You come from a culture of decay, survival, and renewal, where resilience matters more than appearances.',
+        skillProficiencies: 'Nature, Survival',
+        toolProficiencies: 'Poisoner\'s Kit',
+        languages: 'One from Elvish, Giant, or Kraul',
+        choices: [
+            {
+                key: 'golgari-role',
+                title: 'Swarm Role',
+                subtitle: '1 Choice',
+                description: 'Select your function within the Golgari Swarm.',
+                options: ['Rot Farmer', 'Undead Shepherd', 'Scavenger Scout', 'Kraul Warrior', 'Devkarin Witch']
+            },
+            {
+                key: 'golgari-feature',
+                title: 'Undercity Connections',
+                subtitle: 'Background Feature',
+                description: 'Choose how the Golgari undercity serves you.',
+                options: ['Hidden Undercity Passages', 'Corpse Broker Contacts', 'Rot-Farm Safe Haven']
+            }
+        ]
+    },
+    'Gruul Anarch': {
+        description: 'You reject imposed order and thrive on freedom, fury, and the raw strength of untamed community.',
+        skillProficiencies: 'Athletics, Intimidation',
+        toolProficiencies: 'One artisan\'s tool',
+        languages: 'One from Giant, Goblin, or Sylvan',
+        choices: [
+            {
+                key: 'gruul-clan',
+                title: 'Gruul Clan',
+                subtitle: '1 Choice',
+                description: 'Select the wild clan you belong to.',
+                options: ['Burning Tree Clan', 'Ghor Clan', 'Scab Clan', 'Slizt Clan', 'Gravel Hide', 'Zhur-Taa']
+            },
+            {
+                key: 'gruul-feature',
+                title: 'Ruin Dweller',
+                subtitle: 'Background Feature',
+                description: 'Choose how your clan territory provides advantage.',
+                options: ['Ruin Cache Network', 'Wild Beast Kinship', 'Clan War Camp Refuge']
+            }
+        ]
+    },
+    'Izzet Engineer': {
+        description: 'You belong to a culture of magical innovation, reckless experimentation, and brilliant problem solving.',
+        skillProficiencies: 'Arcana, History',
+        toolProficiencies: 'None',
+        languages: 'One from Draconic, Goblin, or Vedalken',
+        choices: [
+            {
+                key: 'izzet-research',
+                title: 'Research Focus',
+                subtitle: '1 Choice',
+                description: 'Select your area of magical-scientific exploration.',
+                options: ['Transmutation & Matter', 'Electromancy', 'Pyromancy Engines', 'Biomechanical Constructs', 'Spellbomb Ordnance']
+            },
+            {
+                key: 'izzet-feature',
+                title: 'Izzet Guild Benefits',
+                subtitle: 'Background Feature',
+                description: 'Choose how league membership benefits you.',
+                options: ['Laboratory Access', 'Experimental Equipment Supply', 'Mizzium Contacts']
+            }
+        ]
+    },
+    'Orzhov Representative': {
+        description: 'You were shaped by a hierarchy of wealth, obligation, and spiritual debt, where favors and power are tightly entwined.',
+        skillProficiencies: 'Intimidation, Religion',
+        toolProficiencies: 'None',
+        languages: 'Two of your choice',
+        choices: [
+            {
+                key: 'orzhov-role',
+                title: 'Church Role',
+                subtitle: '1 Choice',
+                description: 'Select your position within the Orzhov Syndicate.',
+                options: ['Advokist (Legal)', 'Ministrant (Enforcers)', 'Knight (Militant)', 'Oligarch Agent', 'Debt Collector']
+            },
+            {
+                key: 'orzhov-feature',
+                title: 'Leverage',
+                subtitle: 'Background Feature',
+                description: 'Choose the form of institutional leverage you wield.',
+                options: ['Ghost Council Old Debt Favours', 'Syndicate Safe Houses', 'Bribed City Official Network']
+            }
+        ]
+    },
+    'Rakdos Cultist': {
+        description: 'You embraced spectacle, excess, and danger, finding identity in performance that shocks, terrifies, and enthralls.',
+        skillProficiencies: 'Acrobatics, Performance',
+        toolProficiencies: 'One musical instrument or disguise kit',
+        languages: 'One from Abyssal or Giant',
+        choices: [
+            {
+                key: 'rakdos-performer-type',
+                title: 'Performer Role',
+                subtitle: '1 Choice',
+                description: 'Select your act in the Cult of Rakdos.',
+                options: ['Fire-Eater', 'Razor Acrobat', 'Headliner Demon-Caller', 'Jester Provocateur', 'Spectacle Illusionist']
+            },
+            {
+                key: 'rakdos-feature',
+                title: 'Fearsome Reputation',
+                subtitle: 'Background Feature',
+                description: 'Choose how your cultist standing opens certain doors.',
+                options: ['Free Entertainment District Access', 'Underworld Contact Network', 'Demonic Patron Recognition']
+            }
+        ]
+    },
+    'Selesnya Initiate': {
+        description: 'You were raised in a collective that values harmony, devotion, and purpose shared across a greater whole.',
+        skillProficiencies: 'Nature, Persuasion',
+        toolProficiencies: 'Herbalism Kit',
+        languages: 'One from Elvish, Loxodon, or Sylvan',
+        choices: [
+            {
+                key: 'selesnya-cell',
+                title: 'Conclave Cell',
+                subtitle: '1 Choice',
+                description: 'Select your role in the Selesnya Conclave.',
+                options: ['Ledev Guardian', 'Dryad Circle Tended', 'Evangel (Missionary)', 'Votary Defender', 'Mel (Crafter & Tender)']
+            },
+            {
+                key: 'selesnya-feature',
+                title: 'Conclave\'s Shelter',
+                subtitle: 'Background Feature',
+                description: 'Choose how Selesnya community hospitality works for you.',
+                options: ['Safe Haven in All Selesnya Enclaves', 'Nature Spirit Guidance', 'Communal Food & Healing Access']
+            }
+        ]
+    },
+    'Simic Scientist': {
+        description: 'You pursue adaptation and magical biology, viewing the world through experimentation, change, and evolving design.',
+        skillProficiencies: 'Arcana, Medicine',
+        toolProficiencies: 'None',
+        languages: 'Two of your choice',
+        choices: [
+            {
+                key: 'simic-focus',
+                title: 'Research Focus',
+                subtitle: '1 Choice',
+                description: 'Select your area of biomantic research.',
+                options: ['Hybridization', 'Clade Adaptation', 'Environmental Enhancement', 'Krasis Engineering', 'Healing Biomancy']
+            },
+            {
+                key: 'simic-feature',
+                title: 'Simic Guild Benefits',
+                subtitle: 'Background Feature',
+                description: 'Choose how the Combine supports your work.',
+                options: ['Zonot Research Laboratory', 'Biomantic Supply Lines', 'Simic Medic Support']
+            }
+        ]
+    },
+    // ── Strixhaven ────────────────────────────────────────────────────────
+    'Lorehold Student': {
+        description: 'You study the echoes of history through magic, memory, and the stories left behind by great deeds.',
+        skillProficiencies: 'History, Religion',
+        toolProficiencies: 'None',
+        languages: 'Two of your choice',
+        choices: [
+            {
+                key: 'lorehold-discipline',
+                title: 'Study Discipline',
+                subtitle: '1 Choice',
+                description: 'Select your Lorehold research focus.',
+                options: ['Military History', 'Archaeological Magic', 'Spiritual Communion with the Past', 'Runic Reconstruction']
+            },
+            {
+                key: 'lorehold-feature',
+                title: 'Lorehold Initiate',
+                subtitle: 'Background Feature (Feat)',
+                description: 'Choose which cantrip and spell your Lorehold training grants.',
+                options: ['Sacred Flame & Command', 'Light & Comprehend Languages', 'Guidance & Detect Magic']
+            }
+        ]
+    },
+    'Prismari Student': {
+        description: 'Your training blends elemental magic with artistic expression, shaping you to create as much as to cast.',
+        skillProficiencies: 'Acrobatics, Performance',
+        toolProficiencies: 'None',
+        languages: 'One of your choice',
+        choices: [
+            {
+                key: 'prismari-art',
+                title: 'Artistic Focus',
+                subtitle: '1 Choice',
+                description: 'Select the elemental art form you specialize in.',
+                options: ['Pyrokinetic Sculpture', 'Aquatic Dance', 'Storm Choreography', 'Elemental Composition']
+            },
+            {
+                key: 'prismari-feature',
+                title: 'Prismari Initiate',
+                subtitle: 'Background Feature (Feat)',
+                description: 'Choose the elemental magic your Prismari training emphasizes.',
+                options: ['Fire: Fire Bolt + Burning Hands', 'Water: Ray of Frost + Create/Destroy Water', 'Dual Element Foundations']
+            }
+        ]
+    },
+    'Quandrix Student': {
+        description: 'You see magic through patterns, numbers, and elegant abstractions, trusting structure to reveal deeper truths.',
+        skillProficiencies: 'Arcana, Nature',
+        toolProficiencies: 'None',
+        languages: 'One of your choice',
+        choices: [
+            {
+                key: 'quandrix-focus',
+                title: 'Mathematical Focus',
+                subtitle: '1 Choice',
+                description: 'Select the area of magical mathematics you study.',
+                options: ['Biomathematics', 'Geometric Fractals', 'Probability Fields', 'Spatial Recursion']
+            },
+            {
+                key: 'quandrix-feature',
+                title: 'Quandrix Initiate',
+                subtitle: 'Background Feature (Feat)',
+                description: 'Choose the analytic cantrip and tracking spell your studies grant.',
+                options: ['Druidcraft + Entangle', 'Guidance + Enlarge/Reduce', 'Mage Hand + Identify']
+            }
+        ]
+    },
+    'Silverquill Student': {
+        description: 'You were trained to wield language as art and weapon, combining rhetoric, style, and magical expression.',
+        skillProficiencies: 'Intimidation, Persuasion',
+        toolProficiencies: 'None',
+        languages: 'Two of your choice',
+        choices: [
+            {
+                key: 'silverquill-style',
+                title: 'Rhetorical Style',
+                subtitle: '1 Choice',
+                description: 'Select how your word-magic tends to manifest.',
+                options: ['Radiant Invoker (uplifting)', 'Shadow Poet (intimidating)', 'Balanced Oratorist']
+            },
+            {
+                key: 'silverquill-feature',
+                title: 'Silverquill Initiate',
+                subtitle: 'Background Feature (Feat)',
+                description: 'Choose the ink-magic pairing your training provides.',
+                options: ['Sacred Flame + Heroism', 'Vicious Mockery + Dissonant Whispers', 'Thaumaturgy + Command']
+            }
+        ]
+    },
+    'Witherbloom Student': {
+        description: 'You study the cycle of life and decay, drawing strength from harsh truths, instinct, and natural vitality.',
+        skillProficiencies: 'Medicine, Survival',
+        toolProficiencies: 'Herbalism Kit',
+        languages: 'One of your choice',
+        choices: [
+            {
+                key: 'witherbloom-focus',
+                title: 'Research Focus',
+                subtitle: '1 Choice',
+                description: 'Select how you engage life-death magic.',
+                options: ['Herbomancy', 'Necromantic Ecology', 'Primal Healing', 'Pestilence Study']
+            },
+            {
+                key: 'witherbloom-feature',
+                title: 'Witherbloom Initiate',
+                subtitle: 'Background Feature (Feat)',
+                description: 'Choose the primal cantrip and vitality spell your studies grant.',
+                options: ['Chill Touch + Cure Wounds', 'Poison Spray + Inflict Wounds', 'Spare the Dying + Protection from Poison']
+            }
+        ]
+    },
+    // ── Setting: Plane Shift / Amonkhet ────────────────────────────────────
+    Dissenter: {
+        description: 'You stood apart from the beliefs or structures around you, defined by refusal, conviction, and the cost of opposing the norm.',
+        skillProficiencies: 'Deception, Insight',
+        toolProficiencies: 'None',
+        languages: 'None',
+        choices: [
+            {
+                key: 'dissenter-reason',
+                title: 'Reason for Dissent',
+                subtitle: '1 Choice',
+                description: 'Select why you refused to conform.',
+                options: ['Religious Doubt', 'Moral Objection to Orders', 'Suppressed Memory or Truth', 'Loyalty to Outlawed Belief', 'Personal Loss Disillusioned You']
+            },
+            {
+                key: 'dissenter-feature',
+                title: 'Hidden Among the Masses',
+                subtitle: 'Background Feature',
+                description: 'Choose how you conceal your dissent while surviving in society.',
+                options: ['False Compliance Cover', 'Underground Sympathiser Network', 'Oracle of the True Path']
+            }
+        ]
+    },
+    Initiate: {
+        description: 'You began formal training within a sacred, mystical, or institutional tradition, learning its rites, rules, and expectations.',
+        skillProficiencies: 'Athletics, Intimidation',
+        toolProficiencies: 'One gaming set',
+        languages: 'None',
+        choices: [
+            {
+                key: 'initiate-god',
+                title: 'Patron God (Amonkhet)',
+                subtitle: '1 Choice',
+                description: 'Select which of the five gods you trained under.',
+                options: ['Oketra the True (Solidarity)', 'Kefnet the Mindful (Knowledge)', 'Rhonas the Indomitable (Strength)', 'Bontu the Glorified (Ambition)', 'Hazoret the Fervent (Zeal)']
+            },
+            {
+                key: 'initiate-feature',
+                title: 'God\'s Favor',
+                subtitle: 'Background Feature',
+                description: 'Choose the tangible benefit your trial devotion grants.',
+                options: ['Temple of the True Hospitality', 'Trial Reputation (respected by citizenry)', 'Cartouche Blessing (divine connection)']
+            }
+        ]
+    },
+    Vizier: {
+        description: 'You advised rulers or powerful figures, using intellect, planning, and political awareness to shape decisions behind the scenes.',
+        skillProficiencies: 'History, Religion',
+        toolProficiencies: 'One gaming set',
+        languages: 'Two of your choice',
+        choices: [
+            {
+                key: 'vizier-god',
+                title: 'God Served',
+                subtitle: '1 Choice',
+                description: 'Select which god\'s will you serve as a vizier.',
+                options: ['Oketra (Solidarity & Law)', 'Kefnet (Intellect & Magic)', 'Rhonas (Hunt & Combat)', 'Bontu (Undeath & Ambition)', 'Hazoret (Devotion & Courage)']
+            },
+            {
+                key: 'vizier-feature',
+                title: 'God\'s Favor',
+                subtitle: 'Background Feature',
+                description: 'Choose the sphere in which your divine service grants you influence.',
+                options: ['Administrative Authority', 'Temple Archive Access', 'Divine Intermediary Recognition']
+            }
+        ]
+    },
+    // ── Setting: Plane Shift / Ixalan ── ────────────────────────────────────
+    Inquisitor: {
+        description: 'You are trained to question, uncover, and press for truth, using scrutiny and resolve to expose what others hide.',
+        skillProficiencies: 'Investigation, Religion',
+        toolProficiencies: 'None',
+        languages: 'Two of your choice',
+        choices: [
+            {
+                key: 'inquisitor-church',
+                title: 'Church Affiliation',
+                subtitle: '1 Choice',
+                description: 'Select the church of the Legion of Dusk that sent you.',
+                options: ['Sun\'s Blood Congregation', 'Church of the Dusk', 'Silent Order Tribunal', 'Legion Field Inquisition']
+            },
+            {
+                key: 'inquisitor-feature',
+                title: 'Inquisitor\'s Mandate',
+                subtitle: 'Background Feature',
+                description: 'Choose the legal authority your mandate grants.',
+                options: ['Right to Question & Detain', 'Church Safe Passage', 'Intelligence Network Access']
+            }
+        ]
+    },
+    // ── Adventurers League ────────────────────────────────────────────────
+    'Black Fist Double Agent': {
+        description: 'You walk a dangerous line between public service and secret allegiance, trading in information and hidden loyalties.',
+        skillProficiencies: 'Deception, Insight',
+        toolProficiencies: 'Disguise Kit, One gaming set',
+        languages: 'None',
+        choices: [
+            {
+                key: 'black-fist-allegiance',
+                title: 'True Allegiance',
+                subtitle: '1 Choice',
+                description: 'Select who you secretly serve while posing as a Black Fist soldier.',
+                options: ['The Harpers', 'The Zhentarim', 'The Emerald Enclave', 'Lords\' Alliance', 'Independent Civic Resistance']
+            },
+            {
+                key: 'black-fist-feature',
+                title: 'Double Agent',
+                subtitle: 'Background Feature',
+                description: 'Choose how your dual status protects and empowers you.',
+                options: ['Official Black Fist Credentials', 'Secret Contact Dead Drops', 'Uniform & Authority Access']
+            }
+        ]
+    },
+    'Dragon Casualty': {
+        description: 'Your life was changed by draconic destruction, and you carry the scars, fear, or determination that followed in its wake.',
+        skillProficiencies: 'Intimidation, Survival',
+        toolProficiencies: 'None',
+        languages: 'Draconic',
+        choices: [
+            {
+                key: 'dragon-casualty-color',
+                title: 'Dragon Colour',
+                subtitle: '1 Choice',
+                description: 'Select what kind of dragon devastated your life.',
+                options: ['Black (Acid)', 'Blue (Lightning)', 'Green (Poison)', 'Red (Fire)', 'White (Cold)', 'Chromatic Horde (Mixed)']
+            },
+            {
+                key: 'dragon-casualty-feature',
+                title: 'Draconic Scar',
+                subtitle: 'Background Feature',
+                description: 'Choose how your visible trauma affects those around you.',
+                options: ['Intimidating Presence (awe from survivors)', 'Survivor Community Recognition', 'Draconic Scholar Contacts']
+            }
+        ]
+    },
+    'Iron Route Bandit': {
+        description: 'You survived by preying on trade routes, learning how to strike quickly, vanish, and live outside the law.',
+        skillProficiencies: 'Animal Handling, Stealth',
+        toolProficiencies: 'One gaming set, Vehicles (Land)',
+        languages: 'None',
+        choices: [
+            {
+                key: 'iron-route-bandit-role',
+                title: 'Band Role',
+                subtitle: '1 Choice',
+                description: 'Select your function in the Iron Route bandit band.',
+                options: ['Scout & Advance Rider', 'Enforcer & Muscle', 'Lookout & Signaler', 'Negotiator & Fence']
+            },
+            {
+                key: 'iron-route-bandit-feature',
+                title: 'Bandit Routes',
+                subtitle: 'Background Feature',
+                description: 'Choose how knowledge of hidden roads benefits you.',
+                options: ['Escape Route Instinct', 'Underworld Fence Contacts', 'Outlaw Safe House Locations']
+            }
+        ]
+    },
+    'Phlan Insurgent': {
+        description: 'You fought against occupation and oppression, shaped by resistance, secrecy, and the cost of rebellion.',
+        skillProficiencies: 'Stealth, Survival',
+        toolProficiencies: 'One artisan\'s tool, Vehicles (Land)',
+        languages: 'None',
+        choices: [
+            {
+                key: 'phlan-insurgent-role',
+                title: 'Resistance Role',
+                subtitle: '1 Choice',
+                description: 'Select your function in the Phlan resistance.',
+                options: ['Saboteur', 'Scout & Look-Out', 'Courier & Smuggler', 'Propaganda Spreader', 'Fighter & Bodyguard']
+            },
+            {
+                key: 'phlan-insurgent-feature',
+                title: 'Phlan Safe House',
+                subtitle: 'Background Feature',
+                description: 'Choose the kind of resistance network you tapped.',
+                options: ['Underground Meeting Points', 'Sympathiser Merchant Network', 'Escape Route Out of Phlan']
+            }
+        ]
+    },
+    'Stojanow Prisoner': {
+        description: 'Captivity hardened you, teaching endurance, suspicion, and the value of every chance to reclaim your freedom.',
+        skillProficiencies: 'Deception, Perception',
+        toolProficiencies: 'One gaming set, Thieves\' Tools',
+        languages: 'None',
+        choices: [
+            {
+                key: 'stojanow-reason',
+                title: 'Reason for Imprisonment',
+                subtitle: '1 Choice',
+                description: 'Select what landed you in Stojanow Gate.',
+                options: ['Resisting Occupation', 'Criminal Charges', 'Mistaken Identity', 'Political Prisoner', 'Failed Rebellion']
+            },
+            {
+                key: 'stojanow-feature',
+                title: 'Fellow Captive',
+                subtitle: 'Background Feature',
+                description: 'Choose the kind of bond forged in captivity.',
+                options: ['Freed Prisoner Network', 'Shared Survival Instincts', 'Prison Guard Who Owes You One']
+            }
+        ]
+    },
+    'Ticklebelly Nomad': {
+        description: 'You grew up on the move across open country, shaped by travel, community memory, and life under wide skies.',
+        skillProficiencies: 'Animal Handling, Nature',
+        toolProficiencies: 'One artisan\'s tool',
+        languages: 'Giant',
+        choices: [
+            {
+                key: 'ticklebelly-role',
+                title: 'Nomad Role',
+                subtitle: '1 Choice',
+                description: 'Select your primary role in your nomadic band.',
+                options: ['Herd Driver', 'Hunter & Forager', 'Path Keeper (Route Memory)', 'Healer & Herbalist']
+            },
+            {
+                key: 'ticklebelly-feature',
+                title: 'Wandering Hospitality',
+                subtitle: 'Background Feature',
+                description: 'Choose how nomad kinship networks support you.',
+                options: ['Caravan Camp Sanctuary', 'Giant Kin Recognition', 'Grassland Trail Knowledge']
+            }
+        ]
+    },
+    'Caravan Specialist': {
+        description: 'You worked the roads between settlements, mastering logistics, negotiation, and the practical realities of long journeys.',
+        skillProficiencies: 'Animal Handling, Survival',
+        toolProficiencies: 'Vehicles (Land)',
+        languages: 'One of your choice',
+        choices: [
+            {
+                key: 'caravan-specialist-role',
+                title: 'Caravan Role',
+                subtitle: '1 Choice',
+                description: 'Select your primary function on a caravan.',
+                options: ['Driver & Teamster', 'Guard Captain', 'Route Planner & Scout', 'Merchant Liaison', 'Farrier & Animal Handler']
+            },
+            {
+                key: 'caravan-specialist-feature',
+                title: 'Trade Roads',
+                subtitle: 'Background Feature',
+                description: 'Choose how caravan experience opens routes and contacts.',
+                options: ['Free Passage on Known Routes', 'Caravanserai Network', 'Merchant Contact Web']
+            }
+        ]
+    },
+    'Earthspur Miner': {
+        description: 'You toiled in the deep places of the earth, learning grit, caution, and the rhythms of dangerous labor underground.',
+        skillProficiencies: 'Athletics, Survival',
+        toolProficiencies: 'Mason\'s Tools',
+        languages: 'Dwarvish or Undercommon',
+        choices: [
+            {
+                key: 'earthspur-miner-specialty',
+                title: 'Mining Specialty',
+                subtitle: '1 Choice',
+                description: 'Select the type of material you typically excavated.',
+                options: ['Gemstone Extraction', 'Iron Ore Mining', 'Deepstone Quarrying', 'Precious Metal Panning', 'Fungal Cavern Foraging']
+            },
+            {
+                key: 'earthspur-miner-feature',
+                title: 'Deep Passages',
+                subtitle: 'Background Feature',
+                description: 'Choose how underground knowledge benefits you.',
+                options: ['Tunnel Route Instinct', 'Dwarven Community Contacts', 'Undercommon Street Network']
+            }
+        ]
+    },
+    Harborfolk: {
+        description: 'You belong to a waterfront community where trade, tides, and hard manual work define daily life.',
+        skillProficiencies: 'Athletics, Sleight of Hand',
+        toolProficiencies: 'One gaming set, Vehicles (Water)',
+        languages: 'None',
+        choices: [
+            {
+                key: 'harborfolk-role',
+                title: 'Harbor Role',
+                subtitle: '1 Choice',
+                description: 'Select your livelihood on the waterfront.',
+                options: ['Fisherman', 'Dockworker & Longshoreman', 'Ferryman', 'Boat Repairer', 'Tiderunner (light cargo)']
+            },
+            {
+                key: 'harborfolk-feature',
+                title: 'Nautical Network',
+                subtitle: 'Background Feature',
+                description: 'Choose how waterfront community ties benefit you.',
+                options: ['Free Passage on Fishing Boats', 'Harbor Master Recognition', 'Waterfront Informant Web']
+            }
+        ]
+    },
+    'Mulmaster Aristocrat': {
+        description: 'You were raised amid rigid status, political tension, and the demanding expectations of an old and powerful city.',
+        skillProficiencies: 'Deception, Performance',
+        toolProficiencies: 'One artisan\'s tool, One musical instrument',
+        languages: 'None',
+        choices: [
+            {
+                key: 'mulmaster-aristocrat-faction',
+                title: 'Family Faction',
+                subtitle: '1 Choice',
+                description: 'Select your family\'s political alignment in Mulmaster.',
+                options: ['High Blade Loyalists', 'Church of Bane Faithful', 'Zhentarim Sympathisers', 'Thayan Ally Family', 'Independent Mercantile House']
+            },
+            {
+                key: 'mulmaster-aristocrat-feature',
+                title: 'Urban Connections',
+                subtitle: 'Background Feature',
+                description: 'Choose how aristocratic ties serve you outside the estate.',
+                options: ['Social Circle Invitations', 'City Council Introductions', 'Black Market Luxury Contacts']
+            }
+        ]
+    },
+    'Phlan Refugee': {
+        description: 'You were driven from home by conflict or disaster, carrying loss, resilience, and the determination to start again.',
+        skillProficiencies: 'Athletics, Insight',
+        toolProficiencies: 'One artisan\'s tool, Vehicles (Land)',
+        languages: 'None',
+        choices: [
+            {
+                key: 'phlan-refugee-departure',
+                title: 'Departure Story',
+                subtitle: '1 Choice',
+                description: 'Select how you were forced to flee Phlan.',
+                options: ['Escaped During the Night of Terror', 'Carried Out Injured by Allies', 'Smuggled Out Underground', 'Fled Ahead of the Occupation', 'Walked Out as a POW Exchange']
+            },
+            {
+                key: 'phlan-refugee-feature',
+                title: 'Refugee Network',
+                subtitle: 'Background Feature',
+                description: 'Choose the mutual aid network you rely on.',
+                options: ['Displaced Community Safe houses', 'Temple Charitable Support', 'Fellow Refugee Information Web']
+            }
+        ]
+    },
+    'Cormanthor Refugee': {
+        description: 'You fled a dangerous homeland tied to ancient forests and old conflicts, leaving with memory, caution, and survival instinct.',
+        skillProficiencies: 'Nature, Survival',
+        toolProficiencies: 'One artisan\'s tool',
+        languages: 'Elvish',
+        choices: [
+            {
+                key: 'cormanthor-contact',
+                title: 'Elven Contact',
+                subtitle: '1 Choice',
+                description: 'Select which elven community sheltered you.',
+                options: ['Moon Elf Settlement', 'Sun Elf Hidden Camp', 'Wood Elf Hunting Band', 'Half-Elf Border Refuge']
+            },
+            {
+                key: 'cormanthor-feature',
+                title: 'Forest Haven',
+                subtitle: 'Background Feature',
+                description: 'Choose how the forest ties still protect you.',
+                options: ['Elven Safe-Path Routes', 'Nature Spirit Recognition', 'Woodland Community Hospitality']
+            }
+        ]
+    },
+    'Gate Urchin': {
+        description: 'You survived on the margins of the city, learning to slip through crowded spaces and make use of scraps others ignored.',
+        skillProficiencies: 'Deception, Sleight of Hand',
+        toolProficiencies: 'Thieves\' Tools, One musical instrument',
+        languages: 'None',
+        choices: [
+            {
+                key: 'gate-urchin-quarter',
+                title: 'Gate Quarter',
+                subtitle: '1 Choice',
+                description: 'Select which city gate district you called home.',
+                options: ['North Gate Quarter', 'South Docks Gate', 'Market Bazaar Gate', 'Temple District Perimeter', 'Guildhall Gate']
+            },
+            {
+                key: 'gate-urchin-feature',
+                title: 'Street Network',
+                subtitle: 'Background Feature',
+                description: 'Choose how your street knowledge pays off.',
+                options: ['Hidden Alley Escape Routes', 'Street Informant Web', 'Safe Cellar Contacts']
+            }
+        ]
+    },
+    'Hillsfar Merchant': {
+        description: 'You built your life around trade, bargaining, and the risks of doing business in an unforgiving region.',
+        skillProficiencies: 'Insight, Persuasion',
+        toolProficiencies: 'Vehicles (Land), One artisan\'s tool',
+        languages: 'None',
+        choices: [
+            {
+                key: 'hillsfar-merchant-specialty',
+                title: 'Trade Specialty',
+                subtitle: '1 Choice',
+                description: 'Select the type of goods or service you traded.',
+                options: ['Imported Luxury Goods', 'Regional Foodstuffs', 'Arms & Armour', 'Information & Maps', 'Arcane Components']
+            },
+            {
+                key: 'hillsfar-merchant-feature',
+                title: 'City Contacts',
+                subtitle: 'Background Feature',
+                description: 'Choose how merchant connections serve you.',
+                options: ['Market Guild Introductions', 'Trade Route Information', 'Warehouse & Storage Credits']
+            }
+        ]
+    },
+    'Hillsfar Smuggler': {
+        description: 'You survived through illicit transport and quiet deals, building connections where law and profit collided.',
+        skillProficiencies: 'Perception, Stealth',
+        toolProficiencies: 'Forgery Kit',
+        languages: 'None',
+        choices: [
+            {
+                key: 'hillsfar-smuggler-route',
+                title: 'Smuggling Route',
+                subtitle: '1 Choice',
+                description: 'Select the route you relied on most.',
+                options: ['Underground Tunnels', 'Forest Bypass Trail', 'River Boat Night Run', 'False Bottom Cart', 'Bribed Gate Contact']
+            },
+            {
+                key: 'hillsfar-smuggler-feature',
+                title: 'Secret Passage',
+                subtitle: 'Background Feature',
+                description: 'Choose how your route knowledge benefits you.',
+                options: ['Known Entrance Points', 'Underground Safehouse Network', 'Corrupt Official Contact']
+            }
+        ]
+    },
+    'Secret Identity': {
+        description: 'You maintain a carefully protected second identity, balancing appearances with the constant risk of exposure.',
+        skillProficiencies: 'Deception, Stealth',
+        toolProficiencies: 'Disguise Kit, Forgery Kit',
+        languages: 'None',
+        choices: [
+            {
+                key: 'secret-identity-reason',
+                title: 'Reason for Hiding',
+                subtitle: '1 Choice',
+                description: 'Select why you maintain a secret identity.',
+                options: ['Fleeing Political Persecution', 'Hunted by a Criminal Organisation', 'Religious Apostasy', 'Noble or Military Desertion', 'Witness to Something Dangerous']
+            },
+            {
+                key: 'secret-identity-feature',
+                title: 'Dual Life',
+                subtitle: 'Background Feature',
+                description: 'Choose how your hidden identity is maintained.',
+                options: ['Forged Documents Network', 'Cover Story with Real Community Ties', 'Magical Disguise Maintenance']
+            }
+        ]
+    },
+    'Shade Fanatic': {
+        description: 'You devoted yourself to a dark and consuming cause, shaped by zeal, secrecy, and the influence of shadowed powers.',
+        skillProficiencies: 'Deception, Intimidation',
+        toolProficiencies: 'None',
+        languages: 'Netherese',
+        choices: [
+            {
+                key: 'shade-fanatic-level',
+                title: 'Shade Affiliation',
+                subtitle: '1 Choice',
+                description: 'Select how deep your devotion to the Shadow runs.',
+                options: ['Outer Circle Devotee', 'Inner Shadow Circle', 'Personal Devotion to a Shadow Deity', 'Shade-Chosen Initiate']
+            },
+            {
+                key: 'shade-fanatic-feature',
+                title: 'Dark Network',
+                subtitle: 'Background Feature',
+                description: 'Choose how the shadow organisation supports you.',
+                options: ['Shadow Contact Handler', 'Hidden Cache Locations', 'Coded Passage Documents']
+            }
+        ]
+    },
+    'Trade Sheriff': {
+        description: 'You kept commerce routes secure through authority, enforcement, and the practical management of restless frontiers.',
+        skillProficiencies: 'History, Investigation',
+        toolProficiencies: 'Vehicles (Land)',
+        languages: 'One of your choice',
+        choices: [
+            {
+                key: 'trade-sheriff-region',
+                title: 'Sheriff Region',
+                subtitle: '1 Choice',
+                description: 'Select the trade route or territory you policed.',
+                options: ['The Iron Route (Phlan to Zhentil)', 'The Amber Road', 'Dagger Falls Border', 'River Stojanow Route', 'Moonsea Coastal Circuit']
+            },
+            {
+                key: 'trade-sheriff-feature',
+                title: 'Enforcer Authority',
+                subtitle: 'Background Feature',
+                description: 'Choose how your sheriff status grants access.',
+                options: ['Merchant Guild Cooperation', 'Road Waystation Hospitality', 'Regional Guard Reinforcement']
+            }
+        ]
+    },
+    "Celebrity Adventurer's Scion": {
+        description: 'You grew up in the orbit of famous adventurers, inheriting public attention, high expectations, and stories larger than life.',
+        skillProficiencies: 'Perception, Performance',
+        toolProficiencies: 'One gaming set, One musical instrument',
+        languages: 'None',
+        choices: [
+            {
+                key: 'celebrity-scion-parent',
+                title: 'Famous Parent\'s Legacy',
+                subtitle: '1 Choice',
+                description: 'Select the type of adventurer your parent is famous for being.',
+                options: ['Dragon Slayer', 'Legendary Mage', 'Master Thief & Rogue', 'Holy Champion', 'Planar Explorer']
+            },
+            {
+                key: 'celebrity-scion-feature',
+                title: 'By Popular Demand',
+                subtitle: 'Background Feature',
+                description: 'Choose how your famous name opens doors.',
+                options: ['Free Lodging from Fans', 'Adventurers\' Guild Recognition', 'Merchant & Noble Hospitality']
+            }
+        ]
+    },
+    'Failed Merchant': {
+        description: 'A collapsed business or bad deal forced you to adapt, leaving you with hard lessons about risk, ambition, and survival.',
+        skillProficiencies: 'Investigation, Persuasion',
+        toolProficiencies: 'Navigator\'s Tools',
+        languages: 'One of your choice',
+        choices: [
+            {
+                key: 'failed-merchant-business',
+                title: 'Failed Business',
+                subtitle: '1 Choice',
+                description: 'Select the type of enterprise that collapsed.',
+                options: ['Trading Company', 'Alchemical Supply Shop', 'Inn & Tavern', 'Cargo Shipping', 'Artisan Workshop', 'Money Lending Venture']
+            },
+            {
+                key: 'failed-merchant-feature',
+                title: 'Supply Chain Contacts',
+                subtitle: 'Background Feature',
+                description: 'Choose what valuable contacts survived the collapse.',
+                options: ['Creditor Who Still Trusts You', 'Supplier Discount Network', 'Former Business Partner Web']
+            }
+        ]
+    },
+    Gambler: {
+        description: 'You live by instinct, nerve, and calculated risk, always reading the table for opportunity or danger.',
+        skillProficiencies: 'Deception, Insight',
+        toolProficiencies: 'One gaming set',
+        languages: 'None',
+        choices: [
+            {
+                key: 'gambler-specialty',
+                title: 'Game Specialty',
+                subtitle: '1 Choice',
+                description: 'Select the game or wager type you excel at.',
+                options: ['Cards & Three-Dragon Ante', 'Dice & Bones', 'Dragon Racing Wagers', 'Combat Arena Betting', 'Street Shell Games']
+            },
+            {
+                key: 'gambler-feature',
+                title: 'Never Tell Me the Odds',
+                subtitle: 'Background Feature',
+                description: 'Choose how your gambling lifestyle pays off.',
+                options: ['Known at every Gambling Den (free entry)', 'Underground Bookie Contacts', 'Debt-Holder Leverage Club']
+            }
+        ]
+    },
+    Plaintiff: {
+        description: 'You were drawn into legal conflict and learned to survive through persistence, testimony, and understanding institutions of power.',
+        skillProficiencies: 'Investigation, Persuasion',
+        toolProficiencies: 'None',
+        languages: 'None',
+        choices: [
+            {
+                key: 'plaintiff-dispute',
+                title: 'Legal Dispute',
+                subtitle: '1 Choice',
+                description: 'Select the nature of your legal conflict.',
+                options: ['Property & Inheritance Claim', 'Criminal Wrongful Accusation', 'Corporate Breach of Contract', 'Noble Grievance Case', 'Guild Arbitration Dispute']
+            },
+            {
+                key: 'plaintiff-feature',
+                title: 'Legal Connections',
+                subtitle: 'Background Feature',
+                description: 'Choose how your experience with the courts benefits you.',
+                options: ['Lawyer & Advocate Contacts', 'Civic Records Access', 'Sympathetic Magistrate Acquaintance']
+            }
+        ]
+    },
+    'Rival Intern': {
+        description: 'You come from a competitive environment where ambition, comparison, and the need to prove yourself shaped your outlook.',
+        skillProficiencies: 'History, Investigation',
+        toolProficiencies: 'One type of artisan\'s tools',
+        languages: 'One of your choice',
+        choices: [
+            {
+                key: 'rival-intern-company',
+                title: 'Organization',
+                subtitle: '1 Choice',
+                description: 'Select where you served your internship.',
+                options: ['Acquisitions Incorporated', 'A Rival Adventuring Company', 'A Noble House Trade Fleet', 'A Wizard Consortium', 'A Thieves\' Guild Front Office']
+            },
+            {
+                key: 'rival-intern-rival',
+                title: 'Rival',
+                subtitle: 'Background Feature',
+                description: 'Choose who your chief rival is and how their existence keeps you sharp.',
+                options: ['A Former Colleague Who Beat You Out', 'An Intern from a Competing Firm', 'A Well-Connected Noble Trainee']
             }
         ]
     }

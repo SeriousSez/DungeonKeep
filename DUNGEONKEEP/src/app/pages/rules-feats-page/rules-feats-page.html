@@ -1,0 +1,80 @@
+<main class="feats-page">
+
+    <section class="page-hero panel">
+        <div class="hero-copy">
+            <p class="eyebrow">Rules Library</p>
+            <h1>Feats</h1>
+            <p class="hero-text">
+                Browse all {{ allFeats.length }} feats from the 2024 Player's Handbook. Feats are divided into
+                Origin feats (taken at character creation), General feats (level 4 and beyond), and Epic Boons
+                (level 19+). Every feat listed includes an ability score increase.
+            </p>
+        </div>
+        <div class="hero-actions">
+            <a routerLink="/rules" class="ghost-button">
+                <i class="fa-duotone fa-thin fa-arrow-left"></i>
+                Back to Rules Library
+            </a>
+        </div>
+    </section>
+
+    <section class="filter-bar panel">
+        <div class="search-wrap">
+            <i class="fa-duotone fa-thin fa-magnifying-glass search-icon"></i>
+            <input type="text" class="search-input" placeholder="Search feats…" [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" />
+            @if (searchTerm()) {
+            <button class="clear-search" (click)="clearSearch()" aria-label="Clear search">
+                <i class="fa-duotone fa-thin fa-xmark"></i>
+            </button>
+            }
+        </div>
+        <div class="category-filters">
+            @for (filter of categoryFilters; track filter.id) {
+            <button class="filter-chip" [class.active]="categoryFilter() === filter.id" [class.chip-origin]="filter.id === 'origin'" [class.chip-general]="filter.id === 'general'" [class.chip-epic]="filter.id === 'epic-boon'" (click)="setCategoryFilter(filter.id)">
+                {{ filter.label }}
+            </button>
+            }
+        </div>
+    </section>
+
+    @if (filteredFeats().length === 0) {
+    <div class="empty-state panel">
+        <i class="fa-duotone fa-thin fa-star empty-icon"></i>
+        <p class="empty-title">No feats found</p>
+        <p class="empty-sub">Try adjusting your search or filter.</p>
+    </div>
+    } @else {
+    <p class="results-count">{{ filteredFeats().length }} feat{{ filteredFeats().length === 1 ? '' : 's' }}</p>
+    <section class="feats-grid">
+        @for (feat of filteredFeats(); track feat.slug) {
+        <a class="feat-card" [class]="'feat-card cat-' + feat.category" [routerLink]="['/rules/feats', feat.slug]">
+            <div class="card-header">
+                <span class="category-badge badge-{{ feat.category }}">{{ categoryLabel(feat.category) }}</span>
+                <span class="card-source">{{ feat.source }}</span>
+            </div>
+            <h2 class="feat-name">{{ feat.name }}</h2>
+            @if (feat.abilityScoreIncrease) {
+            <div class="trait-row">
+                <span class="trait-label">
+                    <i class="fa-duotone fa-thin fa-arrow-up-right-dots"></i>
+                    ASI
+                </span>
+                <span class="trait-value">{{ feat.abilityScoreIncrease }}</span>
+            </div>
+            }
+            @if (feat.prerequisite) {
+            <div class="trait-row">
+                <span class="trait-label">
+                    <i class="fa-duotone fa-thin fa-lock"></i>
+                    Req.
+                </span>
+                <span class="trait-value prereq">{{ feat.prerequisite }}</span>
+            </div>
+            }
+            <p class="feat-benefit">{{ feat.benefit }}</p>
+        </a>
+        }
+    </section>
+    }
+
+</main>

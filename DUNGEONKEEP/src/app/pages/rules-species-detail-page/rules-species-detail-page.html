@@ -1,0 +1,155 @@
+@if (species(); as entry) {
+<main class="species-detail-page">
+
+    <!-- Hero -->
+    <section class="detail-hero panel" [class]="'detail-hero panel source-' + entry.sourceCategory">
+        @if (speciesImagePath(entry.slug); as imgSrc) {
+        <div class="hero-portrait">
+            <img [src]="imgSrc" [alt]="entry.name" />
+        </div>
+        } @else {
+        <div class="hero-icon">
+            <i [class]="'fa-duotone fa-thin fa-' + entry.icon"></i>
+        </div>
+        }
+        <div class="hero-copy">
+            <span class="source-badge">{{ entry.source }}</span>
+            <h1>{{ entry.name }}</h1>
+            <p class="hero-tagline">{{ entry.tagline }}</p>
+            <div class="hero-stats">
+                <span class="hero-stat">
+                    <span class="hero-stat-label">Size</span>
+                    <span class="hero-stat-value">{{ entry.size }}</span>
+                </span>
+                <span class="stat-divider"></span>
+                <span class="hero-stat">
+                    <span class="hero-stat-label">Speed</span>
+                    <span class="hero-stat-value">{{ entry.speed }} ft.</span>
+                </span>
+                <span class="stat-divider"></span>
+                <span class="hero-stat">
+                    <span class="hero-stat-label">Darkvision</span>
+                    <span class="hero-stat-value">{{ entry.darkvision ? entry.darkvision + ' ft.' : 'None' }}</span>
+                </span>
+                @if (entry.swimSpeed) {
+                <span class="stat-divider"></span>
+                <span class="hero-stat">
+                    <span class="hero-stat-label">Swim Speed</span>
+                    <span class="hero-stat-value">{{ entry.swimSpeed }} ft.</span>
+                </span>
+                }
+            </div>
+        </div>
+        <div class="hero-nav">
+            <a routerLink="/rules/species" class="ghost-button">
+                <i class="fa-duotone fa-thin fa-arrow-left"></i>
+                All Species
+            </a>
+        </div>
+    </section>
+
+    <!-- Core Profile -->
+    @if (entry.coreTraits.length) {
+    <section class="section panel">
+        <div class="section-heading section-heading--stacked">
+            <p class="eyebrow">Core Profile</p>
+            <h2>Species Traits at a Glance</h2>
+        </div>
+        <div class="traits-grid">
+            @for (trait of entry.coreTraits; track trait.label) {
+            <div class="trait-card">
+                <span class="trait-label">{{ trait.label }}</span>
+                <span class="trait-value">{{ trait.value }}</span>
+            </div>
+            }
+        </div>
+        @if (entry.languages.length) {
+        <div class="languages-row">
+            <span class="languages-label">Languages:</span>
+            @for (lang of entry.languages; track lang) {
+            <span class="language-chip">{{ lang }}</span>
+            }
+        </div>
+        }
+    </section>
+    }
+
+    <!-- Summary -->
+    <section class="section panel">
+        <div class="section-heading section-heading--stacked">
+            <p class="eyebrow">Overview</p>
+            <h2>About {{ entry.name }}</h2>
+        </div>
+        <p class="summary-text">{{ entry.summary }}</p>
+    </section>
+
+    <!-- Racial Traits -->
+    @if (entry.traits.length) {
+    <section class="section panel">
+        <div class="section-heading section-heading--stacked">
+            <p class="eyebrow">Species Traits</p>
+            <h2>Innate Abilities</h2>
+        </div>
+        <div class="traits-list">
+            @for (trait of entry.traits; track trait.name) {
+            <div class="trait-row" [class.is-expanded]="expandedTraits()[trait.name]">
+                <button class="trait-header" (click)="toggleTrait(trait.name)" type="button">
+                    <span class="trait-name">{{ trait.name }}</span>
+                    <span class="trait-toggle">
+                        <i [class]="'fa-duotone fa-thin ' + (expandedTraits()[trait.name] ? 'fa-chevron-up' : 'fa-chevron-down')"></i>
+                    </span>
+                </button>
+                @if (expandedTraits()[trait.name]) {
+                <div class="trait-description">
+                    <p>{{ trait.description }}</p>
+                </div>
+                }
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- Key Features -->
+    @if (entry.keyFeatures.length) {
+    <section class="section panel">
+        <div class="section-heading section-heading--stacked">
+            <p class="eyebrow">Mechanics Spotlight</p>
+            <h2>Key Features</h2>
+        </div>
+        <div class="features-grid">
+            @for (feature of entry.keyFeatures; track feature.title) {
+            <div class="feature-card" [class.is-expanded]="expandedFeatures()[feature.title]">
+                <button class="feature-header" (click)="toggleFeature(feature.title)" type="button">
+                    <div class="feature-header-copy">
+                        <span class="feature-title">{{ feature.title }}</span>
+                        <span class="feature-summary">{{ feature.summary }}</span>
+                    </div>
+                    <span class="feature-toggle">
+                        <i [class]="'fa-duotone fa-thin ' + (expandedFeatures()[feature.title] ? 'fa-chevron-up' : 'fa-chevron-down')"></i>
+                    </span>
+                </button>
+                @if (expandedFeatures()[feature.title]) {
+                <div class="feature-details">
+                    <p>{{ feature.details }}</p>
+                </div>
+                }
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+</main>
+} @else {
+<main class="species-detail-page not-found">
+    <section class="section panel">
+        <p class="eyebrow">Species Not Found</p>
+        <h2>No species data for that slug.</h2>
+        <a routerLink="/rules/species" class="ghost-button">
+            <i class="fa-duotone fa-thin fa-arrow-left"></i>
+            Back to All Species
+        </a>
+    </section>
+</main>
+}

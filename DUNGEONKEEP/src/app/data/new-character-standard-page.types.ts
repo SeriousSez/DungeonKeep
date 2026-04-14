@@ -38,6 +38,9 @@ export interface BackgroundDetail {
     languages: string;
     choices: BackgroundChoice[];
     sourceUrl: string;
+    abilityScores?: string;
+    feat?: string;
+    equipment?: string;
 }
 
 export interface SpeciesDetail {

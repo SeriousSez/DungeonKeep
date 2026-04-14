@@ -1,0 +1,471 @@
+:host {
+    display: block;
+}
+
+.spells-page {
+    display: grid;
+    gap: 20px;
+    padding-bottom: 48px;
+}
+
+/* --- Panel shell --- */
+.panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 24px;
+    box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(18px);
+}
+
+/* --- Hero --- */
+.page-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 20px;
+    align-items: end;
+    padding: 24px;
+}
+
+.eyebrow {
+    margin: 0 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 0.72rem;
+    color: var(--text-soft);
+}
+
+.page-hero h1 {
+    margin: 0;
+    font-family: var(--display-font);
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    line-height: 1.04;
+    color: var(--text-main);
+}
+
+.hero-text {
+    margin: 10px 0 0;
+    color: var(--text-muted);
+    line-height: 1.6;
+    max-width: 68ch;
+}
+
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* --- Filter panel --- */
+.filter-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 20px;
+}
+
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.filter-label {
+    flex-shrink: 0;
+    font-size: 0.73rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-soft);
+    width: 48px;
+}
+
+.search-wrap {
+    position: relative;
+    flex: 1 1 260px;
+    min-width: 200px;
+    margin-left: 58px;
+
+    .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        font-size: 0.95rem;
+        pointer-events: none;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 8px 36px 8px 36px;
+        border-radius: 100px;
+        border: 1px solid var(--panel-border);
+        background: var(--color-surface);
+        color: var(--text-main);
+        font-size: 0.9rem;
+        outline: none;
+        box-sizing: border-box;
+
+        &::placeholder {
+            color: var(--text-muted);
+        }
+
+        &:focus {
+            border-color: var(--color-primary);
+        }
+    }
+
+    .clear-search {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--text-muted);
+        padding: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+
+        &:hover {
+            color: var(--text-main);
+        }
+    }
+}
+
+.chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.filter-chip {
+    padding: 4px 12px;
+    border-radius: 100px;
+    border: 1px solid var(--panel-border);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+
+    &:hover {
+        border-color: var(--color-primary);
+        color: var(--text-main);
+    }
+
+    &.active {
+        color: #fff;
+        background: var(--color-primary);
+        border-color: transparent;
+    }
+}
+
+/* --- Results count --- */
+.results-count {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    padding-left: 4px;
+}
+
+/* --- Spells grid --- */
+.spells-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+/* --- Spell card --- */
+.spell-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    border: 1px solid var(--panel-border);
+    background: var(--panel-bg);
+    box-shadow: var(--panel-shadow);
+    text-decoration: none;
+    color: var(--text-main);
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 24px rgba(62, 39, 24, 0.13);
+        border-color: color-mix(in srgb, var(--color-primary) 40%, var(--panel-border));
+    }
+}
+
+/* --- Card top row --- */
+.card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.level-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-size: 0.64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    color: var(--color-primary);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+
+/* School indicator dot */
+.school-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    &.school-abj {
+        background: #b8860b;
+    }
+
+    &.school-con {
+        background: #00897b;
+    }
+
+    &.school-div {
+        background: #1565c0;
+    }
+
+    &.school-enc {
+        background: #ad1457;
+    }
+
+    &.school-evo {
+        background: #bf360c;
+    }
+
+    &.school-ill {
+        background: #4527a0;
+    }
+
+    &.school-nec {
+        background: #6a1b9a;
+    }
+
+    &.school-tra {
+        background: #2e7d32;
+    }
+
+    &.school-other {
+        background: var(--text-muted);
+    }
+}
+
+/* --- Spell name --- */
+.spell-name {
+    margin: 0;
+    font-family: var(--display-font);
+    font-size: 1rem;
+    line-height: 1.25;
+    color: var(--text-main);
+}
+
+/* --- School label --- */
+.spell-school {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-soft);
+    opacity: 0.7;
+}
+
+/* --- Meta row --- */
+.spell-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 2px;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.74rem;
+    color: var(--text-muted);
+
+    i {
+        font-size: 0.68rem;
+        opacity: 0.7;
+        flex-shrink: 0;
+    }
+}
+
+/* --- Tags --- */
+.spell-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.tag {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 100px;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+
+    &.tag-concentration {
+        background: rgba(91, 127, 212, 0.12);
+        color: #3d5ea0;
+        border: 1px solid rgba(91, 127, 212, 0.3);
+    }
+
+    &.tag-ritual {
+        background: rgba(46, 125, 50, 0.1);
+        color: #2e7d32;
+        border: 1px solid rgba(46, 125, 50, 0.25);
+    }
+
+    &.tag-damage {
+        background: rgba(191, 54, 12, 0.08);
+        color: #bf360c;
+        border: 1px solid rgba(191, 54, 12, 0.2);
+        max-width: 90px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+/* --- Empty state --- */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 24px;
+    text-align: center;
+    gap: 8px;
+}
+
+.empty-icon {
+    font-size: 2.5rem;
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+.empty-title {
+    margin: 8px 0 0;
+    font-family: var(--display-font);
+    font-size: 1.2rem;
+    color: var(--text-main);
+}
+
+.empty-sub {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* --- Dark mode --- */
+:root.theme-dark {
+    .tag-concentration {
+        color: #7b9fd4;
+        background: rgba(91, 127, 212, 0.14);
+        border-color: rgba(91, 127, 212, 0.28);
+    }
+
+    .tag-ritual {
+        color: #66bb6a;
+        background: rgba(102, 187, 106, 0.1);
+        border-color: rgba(102, 187, 106, 0.22);
+    }
+
+    .tag-damage {
+        color: #ff7043;
+        background: rgba(255, 112, 67, 0.1);
+        border-color: rgba(255, 112, 67, 0.22);
+    }
+
+    .school-dot.school-abj {
+        background: #e6ac00;
+    }
+
+    .school-dot.school-evo {
+        background: #ff6e40;
+    }
+
+    .school-dot.school-enc {
+        background: #f06292;
+    }
+
+    .school-dot.school-div {
+        background: #64b5f6;
+    }
+
+    .school-dot.school-con {
+        background: #26c6da;
+    }
+
+    .school-dot.school-ill {
+        background: #9575cd;
+    }
+
+    .school-dot.school-nec {
+        background: #ba68c8;
+    }
+
+    .school-dot.school-tra {
+        background: #66bb6a;
+    }
+}
+
+/* --- Responsive --- */
+@media (max-width: 1200px) {
+    .spells-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .spells-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .page-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-actions {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 520px) {
+    .spells-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .search-wrap {
+        margin-left: 0;
+    }
+
+    .filter-label {
+        width: auto;
+    }
+}

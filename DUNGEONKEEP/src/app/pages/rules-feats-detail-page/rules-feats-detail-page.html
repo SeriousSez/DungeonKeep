@@ -1,0 +1,83 @@
+@if (feat(); as f) {
+<main class="feat-detail-page">
+
+    <!-- Hero -->
+    <section class="detail-hero panel">
+        <div class="hero-icon">
+            <i [class]="'fa-duotone fa-thin ' + categoryIcon(f.category)"></i>
+        </div>
+        <div class="hero-copy">
+            <div class="hero-badges">
+                <span class="category-badge badge-{{ f.category }}">{{ categoryLabel(f.category) }}</span>
+                <span class="source-badge">{{ f.source }}</span>
+            </div>
+            <h1>{{ f.name }}</h1>
+            @if (f.prerequisite) {
+            <p class="hero-prereq">
+                <i class="fa-duotone fa-thin fa-lock"></i>
+                Requires: {{ f.prerequisite }}
+            </p>
+            }
+        </div>
+        <div class="hero-nav">
+            <a routerLink="/rules/feats" class="ghost-button">
+                <i class="fa-duotone fa-thin fa-arrow-left"></i>
+                All Feats
+            </a>
+        </div>
+    </section>
+
+    <!-- Core Benefit -->
+    <section class="section panel">
+        <div class="section-heading">
+            <p class="eyebrow">What you gain</p>
+            <h2>Feat Benefit</h2>
+        </div>
+        <p class="benefit-text">{{ f.benefit }}</p>
+    </section>
+
+    <!-- Stats block -->
+    @if (f.abilityScoreIncrease || f.prerequisite) {
+    <section class="section panel">
+        <div class="section-heading">
+            <p class="eyebrow">Details</p>
+            <h2>Requirements &amp; Bonuses</h2>
+        </div>
+        <div class="stats-grid">
+            @if (f.abilityScoreIncrease) {
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-duotone fa-thin fa-arrow-up-right-dots"></i></div>
+                <div class="stat-content">
+                    <span class="stat-label">Ability Score Increase</span>
+                    <span class="stat-value">{{ f.abilityScoreIncrease }}</span>
+                </div>
+            </div>
+            }
+            @if (f.prerequisite) {
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-duotone fa-thin fa-lock"></i></div>
+                <div class="stat-content">
+                    <span class="stat-label">Prerequisite</span>
+                    <span class="stat-value">{{ f.prerequisite }}</span>
+                </div>
+            </div>
+            }
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-duotone fa-thin fa-tag"></i></div>
+                <div class="stat-content">
+                    <span class="stat-label">Category</span>
+                    <span class="stat-value">{{ categoryLabel(f.category) }}</span>
+                </div>
+            </div>
+        </div>
+    </section>
+    }
+
+</main>
+} @else {
+<div class="not-found">
+    <i class="fa-duotone fa-thin fa-circle-exclamation"></i>
+    <p>Feat not found.</p>
+    <a routerLink="/rules/feats" class="ghost-button">Back to Feats</a>
+</div>
+}

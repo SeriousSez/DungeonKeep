@@ -1,0 +1,328 @@
+:host {
+    display: block;
+}
+
+.species-page {
+    display: grid;
+    gap: 24px;
+    padding-bottom: 48px;
+}
+
+/* ----- Hero ----- */
+
+.panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 24px;
+    box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(18px);
+}
+
+.page-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 20px;
+    align-items: end;
+    padding: 24px;
+}
+
+.eyebrow {
+    margin: 0 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 0.72rem;
+    color: var(--text-soft);
+}
+
+.page-hero h1 {
+    margin: 0;
+    font-family: var(--display-font);
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    line-height: 1.04;
+    color: var(--text-main);
+}
+
+.hero-text {
+    margin: 10px 0 0;
+    color: var(--text-muted);
+    line-height: 1.6;
+    max-width: 68ch;
+}
+
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* ----- Grid ----- */
+
+.species-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+}
+
+/* ----- Species Card ----- */
+
+.species-card {
+    display: flex;
+    flex-direction: column;
+    border-radius: 20px;
+    border: 1px solid var(--panel-border);
+    background: var(--panel-bg);
+    text-decoration: none;
+    color: var(--text-main);
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow: var(--panel-shadow);
+}
+
+.species-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 44px rgba(62, 39, 24, 0.18);
+    border-color: color-mix(in srgb, var(--accent-primary) 50%, var(--panel-border));
+}
+
+/* ----- Card Banner ----- */
+
+.card-banner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 160px;
+    padding: 20px;
+    overflow: hidden;
+}
+
+/* PHB 2024 → warm amber/parchment */
+.source-phb .card-banner {
+    background: linear-gradient(150deg, #6b3c14 0%, #9c5b2a 40%, #c27c3a 100%);
+}
+
+/* Expanded sourcebooks → deep teal */
+.source-expanded .card-banner {
+    background: linear-gradient(150deg, #0a2a2a 0%, #155555 40%, #2a9090 100%);
+}
+
+/* Elemental → deep sapphire-blue */
+.source-elemental .card-banner {
+    background: linear-gradient(150deg, #0a1a3a 0%, #1a3a7a 40%, #2a60b0 100%);
+}
+
+/* Legacy → muted slate */
+.source-legacy .card-banner {
+    background: linear-gradient(150deg, #1a1a22 0%, #2e2e3e 40%, #48485e 100%);
+}
+
+:root.theme-dark .source-phb .card-banner {
+    background: linear-gradient(150deg, #3d2007 0%, #6b3c14 40%, #8a5420 100%);
+}
+
+:root.theme-dark .source-expanded .card-banner {
+    background: linear-gradient(150deg, #041414 0%, #0a3030 40%, #1a6060 100%);
+}
+
+:root.theme-dark .source-elemental .card-banner {
+    background: linear-gradient(150deg, #050e22 0%, #0e2252 40%, #1a3a7a 100%);
+}
+
+:root.theme-dark .source-legacy .card-banner {
+    background: linear-gradient(150deg, #0e0e14 0%, #1c1c28 40%, #2e2e3e 100%);
+}
+
+.source-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 1;
+    padding: 3px 8px;
+    border-radius: 100px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    background: rgba(0, 0, 0, 0.4);
+    color: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(4px);
+    max-width: calc(100% - 24px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.banner-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+}
+
+.centaur {
+    object-position: center 25%;
+}
+
+.yuan-ti {
+    object-position: center 20%;
+}
+
+.kobold,
+.owlin {
+    object-position: center 15%;
+}
+
+.lizardfolk,
+.changeling,
+.kenku {
+    object-position: center 10%;
+}
+
+.githzerai,
+.hobgoblin,
+.satyr {
+    object-position: center 5%;
+}
+
+.banner-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom,
+            rgba(0, 0, 0, 0.08) 0%,
+            rgba(0, 0, 0, 0.22) 100%);
+}
+
+.card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 68px;
+    height: 68px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+
+    i {
+        font-size: 2rem;
+        color: rgba(255, 255, 255, 0.9);
+    }
+}
+
+/* ----- Card Body ----- */
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px 20px 20px;
+    flex: 1;
+}
+
+.species-name {
+    margin: 0;
+    font-family: var(--display-font);
+    font-size: 1.3rem;
+    line-height: 1.2;
+    color: var(--text-main);
+}
+
+.species-tagline {
+    margin: 0;
+    font-style: italic;
+    font-size: 0.85rem;
+    color: var(--color-primary);
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.species-summary {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex: 1;
+}
+
+.species-stats {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 12px;
+    flex: 1;
+    border-right: 1px solid var(--panel-border);
+
+    &:last-child {
+        border-right: none;
+    }
+}
+
+.stat-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-soft);
+}
+
+.stat-value {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-main);
+    line-height: 1.3;
+}
+
+.view-details-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    margin-top: auto;
+
+    i {
+        font-size: 0.75rem;
+        transition: transform 0.2s ease;
+    }
+}
+
+.species-card:hover .view-details-btn i {
+    transform: translateX(3px);
+}
+
+/* ----- Responsive ----- */
+
+@media (max-width: 1024px) {
+    .species-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .page-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-actions {
+        justify-content: flex-start;
+    }
+
+    .species-grid {
+        grid-template-columns: 1fr;
+    }
+}
