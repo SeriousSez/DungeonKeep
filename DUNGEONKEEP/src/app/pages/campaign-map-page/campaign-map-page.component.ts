@@ -102,6 +102,7 @@ const MAP_GRID_CONTROLS_EXPANDED_STORAGE_KEY = 'dungeonkeep.campaign-map.grid-co
 const MAP_PLACEMENT_HINT_VISIBILITY_STORAGE_KEY = 'dungeonkeep.campaign-map.show-placement-hint';
 const MAP_AUTOSAVE_DELAY_MS = 450;
 const MAP_VISION_MEMORY_LIMIT = 40;
+const MAP_VISION_FEET_PER_GRID_SQUARE = 5;
 const MAP_VISION_MEMORY_ORIGIN_THRESHOLD = 0.02;
 const MAP_VISION_MEMORY_PERSIST_DELAY_MS = 1200;
 const MAP_VISION_MEMORY_PENDING_STORAGE_KEY = 'dungeonkeep.campaign-map.pending-vision-memory';
@@ -592,6 +593,10 @@ export class CampaignMapPageComponent {
         const token = this.visionPreviewToken();
         return token ? this.resolveTokenVisionRangeFeet(token) : 0;
     });
+    readonly visionPreviewRangeSquares = computed(() => {
+        const rangeFeet = this.visionPreviewRangeFeet();
+        return rangeFeet > 0 ? this.visionRangeSquares(rangeFeet) : 0;
+    });
     readonly visionPreviewSummary = computed(() => {
         const token = this.visionPreviewToken();
         if (!token) {
@@ -602,12 +607,13 @@ export class CampaignMapPageComponent {
             ? this.campaignCharacters().find((character) => character.id === token.assignedCharacterId) ?? null
             : null;
         const rangeFeet = this.resolveTokenVisionRangeFeet(token);
+        const rangeSquares = this.visionRangeSquares(rangeFeet);
 
         if (assignedCharacter) {
-            return `${assignedCharacter.name} reveals roughly ${rangeFeet} ft of sight using assigned character senses.`;
+            return `${assignedCharacter.name} reveals roughly ${rangeFeet} ft of sight across about ${rangeSquares} grid squares.`;
         }
 
-        return `This token reveals roughly ${rangeFeet} ft of sight using the default token vision range.`;
+        return `This token reveals roughly ${rangeFeet} ft of sight across about ${rangeSquares} grid squares.`;
     });
     readonly temporaryVisionPreviewActive = computed(() => this.shiftKeyPressed() && !!this.visionPreviewToken());
     readonly manualVisionOverlayActive = computed(() => (this.showVisionPreview() || this.temporaryVisionPreviewActive()) && !!this.visionPreviewToken());
@@ -4871,7 +4877,7 @@ export class CampaignMapPageComponent {
     private buildVisionPolygon(token: CampaignMapToken): CampaignMapPoint[] {
         const origin = this.tokenVisionOrigin(token);
         const rangeFeet = this.resolveTokenVisionRangeFeet(token);
-        const rangePixels = this.visionRangePixels(rangeFeet);
+        const rangePixels = this.visionRangePixels(rangeFeet, token.size);
         const wallSegments = this.mapWallSegments('vision');
         const boundarySegments = [
             [{ x: 0, y: 0 }, { x: 1000, y: 0 }],
@@ -5430,10 +5436,22 @@ export class CampaignMapPageComponent {
         return Math.hypot(left.x - right.x, left.y - right.y);
     }
 
-    private visionRangePixels(rangeFeet: number): number {
-        const cellSize = Math.min(1000 / this.gridColumns(), 700 / this.gridRows());
-        const cellCount = Math.max(1, rangeFeet / 5);
-        return cellSize * cellCount;
+    private gridSquareSizePixels(): number {
+        return Math.min(1000 / this.gridColumns(), 700 / this.gridRows());
+    }
+
+    private visionRangeSquares(rangeFeet: number): number {
+        if (!Number.isFinite(rangeFeet) || rangeFeet <= 0) {
+            return 0;
+        }
+
+        return Math.max(1, rangeFeet / MAP_VISION_FEET_PER_GRID_SQUARE);
+    }
+
+    private visionRangePixels(rangeFeet: number, tokenSize = 1): number {
+        const rangeSquares = this.visionRangeSquares(rangeFeet);
+        const tokenEdgeSquares = this.normalizeTokenGridSpan(tokenSize) / 2;
+        return this.gridSquareSizePixels() * (rangeSquares + tokenEdgeSquares);
     }
 
     private mapWallSegments(kind: 'all' | 'vision' | 'movement' = 'all'): Array<[{ x: number; y: number }, { x: number; y: number }]> {
