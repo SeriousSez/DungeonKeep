@@ -1994,8 +1994,8 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                     ? "The result should look like a professionally drawn regional map with hand-inked terrain, watercolor shading, roads, settlements, forests, mountains, and coastlines, but no visible text or lettering."
                     : "The result should look like a professionally drawn regional map with hand-inked terrain, watercolor shading, roads, settlements, forests, mountains, coastlines, and fantasy labels."),
             background == "Battlemap"
-                ? "Do not create a visible grid, token layout, character portrait, UI screenshot, perspective scene illustration, isometric view, oblique angle, or side-on scenery."
-                : "Do not create a battlemap, token layout, grid, character portrait, or UI screenshot.",
+                ? "Do not create a visible grid, square grid, hex grid, cell outlines, checkerboard paving, token layout, character portrait, UI screenshot, perspective scene illustration, isometric view, oblique angle, or side-on scenery. The app overlays its own tactical grid separately."
+                : "Do not create a battlemap, token layout, visible grid, square grid, hex grid, cell outlines, or UI screenshot.",
             background == "Battlemap"
                 ? "Compose the image as a true orthographic top-down 2D virtual tabletop encounter board suitable for tactical play and overlaying interactive tokens. The camera must be perpendicular to the ground plane, looking straight down at 90 degrees."
                 : "Compose the image as a wide map background suitable for overlaying interactive routes and landmarks.",
@@ -2196,15 +2196,15 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
     {
         var localePrompt = battlemapLocale switch
         {
-            "TownStreet" => "Create a compact street-fight battlemat as a flat top-down street plan with alley junctions, market stalls, wagons, low walls, doors, fences, and choke points. Show only the immediate skirmish block, not the surrounding town, and do not use perspective buildings or side-on walls.",
-            "BuildingInterior" => "Create a roof-removed interior floor plan battlemat with connected rooms, halls, doors, stairs, furniture, and close-quarters cover. The entire image must be the inside of the building only.",
+            "TownStreet" => "Create a compact street-fight battlemat as a flat top-down street plan with alley junctions, market stalls, wagons, low walls, fences, and choke points. Show only the immediate skirmish block, not the surrounding town, and do not use perspective buildings or side-on walls.",
+            "BuildingInterior" => "Create a roof-removed interior floor plan battlemat with connected rooms, halls, stairs, furniture, and close-quarters cover. Prefer open thresholds or archways instead of explicit door objects. The entire image must be the inside of the building only.",
             "Roadside" => "Create a roadside ambush battlemat as a flat top-down ground plan with a short road segment, ditches, brush, rocks, broken fencing, wagons, and flanking cover. Keep the scene local and tactical, with no cinematic road perspective or visible terrain sidewalls.",
             "Cliffside" => "Create a cliffside battlemat as a continuous top-down ground surface running along a dangerous cliff edge. Show narrow paths, exposed ledges, switchbacks, ropes, broken stone, sparse cover, and tactical high ground inside one compact encounter area. Do not create floating rock islands, cutaway chasms with visible side walls, suspended platforms over a white void, or a 3D diorama view.",
             "Riverside" => "Create a riverside battlemat as a flat top-down encounter board with a shallow crossing, muddy banks, reeds, stones, a small bridge or ford, and water hazards inside one compact encounter area. Show the river edge and banks as map shapes from above, not as scenic side views.",
             "Ruins" => "Create a ruined-site battlemat as a flat top-down site plan with collapsed walls, broken chambers, rubble, cracked floors, scattered pillars, and ancient hard cover within one playable site. Ruins must read as footprints and broken outlines from directly above.",
-            "DungeonRoom" => "Create a dungeon floor-plan battlemat with chambers, side passages, pillars, doors, stairs, and classic tactical room geometry. Keep the image tightly focused on the playable rooms.",
-            "Tavern" => "Create a tavern brawl battlemat as a roof-removed interior floor plan. Show a single tavern or inn interior only, filled by wooden plank floors, tables, chairs, booths, a bar counter, stools, a hearth, stairs, doors, side rooms, and kitchen access. The whole image must read as an indoor playable tavern layout from directly above. Keep the room warmly lit and readable, with brighter plank floors, clearer table separation, and visible room features instead of a dim or shadow-crushed interior.",
-            _ => "Create a forest-clearing battlemat as a flat top-down outdoor ground plan with trees seen as canopies, roots, stumps, brush, rocks, and natural cover surrounding one compact playable clearing. Do not create scenic forest perspective or visible terrain sidewalls."
+            "DungeonRoom" => "Create a dungeon floor-plan battlemat with chambers, side passages, pillars, stairs, and classic tactical room geometry. Prefer open thresholds, arches, or simple wall gaps instead of visible door props. Keep the image tightly focused on the playable rooms.",
+            "Tavern" => "Create a tavern brawl battlemat as a roof-removed interior floor plan. Show a single tavern or inn interior only, filled by wooden plank floors, tables, chairs, booths, a bar counter, stools, a hearth, stairs, side rooms, and kitchen access. Prefer open thresholds or archways instead of explicit door objects. The whole image must read as an indoor playable tavern layout from directly above. Keep the room warmly lit and readable, with brighter plank floors, clearer table separation, and visible room features instead of a dim or shadow-crushed interior.",
+            _ => "Create a forest-clearing battlemat as a flat top-down outdoor ground plan with trees seen as canopies, roots, stumps, brush, rocks, and natural cover surrounding one compact playable clearing. Keep the ground natural and organic; do not create a paved plaza, tiled pad, checkerboard clearing, or formal stone floor unless explicitly requested. Do not create scenic forest perspective or visible terrain sidewalls."
         };
 
         var promptLines = new List<string>
@@ -2215,10 +2215,18 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             "Fill the frame with the encounter site itself so nearly the entire image is usable play space.",
             "No parchment paper texture, no antique paper background, no inked atlas style, no compass rose, no cartouche, no coastline silhouette, no continent edge, no route network, no long-distance roads, and no mountain-range overview.",
             "No isometric angle, no perspective, no horizon, no side view, no scenic vista, and no zoomed-out geography.",
-            "Show terrain, props, obstacles, cover, doors, stairs, furniture, and hazards as top-down gameplay shapes sized for token movement.",
-            "Use readable midtone lighting and clear value separation so floors, walls, doors, furniture, and hazards stay easy to distinguish at a glance. Avoid an overly dark, muddy, or near-black result.",
+            "If any part of the image looks angled, cinematic, or even slightly isometric, it is incorrect and must be flattened into a pure plan view.",
+            "Show terrain, props, obstacles, cover, stairs, furniture, and hazards as top-down gameplay shapes sized for token movement.",
+            "Prefer open thresholds, arches, or simple wall gaps over visible swinging doors or decorative door props.",
+            "Visible floor tiles, flagstones, planks, or paving modules are optional and should appear only when the chosen locale naturally calls for them.",
+            "Outdoor scenes such as forest clearings, roadsides, riversides, and cliff paths should usually use natural ground like dirt, grass, mud, roots, gravel, or bare stone instead of a tiled or paved center.",
+            "Do not paint any visible square grid, hex grid, cell outlines, checkerboard paving, measurement marks, or repeated linework intended to act as a combat grid. The app overlays its own tactical grid separately.",
+            "If stonework or planks are present, keep them organic and irregular rather than evenly spaced like a VTT grid.",
+            "Openings, hall widths, stairs, and room footprints should remain tactically readable without drawing any visible grid.",
+            "Use readable midtone lighting and clear value separation so floors, walls, stairs, furniture, and hazards stay easy to distinguish at a glance. Avoid an overly dark, muddy, or near-black result.",
             "Every encounter map, including outdoor scenes, must use the same flat top-down VTT projection discipline as a roof-removed tavern battlemat. Outdoor maps are ground plans from above, not scenic terrain renders.",
             "Buildings must read as roof-removed floor plans or room footprints from directly above. Trees must read as canopies from above. Cliffs and walls must read as top-down terrain edges, not side elevations.",
+            "Never show wall faces, stair risers, furniture sides, or other vertical surfaces from an angle. Indoor rooms must read as flattened floor-plan footprints, not as 3D rendered masonry or angled room scenes.",
             "Do not create floating terrain chunks, cutaway dungeon tiles, board-game dioramas, exposed side-on cliff faces, or isolated platforms surrounded by empty void.",
             "Do not render any text, labels, names, legends, road names, room names, tavern names, or title lettering into the image.",
             lighting switch

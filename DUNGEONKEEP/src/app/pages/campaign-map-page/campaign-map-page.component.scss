@@ -1185,8 +1185,11 @@ app-dropdown {
     z-index: 8;
     display: grid;
     place-items: center;
-    pointer-events: auto;
-    overflow: hidden;
+    padding: 16px;
+    pointer-events: none;
+    overflow: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
 }
 
 .map-generation-overlay__backdrop {
@@ -1933,6 +1936,45 @@ app-dropdown {
     .panel {
         padding: 18px;
         border-radius: 22px;
+    }
+
+    .map-generation-overlay {
+        place-items: start center;
+        padding: max(12px, env(safe-area-inset-top)) 12px 12px;
+    }
+
+    .map-generation-overlay__content {
+        gap: 10px;
+        width: min(100%, 320px);
+        max-height: calc(100% - 12px);
+        padding: 18px 16px;
+        border-radius: 22px;
+    }
+
+    .map-generation-overlay__sigil {
+        width: 88px;
+        height: 88px;
+        margin-bottom: 2px;
+    }
+
+    .map-generation-overlay__sigil i {
+        font-size: 1.5rem;
+    }
+
+    .map-generation-overlay__content h3 {
+        font-size: 1.15rem;
+        line-height: 1.1;
+    }
+
+    .map-generation-overlay__content p {
+        max-width: 18rem;
+        font-size: 0.92rem;
+        line-height: 1.35;
+    }
+
+    .map-generation-overlay__eyebrow {
+        font-size: 0.66rem;
+        letter-spacing: 0.14em;
     }
 
     .page-intro-header,

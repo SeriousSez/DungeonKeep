@@ -921,7 +921,8 @@ export class CampaignMapPageComponent {
                 this.showMapNotice(event.summary || `Active map changed to ${event.activeMapName}.`);
 
                 const displayedMapId = this.routeMapId() || this.currentMapId();
-                if (displayedMapId
+                if (!this.canEdit()
+                    && displayedMapId
                     && displayedMapId !== 'new'
                     && displayedMapId !== event.activeMapId) {
                     void this.navigateToMapViewWithFallback(event.campaignId, event.activeMapId);
@@ -986,7 +987,8 @@ export class CampaignMapPageComponent {
 
             const nextActiveMap = maps.find((map) => map.id === campaign.activeMapId) ?? maps[0] ?? null;
             const displayedMapId = routeMapId || this.currentMapId();
-            if (displayedMapId
+            if (!this.canEdit()
+                && displayedMapId
                 && displayedMapId !== 'new'
                 && nextActiveMap
                 && displayedMapId !== nextActiveMap.id) {
@@ -3798,15 +3800,15 @@ export class CampaignMapPageComponent {
             return trimmedDirection || undefined;
         }
 
-        const baseDirection = `Create a strict orthographic top-down 2D virtual tabletop encounter battlemat set in a ${this.battlemapLocaleLabel(options.battlemapLocale)}. This should read like a playable floor plan or printable battlemat, not scenic concept art, not a hand-drawn atlas, and not a parchment world map. Fill the frame with one local encounter site at battle scale, not a regional overview or distant geography. The camera must look straight down at 90 degrees with no isometric angle, no oblique view, no horizon, and no perspective scene art. All encounter maps, including outdoor scenes, must use the same flat VTT projection discipline as a roof-removed tavern battlemat. Include encounter-ready cover, obstacles, traversal features, and grounded props sized for token movement. Trees, buildings, walls, bridges, furniture, and cliffs must read as top-down shapes viewed from directly above. Do not render a baked-in grid, UI, tokens, border, cartouche, legend, parchment texture, coastline silhouette, long travel road, or labeled map features.`;
+        const baseDirection = `Create a strict orthographic top-down 2D virtual tabletop encounter battlemat set in a ${this.battlemapLocaleLabel(options.battlemapLocale)}. This should read like a playable floor plan or printable battlemat, not scenic concept art, not a hand-drawn atlas, and not a parchment world map. Fill the frame with one local encounter site at battle scale, not a regional overview or distant geography. The camera must look straight down at 90 degrees with no isometric angle, no oblique view, no horizon, and no perspective scene art. If any part of the image looks angled, cinematic, or even slightly isometric, it is wrong and must be flattened into a pure plan view. All encounter maps, including outdoor scenes, must use the same flat VTT projection discipline as a roof-removed tavern battlemat. Include encounter-ready cover, obstacles, traversal features, and grounded props sized for token movement. Trees, buildings, walls, bridges, furniture, and cliffs must read as top-down shapes viewed from directly above. Never show wall faces, stair risers, furniture sides, or other vertical surfaces from an angle; indoor rooms must read as flattened floor-plan footprints rather than 3D rendered masonry. Prefer open thresholds, arches, or simple wall gaps over visible swinging doors or decorative door props. Visible floor tiles, flagstones, planks, or paving modules are optional and should appear only when the chosen locale naturally calls for them. Outdoor scenes such as forest clearings, roadsides, riversides, and cliff paths should usually use natural ground like dirt, grass, mud, roots, gravel, or bare stone instead of a tiled or paved center. Do not paint any visible square grid, hex grid, cell outlines, checkerboard paving, measurement marks, or repeated linework intended to act as a combat grid. If stonework or planks are present, keep them organic and irregular rather than evenly spaced like our editor grid, because the tactical grid will be added separately in the app. Do not render a baked-in grid, UI, tokens, border, cartouche, legend, parchment texture, coastline silhouette, long travel road, or labeled map features.`;
         const localeDirection = options.battlemapLocale === 'Tavern'
-            ? 'This must be a single tavern or inn interior only, shown as a roof-removed floor plan from directly above, with tables, chairs, booths, bar counter, stools, hearth, stairs, doors, kitchen access, and side rooms. No exterior town, road network, wilderness, mountains, coastline, or world-map composition.'
+            ? 'This must be a single tavern or inn interior only, shown as a roof-removed floor plan from directly above, with tables, chairs, booths, bar counter, stools, hearth, stairs, kitchen access, and side rooms. Prefer open thresholds or archways instead of explicit door objects. No exterior town, road network, wilderness, mountains, coastline, or world-map composition.'
             : options.battlemapLocale === 'BuildingInterior'
-                ? 'This must be a single interior floor-plan encounter space only, shown from directly above with rooms, doors, halls, stairs, and furniture, and no exterior town or regional landscape.'
+                ? 'This must be a single interior floor-plan encounter space only, shown from directly above with rooms, halls, stairs, furniture, and no exterior town or regional landscape. Prefer open thresholds or archways instead of explicit door objects.'
                 : options.battlemapLocale === 'Cliffside'
                     ? 'This must be one continuous top-down playable area along a cliff edge, with ledges, switchbacks, ropes, broken stone, and exposed drops shown as map shapes from above. Do not generate floating rock islands, cutaway chasms, suspended platforms over empty white space, or any side-view cliff diorama.'
                     : options.battlemapLocale === 'ForestClearing'
-                        ? 'This must be a flat top-down outdoor ground plan with tree canopies, roots, brush, rocks, and cover shapes seen from above, not a scenic forest scene with visible trunks and side views.'
+                        ? 'This must be a flat top-down outdoor ground plan with tree canopies, roots, brush, rocks, and cover shapes seen from above, not a scenic forest scene with visible trunks and side views. Keep the ground natural and organic; do not add a paved plaza, tiled pad, checkerboard clearing, or formal stone floor unless explicitly requested.'
                         : options.battlemapLocale === 'Roadside'
                             ? 'This must be a flat top-down roadside encounter area with the road, ditches, wagons, brush, and fences shown as gameplay shapes from above, not a cinematic travel-road scene.'
                             : options.battlemapLocale === 'Riverside'
