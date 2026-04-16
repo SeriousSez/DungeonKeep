@@ -31,7 +31,7 @@
                 <p class="eyebrow">Monster Catalog</p>
                 <h2>Compendium shelf</h2>
             </div>
-            <p>Filter the imported monster list by name, CR, type, or source, then open a stat block summary with one click.</p>
+            <p>Filter the imported monster list by name, CR, type, or source, then open a dedicated monster page with one click.</p>
         </div>
 
         <div class="filter-grid">
@@ -79,7 +79,7 @@
         } @else {
         <div class="monster-grid">
             @for (entry of filteredEntries(); track entry.id) {
-            <article class="monster-card" (click)="openMonster(entry)">
+            <article class="monster-card" tabindex="0" role="link" (click)="openMonster(entry)" (keydown.enter)="openMonster(entry)" (keydown.space)="openMonster(entry); $event.preventDefault()">
                 <div class="monster-card-header">
                     <div>
                         <p class="monster-card-kicker">{{ entry.creatureCategory || 'Other' }}</p>
@@ -108,7 +108,7 @@
 
                 <div class="monster-actions">
                     @if (entry.sourceUrl) {
-                    <a class="ghost-button" [href]="entry.sourceUrl" target="_blank" rel="noopener noreferrer">Open Official Entry</a>
+                    <a class="ghost-button" [href]="entry.sourceUrl" target="_blank" rel="noopener noreferrer" (click)="$event.stopPropagation()">Open Official Entry</a>
                     }
                 </div>
             </article>
@@ -135,7 +135,4 @@
         </div>
     </section>
 
-    @if (selectedMonster(); as monster) {
-    <app-monster-stat-block-modal [monster]="monster" (closed)="closeMonsterModal()"></app-monster-stat-block-modal>
-    }
 </main>

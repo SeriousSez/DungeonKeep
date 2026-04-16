@@ -1,0 +1,116 @@
+<main class="monster-detail-page">
+    @if (monster(); as monster) {
+    <section class="panel monster-page-shell">
+        <header class="monster-strip">
+            <div class="monster-strip-icon" aria-hidden="true">
+                <i class="fa-duotone fa-thin fa-dragon"></i>
+            </div>
+
+            <div class="monster-strip-copy">
+                <p class="monster-strip-kicker">Monster Reference</p>
+                <h1>{{ monster.name }}</h1>
+                <p>{{ subtitle() }}</p>
+            </div>
+
+            <div class="monster-strip-actions">
+                <a class="secondary-link-btn" routerLink="/rules/monsters">Back to Monsters</a>
+                @if (monster.sourceUrl) {
+                <a class="primary-link-btn" [href]="monster.sourceUrl" target="_blank" rel="noopener noreferrer">Open Full Stat Block</a>
+                }
+            </div>
+        </header>
+
+        <div class="monster-sheet-body">
+            <div class="monster-tags-row">
+                <span class="monster-tags-label">PROFILE:</span>
+                @for (tag of profileTags(); track tag) {
+                <span class="monster-tag">{{ tag }}</span>
+                }
+            </div>
+
+            <hr class="sheet-divider" />
+
+            <section class="monster-facts-grid">
+                <article class="monster-fact-card">
+                    <span class="monster-fact-label">Armor Class</span>
+                    <strong>{{ armorClassText() }}</strong>
+                </article>
+                <article class="monster-fact-card">
+                    <span class="monster-fact-label">Hit Points</span>
+                    <strong>{{ hitPointsText() }}</strong>
+                </article>
+                <article class="monster-fact-card">
+                    <span class="monster-fact-label">Speed</span>
+                    <strong>{{ speedText() }}</strong>
+                </article>
+                <article class="monster-fact-card">
+                    <span class="monster-fact-label">Challenge</span>
+                    <strong>{{ monster.challengeRating || '—' }}</strong>
+                </article>
+            </section>
+
+            <hr class="sheet-divider" />
+
+            <section class="monster-abilities-grid">
+                @for (ability of abilityRows(); track ability.label) {
+                <article class="monster-ability-card">
+                    <span class="monster-ability-label">{{ ability.label }}</span>
+                    <strong>{{ scoreText(ability.value) }}</strong>
+                    <span>{{ modifierText(ability.value) }}</span>
+                </article>
+                }
+            </section>
+
+            @if (supplementalDetails().length > 0) {
+            <hr class="sheet-divider" />
+
+            <dl class="monster-details-list monster-details-list-extended">
+                @for (detail of supplementalDetails(); track detail.label) {
+                <div>
+                    <dt>{{ detail.label }}:</dt>
+                    <dd>{{ detail.value }}</dd>
+                </div>
+                }
+            </dl>
+            }
+
+            @if (textSections().length > 0) {
+            <hr class="sheet-divider" />
+
+            <div class="monster-text-sections">
+                @for (section of textSections(); track trackTextSection($index, section)) {
+                <section class="monster-text-section">
+                    <h2>{{ section.heading }}</h2>
+                    <div class="monster-text-entry-list">
+                        @for (entry of section.entries; track entry.title + entry.text) {
+                        <article class="monster-text-entry panel">
+                            <p>
+                                @if (entry.title) {
+                                <strong><em>{{ entry.title }}. </em></strong>
+                                }
+                                <span [innerHTML]="formatEntryText(entry.text)"></span>
+                            </p>
+                        </article>
+                        }
+                    </div>
+                </section>
+                }
+            </div>
+            }
+
+            <hr class="sheet-divider" />
+
+            <p class="monster-note">
+                This page summarizes the local monster data in your catalog. Use the external stat block link when you want the full official wording.
+            </p>
+        </div>
+    </section>
+    } @else {
+    <section class="panel monster-missing-state">
+        <p class="eyebrow">Monster Reference</p>
+        <h1>Monster not found</h1>
+        <p>The requested monster could not be found in the local catalog.</p>
+        <a class="secondary-link-btn" routerLink="/rules/monsters">Back to Monsters</a>
+    </section>
+    }
+</main>

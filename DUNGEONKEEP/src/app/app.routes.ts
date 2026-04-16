@@ -36,6 +36,7 @@ import { RulesFeatsPage } from './pages/rules-feats-page/rules-feats-page';
 import { RulesFeatsDetailPage } from './pages/rules-feats-detail-page/rules-feats-detail-page';
 import { RulesSpellsPage } from './pages/rules-spells-page/rules-spells-page';
 import { RulesSpellDetailPage } from './pages/rules-spell-detail-page/rules-spell-detail-page';
+import { RulesMonsterDetailPage } from './pages/rules-monster-detail-page/rules-monster-detail-page';
 
 export const routes: Routes = [
     {
@@ -286,6 +287,11 @@ export const routes: Routes = [
         path: 'rules/monsters',
         component: MonsterReferencePageComponent,
         data: { title: 'Monster Reference', breadcrumb: 'Monsters', parentCrumbs: [{ label: 'Rules', url: '/rules' }] }
+    },
+    {
+        path: 'rules/monsters/:monsterSlug',
+        component: RulesMonsterDetailPage,
+        data: { title: 'Monster Detail', breadcrumb: 'Monster', parentCrumbs: [{ label: 'Rules', url: '/rules' }, { label: 'Monsters', url: '/rules/monsters' }] }
     },
     {
         path: 'rules/classes',

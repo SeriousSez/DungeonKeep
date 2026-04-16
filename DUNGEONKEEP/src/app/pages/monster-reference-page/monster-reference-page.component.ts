@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 
-import { MonsterStatBlockModalComponent } from '../../components/monster-stat-block-modal/monster-stat-block-modal.component';
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
 import { monsterCatalog } from '../../data/monster-catalog.generated';
 import { MonsterCatalogEntry } from '../../models/monster-reference.models';
@@ -61,12 +61,14 @@ const officialSourceShortcuts: SourceShortcut[] = [
 @Component({
     selector: 'app-monster-reference-page',
     standalone: true,
-    imports: [CommonModule, DropdownComponent, MonsterStatBlockModalComponent],
+    imports: [CommonModule, DropdownComponent],
     templateUrl: './monster-reference-page.component.html',
     styleUrl: './monster-reference-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MonsterReferencePageComponent {
+    private readonly router = inject(Router);
+
     readonly officialSourceShortcuts = officialSourceShortcuts;
     readonly sortOptions = sortOptions;
 
@@ -76,7 +78,6 @@ export class MonsterReferencePageComponent {
     readonly selectedSource = signal('All sources');
     readonly selectedSort = signal<MonsterSortOption>('name');
     readonly selectedSortPill = signal('');
-    readonly selectedMonster = signal<MonsterCatalogEntry | null>(null);
 
     readonly creatureTypeOptions = computed<DropdownOption[]>(() => {
         const labels = Array.from(new Set(this.entries().map((entry) => entry.creatureCategory).filter(Boolean)))
@@ -213,11 +214,7 @@ export class MonsterReferencePageComponent {
     }
 
     openMonster(entry: MonsterCatalogEntry): void {
-        this.selectedMonster.set(entry);
-    }
-
-    closeMonsterModal(): void {
-        this.selectedMonster.set(null);
+        void this.router.navigate(['/rules/monsters', entry.slug]);
     }
 
     private parseChallengeRating(value: string): number {
