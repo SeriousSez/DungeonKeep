@@ -24,7 +24,7 @@
 
             <div class="portrait-crop-controls">
                 <label class="portrait-crop-label" for="portrait-crop-zoom">Zoom</label>
-                <input id="portrait-crop-zoom" class="portrait-crop-range" type="range" min="1" max="4" step="0.01" [value]="zoom()" (input)="updateZoom($any($event.target).value)" />
+                <input id="portrait-crop-zoom" class="portrait-crop-range" type="range" min="0.4" max="4" step="0.01" [value]="zoom()" (input)="updateZoom($any($event.target).value)" />
                 <div class="portrait-crop-scale-row">
                     <span>Fit</span>
                     <strong>{{ zoom().toFixed(2) }}x</strong>

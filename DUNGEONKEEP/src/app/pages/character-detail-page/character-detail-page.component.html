@@ -271,10 +271,10 @@
                 <div class="skill-row detail-trigger-row" role="button" tabindex="0" [class.proficient]="skill.proficient" [class.disadvantaged]="skill.hasDisadvantage" (click)="openSkillDetail(skill)" (keydown.enter)="openSkillDetail(skill)" (keydown.space)="openSkillDetail(skill)">
                     <span class="skill-prof">@if (skill.proficient) { ● } @else { ○ }</span>
                     <span class="skill-name">{{ skill.name }}</span>
-                    <span class="skill-ability">{{ skill.ability }}</span>
                     @if (skill.hasDisadvantage) {
                     <span class="skill-flag">DIS</span>
                     }
+                    <span class="skill-ability">{{ skill.ability }}</span>
                     <span class="skill-mod">{{ skill.modifierLabel }}</span>
                 </div>
                 }

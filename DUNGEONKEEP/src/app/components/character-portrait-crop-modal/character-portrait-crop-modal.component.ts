@@ -9,9 +9,9 @@ import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostList
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CharacterPortraitCropModalComponent implements AfterViewInit, OnDestroy {
-    private static readonly CROPPER_SIZE = 360;
+    private static readonly DEFAULT_VIEWPORT_SIZE = 360;
     private static readonly OUTPUT_SIZE = 768;
-    private static readonly MIN_ZOOM = 1;
+    private static readonly MIN_ZOOM = 0.4;
     private static readonly MAX_ZOOM = 4;
     private static readonly FRAME_INSET_RATIO = 0.12;
 
@@ -31,8 +31,9 @@ export class CharacterPortraitCropModalComponent implements AfterViewInit, OnDes
     readonly offsetY = signal(0);
     readonly naturalWidth = signal(0);
     readonly naturalHeight = signal(0);
+    readonly viewportSize = signal(CharacterPortraitCropModalComponent.DEFAULT_VIEWPORT_SIZE);
     readonly imageReady = computed(() => this.naturalWidth() > 0 && this.naturalHeight() > 0 && this.imageUrl().trim().length > 0);
-    readonly frameSize = computed(() => CharacterPortraitCropModalComponent.CROPPER_SIZE * (1 - (CharacterPortraitCropModalComponent.FRAME_INSET_RATIO * 2)));
+    readonly frameSize = computed(() => this.viewportSize() * (1 - (CharacterPortraitCropModalComponent.FRAME_INSET_RATIO * 2)));
     readonly displayScale = computed(() => {
         const width = this.naturalWidth();
         const height = this.naturalHeight();
@@ -40,9 +41,10 @@ export class CharacterPortraitCropModalComponent implements AfterViewInit, OnDes
             return 1;
         }
 
+        const viewportSize = this.viewportSize();
         const baseScale = Math.max(
-            CharacterPortraitCropModalComponent.CROPPER_SIZE / width,
-            CharacterPortraitCropModalComponent.CROPPER_SIZE / height
+            viewportSize / width,
+            viewportSize / height
         );
 
         return baseScale * this.zoom();
@@ -75,6 +77,7 @@ export class CharacterPortraitCropModalComponent implements AfterViewInit, OnDes
 
     ngAfterViewInit(): void {
         this.renderer.appendChild(this.document.body, this.elementRef.nativeElement);
+        this.measureViewport();
     }
 
     ngOnDestroy(): void {
@@ -140,14 +143,6 @@ export class CharacterPortraitCropModalComponent implements AfterViewInit, OnDes
             return;
         }
 
-        const scale = this.displayScale();
-        const cropWidth = this.frameSize() / scale;
-        const cropHeight = this.frameSize() / scale;
-        const sourceCenterX = (this.naturalWidth() / 2) - (this.offsetX() / scale);
-        const sourceCenterY = (this.naturalHeight() / 2) - (this.offsetY() / scale);
-        const sourceX = this.clampValue(sourceCenterX - (cropWidth / 2), 0, Math.max(0, this.naturalWidth() - cropWidth));
-        const sourceY = this.clampValue(sourceCenterY - (cropHeight / 2), 0, Math.max(0, this.naturalHeight() - cropHeight));
-
         const canvas = document.createElement('canvas');
         canvas.width = CharacterPortraitCropModalComponent.OUTPUT_SIZE;
         canvas.height = CharacterPortraitCropModalComponent.OUTPUT_SIZE;
@@ -157,26 +152,33 @@ export class CharacterPortraitCropModalComponent implements AfterViewInit, OnDes
             return;
         }
 
+        const exportScale = canvas.width / this.frameSize();
+        const displayedWidth = this.naturalWidth() * this.displayScale() * exportScale;
+        const displayedHeight = this.naturalHeight() * this.displayScale() * exportScale;
+        const drawX = ((canvas.width - displayedWidth) / 2) + (this.offsetX() * exportScale);
+        const drawY = ((canvas.height - displayedHeight) / 2) + (this.offsetY() * exportScale);
+
         context.clearRect(0, 0, canvas.width, canvas.height);
         context.save();
         context.beginPath();
         context.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2, 0, Math.PI * 2);
         context.closePath();
         context.clip();
-        context.drawImage(
-            this.loadedImage,
-            sourceX,
-            sourceY,
-            cropWidth,
-            cropHeight,
-            0,
-            0,
-            canvas.width,
-            canvas.height
-        );
+        context.fillStyle = this.getCanvasBackgroundColor();
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+        context.drawImage(this.loadedImage, drawX, drawY, displayedWidth, displayedHeight);
         context.restore();
 
         this.applied.emit(canvas.toDataURL('image/png'));
+    }
+
+    @HostListener('window:resize')
+    handleWindowResize(): void {
+        if (this.open()) {
+            this.measureViewport();
+        }
     }
 
     @HostListener('document:keydown', ['$event'])
@@ -205,9 +207,25 @@ export class CharacterPortraitCropModalComponent implements AfterViewInit, OnDes
             this.loadedImage = image;
             this.naturalWidth.set(image.naturalWidth || 1);
             this.naturalHeight.set(image.naturalHeight || 1);
+            this.measureViewport();
             this.clampOffsets();
         };
         image.src = imageUrl;
+    }
+
+    private measureViewport(): void {
+        const viewport = this.elementRef.nativeElement.querySelector('.portrait-crop-viewport') as HTMLElement | null;
+        const nextSize = viewport?.getBoundingClientRect().width ?? CharacterPortraitCropModalComponent.DEFAULT_VIEWPORT_SIZE;
+        if (nextSize > 0) {
+            this.viewportSize.set(nextSize);
+        }
+    }
+
+    private getCanvasBackgroundColor(): string {
+        const rootStyles = this.document.defaultView?.getComputedStyle(this.document.documentElement);
+        return rootStyles?.getPropertyValue('--color-surface-alt').trim()
+            || rootStyles?.getPropertyValue('--color-surface').trim()
+            || '#a79f96';
     }
 
     private clampOffsets(): void {

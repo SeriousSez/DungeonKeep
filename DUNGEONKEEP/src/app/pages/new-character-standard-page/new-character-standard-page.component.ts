@@ -6465,6 +6465,14 @@ export class NewCharacterStandardPageComponent {
     };
 
     readonly applyCompletionPortraitCrop = (croppedImageUrl: string) => {
+        const originalImageUrl = this.completionPortraitOriginalImageUrl().trim()
+            || this.completionPortraitCropSourceImageUrl().trim()
+            || this.completionPortraitImageUrl().trim();
+
+        if (originalImageUrl) {
+            this.completionPortraitOriginalImageUrl.set(originalImageUrl);
+        }
+
         this.completionPortraitImageUrl.set(croppedImageUrl);
         this.completionPortraitCropModalOpen.set(false);
         this.completionPortraitCropSourceImageUrl.set('');
@@ -6472,9 +6480,15 @@ export class NewCharacterStandardPageComponent {
     };
 
     readonly recropCompletionPortrait = () => {
-        const imageUrl = this.completionPortraitOriginalImageUrl() || this.completionPortraitImageUrl();
+        const originalImageUrl = this.completionPortraitOriginalImageUrl().trim();
+        const fallbackImageUrl = this.completionPortraitImageUrl().trim();
+        const imageUrl = originalImageUrl || fallbackImageUrl;
         if (!imageUrl || this.isCompletingCharacter()) {
             return;
+        }
+
+        if (!originalImageUrl && fallbackImageUrl) {
+            this.completionPortraitOriginalImageUrl.set(fallbackImageUrl);
         }
 
         this.completionPortraitCropSourceImageUrl.set(imageUrl);

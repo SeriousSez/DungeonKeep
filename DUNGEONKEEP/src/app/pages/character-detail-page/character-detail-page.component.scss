@@ -2031,7 +2031,8 @@
     max-height: calc(100vh - 32px);
     border-radius: 14px;
     border: 1px solid var(--panel-border);
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
     padding: 18px;
     z-index: 30000;
     box-shadow: 0 14px 32px color-mix(in srgb, var(--text-main) 22%, transparent);
@@ -3406,20 +3407,25 @@
 
 .detail-breakdown-row {
     display: grid;
-    grid-template-columns: minmax(58px, max-content) minmax(0, 1fr);
+    grid-template-columns: minmax(84px, 110px) minmax(0, 1fr);
     gap: 8px;
-    align-items: baseline;
+    align-items: start;
 }
 
 .detail-breakdown-value {
     color: var(--text-main);
     font-size: 1rem;
-    line-height: 1;
-    white-space: nowrap;
+    line-height: 1.25;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .detail-breakdown-label {
     color: var(--text-main);
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 
     em {
         color: var(--text-muted);

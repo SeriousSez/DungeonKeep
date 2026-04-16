@@ -627,7 +627,7 @@ export class CharacterDetailPageComponent {
             }
 
             this.lastPortraitSourceCharacterId = characterId;
-            this.portraitOriginalImageUrl.set('');
+            this.portraitOriginalImageUrl.set(characterId ? this.readStoredPortraitOriginalImageUrl(characterId) : '');
         });
 
         effect(() => {
@@ -1090,9 +1090,15 @@ export class CharacterDetailPageComponent {
 
     readonly openPortraitRecrop = () => {
         const char = this.character();
-        const sourceImageUrl = this.portraitOriginalImageUrl() || char?.image || '';
+        const originalImageUrl = this.portraitOriginalImageUrl().trim();
+        const fallbackImageUrl = char?.image?.trim() ?? '';
+        const sourceImageUrl = originalImageUrl || fallbackImageUrl;
         if (!char?.canEdit || !sourceImageUrl || this.isSavingPortrait() || this.isGeneratingPortrait()) {
             return;
+        }
+
+        if (!originalImageUrl) {
+            this.storePortraitOriginalImageUrl(char.id, sourceImageUrl);
         }
 
         this.portraitGenerationError.set('');
@@ -1110,7 +1116,7 @@ export class CharacterDetailPageComponent {
 
         try {
             const imageUrl = await this.readPortraitFile(file);
-            this.portraitOriginalImageUrl.set(imageUrl);
+            this.storePortraitOriginalImageUrl(this.characterId, imageUrl);
             this.portraitCropSourceImageUrl.set(imageUrl);
             this.portraitCropModalOpen.set(true);
         } catch (error) {
@@ -1145,7 +1151,7 @@ export class CharacterDetailPageComponent {
                 additionalDirection: this.portraitPromptDetails().trim()
             });
 
-            this.portraitOriginalImageUrl.set(response.imageUrl);
+            this.storePortraitOriginalImageUrl(this.characterId, response.imageUrl);
             await this.persistPortrait(response.imageUrl, 'Portrait generated and saved.');
         } catch (error) {
             this.portraitGenerationError.set(this.getPortraitGenerationErrorMessage(error));
@@ -1161,11 +1167,21 @@ export class CharacterDetailPageComponent {
             return;
         }
 
-        this.portraitOriginalImageUrl.set('');
+        this.storePortraitOriginalImageUrl(this.characterId, '');
         await this.persistPortrait('', 'Portrait removed.');
     };
 
     readonly applyPortraitCrop = async (croppedImageUrl: string) => {
+        const char = this.character();
+        const sourceImageUrl = this.portraitOriginalImageUrl().trim()
+            || this.portraitCropSourceImageUrl().trim()
+            || char?.image?.trim()
+            || '';
+
+        if (char && sourceImageUrl) {
+            this.storePortraitOriginalImageUrl(char.id, sourceImageUrl);
+        }
+
         this.portraitCropModalOpen.set(false);
         this.portraitCropSourceImageUrl.set('');
         await this.persistPortrait(croppedImageUrl, 'Portrait updated.');
@@ -2170,13 +2186,15 @@ export class CharacterDetailPageComponent {
         return bag.weapons.map((weaponLabel) => {
             const weaponName = weaponLabel.replace(/\s+x\d+$/i, '').trim();
             const weaponKey = weaponName.toLowerCase();
+            const normalizedWeaponKey = weaponKey.replace(/^(light|hand|heavy) crossbow$/i, 'crossbow, $1');
+            const weaponCatalogItem = this.catalogLookup.get(weaponKey) ?? this.catalogLookup.get(normalizedWeaponKey);
             const isRanged = /bow|crossbow|sling|blowgun|pistol|musket|rifle|gun/i.test(weaponName);
             const useDexterity = /bow|crossbow|sling|dagger|rapier|shortsword/i.test(weaponName);
             const abilityKey: AbilityKey = useDexterity ? 'dexterity' : 'strength';
             const abilityMod = this.getAbilityModifier(this.effectiveAbilityScores()?.[abilityKey] ?? 10);
             const bonus = abilityMod + char.proficiencyBonus;
-            const damage = this.weaponDamageMap[weaponKey] ?? '—';
-            const catalogNotes = this.catalogLookup.get(weaponKey)?.notes ?? '—';
+            const damage = this.weaponDamageMap[weaponKey] ?? this.weaponDamageMap[normalizedWeaponKey] ?? '—';
+            const catalogNotes = weaponCatalogItem?.notes?.trim() || weaponCatalogItem?.summary?.trim() || '—';
             return {
                 name: weaponName,
                 subtitle: isRanged ? 'Ranged Weapon' : 'Melee Weapon',
@@ -2893,6 +2911,29 @@ export class CharacterDetailPageComponent {
         } finally {
             this.isSavingHp.set(false);
             this.cdr.detectChanges();
+        }
+    }
+
+    private readStoredPortraitOriginalImageUrl(characterId: string): string {
+        try {
+            return globalThis.localStorage?.getItem(`dungeonkeep-portrait-original:${characterId}`)?.trim() ?? '';
+        } catch {
+            return '';
+        }
+    }
+
+    private storePortraitOriginalImageUrl(characterId: string, imageUrl: string): void {
+        const trimmed = imageUrl.trim();
+        this.portraitOriginalImageUrl.set(trimmed);
+
+        try {
+            if (!trimmed) {
+                globalThis.localStorage?.removeItem(`dungeonkeep-portrait-original:${characterId}`);
+            } else {
+                globalThis.localStorage?.setItem(`dungeonkeep-portrait-original:${characterId}`, trimmed);
+            }
+        } catch {
+            // Ignore browser storage failures and fall back to in-memory state.
         }
     }
 
@@ -3931,18 +3972,246 @@ export class CharacterDetailPageComponent {
         lifespan: string;
         height: string;
         weight: string;
+        adulthoodAge: number;
+        elderAge: number;
         bullets: string[];
     }>> = {
+            Aasimar: {
+                history: 'Aasimar carry a trace of celestial heritage that often reveals itself through quiet omens, radiant presence, or a sense of destiny that follows them through life.',
+                adulthood: 'Aasimar mature at about the same pace as humans, though many connect adulthood with the first clear sign of their divine calling.',
+                lifespan: 'They often live somewhat longer than humans, with some reaching roughly 160 years.',
+                height: 'Aasimar usually fall within ordinary human height ranges, though their posture and presence often feel striking or luminous.',
+                weight: 'Their builds vary widely, but many appear balanced, healthy, and subtly touched by something otherworldly.',
+                adulthoodAge: 18,
+                elderAge: 90,
+                bullets: [
+                    'Many aasimar feel caught between mortal life and a higher purpose.',
+                    'Their appearance may include faintly radiant eyes, unusual calm, or an unmistakable sense of grace.',
+                    'They are often remembered for presence as much as for physical features.'
+                ]
+            },
+            Dragonborn: {
+                history: 'Dragonborn trace their bloodlines to ancient dragons and often carry a strong sense of pride, honor, and lineage in how they present themselves to the world.',
+                adulthood: 'Dragonborn grow quickly and are usually considered adults by around age 15.',
+                lifespan: 'Most dragonborn live to around 80 years, giving them a shorter but intense sense of legacy.',
+                height: 'Dragonborn are typically tall and imposing, often standing well over 6 feet with powerful, upright frames.',
+                weight: 'They tend toward dense, muscular builds made heavier by strong bone structure, scales, and draconic features.',
+                adulthoodAge: 15,
+                elderAge: 50,
+                bullets: [
+                    'Physical presence matters greatly in many dragonborn cultures.',
+                    'Coloration, horns, and scaled features often visually reflect ancestry and temperament.',
+                    'Their appearance usually reads as martial, proud, and difficult to ignore.'
+                ]
+            },
+            Dwarf: {
+                history: 'Dwarves are shaped by clan, craft, and endurance, with traditions rooted in stone halls, patient labor, and memory that stretches across generations.',
+                adulthood: 'Dwarves are generally considered adults around age 50, after years of work, discipline, and family expectation.',
+                lifespan: 'They often live 350 years or more, giving them a long relationship with ancestry, grudges, and legacy.',
+                height: 'Dwarves are shorter than most humans, commonly between about 4 and 5 feet tall, with compact and formidable posture.',
+                weight: 'They are famously broad, dense, and heavy for their height, with sturdy frames built for labor and battle.',
+                adulthoodAge: 50,
+                elderAge: 220,
+                bullets: [
+                    'A dwarf often appears solid, grounded, and difficult to move either physically or emotionally.',
+                    'Beards, braids, jewelry, and clan marks frequently carry personal and family meaning.',
+                    'Their build suggests resilience more than speed.'
+                ]
+            },
             Elf: {
                 history: 'Elves are ancient, fey-touched people tied to magic, artistry, and memory. Their cultures are often associated with old forests, refined learning, and a long view of history that makes human kingdoms feel brief by comparison.',
                 adulthood: 'Elves reach physical maturity at roughly the same age as humans, but an elf is not usually regarded as a true adult until around age 100, when experience and identity are considered fully formed.',
                 lifespan: 'Elves commonly live to around 750 years, giving them a very different sense of legacy, patience, grief, and long-term obligation than shorter-lived peoples.',
                 height: 'Elves are typically slender and graceful, ranging from under 5 feet to over 6 feet tall depending on lineage and individual build.',
                 weight: 'Elves usually have lighter, leaner frames than similarly tall humans, emphasizing balance, agility, and a narrow build over bulk.',
+                adulthoodAge: 100,
+                elderAge: 500,
                 bullets: [
                     'Elven culture often prizes artistry, memory, magic, and natural beauty.',
                     'Their long lives can make them patient, reserved, nostalgic, or slow to fully trust quick-moving cultures.',
                     'Many elven traditions balance personal freedom with deep continuity across centuries.'
+                ]
+            },
+            Gnome: {
+                history: 'Gnomes are curious, clever, and inventive folk whose communities often blend whimsy, practical skill, and an intense love of discovery.',
+                adulthood: 'Gnomes mature more slowly than humans and are often considered adults around age 40.',
+                lifespan: 'Many gnomes live from 350 to 500 years, allowing lifetimes of experimentation, craft, and accumulated stories.',
+                height: 'Gnomes are small, usually around 3 to 4 feet tall, with lively expressions and compact frames.',
+                weight: 'They are light compared with most humanoids, though their posture and energy can make them seem larger than they are.',
+                adulthoodAge: 40,
+                elderAge: 250,
+                bullets: [
+                    'Gnomish appearance often reflects personality through bright clothes, tools, keepsakes, and expressive styling.',
+                    'They tend to look alert, quick, and intensely engaged with the world around them.',
+                    'Even older gnomes often carry a spark of restless curiosity.'
+                ]
+            },
+            Goliath: {
+                history: 'Goliaths come from harsh highland traditions shaped by endurance, competition, and the belief that strength should be matched by discipline and self-reliance.',
+                adulthood: 'Goliaths mature at about the same pace as humans, with adulthood usually recognized in the later teenage years.',
+                lifespan: 'They generally live less than a century, and many experience life as something to be met head-on rather than preserved gently.',
+                height: 'Goliaths are notably tall and broad, often towering above other humanoids with long limbs and mountain-hardened frames.',
+                weight: 'They are heavily built, with dense muscle and bone that make them feel as solid as the terrain they come from.',
+                adulthoodAge: 18,
+                elderAge: 60,
+                bullets: [
+                    'Their physical silhouette often reads as athletic, weathered, and powerful.',
+                    'Scars, tattoos, and trophies can serve as records of competition or survival.',
+                    'A goliath presence usually suggests resilience before a word is spoken.'
+                ]
+            },
+            Halfling: {
+                history: 'Halflings are deeply rooted in home, hospitality, and quiet courage, often building lives around comfort, family, and community rather than grandeur.',
+                adulthood: 'Halflings are usually considered adults around age 20.',
+                lifespan: 'Many halflings live to around 150 years, giving them a relaxed but enduring view of life.',
+                height: 'They are typically around 3 feet tall, with quick movements and easy, balanced posture.',
+                weight: 'Halflings are generally light and compact, built for nimbleness rather than reach or raw size.',
+                adulthoodAge: 20,
+                elderAge: 100,
+                bullets: [
+                    'Their appearance often feels approachable, grounded, and quietly confident.',
+                    'Good food, travel wear, and practical personal comforts often show up in halfling style.',
+                    'Small stature rarely translates to small presence.'
+                ]
+            },
+            Human: {
+                history: 'Humans are adaptable, ambitious, and astonishingly varied, building cultures everywhere from remote villages to sprawling cities and frontier outposts.',
+                adulthood: 'Humans are generally considered adults in their late teens or early twenties.',
+                lifespan: 'Most humans live less than a century, which often gives them urgency, drive, and a willingness to change quickly.',
+                height: 'Human height varies enormously, from shorter compact builds to tall, long-limbed frames depending on lineage and region.',
+                weight: 'Human weight is equally varied, with no single typical build beyond broad adaptability.',
+                adulthoodAge: 18,
+                elderAge: 60,
+                bullets: [
+                    'Human appearance is defined more by culture and upbringing than by one common physical mold.',
+                    'They often show their identity through clothing, accents, posture, and personal ambition.',
+                    'Their versatility is as visible socially as it is physically.'
+                ]
+            },
+            Orc: {
+                history: 'Orcs are hardy wanderers and survivors, shaped by demanding environments and traditions that often prize directness, endurance, and decisive action.',
+                adulthood: 'Orcs mature quickly and are often recognized as adults in the early teenage years.',
+                lifespan: 'They tend to live shorter lives than humans, often seldom reaching far beyond 50 years.',
+                height: 'Orcs are usually tall, broad-shouldered, and physically commanding, with a natural look of strength and motion.',
+                weight: 'Their builds tend toward heavy muscle and durable frames suited to hard travel and conflict.',
+                adulthoodAge: 12,
+                elderAge: 35,
+                bullets: [
+                    'An orc often gives the impression of momentum, force, and durability.',
+                    'Tusks, scars, and weathered gear frequently become part of their visual identity.',
+                    'Their appearance commonly reflects life lived close to hardship and action.'
+                ]
+            },
+            Tiefling: {
+                history: 'Tieflings bear the visible or spiritual marks of fiendish legacy, often living at the intersection of fascination, suspicion, and personal reinvention.',
+                adulthood: 'Tieflings generally mature at about the same pace as humans.',
+                lifespan: 'Many live slightly longer than humans, though their lives are often shaped more by social pressure than by age alone.',
+                height: 'Tieflings usually share human-like height ranges, though horns, tails, and striking features can make their silhouettes memorable.',
+                weight: 'Their builds vary like those of humans, with infernal traits adding more distinctiveness than mass.',
+                adulthoodAge: 18,
+                elderAge: 70,
+                bullets: [
+                    'Their appearance can range from subtly uncanny to unmistakably infernal.',
+                    'Horns, tails, unusual skin tones, and luminous eyes often define first impressions.',
+                    'Many tieflings shape their look intentionally as an act of control over how they are seen.'
+                ]
+            },
+            Tabaxi: {
+                history: 'Tabaxi are wandering, story-hungry travelers whose lives are often shaped by curiosity, movement, and a deep appetite for novelty.',
+                adulthood: 'Tabaxi mature at about the same rate as humans, reaching adulthood in the later teenage years.',
+                lifespan: 'They tend to live human-length lives, though their outlook often favors experience over permanence.',
+                height: 'Tabaxi are typically human-sized or a bit taller, with long-limbed, feline frames built for balance and speed.',
+                weight: 'They usually look lean and spring-loaded rather than bulky, with movement that feels graceful and precise.',
+                adulthoodAge: 18,
+                elderAge: 60,
+                bullets: [
+                    'Patterning, fur color, ears, tail, and eye shape make tabaxi visually distinctive at a glance.',
+                    'They often seem poised to move even while standing still.',
+                    'A tabaxi silhouette usually communicates agility before strength.'
+                ]
+            },
+            Shifter: {
+                history: 'Shifters carry bestial heritage that surfaces in instinct, appearance, and bursts of heightened ferocity, often leaving them between worlds rather than fully at home in one.',
+                adulthood: 'Shifters mature at about the same pace as humans, though many become socially independent early.',
+                lifespan: 'They tend to live slightly shorter lives than humans on average, though this varies by community and lifestyle.',
+                height: 'Shifters usually fall within human height ranges, though posture, movement, and features often suggest an animal edge.',
+                weight: 'Their builds are commonly wiry, athletic, and ready for sudden motion rather than ornamental stillness.',
+                adulthoodAge: 18,
+                elderAge: 60,
+                bullets: [
+                    'Hair, eyes, canines, and body language often carry subtle animal markers even before shifting.',
+                    'They frequently look like they are holding energy just under the surface.',
+                    'Different shifter lineages can skew more lithe, rugged, or predatory in appearance.'
+                ]
+            },
+            Goblin: {
+                history: 'Goblins are quick, adaptable survivors whose communities often value cunning, speed, and practical advantage over comfort or permanence.',
+                adulthood: 'Goblins grow up fast and are often considered adults by about age 8.',
+                lifespan: 'They rarely live especially long lives, often topping out around 60 years.',
+                height: 'Goblins are short, usually between about 3 and 4 feet tall, with sharp features and restless body language.',
+                weight: 'They are usually wiry and light, built for squeezing through danger and escaping it just as fast.',
+                adulthoodAge: 8,
+                elderAge: 40,
+                bullets: [
+                    'A goblin often looks alert, crafty, and halfway ready to bolt or pounce.',
+                    'Their presence tends to emphasize speed, expression, and improvisation over size.',
+                    'Gear and clothing frequently look practical, scavenged, or cleverly repurposed.'
+                ]
+            },
+            'Shadar-Kai': {
+                history: 'Shadar-kai are shadow-touched elves shaped by loss, duty, and the austere influence of the Raven Queen, often carrying an air of intensity or distance.',
+                adulthood: 'Like other elves, shadar-kai mature physically at a human pace but are not usually regarded as fully adult until around age 100.',
+                lifespan: 'They share the long elven lifespan, often living for many centuries.',
+                height: 'Shadar-kai are usually slender and graceful like other elves, though their bearing often feels more severe or haunted.',
+                weight: 'They tend toward lean, light frames, with a visual emphasis on precision and endurance rather than softness.',
+                adulthoodAge: 100,
+                elderAge: 500,
+                bullets: [
+                    'Their appearance often carries dark elegance, restraint, and signs of shadowed heritage.',
+                    'Muted colors, stark features, and ritual scars or adornments are common visual cues.',
+                    'They often seem emotionally contained even when physically still.'
+                ]
+            },
+            Minotaur: {
+                history: 'Minotaurs are physically formidable folk often associated with strength, momentum, and proud personal presence, whether in war, travel, or public life.',
+                adulthood: 'Minotaurs mature at roughly the same pace as humans, reaching adulthood in the later teenage years.',
+                lifespan: 'They often live human-length lives, though their cultures may place greater emphasis on deeds than longevity.',
+                height: 'Minotaurs are typically very tall and broad, with powerful shoulders, thick necks, and unmistakable horned silhouettes.',
+                weight: 'They are heavy, muscular, and massively built, with weight that reflects raw physical force and stability.',
+                adulthoodAge: 17,
+                elderAge: 55,
+                bullets: [
+                    'A minotaur usually reads as imposing even in relaxed posture.',
+                    'Horns, stance, and sheer physical width define much of their visual identity.',
+                    'Their appearance often suggests impact, confidence, and presence in close quarters.'
+                ]
+            },
+            'Half-Elf': {
+                history: 'Half-elves often grow up balancing different cultural worlds, carrying both human adaptability and an elven sense of memory, grace, or distance.',
+                adulthood: 'Half-elves mature at about the same pace as humans, though their mixed heritage can shape how adulthood is recognized socially.',
+                lifespan: 'They often live considerably longer than humans, with many reaching around 180 years.',
+                height: 'Half-elves usually stand within human height ranges, often with a graceful carriage or fine-featured look that hints at elven ancestry.',
+                weight: 'Their build varies widely, but many appear balanced and lightly athletic rather than especially heavy.',
+                adulthoodAge: 20,
+                elderAge: 120,
+                bullets: [
+                    'Their appearance often blends familiar humanity with a subtly uncanny refinement.',
+                    'Many half-elves look adaptable in social spaces because they literally move between worlds.',
+                    'Their features can read as elegant without being fragile.'
+                ]
+            },
+            'Half-Orc': {
+                history: 'Half-orcs often grow up negotiating strength, identity, and expectation, carrying both the resilience of orcish blood and the flexibility to move between different communities.',
+                adulthood: 'Half-orcs mature a little faster than humans and are often considered adults in the mid-teens.',
+                lifespan: 'They rarely live as long as humans, often reaching around 75 years at most.',
+                height: 'Half-orcs are usually taller and broader than most humans, with an unmistakably powerful physical presence.',
+                weight: 'They tend to be heavy-boned and muscular, built for impact and endurance.',
+                adulthoodAge: 14,
+                elderAge: 45,
+                bullets: [
+                    'Strength, scars, and force of personality often shape a half-orc first impression.',
+                    'Their appearance can range from rough and intimidating to calm and imposing.',
+                    'Many carry visible signs of hard-earned resilience.'
                 ]
             }
         };
@@ -3982,8 +4251,38 @@ export class CharacterDetailPageComponent {
     }
 
     private getSpeciesLore(speciesName: string) {
-        const match = Object.entries(this.speciesLoreDetails).find(([key]) => key.toLowerCase() === speciesName.trim().toLowerCase());
-        return match?.[1] ?? null;
+        const normalizedName = speciesName.trim();
+        const match = Object.entries(this.speciesLoreDetails).find(([key]) => key.toLowerCase() === normalizedName.toLowerCase());
+        if (match?.[1]) {
+            return match[1];
+        }
+
+        const speciesInfo = this.getSpeciesInfo(normalizedName);
+        const size = speciesInfo?.speciesDetails?.size?.toLowerCase() ?? '';
+        if (!speciesInfo) {
+            return null;
+        }
+
+        const height = size.includes('small')
+            ? `${normalizedName} is typically shorter and more compact than a human, with proportions shaped by Small size and practical movement.`
+            : size.includes('medium')
+                ? `${normalizedName} usually falls within a human-like height band, though posture, features, and silhouette vary by lineage.`
+                : `${normalizedName} has a more unusual silhouette than most humanoids, often standing out immediately in a crowd.`;
+
+        const weight = size.includes('small')
+            ? 'Build tends toward light, compact frames that emphasize balance, nimbleness, or efficiency over bulk.'
+            : 'Build can range from lean to heavily set depending on heritage, environment, and lifestyle.';
+
+        return {
+            history: speciesInfo.summary ?? `${normalizedName} has its own distinct culture, physical presence, and visual identity.`,
+            adulthood: `${normalizedName} reaches adulthood according to its own community standards, often tied to independence, training, or social role.`,
+            lifespan: `Members of this species follow their own life stages and traditions, though exact lifespan can vary by lineage and setting.`,
+            height,
+            weight,
+            adulthoodAge: 18,
+            elderAge: 60,
+            bullets: speciesInfo.highlights?.slice(0, 3) ?? []
+        };
     }
 
     private formatAlignmentValue(value: string): string {
@@ -3998,26 +4297,27 @@ export class CharacterDetailPageComponent {
     private describeSpeciesAge(speciesName: string, value: string): DetailDrawerContent {
         const lore = this.getSpeciesLore(speciesName);
         const parsedAge = Number.parseInt(value, 10);
-        const stage = Number.isFinite(parsedAge)
-            ? parsedAge < 100
-                ? 'This character is physically mature by many humanoid standards, but still young by elven cultural expectations.'
-                : parsedAge < 350
-                    ? 'This character is a fully established adult by elven standards, with significant time to build identity and reputation.'
-                    : 'This character stands within the long historical memory of an elven life, carrying decades or centuries of perspective.'
+        const stage = lore && Number.isFinite(parsedAge)
+            ? parsedAge < lore.adulthoodAge
+                ? `This character is still young by ${speciesName} standards, with much of adult life still ahead.`
+                : parsedAge < lore.elderAge
+                    ? `This character is in the established adult span typical for ${speciesName}, with identity and reputation likely well formed.`
+                    : `This character is older by ${speciesName} standards and may carry deep memory, experience, or a longer view of the world.`
             : null;
 
         return {
             title: `Age: ${value}`,
             subtitle: `${speciesName} lifespan`,
-            lineItems: lore
-                ? [
-                    { value, label: 'Current recorded age' },
-                    { value: 'Maturity', label: lore.adulthood },
-                    { value: 'Lifespan', label: lore.lifespan }
-                ]
-                : undefined,
-            description: 'Age is interpreted through species culture, maturity expectations, and lifespan norms.',
-            bullets: [stage].filter((entry): entry is string => Boolean(entry))
+            lineItems: [
+                { label: 'Current recorded age', value }
+            ],
+            description: lore
+                ? `${lore.adulthood} ${lore.lifespan}`
+                : 'Age is interpreted through species culture, maturity expectations, and lifespan norms.',
+            bullets: [
+                stage,
+                ...(lore?.bullets ?? [])
+            ].filter((entry): entry is string => Boolean(entry))
         };
     }
 
@@ -4026,14 +4326,12 @@ export class CharacterDetailPageComponent {
         return {
             title: `Height: ${value}`,
             subtitle: `${speciesName} physique`,
-            lineItems: lore
-                ? [
-                    { value, label: 'Current recorded height' },
-                    { value: 'Typical range', label: lore.height }
-                ]
-                : undefined,
-            description: 'Height helps define silhouette, posture, and first-impression presence in scenes and portraits.',
-            bullets: lore ? [lore.weight] : ['Height and build often influence movement style, presence, and how equipment or clothing are visualized.']
+            lineItems: [
+                { label: 'Current recorded height', value }
+            ],
+            description: lore?.height
+                ?? 'Height helps define silhouette, posture, and first-impression presence in scenes and portraits.',
+            bullets: lore ? [lore.weight, ...lore.bullets.slice(0, 1)] : ['Height and build often influence movement style, presence, and how equipment or clothing are visualized.']
         };
     }
 
@@ -4042,14 +4340,12 @@ export class CharacterDetailPageComponent {
         return {
             title: `Weight: ${value}`,
             subtitle: `${speciesName} build`,
-            lineItems: lore
-                ? [
-                    { value, label: 'Current recorded weight' },
-                    { value: 'Typical build', label: lore.weight }
-                ]
-                : undefined,
-            description: 'Weight reflects frame and build, helping describe how the character carries gear and moves through the world.',
-            bullets: lore ? [lore.height] : ['Weight can inform how the character moves, appears, and is described in armor or travel gear.']
+            lineItems: [
+                { label: 'Current recorded weight', value }
+            ],
+            description: lore?.weight
+                ?? 'Weight reflects frame and build, helping describe how the character carries gear and moves through the world.',
+            bullets: lore ? [lore.height, ...lore.bullets.slice(0, 1)] : ['Weight can inform how the character moves, appears, and is described in armor or travel gear.']
         };
     }
 
@@ -4082,19 +4378,21 @@ export class CharacterDetailPageComponent {
                     subtitle: 'Species',
                     description: speciesLore?.history ?? speciesInfo?.summary ?? race?.description ?? 'A unique species with its own history, culture, and traits.',
                     lineItems: [
-                        ...(speciesInfo?.speciesDetails?.coreTraits ?? []).map((item) => ({ value: item.value, label: item.label })),
-                        ...(speciesLore
-                            ? [
-                                { value: 'Adulthood', label: speciesLore.adulthood },
-                                { value: 'Lifespan', label: speciesLore.lifespan }
-                            ]
-                            : [])
+                        ...(speciesInfo?.speciesDetails?.coreTraits ?? []).map((item) => ({ value: item.value, label: item.label }))
                     ],
                     secondaryHeading: 'Notable species traits',
-                    bullets: speciesInfo?.speciesDetails?.traitNotes?.map((item) => `${item.title}: ${item.summary}`)
-                        ?? speciesLore?.bullets
-                        ?? race?.traits
-                        ?? []
+                    bullets: [
+                        ...(speciesInfo?.speciesDetails?.traitNotes?.map((item) => `${item.title}: ${item.summary}`)
+                            ?? speciesLore?.bullets
+                            ?? race?.traits
+                            ?? []),
+                        ...(speciesLore
+                            ? [
+                                `Adulthood: ${speciesLore.adulthood}`,
+                                `Lifespan: ${speciesLore.lifespan}`
+                            ]
+                            : [])
+                    ]
                 });
                 break;
             }

@@ -894,9 +894,15 @@ const baseEquipmentCatalog: ReadonlyArray<EquipmentItem> = [
     { name: 'Spear', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons', weight: 3, costGp: 1, notes: 'Simple, Thrown, Versatile (1d8), Range (20/60)' },
     // Simple Ranged Weapons
     { name: 'Crossbow, Light', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons', weight: 5, costGp: 25, notes: 'Simple, Ammunition, Loading, Two-Handed, Slow, Range (80/320)' },
+    { name: 'Dart', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons', weight: 0.25, costGp: 0.05, notes: 'Simple, Finesse, Thrown, Range (20/60)' },
     { name: 'Shortbow', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons', weight: 2, costGp: 25, notes: 'Simple, Ammunition, Two-Handed, Range (80/320)' },
+    { name: 'Sling', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons', weight: 0, costGp: 0.1, notes: 'Simple, Ammunition, Range (30/120)' },
     // Martial Ranged Weapons
+    { name: 'Blowgun', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons', weight: 1, costGp: 10, notes: 'Martial, Ammunition, Loading, Range (25/100)' },
+    { name: 'Crossbow, Hand', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons', weight: 3, costGp: 75, notes: 'Martial, Ammunition, Light, Loading, Range (30/120)' },
+    { name: 'Crossbow, Heavy', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons', weight: 18, costGp: 50, notes: 'Martial, Ammunition, Heavy, Loading, Two-Handed, Range (100/400)' },
     { name: 'Longbow', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons', weight: 2, costGp: 50, notes: 'Martial, Ammunition, Heavy, Two-Handed, Range (150/600)' },
+    { name: 'Net', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons', weight: 3, costGp: 1, notes: 'Martial, Special, Thrown, Range (5/15)' },
     // Martial Melee Weapons
     { name: 'Longsword', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons', weight: 3, costGp: 15, notes: 'Martial, Versatile (1d10)' },
     { name: 'Greatsword', category: 'Weapon', sourceUrl: 'https://dnd5e.wikidot.com/weapons', weight: 6, costGp: 50, notes: 'Martial, Heavy, Two-Handed, Graze' },
