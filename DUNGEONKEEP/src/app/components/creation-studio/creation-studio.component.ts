@@ -314,17 +314,7 @@ export class CreationStudioComponent {
             return;
         }
 
-        this.campaignSubmitAttempted.set(true);
-
-        if (this.currentCampaignStep() === 'identity' && this.hasIdentityValidationErrors()) {
-            return;
-        }
-
-        if (this.currentCampaignStep() === 'story' && this.hasStoryValidationErrors()) {
-            return;
-        }
-
-        this.campaignStepIndex.update((step) => Math.min(step + 1, this.campaignStepOrder.length - 1));
+        this.goToCampaignStep(this.campaignStepIndex() + 1);
     }
 
     goToPreviousCampaignStep(): void {
@@ -332,7 +322,35 @@ export class CreationStudioComponent {
             return;
         }
 
-        this.campaignStepIndex.update((step) => Math.max(step - 1, 0));
+        this.goToCampaignStep(this.campaignStepIndex() - 1);
+    }
+
+    goToCampaignStep(index: number): void {
+        const boundedIndex = Math.max(0, Math.min(index, this.campaignStepOrder.length - 1));
+        const currentIndex = this.campaignStepIndex();
+
+        if (boundedIndex === currentIndex) {
+            return;
+        }
+
+        if (boundedIndex < currentIndex) {
+            this.campaignStepIndex.set(boundedIndex);
+            return;
+        }
+
+        this.campaignSubmitAttempted.set(true);
+
+        if (boundedIndex >= 1 && this.hasIdentityValidationErrors()) {
+            this.campaignStepIndex.set(0);
+            return;
+        }
+
+        if (boundedIndex >= 2 && this.hasStoryValidationErrors()) {
+            this.campaignStepIndex.set(1);
+            return;
+        }
+
+        this.campaignStepIndex.set(boundedIndex);
     }
 
     applyCampaignTemplate(template: CampaignTemplate): void {

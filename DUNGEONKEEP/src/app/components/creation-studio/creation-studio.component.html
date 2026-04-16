@@ -10,7 +10,6 @@
             <h2>Add new material</h2>
             }
         </div>
-        <span class="pill">Local in-memory demo state</span>
     </div>
 
     <div class="studio-grid" [class.single]="mode() !== 'both'">
@@ -31,7 +30,8 @@
 
             <ol class="wizard-steps">
                 @for (step of campaignStepOrder; track step; let index = $index) {
-                <li class="wizard-step" [class.wizard-step-active]="campaignStepIndex() === index" [class.wizard-step-complete]="campaignStepIndex() > index">
+                <li class="wizard-step" [class.wizard-step-active]="campaignStepIndex() === index" [class.wizard-step-complete]="campaignStepIndex() > index" tabindex="0" role="button" [attr.aria-current]="campaignStepIndex() === index ? 'step' : null" (click)="goToCampaignStep(index)"
+                    (keydown.enter)="goToCampaignStep(index)" (keydown.space)="goToCampaignStep(index); $event.preventDefault()">
                     <span class="wizard-step-index">{{ index + 1 }}</span>
                     <span class="wizard-step-label">
                         @if (step === 'identity') {

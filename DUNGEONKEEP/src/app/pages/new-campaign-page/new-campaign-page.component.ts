@@ -143,7 +143,7 @@ export class NewCampaignPageComponent {
                 levelStart: generated.levelStart,
                 levelEnd: generated.levelEnd,
                 hook: generated.hook,
-                nextSession: generated.nextSession,
+                nextSession: '',
                 summary: generated.summary
             });
         } catch {
@@ -176,7 +176,7 @@ export class NewCampaignPageComponent {
             levelStart: draft.levelStart,
             levelEnd: draft.levelEnd,
             hook: draft.hook,
-            nextSession: draft.nextSession,
+            nextSession: '',
             summary: draft.summary
         });
         this.creationMode.set('standard');
