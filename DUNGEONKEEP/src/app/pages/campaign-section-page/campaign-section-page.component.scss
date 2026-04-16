@@ -76,9 +76,9 @@
 
 .campaign-nav {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 12px;
-    padding: 18px;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    padding: clamp(12px, 2vw, 18px);
 }
 
 .campaign-nav-link {

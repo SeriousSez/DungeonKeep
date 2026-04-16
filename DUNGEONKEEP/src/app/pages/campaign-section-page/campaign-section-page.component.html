@@ -50,10 +50,12 @@
             <span class="campaign-nav-label">Sessions</span>
             <span class="campaign-nav-meta">{{ campaign.sessions.length }} planned</span>
         </a>
+        @if (campaign.currentUserRole === 'Owner') {
         <a [routerLink]="['/campaigns', campaign.id, 'npcs']" class="campaign-nav-link" [class.is-active]="isActiveSection('npcs')">
             <span class="campaign-nav-label">NPCs</span>
             <span class="campaign-nav-meta">{{ campaign.npcs.length }} tracked</span>
         </a>
+        }
         <a [routerLink]="['/campaigns', campaign.id, 'loot']" class="campaign-nav-link" [class.is-active]="isActiveSection('loot')">
             <span class="campaign-nav-label">Loot</span>
             <span class="campaign-nav-meta">{{ campaign.loot.length }} logged</span>
@@ -67,7 +69,7 @@
             <span class="campaign-nav-meta">{{ campaign.worldNotes.length }} entries</span>
         </a>
         <a [routerLink]="['/campaigns', campaign.id, 'maps']" class="campaign-nav-link">
-            <span class="campaign-nav-label">Map</span>
+            <span class="campaign-nav-label">Maps</span>
             <span class="campaign-nav-meta">{{ campaign.maps.length }} boards</span>
         </a>
         <a [routerLink]="['/campaigns', campaign.id, 'members']" class="campaign-nav-link" [class.is-active]="isActiveSection('members')">
@@ -154,7 +156,9 @@
             </div>
         </div>
 
-        <app-npc-manager [campaignId]="campaign.id" [canEdit]="campaign.currentUserRole === 'Owner'" [npcNames]="campaign.npcs" [listOnly]="true"></app-npc-manager>
+        @if (campaign.currentUserRole === 'Owner') {
+        <app-npc-manager [campaignId]="campaign.id" [canEdit]="true" [npcNames]="campaign.npcs" [listOnly]="true"></app-npc-manager>
+        }
         }
 
         @case ('loot') {

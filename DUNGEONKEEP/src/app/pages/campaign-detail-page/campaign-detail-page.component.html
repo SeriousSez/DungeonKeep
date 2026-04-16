@@ -57,10 +57,12 @@
             <span class="campaign-nav-label">Sessions</span>
             <span class="campaign-nav-meta">{{ campaign.sessions.length }} planned</span>
         </a>
+        @if (campaign.currentUserRole === 'Owner') {
         <a [routerLink]="['/campaigns', campaign.id, 'npcs']" class="campaign-nav-link">
             <span class="campaign-nav-label">NPCs</span>
             <span class="campaign-nav-meta">{{ campaign.npcs.length }} tracked</span>
         </a>
+        }
         <a [routerLink]="['/campaigns', campaign.id, 'loot']" class="campaign-nav-link">
             <span class="campaign-nav-label">Loot</span>
             <span class="campaign-nav-meta">{{ campaign.loot.length }} logged</span>
@@ -140,6 +142,7 @@
             <p>{{ campaign.sessions.length > 0 ? campaign.sessions[0].title : 'No sessions are mapped yet. Build the next session plan from the dedicated page.' }}</p>
         </a>
 
+        @if (campaign.currentUserRole === 'Owner') {
         <a class="panel workspace-preview-card" [routerLink]="['/campaigns', campaign.id, 'npcs']">
             <div class="workspace-preview-header">
                 <div>
@@ -150,6 +153,7 @@
             </div>
             <p>{{ campaign.npcs.length > 0 ? campaign.npcs.slice(0, 2).join(' • ') : 'Track patrons, suspects, allies, and rivals from the NPC page.' }}</p>
         </a>
+        }
 
         <a class="panel workspace-preview-card" [routerLink]="['/campaigns', campaign.id, 'loot']">
             <div class="workspace-preview-header">

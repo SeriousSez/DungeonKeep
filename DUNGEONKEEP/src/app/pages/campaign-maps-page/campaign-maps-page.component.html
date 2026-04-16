@@ -39,10 +39,12 @@
             <span class="campaign-nav-label">Sessions</span>
             <span class="campaign-nav-meta">{{ campaign.sessions.length }} planned</span>
         </a>
+        @if (canEdit()) {
         <a [routerLink]="['/campaigns', campaign.id, 'npcs']" class="campaign-nav-link">
             <span class="campaign-nav-label">NPCs</span>
             <span class="campaign-nav-meta">{{ campaign.npcs.length }} tracked</span>
         </a>
+        }
         <a [routerLink]="['/campaigns', campaign.id, 'loot']" class="campaign-nav-link">
             <span class="campaign-nav-label">Loot</span>
             <span class="campaign-nav-meta">{{ campaign.loot.length }} logged</span>
@@ -56,7 +58,7 @@
             <span class="campaign-nav-meta">{{ campaign.worldNotes.length }} entries</span>
         </a>
         <a [routerLink]="['/campaigns', campaign.id, 'maps']" class="campaign-nav-link is-active">
-            <span class="campaign-nav-label">Map</span>
+            <span class="campaign-nav-label">Maps</span>
             <span class="campaign-nav-meta">{{ mapBoards().length }} boards</span>
         </a>
         <a [routerLink]="['/campaigns', campaign.id, 'members']" class="campaign-nav-link">

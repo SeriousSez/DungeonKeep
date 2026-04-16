@@ -73,10 +73,14 @@
     justify-content: flex-end;
 }
 
-.eyebrow,
-.campaign-nav-label {
+.eyebrow {
     text-transform: uppercase;
     letter-spacing: 0.14em;
+}
+
+.campaign-nav-label {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
 .eyebrow {
@@ -87,8 +91,8 @@
 
 .campaign-nav {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: clamp(10px, 2vw, 12px);
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
     padding: clamp(12px, 2.5vw, 18px);
 }
 
@@ -120,7 +124,10 @@
     font-weight: 700;
 }
 
-.campaign-nav-meta,
+.campaign-nav-meta {
+    font-size: 0.82rem;
+}
+
 .map-card-copy {
     font-size: 0.85rem;
 }
