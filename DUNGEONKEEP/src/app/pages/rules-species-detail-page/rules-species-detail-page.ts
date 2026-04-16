@@ -41,4 +41,18 @@ export class RulesSpeciesDetailPage {
     }
 
     readonly speciesImagePath = getSpeciesImagePath;
+
+    onSpeciesImageError(event: Event, slug: string): void {
+        const target = event.target;
+        if (!(target instanceof HTMLImageElement)) {
+            return;
+        }
+
+        const pngPath = this.speciesImagePath(slug, 'png');
+        if (!pngPath || target.src.endsWith('.png')) {
+            return;
+        }
+
+        target.src = pngPath;
+    }
 }

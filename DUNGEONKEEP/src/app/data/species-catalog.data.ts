@@ -1878,6 +1878,6 @@ export const speciesSlugsWithImages = new Set([
     'orc', 'owlin', 'plasmoid', 'satyr', 'sea-elf', 'shadar-kai', 'shifter', 'simic-hybrid', 'tabaxi', 'thri-kreen', 'tiefling', 'tortle', 'triton', 'reborn', 'verdan', 'warforged', 'yuan-ti',
 ]);
 
-export function getSpeciesImagePath(slug: string): string | null {
-    return speciesSlugsWithImages.has(slug) ? `/assets/images/species/${slug}.webp` : null;
+export function getSpeciesImagePath(slug: string, format: 'webp' | 'png' = 'webp'): string | null {
+    return speciesSlugsWithImages.has(slug) ? `/assets/images/species/${slug}.${format}` : null;
 }
