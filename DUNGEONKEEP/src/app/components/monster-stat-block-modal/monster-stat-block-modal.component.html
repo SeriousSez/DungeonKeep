@@ -124,10 +124,9 @@
             </p>
 
             <div class="monster-actions-row">
+                <a class="primary-link-btn" [routerLink]="['/rules/monsters', monster().slug]" (click)="close()">Open Monster Page</a>
                 @if (monster().sourceUrl) {
-                <a class="primary-link-btn" [href]="monster().sourceUrl" target="_blank" rel="noopener noreferrer">Open Full Stat Block</a>
-                } @else {
-                <span class="monster-missing-link">No external stat block link is available for this monster.</span>
+                <a class="secondary-link-btn" [href]="monster().sourceUrl" target="_blank" rel="noopener noreferrer">Open Official Entry</a>
                 }
             </div>
         </div>

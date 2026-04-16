@@ -1,12 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, HostListener, computed, input, output } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { MonsterCatalogEntry, MonsterTextSectionEntry } from '../../models/monster-reference.models';
 
 @Component({
     selector: 'app-monster-stat-block-modal',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, RouterLink],
     templateUrl: './monster-stat-block-modal.component.html',
     styleUrl: './monster-stat-block-modal.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
