@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, input, output, signal } from '@angular/core';
 
 import type { InventoryEntry } from '../../data/new-character-standard-page.types';
 
@@ -19,6 +19,11 @@ export class ItemDetailModalComponent {
 
     close(): void {
         this.closed.emit();
+    }
+
+    @HostListener('document:dungeonkeep-close-overlays')
+    handleCloseOverlayRequest(): void {
+        this.close();
     }
 
     decrementQuantity(): void {

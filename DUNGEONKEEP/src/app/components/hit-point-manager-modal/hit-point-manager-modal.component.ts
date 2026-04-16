@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, input, output } from '@angular/core';
 
 import { DropdownComponent, type DropdownOption } from '../dropdown/dropdown.component';
 
@@ -30,6 +30,11 @@ export class HitPointManagerModalComponent {
 
     close(): void {
         this.closed.emit();
+    }
+
+    @HostListener('document:dungeonkeep-close-overlays')
+    handleCloseOverlayRequest(): void {
+        this.close();
     }
 
     onModeChanged(value: string | number): void {

@@ -82,14 +82,14 @@ html {
 
 .campaign-nav-link {
     display: grid;
-    gap: 6px;
-    padding: clamp(10px, 2vw, 14px) clamp(12px, 2.5vw, 16px);
+    gap: 2px;
+    padding: clamp(8px, 1.5vw, 12px) clamp(12px, 2.5vw, 16px);
     border: 1px solid var(--panel-border);
     border-radius: 16px;
     background: color-mix(in srgb, var(--surface-raised) 84%, var(--accent-primary) 16%);
     text-decoration: none;
     color: var(--text-main);
-    font-size: clamp(0.8rem, 1.2vw, 0.95rem);
+    font-size: clamp(0.8rem, 1.2vw, 0.92rem);
     transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
 
@@ -109,11 +109,13 @@ html {
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
+    line-height: 1.1;
 }
 
 .campaign-nav-meta {
     font-size: 0.82rem;
     color: var(--text-muted);
+    line-height: 1.1;
 }
 
 .section-panel {

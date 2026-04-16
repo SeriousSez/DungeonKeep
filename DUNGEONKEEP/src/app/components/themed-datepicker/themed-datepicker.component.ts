@@ -93,6 +93,12 @@ export class ThemedDatepickerComponent {
         this.opensUpward.set(false);
     }
 
+    @HostListener('document:dungeonkeep-close-popups')
+    onClosePopupRequest(): void {
+        this.isOpen.set(false);
+        this.opensUpward.set(false);
+    }
+
     @HostListener('window:resize')
     onWindowResize(): void {
         if (this.isOpen()) {
@@ -101,6 +107,7 @@ export class ThemedDatepickerComponent {
     }
 
     open(): void {
+        this.requestCloseChat();
         this.isOpen.set(true);
     }
 
@@ -111,8 +118,13 @@ export class ThemedDatepickerComponent {
                 return false;
             }
 
+            this.requestCloseChat();
             return true;
         });
+    }
+
+    private requestCloseChat(): void {
+        globalThis.document?.dispatchEvent(new CustomEvent('dungeonkeep-close-chat', { bubbles: true }));
     }
 
     goToPreviousMonth(): void {

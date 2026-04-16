@@ -31,7 +31,6 @@
 .compact-heading,
 .map-stage-header,
 .selected-icon-header,
-.campaign-nav,
 .header-actions,
 .tool-toggle-row,
 .tool-actions,
@@ -147,23 +146,26 @@
     grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     gap: 10px;
     padding: clamp(12px, 2vw, 18px);
+    align-items: stretch;
 }
 
 .campaign-nav-link {
     display: grid;
-    gap: 6px;
-    padding: 14px 16px;
+    gap: 2px;
+    padding: clamp(8px, 1.5vw, 12px) clamp(12px, 2.5vw, 16px);
     border: 1px solid var(--panel-border);
     border-radius: 16px;
     background: color-mix(in srgb, var(--surface-raised) 84%, var(--accent-primary) 16%);
     text-decoration: none;
     color: var(--text-main);
+    font-size: clamp(0.8rem, 1.2vw, 0.92rem);
     transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
 
 .campaign-nav-link:hover {
     transform: translateY(-2px);
     border-color: color-mix(in srgb, var(--panel-border) 55%, var(--accent-primary) 45%);
+    background: color-mix(in srgb, var(--surface-raised) 72%, var(--accent-primary) 28%);
 }
 
 .campaign-nav-link.is-active {
@@ -174,11 +176,13 @@
 .campaign-nav-label {
     font-size: 0.92rem;
     font-weight: 700;
+    line-height: 1.1;
 }
 
 .campaign-nav-meta,
 .meta-copy {
     font-size: 0.82rem;
+    line-height: 1.1;
 }
 
 .map-layout {

@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, output, signal, inject, effect, ElementRef, computed, viewChild } from '@angular/core';
+import { Component, ChangeDetectionStrategy, HostListener, input, output, signal, inject, effect, ElementRef, computed, viewChild } from '@angular/core';
 import { CommonModule, DOCUMENT } from '@angular/common';
 
 export interface MultiSelectOption {
@@ -197,12 +197,23 @@ export class MultiSelectDropdownComponent {
             const nextOpen = !open;
             if (nextOpen) {
                 this.suppressOutsideCloseUntil = Date.now() + 150;
+                this.requestCloseChat();
             } else {
                 this.searchTerm.set('');
             }
 
             return nextOpen;
         });
+    }
+
+    private requestCloseChat(): void {
+        this.document.dispatchEvent(new CustomEvent('dungeonkeep-close-chat', { bubbles: true }));
+    }
+
+    @HostListener('document:dungeonkeep-close-popups')
+    handleGlobalCloseRequest(): void {
+        this.isOpen.set(false);
+        this.searchTerm.set('');
     }
 
     updateSearchTerm(value: string): void {

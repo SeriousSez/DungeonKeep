@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, effect, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { Component, HostListener, effect, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { marked } from 'marked';
 import { Router } from '@angular/router';
@@ -70,8 +70,32 @@ export class DndChatWidgetComponent {
     }
 
     toggleOpen(): void {
-        this.isOpen.update((open) => !open);
+        const nextOpen = !this.isOpen();
+        if (nextOpen) {
+            this.requestClosePopups();
+        }
+
+        this.isOpen.set(nextOpen);
         this.error.set('');
+    }
+
+    @HostListener('document:dungeonkeep-close-chat')
+    onCloseChatRequest(): void {
+        this.isOpen.set(false);
+        this.error.set('');
+    }
+
+    private requestClosePopups(): void {
+        if (typeof globalThis.document === 'undefined') {
+            return;
+        }
+
+        globalThis.document.dispatchEvent(new CustomEvent('dungeonkeep-close-popups', { bubbles: true }));
+
+        const activeElement = globalThis.document.activeElement;
+        if (activeElement instanceof HTMLElement) {
+            activeElement.blur();
+        }
     }
 
     renderMarkdown(content: string): string {

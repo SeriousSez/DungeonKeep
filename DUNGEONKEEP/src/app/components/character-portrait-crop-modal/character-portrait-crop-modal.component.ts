@@ -192,6 +192,13 @@ export class CharacterPortraitCropModalComponent implements AfterViewInit, OnDes
         }
     }
 
+    @HostListener('document:dungeonkeep-close-overlays')
+    handleCloseOverlayRequest(): void {
+        if (this.open()) {
+            this.close();
+        }
+    }
+
     private loadImage(imageUrl: string): void {
         const image = new Image();
         image.onload = () => {

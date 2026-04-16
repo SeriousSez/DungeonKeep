@@ -29,11 +29,18 @@
     }
 }
 
-.heading-actions,
-.table-card-actions {
+.heading-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+.table-card-actions {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
 }
 
 .eyebrow {
@@ -102,5 +109,9 @@
     .table-panel-heading,
     .table-card {
         flex-direction: column;
+    }
+
+    .table-card-actions {
+        flex-wrap: wrap;
     }
 }

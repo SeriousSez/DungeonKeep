@@ -760,6 +760,21 @@ export interface ApiGenerateNpcDraftResponse {
     isImportant: boolean;
 }
 
+export interface ApiGenerateTableDraftRequest {
+    campaignId?: string;
+    titleHint: string;
+    descriptionHint: string;
+    themeHint: string;
+    entryCount?: number;
+    existingTableTitles: string[];
+}
+
+export interface ApiGenerateTableDraftResponse {
+    title: string;
+    description: string;
+    entries: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class DungeonApiService {
 
@@ -842,6 +857,10 @@ export class DungeonApiService {
 
     async generateNpcDraft(payload: ApiGenerateNpcDraftRequest): Promise<ApiGenerateNpcDraftResponse> {
         return await firstValueFrom(this.http.post<ApiGenerateNpcDraftResponse>(`${this.baseUrl}/campaigns/npcs/generate-draft`, payload));
+    }
+
+    async generateTableDraft(payload: ApiGenerateTableDraftRequest): Promise<ApiGenerateTableDraftResponse> {
+        return await firstValueFrom(this.http.post<ApiGenerateTableDraftResponse>(`${this.baseUrl}/campaigns/tables/generate-draft`, payload));
     }
 
     async addCampaignLoot(campaignId: string, name: string): Promise<ApiCampaignDto> {

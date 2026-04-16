@@ -30,7 +30,14 @@
     justify-content: space-between;
 }
 
-.header-actions,
+.header-actions {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
 .table-actions,
 .table-actions-secondary {
     display: flex;
@@ -142,5 +149,9 @@
     .page-intro-header,
     .section-heading {
         flex-direction: column;
+    }
+
+    .header-actions {
+        flex-wrap: wrap;
     }
 }

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, computed, input, output } from '@angular/core';
 
 import { MonsterCatalogEntry, MonsterTextSectionEntry } from '../../models/monster-reference.models';
 
@@ -56,6 +56,11 @@ export class MonsterStatBlockModalComponent {
 
     close(): void {
         this.closed.emit();
+    }
+
+    @HostListener('document:dungeonkeep-close-overlays')
+    handleCloseOverlayRequest(): void {
+        this.close();
     }
 
     subtitle(): string {

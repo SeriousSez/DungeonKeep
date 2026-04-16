@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, effect, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, computed, effect, input, output, signal } from '@angular/core';
 
 import { DropdownComponent, DropdownOption } from '../dropdown/dropdown.component';
 import { CampaignMapBackground } from '../../models/dungeon.models';
@@ -569,6 +569,13 @@ export class MapArtGenerationModalComponent {
 
     close(): void {
         this.closed.emit();
+    }
+
+    @HostListener('document:dungeonkeep-close-overlays')
+    handleCloseOverlayRequest(): void {
+        if (this.open()) {
+            this.close();
+        }
     }
 
     submit(): void {

@@ -17,7 +17,6 @@
 }
 
 .page-intro-header,
-.campaign-nav,
 .header-actions,
 .map-card-header,
 .map-preview-stats {
@@ -94,12 +93,13 @@
     grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     gap: 10px;
     padding: clamp(12px, 2.5vw, 18px);
+    align-items: stretch;
 }
 
 .campaign-nav-link {
     display: grid;
-    gap: 6px;
-    padding: clamp(10px, 2vw, 14px) clamp(12px, 2.5vw, 16px);
+    gap: 2px;
+    padding: clamp(8px, 1.5vw, 12px) clamp(12px, 2.5vw, 16px);
     border: 1px solid var(--panel-border);
     border-radius: 16px;
     background: color-mix(in srgb, var(--surface-raised) 84%, var(--accent-primary) 16%);
@@ -112,6 +112,7 @@
 .campaign-nav-link:hover,
 .map-card-link:hover {
     border-color: color-mix(in srgb, var(--panel-border) 55%, var(--accent-primary) 45%);
+    background: color-mix(in srgb, var(--surface-raised) 72%, var(--accent-primary) 28%);
 }
 
 .campaign-nav-link.is-active {
@@ -122,10 +123,12 @@
 .campaign-nav-label {
     font-size: 0.92rem;
     font-weight: 700;
+    line-height: 1.1;
 }
 
 .campaign-nav-meta {
     font-size: 0.82rem;
+    line-height: 1.1;
 }
 
 .map-card-copy {

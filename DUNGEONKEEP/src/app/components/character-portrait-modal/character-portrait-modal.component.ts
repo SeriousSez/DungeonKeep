@@ -82,4 +82,11 @@ export class CharacterPortraitModalComponent {
             this.close();
         }
     }
+
+    @HostListener('document:dungeonkeep-close-overlays')
+    handleCloseOverlayRequest(): void {
+        if (this.open()) {
+            this.close();
+        }
+    }
 }

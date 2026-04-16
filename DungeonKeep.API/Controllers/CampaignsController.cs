@@ -21,6 +21,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
     private const string DefaultResponsesUrl = "https://api.openai.com/v1/responses";
     private const string DefaultImageModel = "gpt-image-1";
     private const string DefaultImagesUrl = "https://api.openai.com/v1/images/generations";
+    private static readonly TimeSpan OpenAiRequestTimeout = TimeSpan.FromMinutes(4);
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
     [HttpGet("summaries")]
@@ -273,7 +274,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                 BuildSessionDraftPrompt(campaign, request),
                 referenceImageUrl: null,
                 temperature: 0.9,
-                maxOutputTokens: 4200,
+                maxOutputTokens: 3200,
                 textFormat: BuildSessionDraftJsonSchemaFormat(),
                 fallbackToPlainTextOnBadRequest: true,
                 cancellationToken: cancellationToken);
@@ -286,7 +287,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                     responsesUrl,
                     model,
                     BuildSessionDraftRepairPrompt(text),
-                    maxOutputTokens: 4600,
+                    maxOutputTokens: 3600,
                     cancellationToken);
 
                 generated = TryParseGeneratedSessionDraftPayload(repairedText);
@@ -405,6 +406,80 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         catch (InvalidOperationException exception)
         {
             return Problem(title: "NPC generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+    }
+
+    [HttpPost("tables/generate-draft")]
+    public async Task<ActionResult<GenerateTableDraftResponse>> GenerateTableDraft([FromBody] GenerateTableDraftRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        CampaignDto? campaign = null;
+        if (request.CampaignId is Guid campaignId && campaignId != Guid.Empty)
+        {
+            campaign = await GetCampaignContextAsync(campaignId, user.Id, cancellationToken);
+            if (campaign is null)
+            {
+                return NotFound("Campaign was not found.");
+            }
+
+            if (!string.Equals(campaign.CurrentUserRole, "Owner", StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(403);
+            }
+        }
+
+        if (!TryGetOpenAiConfiguration(out var apiKey, out var responsesUrl, out var model))
+        {
+            return Problem(title: "Table generation unavailable.", detail: "OpenAI API key is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
+        try
+        {
+            var text = await SendOpenAiPromptAsync(
+                apiKey,
+                responsesUrl,
+                model,
+                BuildTableDraftPrompt(campaign, request),
+                referenceImageUrl: null,
+                temperature: 0.8,
+                maxOutputTokens: 1200,
+                textFormat: null,
+                fallbackToPlainTextOnBadRequest: false,
+                cancellationToken: cancellationToken);
+
+            var generated = TryParseGeneratedTableDraftPayload(text);
+            if (generated is null)
+            {
+                var repairedText = await RepairJsonAsync(
+                    apiKey,
+                    responsesUrl,
+                    model,
+                    BuildTableDraftRepairPrompt(text),
+                    maxOutputTokens: 1600,
+                    cancellationToken);
+
+                generated = TryParseGeneratedTableDraftPayload(repairedText);
+            }
+
+            if (generated is null)
+            {
+                return Problem(title: "Table generation failed.", detail: "Model output was not valid JSON.", statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            return Ok(NormalizeTableDraft(generated, request));
+        }
+        catch (HttpRequestException exception)
+        {
+            return Problem(title: "Table generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return Problem(title: "Table generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
         }
     }
 
@@ -1389,67 +1464,75 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         CancellationToken cancellationToken)
     {
         var client = httpClientFactory.CreateClient();
+        client.Timeout = OpenAiRequestTimeout;
 
-        using var response = await SendResponsesApiRequestAsync(
-            client,
-            apiKey,
-            responsesUrl,
-            model,
-            prompt,
-            referenceImageUrl,
-            temperature,
-            maxOutputTokens,
-            textFormat,
-            cancellationToken);
-
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
-
-        if (!response.IsSuccessStatusCode && fallbackToPlainTextOnBadRequest && textFormat is not null && response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+        try
         {
-            using var fallbackResponse = await SendResponsesApiRequestAsync(
+            using var response = await SendResponsesApiRequestAsync(
                 client,
                 apiKey,
                 responsesUrl,
                 model,
                 prompt,
-                referenceImageUrl: null,
+                referenceImageUrl,
                 temperature,
                 maxOutputTokens,
-                textFormat: null,
-                cancellationToken: cancellationToken);
+                textFormat,
+                cancellationToken);
 
-            body = await fallbackResponse.Content.ReadAsStringAsync(cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
-            if (!fallbackResponse.IsSuccessStatusCode)
+            if (!response.IsSuccessStatusCode && fallbackToPlainTextOnBadRequest && textFormat is not null && response.StatusCode == System.Net.HttpStatusCode.BadRequest)
             {
-                var fallbackDetail = body.Length > 240 ? body[..240] : body;
-                throw new HttpRequestException($"OpenAI request failed ({(int)fallbackResponse.StatusCode}): {fallbackDetail}", null, fallbackResponse.StatusCode);
+                using var fallbackResponse = await SendResponsesApiRequestAsync(
+                    client,
+                    apiKey,
+                    responsesUrl,
+                    model,
+                    prompt,
+                    referenceImageUrl: null,
+                    temperature,
+                    maxOutputTokens,
+                    textFormat: null,
+                    cancellationToken: cancellationToken);
+
+                body = await fallbackResponse.Content.ReadAsStringAsync(cancellationToken);
+
+                if (!fallbackResponse.IsSuccessStatusCode)
+                {
+                    var fallbackDetail = body.Length > 240 ? body[..240] : body;
+                    throw new HttpRequestException($"OpenAI request failed ({(int)fallbackResponse.StatusCode}): {fallbackDetail}", null, fallbackResponse.StatusCode);
+                }
+
+                var fallbackPayload = JsonSerializer.Deserialize<OpenAiResponsesApiResponse>(body, SerializerOptions);
+                var fallbackText = ExtractResponseText(fallbackPayload);
+                if (string.IsNullOrWhiteSpace(fallbackText))
+                {
+                    throw new InvalidOperationException("The model returned no text.");
+                }
+
+                return fallbackText;
             }
 
-            var fallbackPayload = JsonSerializer.Deserialize<OpenAiResponsesApiResponse>(body, SerializerOptions);
-            var fallbackText = ExtractResponseText(fallbackPayload);
-            if (string.IsNullOrWhiteSpace(fallbackText))
+            if (!response.IsSuccessStatusCode)
+            {
+                var detail = body.Length > 240 ? body[..240] : body;
+                throw new HttpRequestException($"OpenAI request failed ({(int)response.StatusCode}): {detail}", null, response.StatusCode);
+            }
+
+            var payload = JsonSerializer.Deserialize<OpenAiResponsesApiResponse>(body, SerializerOptions);
+            var text = ExtractResponseText(payload);
+            if (string.IsNullOrWhiteSpace(text))
             {
                 throw new InvalidOperationException("The model returned no text.");
             }
 
-            return fallbackText;
+            return text;
         }
-
-        if (!response.IsSuccessStatusCode)
+        catch (TaskCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {
-            var detail = body.Length > 240 ? body[..240] : body;
-            throw new HttpRequestException($"OpenAI request failed ({(int)response.StatusCode}): {detail}", null, response.StatusCode);
+            throw new InvalidOperationException($"The AI request timed out after {OpenAiRequestTimeout.TotalMinutes:0} minutes. Try again or shorten the draft request.", exception);
         }
-
-        var payload = JsonSerializer.Deserialize<OpenAiResponsesApiResponse>(body, SerializerOptions);
-        var text = ExtractResponseText(payload);
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            throw new InvalidOperationException("The model returned no text.");
-        }
-
-        return text;
     }
 
     private static HttpRequestMessage BuildResponsesApiRequest(
@@ -1554,6 +1637,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         CancellationToken cancellationToken)
     {
         var client = httpClientFactory.CreateClient();
+        client.Timeout = OpenAiRequestTimeout;
         using var message = new HttpRequestMessage(HttpMethod.Post, imagesUrl)
         {
             Headers =
@@ -1569,23 +1653,30 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             })
         };
 
-        using var response = await client.SendAsync(message, cancellationToken);
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
+        try
         {
-            var detail = body.Length > 240 ? body[..240] : body;
-            throw new HttpRequestException($"OpenAI image request failed ({(int)response.StatusCode}): {detail}", null, response.StatusCode);
-        }
+            using var response = await client.SendAsync(message, cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
-        var payload = JsonSerializer.Deserialize<OpenAiImageApiResponse>(body, SerializerOptions);
-        var image = ExtractGeneratedImageDataUrl(payload);
-        if (string.IsNullOrWhiteSpace(image))
+            if (!response.IsSuccessStatusCode)
+            {
+                var detail = body.Length > 240 ? body[..240] : body;
+                throw new HttpRequestException($"OpenAI image request failed ({(int)response.StatusCode}): {detail}", null, response.StatusCode);
+            }
+
+            var payload = JsonSerializer.Deserialize<OpenAiImageApiResponse>(body, SerializerOptions);
+            var image = ExtractGeneratedImageDataUrl(payload);
+            if (string.IsNullOrWhiteSpace(image))
+            {
+                throw new InvalidOperationException("The image model returned no image.");
+            }
+
+            return image;
+        }
+        catch (TaskCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {
-            throw new InvalidOperationException("The image model returned no image.");
+            throw new InvalidOperationException($"The AI image request timed out after {OpenAiRequestTimeout.TotalMinutes:0} minutes. Try again with a simpler prompt.", exception);
         }
-
-        return image;
     }
 
     private static object BuildSessionDraftJsonSchemaFormat()
@@ -2562,6 +2653,63 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         ]);
     }
 
+    private static string BuildTableDraftPrompt(CampaignDto? campaign, GenerateTableDraftRequest request)
+    {
+        var titleHint = string.IsNullOrWhiteSpace(request.TitleHint) ? "No title hint provided" : request.TitleHint.Trim();
+        var descriptionHint = string.IsNullOrWhiteSpace(request.DescriptionHint) ? "No description hint provided" : request.DescriptionHint.Trim();
+        var themeHint = string.IsNullOrWhiteSpace(request.ThemeHint) ? "No theme hint provided" : request.ThemeHint.Trim();
+        var entryCount = Math.Clamp(request.EntryCount ?? 8, 4, 20);
+
+        var lines = new List<string>
+        {
+            "Generate a Dungeons & Dragons random table draft for DungeonKeep.",
+            "Return only valid JSON.",
+            "Use these exact fields: title, description, entries.",
+            "entries must be an array of concise strings suitable for rolling at the table.",
+            $"Generate exactly {entryCount} entries.",
+            "Make the results varied, specific, and immediately useful during play.",
+            string.Empty
+        };
+
+        if (campaign is not null)
+        {
+            lines.Add($"Campaign name: {campaign.Name}");
+            lines.Add($"Campaign setting: {campaign.Setting}");
+            lines.Add($"Campaign tone: {campaign.Tone}");
+            lines.Add($"Campaign summary: {campaign.Summary}");
+            lines.Add($"Campaign hook: {campaign.Hook}");
+            lines.Add($"Existing table titles to avoid duplicating: {FormatList(request.ExistingTableTitles)}");
+            lines.Add(string.Empty);
+        }
+        else
+        {
+            lines.Add($"Existing table titles to avoid duplicating: {FormatList(request.ExistingTableTitles)}");
+            lines.Add("No campaign context was provided, so generate a reusable fantasy table that can fit into many adventures.");
+            lines.Add(string.Empty);
+        }
+
+        lines.Add($"Title hint: {titleHint}");
+        lines.Add($"Description hint: {descriptionHint}");
+        lines.Add($"Theme hint: {themeHint}");
+        lines.Add("Prefer compact results that read well as one-line roll outcomes.");
+
+        return string.Join('\n', lines);
+    }
+
+    private static string BuildTableDraftRepairPrompt(string invalidOutput)
+    {
+        return string.Join('\n',
+        [
+            "Convert the provided random table content into valid JSON only.",
+            "Do not add markdown, explanations, or code fences.",
+            "Use these exact fields: title, description, entries.",
+            "entries must be an array of strings.",
+            string.Empty,
+            "Content to repair:",
+            invalidOutput
+        ]);
+    }
+
     private static string NormalizeTone(string? generatedTone, string? requestedTone)
     {
         var candidate = string.IsNullOrWhiteSpace(generatedTone)
@@ -2705,6 +2853,29 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             IsAlive: generated.IsAlive ?? true,
             IsImportant: generated.IsImportant ?? false
         );
+    }
+
+    private static GenerateTableDraftResponse NormalizeTableDraft(GenerateTableDraftPayload generated, GenerateTableDraftRequest request)
+    {
+        var entryCount = Math.Clamp(request.EntryCount ?? 8, 4, 20);
+        var normalizedEntries = NormalizeStringList(generated.Entries, entryCount);
+        if (normalizedEntries.Length == 0)
+        {
+            normalizedEntries = BuildFallbackTableEntries(request, entryCount);
+        }
+
+        return new GenerateTableDraftResponse(
+            Title: FirstNonEmpty(generated.Title, request.TitleHint, request.ThemeHint, request.DescriptionHint, "Generated Table"),
+            Description: FirstNonEmpty(generated.Description, request.DescriptionHint, request.ThemeHint, request.TitleHint, "AI-generated random table."),
+            Entries: normalizedEntries);
+    }
+
+    private static string[] BuildFallbackTableEntries(GenerateTableDraftRequest request, int count)
+    {
+        var theme = FirstNonEmpty(request.ThemeHint, request.TitleHint, request.DescriptionHint, null, "adventure twist");
+        return Enumerable.Range(1, count)
+            .Select(index => $"{theme.Trim().TrimEnd('.')}: result {index}")
+            .ToArray();
     }
 
     private static string ResolveNpcMotivations(GenerateNpcDraftPayload generated, GenerateNpcDraftRequest request)
@@ -3830,6 +4001,66 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         }
     }
 
+    private static GenerateTableDraftPayload? TryParseGeneratedTableDraftPayload(string rawText)
+    {
+        foreach (var candidate in BuildJsonCandidates(rawText))
+        {
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<GenerateTableDraftPayload>(candidate, SerializerOptions);
+                if (parsed is not null)
+                {
+                    return parsed;
+                }
+            }
+            catch (JsonException)
+            {
+            }
+
+            try
+            {
+                using var document = JsonDocument.Parse(candidate);
+                var root = document.RootElement;
+
+                if (root.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var propertyName in new[] { "table", "draft", "data", "result", "response" })
+                    {
+                        if (TryGetPropertyIgnoreCase(root, propertyName, out var nested) && nested.ValueKind == JsonValueKind.Object)
+                        {
+                            root = nested;
+                            break;
+                        }
+                    }
+                }
+
+                if (root.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
+
+                var entries = GetOptionalStringList(root, "entries")
+                    ?? GetOptionalStringList(root, "results")
+                    ?? GetOptionalStringList(root, "items");
+
+                if (!string.IsNullOrWhiteSpace(GetOptionalString(root, "title"))
+                    || !string.IsNullOrWhiteSpace(GetOptionalString(root, "description"))
+                    || entries is { Count: > 0 })
+                {
+                    return new GenerateTableDraftPayload(
+                        Title: GetOptionalString(root, "title"),
+                        Description: GetOptionalString(root, "description"),
+                        Entries: entries);
+                }
+            }
+            catch (JsonException)
+            {
+            }
+        }
+
+        return null;
+    }
+
     private static JsonElement SelectNpcDraftRoot(JsonElement root)
     {
         if (root.ValueKind != JsonValueKind.Object)
@@ -4375,6 +4606,19 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         bool IsAlive,
         bool IsImportant);
 
+    public sealed record GenerateTableDraftRequest(
+        Guid? CampaignId,
+        string? TitleHint,
+        string? DescriptionHint,
+        string? ThemeHint,
+        int? EntryCount,
+        IReadOnlyList<string>? ExistingTableTitles);
+
+    public sealed record GenerateTableDraftResponse(
+        string Title,
+        string Description,
+        IReadOnlyList<string> Entries);
+
     public sealed record GenerateSessionSceneResponse(string Title, string Description, string Trigger, IReadOnlyList<string> KeyEvents, IReadOnlyList<string> PossibleOutcomes);
     public sealed record GenerateSessionNpcResponse(string Name, string Role, string Personality, string Motivation, string VoiceNotes);
     public sealed record GenerateSessionMonsterResponse(string Name, string Type, string ChallengeRating, int Hp, string KeyAbilities, string Notes);
@@ -4455,6 +4699,11 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         bool? IsHostile,
         bool? IsAlive,
         bool? IsImportant);
+
+    private sealed record GenerateTableDraftPayload(
+        string? Title,
+        string? Description,
+        List<string>? Entries);
 
     private sealed record GenerateSessionScenePayload(string? Title, string? Description, string? Trigger, List<string>? KeyEvents, List<string>? PossibleOutcomes);
     private sealed record GenerateSessionNpcPayload(string? Name, string? Role, string? Personality, string? Motivation, string? VoiceNotes);

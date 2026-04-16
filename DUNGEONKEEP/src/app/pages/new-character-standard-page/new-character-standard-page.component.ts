@@ -1,6 +1,6 @@
 ﻿import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule, DOCUMENT } from '@angular/common';
-import { afterNextRender, ChangeDetectorRef, Component, computed, effect, inject, signal } from '@angular/core';
+import { afterNextRender, ChangeDetectorRef, Component, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs/operators';
@@ -345,6 +345,15 @@ export class NewCharacterStandardPageComponent {
                 this.document.removeEventListener('scroll', update, true);
             });
         });
+    }
+
+    @HostListener('document:dungeonkeep-close-popups')
+    onClosePopups(): void {
+        this.faithDropdownOpen.set(false);
+    }
+
+    private requestCloseChat(): void {
+        this.document.dispatchEvent(new CustomEvent('dungeonkeep-close-chat', { bubbles: true }));
     }
 
     populateFromPremade(premade: Character) {
@@ -4797,6 +4806,7 @@ export class NewCharacterStandardPageComponent {
             return;
         }
 
+        this.requestCloseChat();
         this.hitPointManagerOpen.set(true);
     }
 
@@ -7301,7 +7311,12 @@ export class NewCharacterStandardPageComponent {
     onFaithChanged(value: string, input: HTMLInputElement): void {
         this.faithInputElement = input;
         this.selectedFaith.set(value);
-        this.faithDropdownOpen.set(value.trim().length > 0);
+        const nextOpen = value.trim().length > 0;
+        if (nextOpen) {
+            this.requestCloseChat();
+        }
+
+        this.faithDropdownOpen.set(nextOpen);
         this.updateFaithSuggestionOverlayPosition();
         this.scheduleFaithSuggestionOverlayPositionUpdate();
     }
@@ -7323,6 +7338,7 @@ export class NewCharacterStandardPageComponent {
     }
 
     openDeityPicker(): void {
+        this.requestCloseChat();
         this.faithDropdownOpen.set(false);
         this.faithOpensUpward.set(false);
         this.faithSuggestionsStyle.set({});

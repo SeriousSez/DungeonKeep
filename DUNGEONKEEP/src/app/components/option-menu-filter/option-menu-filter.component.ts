@@ -25,11 +25,19 @@ export class OptionMenuFilterComponent {
 
     toggleMenu(): void {
         const nextOpen = !this.menuOpen();
+        if (nextOpen) {
+            this.requestCloseChat();
+        }
+
         this.menuOpen.set(nextOpen);
 
         if (nextOpen) {
             globalThis.window?.requestAnimationFrame(() => this.updatePanelAlignment());
         }
+    }
+
+    private requestCloseChat(): void {
+        globalThis.document?.dispatchEvent(new CustomEvent('dungeonkeep-close-chat', { bubbles: true }));
     }
 
     pickOption(value: string | number): void {
@@ -51,6 +59,11 @@ export class OptionMenuFilterComponent {
         if (!this.hostElement.nativeElement.contains(target)) {
             this.menuOpen.set(false);
         }
+    }
+
+    @HostListener('document:dungeonkeep-close-popups')
+    onClosePopups(): void {
+        this.menuOpen.set(false);
     }
 
     @HostListener('window:resize')

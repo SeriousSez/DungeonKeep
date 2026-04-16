@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { marked } from 'marked';
@@ -654,6 +654,20 @@ export class CharacterDetailPageComponent {
         });
     }
 
+    @HostListener('document:dungeonkeep-close-popups')
+    onClosePopups(): void {
+        this.activeDetailDrawer.set(null);
+        this.activeExtrasStatEntry.set(null);
+        this.hpManagerOpen.set(false);
+        this.coinManagerOpen.set(false);
+        this.spellManagerOpen.set(false);
+        this.inventoryManagerOpen.set(false);
+        this.extrasManagerOpen.set(false);
+    }
+
+    private requestCloseChat(): void {
+        globalThis.document?.dispatchEvent(new CustomEvent('dungeonkeep-close-chat', { bubbles: true }));
+    }
 
     readonly combatTabs: Array<{ key: CombatTab; label: string }> = [
         { key: 'actions', label: 'Actions' },
@@ -2438,6 +2452,7 @@ export class CharacterDetailPageComponent {
     }
 
     private openDetailDrawer(content: DetailDrawerContent): void {
+        this.requestCloseChat();
         this.hpManagerOpen.set(false);
         this.inventoryManagerOpen.set(false);
         this.extrasManagerOpen.set(false);
@@ -2452,6 +2467,7 @@ export class CharacterDetailPageComponent {
             return;
         }
 
+        this.requestCloseChat();
         this.activeDetailDrawer.set(null);
         this.inventoryManagerOpen.set(false);
         this.extrasManagerOpen.set(false);
@@ -4256,6 +4272,7 @@ export class CharacterDetailPageComponent {
             return;
         }
 
+        this.requestCloseChat();
         this.activeDetailDrawer.set(null);
         this.hpManagerOpen.set(false);
         this.coinManagerOpen.set(false);
@@ -4559,6 +4576,7 @@ export class CharacterDetailPageComponent {
             return;
         }
 
+        this.requestCloseChat();
         this.inventoryManagerOpening.set(true);
         this.cdr.detectChanges();
 
@@ -5230,6 +5248,7 @@ export class CharacterDetailPageComponent {
             return;
         }
 
+        this.requestCloseChat();
         this.activeDetailDrawer.set(null);
         this.hpManagerOpen.set(false);
         this.inventoryManagerOpen.set(false);
@@ -6205,6 +6224,7 @@ export class CharacterDetailPageComponent {
             return;
         }
 
+        this.requestCloseChat();
         this.activeExtrasStatEntry.set(null);
         this.activeDetailDrawer.set(null);
         this.hpManagerOpen.set(false);
@@ -6223,6 +6243,7 @@ export class CharacterDetailPageComponent {
     }
 
     openExtrasStatPopup(entry: PersistedExtrasEntry): void {
+        this.requestCloseChat();
         this.activeDetailDrawer.set(null);
         this.hpManagerOpen.set(false);
         this.coinManagerOpen.set(false);

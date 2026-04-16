@@ -42,10 +42,6 @@
                     <button type="button" class="ghost-button" (click)="$event.stopPropagation(); openEditor(table.id)">Edit</button>
                     }
 
-                    @if (!libraryMode() && canEdit()) {
-                    <button type="button" class="ghost-button" (click)="$event.stopPropagation(); saveTableToLibrary(table.id)">Save to Library</button>
-                    }
-
                     @if (libraryMode() && importTargetCampaignId()) {
                     <button type="button" class="ghost-button" (click)="$event.stopPropagation(); importLibraryTable(table.id)">Import</button>
                     }

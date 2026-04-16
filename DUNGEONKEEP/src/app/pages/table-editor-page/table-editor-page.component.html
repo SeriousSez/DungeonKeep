@@ -21,26 +21,73 @@
     }
 
     <section class="panel editor-panel">
+        @if (canEdit()) {
+        <section class="creation-mode-panel" aria-label="Table drafting type">
+            <h3>Choose table drafting type</h3>
+            <div class="mode-options">
+                <button type="button" class="mode-card" [class.mode-card-active]="editorMode() === 'standard'" (click)="selectEditorMode('standard')">
+                    <strong>Standard editing</strong>
+                    <span>Fill out the table title, description, and entries manually.</span>
+                </button>
+                <button type="button" class="mode-card" [class.mode-card-active]="editorMode() === 'ai'" (click)="selectEditorMode('ai')">
+                    <strong>AI generation</strong>
+                    <span>Give the model direction, then generate a table draft into the editor.</span>
+                </button>
+            </div>
+        </section>
+        }
+
+        @if (canEdit() && editorMode() === 'ai') {
+        <section class="generation-prompt-shell">
+            <div class="generation-prompt-header">
+                <div>
+                    <p class="eyebrow">Generation Prompt</p>
+                    <h3>Guide the table draft</h3>
+                    <p>Add a short theme or purpose and AI will draft the results.</p>
+                </div>
+            </div>
+
+            <label class="editor-field">
+                <span>Generate with AI</span>
+                <textarea class="generation-textarea" rows="3" [value]="generationPrompt()" (input)="updateGenerationPrompt($any($event.target).value)" placeholder="Ex: eerie tavern rumors for a storm-battered coastal city"></textarea>
+                <small>Describe the table theme or purpose and AI will draft the title, description, and results.</small>
+            </label>
+
+            @if (generationError()) {
+            <p class="generation-error">{{ generationError() }}</p>
+            }
+
+            <div class="generation-actions-row">
+                <button type="button" class="ghost-button" (click)="selectEditorMode('standard')">Back to editor</button>
+                <button type="button" class="primary-button" [class.is-loading]="generationBusy()" [disabled]="generationBusy()" (click)="generateTable()">
+                    {{ generationBusy() ? 'Generating…' : 'Generate table draft' }}
+                </button>
+            </div>
+        </section>
+        }
+
+        @if (!canEdit() || editorMode() === 'standard') {
         <div class="editor-fields">
             <label class="editor-field">
                 <span>Title</span>
-                <input type="text" [value]="title()" (input)="updateTitle($any($event.target).value)" placeholder="Ex: Tavern Rumors" />
+                <input type="text" [value]="title()" [disabled]="!canEdit()" (input)="updateTitle($any($event.target).value)" placeholder="Ex: Tavern Rumors" />
             </label>
 
             <label class="editor-field">
                 <span>Description</span>
-                <textarea rows="3" [value]="description()" (input)="updateDescription($any($event.target).value)" placeholder="What is this table used for?"></textarea>
+                <textarea rows="3" [value]="description()" [disabled]="!canEdit()" (input)="updateDescription($any($event.target).value)" placeholder="What is this table used for?"></textarea>
             </label>
 
             <label class="editor-field">
                 <span>Entries</span>
-                <textarea rows="12" [value]="entriesText()" (input)="updateEntries($any($event.target).value)" placeholder="One result per line"></textarea>
+                <textarea rows="12" [value]="entriesText()" [disabled]="!canEdit()" (input)="updateEntries($any($event.target).value)" placeholder="One result per line"></textarea>
                 <small>Each line becomes a possible rolled outcome.</small>
             </label>
         </div>
 
         <div class="editor-actions">
-            <button type="button" class="primary-button" (click)="saveTable()">Save Table</button>
+            <button type="button" class="primary-button" [disabled]="!canEdit() || generationBusy()" (click)="saveTable()">Save Table</button>
         </div>
+        }
     </section>
 </main>

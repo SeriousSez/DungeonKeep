@@ -1,4 +1,4 @@
-import { Component, computed, effect, input, output, signal } from '@angular/core';
+import { Component, HostListener, computed, effect, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -150,6 +150,11 @@ export class CharacteristicsModalComponent {
 
     protected applyAndClose(): void {
         this.onSubmit.emit(this.selectedSuggestions());
+        this.close();
+    }
+
+    @HostListener('document:dungeonkeep-close-overlays')
+    protected handleCloseOverlayRequest(): void {
         this.close();
     }
 

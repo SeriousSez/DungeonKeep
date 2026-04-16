@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, computed, input, output, signal } from '@angular/core';
 
 import { CampaignNpc } from '../../models/campaign-npc.models';
 
@@ -81,6 +81,11 @@ export class CampaignNpcPreviewModalComponent {
 
     close(): void {
         this.closed.emit();
+    }
+
+    @HostListener('document:dungeonkeep-close-overlays')
+    handleCloseOverlayRequest(): void {
+        this.close();
     }
 
     selectTab(tab: NpcPreviewTab): void {

@@ -60,4 +60,13 @@ export class ConfirmModalComponent implements AfterViewInit, OnDestroy {
             this.confirm();
         }
     }
+
+    @HostListener('document:dungeonkeep-close-overlays')
+    handleCloseOverlayRequest(): void {
+        if (!this.open) {
+            return;
+        }
+
+        this.cancel();
+    }
 }

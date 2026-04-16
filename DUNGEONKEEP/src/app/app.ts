@@ -93,8 +93,21 @@ export class App {
     }
   }
 
+  @HostListener('document:dungeonkeep-close-popups')
+  onClosePopups(): void {
+    this.closeDropdown();
+    this.closeMobileNav();
+  }
+
   toggleDropdown(name: string): void {
-    this.openDropdown.update(current => current === name ? null : name);
+    this.openDropdown.update(current => {
+      const next = current === name ? null : name;
+      if (next) {
+        this.document.dispatchEvent(new CustomEvent('dungeonkeep-close-chat', { bubbles: true }));
+      }
+
+      return next;
+    });
   }
 
   closeDropdown(): void {

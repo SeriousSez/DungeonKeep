@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, computed, ElementRef, effect, inject, input, output, signal, viewChild } from '@angular/core';
+import { Component, ChangeDetectionStrategy, HostListener, computed, ElementRef, effect, inject, input, output, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 export interface DropdownOption {
@@ -222,7 +222,18 @@ export class DropdownComponent {
             return;
         }
 
-        this.isOpen.update((open) => !open);
+        this.isOpen.update((open) => {
+            const nextOpen = !open;
+            if (nextOpen) {
+                this.requestCloseChat();
+            }
+
+            return nextOpen;
+        });
+    }
+
+    private requestCloseChat(): void {
+        globalThis.document?.dispatchEvent(new CustomEvent('dungeonkeep-close-chat', { bubbles: true }));
     }
 
     onSearchInput(value: string): void {
@@ -231,6 +242,12 @@ export class DropdownComponent {
 
     onOptionPicked(value: string | number): void {
         this.changed.emit(value);
+        this.isOpen.set(false);
+        this.searchTerm.set('');
+    }
+
+    @HostListener('document:dungeonkeep-close-popups')
+    handleGlobalCloseRequest(): void {
         this.isOpen.set(false);
         this.searchTerm.set('');
     }

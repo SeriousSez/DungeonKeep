@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, output, input, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, output, input, signal, computed } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import type { ActiveInfoModal } from '../../data/new-character-standard-page.types';
@@ -71,6 +71,11 @@ export class NewCharacterInfoModalComponent {
 
     close(): void {
         this.closed.emit();
+    }
+
+    @HostListener('document:dungeonkeep-close-overlays')
+    handleCloseOverlayRequest(): void {
+        this.close();
     }
 
     confirm(): void {
