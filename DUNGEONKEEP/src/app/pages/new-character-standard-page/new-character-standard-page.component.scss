@@ -2871,9 +2871,9 @@ input {
 }
 
 .species-icon-badge {
-    width: 72px;
-    height: 72px;
-    border-radius: 10px;
+    width: 125px;
+    height: 125px;
+    border-radius: 14px;
     background: linear-gradient(135deg, color-mix(in srgb, var(--accent-primary) 15%, var(--surface-raised)), color-mix(in srgb, var(--accent-primary) 8%, var(--surface-raised)));
     border: 1px solid color-mix(in srgb, var(--accent-primary) 30%, var(--panel-border));
     display: flex;
@@ -2881,6 +2881,16 @@ input {
     justify-content: center;
     font-size: 1.8rem;
     color: var(--accent-primary);
+    overflow: hidden;
+    box-shadow: 0 8px 18px rgba(62, 39, 24, 0.12);
+}
+
+.species-icon-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    display: block;
 }
 
 .species-change-link {

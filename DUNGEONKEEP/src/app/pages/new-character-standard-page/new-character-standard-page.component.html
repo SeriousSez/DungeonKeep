@@ -1395,17 +1395,19 @@
                 </div>
                 <div class="species-header-right">
                     <div class="species-icon-badge">
+                        @if (selectedSpeciesImagePath(); as speciesImage) {
+                        <img class="species-icon-image" [src]="speciesImage" [alt]="selectedSpeciesName()" [style.object-position]="selectedSpeciesImageObjectPosition()" loading="lazy" />
+                        } @else {
                         <i class="fa-duotone fa-thin fa-dragon"></i>
+                        }
                     </div>
                     <button type="button" class="species-change-link" (click)="changeSpecies()">Change Species</button>
                 </div>
             </div>
-            @if (specDetails?.sourceUrl) {
-            <a [href]="specDetails!.sourceUrl" class="species-details-link" target="_blank" rel="noopener noreferrer">
-                <i class="fa-duotone fa-thin fa-arrow-up-right-from-square"></i>
-                {{ selectedSpeciesName() }} Details Page
+            <a [routerLink]="selectedSpeciesRulesLink()" class="species-details-link">
+                <i class="fa-duotone fa-thin fa-book-open-cover"></i>
+                Open {{ selectedSpeciesName() }} in Species Library
             </a>
-            }
             <div class="trait-accordion-list">
                 <!-- Core: Creature Type -->
                 <div class="trait-accordion" [class.trait-open]="isTraitOpen('creature-type')" (click)="toggleTrait('creature-type')">

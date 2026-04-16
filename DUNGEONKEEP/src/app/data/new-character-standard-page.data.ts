@@ -1,4 +1,5 @@
 import type { BuilderInfo, BackgroundDetail, EquipmentItem, EquipmentSource } from './new-character-standard-page.types';
+import { speciesCatalogEntries, type SpeciesCatalogEntry } from './species-catalog.data';
 import { officialWikidotEquipmentCatalog } from './wikidot-items.generated';
 
 export const equipmentSourceLinks: ReadonlyArray<EquipmentSource> = [
@@ -3175,99 +3176,71 @@ const phbSpeciesDetails: Record<string, BuilderInfo> = {
     }
 };
 
-const makeGenericSpeciesInfo = (
-    name: string,
-    summary: string,
-    hallmark: string,
-    slug: string,
-    size: string,
-    speed: string,
-    knownLanguages = 'Common',
-    languageChoices = 1,
-    languageChoiceLabel = 'Species'
-): BuilderInfo => ({
-    name,
-    source: "Expanded Lineages",
-    summary,
-    highlights: [hallmark],
+function formatSpeciesSpeed(species: SpeciesCatalogEntry): string {
+    const movementParts = [`${species.speed} ft.`];
+
+    if ((species.flightSpeed ?? 0) > 0) {
+        movementParts.push(`fly ${species.flightSpeed} ft.`);
+    }
+
+    if ((species.climbSpeed ?? 0) > 0) {
+        movementParts.push(`climb ${species.climbSpeed} ft.`);
+    }
+
+    if ((species.swimSpeed ?? 0) > 0) {
+        movementParts.push(`swim ${species.swimSpeed} ft.`);
+    }
+
+    return movementParts.join(' • ');
+}
+
+function getSpeciesLanguageTrait(species: SpeciesCatalogEntry) {
+    const fixedLanguages = species.languages.filter((language) => !/choice|extra|your choice/i.test(language));
+    const choiceCount = species.languages.length - fixedLanguages.length;
+
+    return langTrait(
+        fixedLanguages.join(' and ') || 'Common',
+        choiceCount,
+        choiceCount > 0 ? 'Species' : ''
+    );
+}
+
+const makeGenericSpeciesInfo = (species: SpeciesCatalogEntry): BuilderInfo => ({
+    name: species.name,
+    source: species.source,
+    summary: species.summary,
+    highlights: (species.keyFeatures.length > 0
+        ? species.keyFeatures.slice(0, 3).map((feature) => feature.title)
+        : species.traits.slice(0, 3).map((trait) => trait.name)),
     speciesDetails: {
-        tagline: `${name} Lineage Overview`,
+        tagline: species.tagline,
         creatureType: 'Humanoid',
-        size,
-        speed,
-        sourceUrl: `https://dnd5e.wikidot.com/lineage:${slug}`,
-        traits: ['Lineage Traits', 'Languages'],
+        size: species.size,
+        speed: formatSpeciesSpeed(species),
+        sourceUrl: `https://dnd5e.wikidot.com/lineage:${species.slug}`,
+        traits: species.traits.map((trait) => trait.name),
         coreTraits: [
             { label: 'Creature Type', value: 'Humanoid' },
-            { label: 'Size', value: size },
-            { label: 'Speed', value: speed }
+            ...species.coreTraits
         ],
         traitNotes: [
-            {
-                title: 'Lineage Identity',
-                summary: hallmark,
-                details: `${name} provides a distinct lineage package that affects roleplay, exploration, and tactical decisions. Consult the source book for exact feature details.`
-            },
-            langTrait(knownLanguages, languageChoices, languageChoiceLabel)
+            ...species.keyFeatures.slice(0, 3).map((feature) => ({
+                title: feature.title,
+                summary: feature.summary,
+                details: feature.details
+            })),
+            getSpeciesLanguageTrait(species)
         ]
     }
 });
 
-const speciesCatalog: Array<{ name: string; slug: string; hallmark: string; size?: string; speed?: string; knownLanguages?: string; languageChoices?: number; languageChoiceLabel?: string }> = [
-    { name: 'Aarakocra', slug: 'aarakocra', hallmark: 'Aerial positioning and flight', speed: '25 ft. (fly 50 ft.)' },
-    { name: 'Aasimar', slug: 'aasimar', hallmark: 'Celestial radiance and healing' },
-    { name: 'Changeling', slug: 'changeling', hallmark: 'Shapeshifting social utility' },
-    { name: 'Deep Gnome', slug: 'deep-gnome', hallmark: 'Subterranean stealth and resilience', size: 'Small' },
-    { name: 'Duergar', slug: 'duergar', hallmark: 'Stoic underdark durability', size: 'Medium' },
-    { name: 'Eladrin', slug: 'eladrin', hallmark: 'Fey teleportation by season' },
-    { name: 'Fairy', slug: 'fairy', hallmark: 'Fey flight and innate magic', size: 'Small', speed: '30 ft. (fly 30 ft.)' },
-    { name: 'Firbolg', slug: 'firbolg', hallmark: 'Nature-giant connection and magic' },
-    { name: 'Genasi (Air)', slug: 'genasi-air', hallmark: 'Air-aspected mobility and spells' },
-    { name: 'Genasi (Earth)', slug: 'genasi-earth', hallmark: 'Earth-aspected toughness and spells' },
-    { name: 'Genasi (Fire)', slug: 'genasi-fire', hallmark: 'Fire-aspected damage and pressure' },
-    { name: 'Genasi (Water)', slug: 'genasi-water', hallmark: 'Water-aspected adaptability and swimming' },
-    { name: 'Githyanki', slug: 'githyanki', hallmark: 'Astral martial discipline and psionics' },
-    { name: 'Githzerai', slug: 'githzerai', hallmark: 'Psionic defensive focus and clarity' },
-    { name: 'Goliath', slug: 'goliath', hallmark: 'Athletic giant endurance' },
-    { name: 'Harengon', slug: 'harengon', hallmark: 'Rabbit-folk burst mobility and initiative' },
-    { name: 'Kenku', slug: 'kenku', hallmark: 'Mimicry, stealth, and trickery' },
-    { name: 'Locathah', slug: 'locathah', hallmark: 'Aquatic survival and natural armor' },
-    { name: 'Owlin', slug: 'owlin', hallmark: 'Silent nocturnal flight and stealth', speed: '30 ft. (fly 30 ft.)' },
-    { name: 'Satyr', slug: 'satyr', hallmark: 'Fey magic resistance and social disruption' },
-    { name: 'Sea Elf', slug: 'sea-elf', hallmark: 'Marine elven adaptability and swimming' },
-    { name: 'Shadar-Kai', slug: 'shadar-kai', hallmark: 'Shadowfell teleportation and necrotic resistance' },
-    { name: 'Tabaxi', slug: 'tabaxi', hallmark: 'Feline sprint, claws, and scouting mobility' },
-    { name: 'Tortle', slug: 'tortle', hallmark: 'Natural shell defense and hold breath' },
-    { name: 'Triton', slug: 'triton', hallmark: 'Sea-guardian utility and water breathing' },
-    { name: 'Verdan', slug: 'verdan', hallmark: 'Adaptive growth and telepathy', size: 'Small or Medium' },
-    { name: 'Bugbear', slug: 'bugbear', hallmark: 'Ambush reach and surprise pressure' },
-    { name: 'Centaur', slug: 'centaur', hallmark: 'Charge-oriented movement and carry capacity', speed: '40 ft.' },
-    { name: 'Goblin', slug: 'goblin', hallmark: 'Nimble skirmish utility and fury', size: 'Small' },
-    { name: 'Grung', slug: 'grung', hallmark: 'Amphibious poison skin identity', size: 'Small', knownLanguages: 'Grung', languageChoices: 0, languageChoiceLabel: '' },
-    { name: 'Hobgoblin', slug: 'hobgoblin', hallmark: 'Coordinated martial discipline and saving throws' },
-    { name: 'Kobold', slug: 'kobold', hallmark: 'Pack-style tactics and draconic heritage', size: 'Small' },
-    { name: 'Lizardfolk', slug: 'lizardfolk', hallmark: 'Primal survival, natural armor, and swimming' },
-    { name: 'Minotaur', slug: 'minotaur', hallmark: 'Horns, heavy melee momentum, and navigation' },
-    { name: 'Orc', slug: 'orc', hallmark: 'Aggressive frontline cadence and endurance' },
-    { name: 'Shifter', slug: 'shifter', hallmark: 'Beast-touched transformation combat windows' },
-    { name: 'Yuan-Ti', slug: 'yuan-ti', hallmark: 'Serpentine magic resistance and innate spells' }
-];
+const speciesCatalog = speciesCatalogEntries.filter((species) => !Object.prototype.hasOwnProperty.call(phbSpeciesDetails, species.name));
 
 export const speciesInfoMap: Record<string, BuilderInfo> = {
     ...Object.fromEntries(
         speciesCatalog.map((species) => [
             species.name,
-            makeGenericSpeciesInfo(
-                species.name,
-                `${species.name} lineage with a ${species.hallmark.toLowerCase()} focus.`,
-                species.hallmark,
-                species.slug,
-                species.size ?? 'Medium',
-                species.speed ?? '30 ft.',
-                species.knownLanguages ?? 'Common',
-                species.languageChoices ?? 1,
-                species.languageChoiceLabel ?? 'Species'
-            )
+            makeGenericSpeciesInfo(species)
         ])
     ),
     ...phbSpeciesDetails

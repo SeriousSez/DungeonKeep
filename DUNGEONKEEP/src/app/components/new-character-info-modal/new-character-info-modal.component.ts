@@ -1,9 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, output, input, signal, computed } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import type { ActiveInfoModal } from '../../data/new-character-standard-page.types';
 import { classCatalogEntries, type ClassCatalogEntry } from '../../data/class-catalog.data';
 import { proficiencyBonusByLevel } from '../../data/class-progression.data';
+import { speciesNameToSlug } from '../../data/species-catalog.data';
 
 export interface ModalProgressionRow {
     level: number;
@@ -14,7 +16,7 @@ export interface ModalProgressionRow {
 
 @Component({
     selector: 'app-new-character-info-modal',
-    imports: [CommonModule],
+    imports: [CommonModule, RouterLink],
     templateUrl: './new-character-info-modal.component.html',
     styleUrl: './new-character-info-modal.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -56,6 +58,15 @@ export class NewCharacterInfoModalComponent {
             else groups.push({ label: col.group, count: 1 });
         }
         return groups;
+    });
+
+    readonly speciesRulesLink = computed(() => {
+        const modal = this.modal();
+        if (modal.type !== 'species') {
+            return ['/rules/species'];
+        }
+
+        return ['/rules/species', speciesNameToSlug(modal.info.name)];
     });
 
     close(): void {

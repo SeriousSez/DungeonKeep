@@ -30,11 +30,12 @@ import { getWizardCantripLimit, getWizardFreeLeveledSpellLimit, getWizardPrepare
 import { deitiesList } from '../../data/deities.data';
 import { subclassFeatureProgressionByClass as sharedSubclassFeatureProgressionByClass, subclassConfigs as sharedSubclassConfigs, subclassChoiceTitles as sharedSubclassChoiceTitles, subclassOptionsByClass as sharedSubclassOptionsByClass, type SubclassConfig } from '../../data/subclass-features.data';
 import { premadeCharacters } from '../../data/premade-characters.data';
+import { getSpeciesImagePath, speciesNameToSlug } from '../../data/species-catalog.data';
 
 type StandardStep = 'home' | 'class' | 'species' | 'background' | 'abilities' | 'equipment' | 'whats-next';
 type AbilityGenerationMethod = '' | 'standard-array' | 'manual-rolled' | 'point-buy';
 type ClassSortMode = 'primary-ability' | 'party-role' | 'power-source' | 'complexity' | 'spellcasting' | 'armor';
-type SpeciesSortMode = 'lineage' | 'movement' | 'world' | 'complexity';
+type SpeciesSortMode = 'source' | 'lineage' | 'movement' | 'world' | 'complexity';
 type ClassPanelTab = 'class-features' | 'spells';
 type WizardSpellSubTab = 'prepared' | 'spellbook' | 'catalog';
 type AbilityScoreImprovementMode = '' | 'plus-two' | 'plus-one-plus-one';
@@ -43,6 +44,30 @@ type HeightUnit = 'cm' | 'm' | 'ft' | 'in';
 type WeightUnit = 'kg' | 'lb';
 
 const equipmentRarityOrder = ['Common', 'Uncommon', 'Rare', 'Very Rare', 'Legendary', 'Artifact', 'Unique', '???'] as const;
+
+function getSpeciesImageObjectPosition(slug: string): string {
+    if (slug === 'centaur') {
+        return 'center 25%';
+    }
+
+    if (['yuan-ti', 'grung'].includes(slug)) {
+        return 'center 20%';
+    }
+
+    if (['kobold', 'owlin', 'dwarf', 'deep-gnome', 'duergar', 'fairy', 'harengon', 'triton', 'astral-elf', 'autognome', 'verdan'].includes(slug)) {
+        return 'center 15%';
+    }
+
+    if (['lizardfolk', 'changeling', 'kenku', 'dragonborn', 'githyanki', 'locathah', 'shifter', 'dhampir', 'giff', 'hadozee', 'kender', 'leonin', 'loxodon', 'plasmoid', 'warforged'].includes(slug)) {
+        return 'center 10%';
+    }
+
+    if (['githzerai', 'hobgoblin', 'satyr', 'gnome', 'eladrin', 'sea-elf', 'shadar-kai', 'kalashtar', 'reborn', 'simic-hybrid', 'thri-kreen'].includes(slug)) {
+        return 'center 5%';
+    }
+
+    return 'center top';
+}
 
 interface AbilityScoreImprovementChoice {
     mode: AbilityScoreImprovementMode;
@@ -783,116 +808,182 @@ export class NewCharacterStandardPageComponent {
     readonly physicalWeightUnit = signal<WeightUnit>('lb');
     readonly physicalAge = signal('');
     readonly physicalGender = signal('');
-    readonly selectedSpeciesSortMode = signal<SpeciesSortMode>('lineage');
+    readonly selectedSpeciesSortMode = signal<SpeciesSortMode>('source');
     readonly speciesSortOptions: ReadonlyArray<DropdownOption> = [
-        { value: 'lineage', label: 'Lineage Group' },
+        { value: 'source', label: 'Source Book' },
+        { value: 'lineage', label: 'Theme / Lineage' },
         { value: 'movement', label: 'Movement Profile' },
         { value: 'world', label: 'World Affinity' },
         { value: 'complexity', label: 'Complexity' }
     ];
     readonly speciesCategorySets: Readonly<Record<SpeciesSortMode, ReadonlyArray<{ label: string; source: string; species: ReadonlyArray<string> }>>> = {
-        lineage: [
+        source: [
             {
-                label: 'Core Species',
-                source: "Player's Handbook",
-                species: ['Dragonborn', 'Dwarf', 'Elf', 'Gnome', 'Goliath', 'Halfling', 'Human', 'Orc', 'Tiefling']
+                label: "Player's Handbook 2024",
+                source: 'Core rules species',
+                species: ['Aasimar', 'Dragonborn', 'Dwarf', 'Elf', 'Gnome', 'Goliath', 'Halfling', 'Human', 'Orc', 'Tiefling']
             },
             {
-                label: 'Expanded Lineages',
-                source: 'Expanded Lineages',
+                label: 'Monsters of the Multiverse',
+                source: 'Modern expansion roster',
                 species: [
-                    'Aarakocra', 'Aasimar', 'Changeling', 'Deep Gnome', 'Duergar', 'Eladrin', 'Fairy', 'Firbolg',
-                    'Genasi (Air)', 'Genasi (Earth)', 'Genasi (Fire)', 'Genasi (Water)', 'Githyanki', 'Githzerai',
-                    'Harengon', 'Kenku', 'Locathah', 'Owlin', 'Satyr', 'Sea Elf', 'Shadar-Kai', 'Tabaxi',
-                    'Tortle', 'Triton', 'Verdan'
+                    'Aarakocra', 'Bugbear', 'Centaur', 'Changeling', 'Deep Gnome', 'Duergar', 'Eladrin', 'Fairy',
+                    'Firbolg', 'Genasi (Air)', 'Genasi (Earth)', 'Genasi (Fire)', 'Genasi (Water)', 'Githyanki',
+                    'Githzerai', 'Goblin', 'Harengon', 'Hobgoblin', 'Kenku', 'Kobold', 'Lizardfolk', 'Minotaur',
+                    'Satyr', 'Sea Elf', 'Shadar-Kai', 'Tabaxi', 'Tortle', 'Triton', 'Yuan-Ti'
                 ]
             },
             {
-                label: 'Monstrous Ancestries',
-                source: 'Expanded Lineages',
-                species: ['Bugbear', 'Centaur', 'Goblin', 'Grung', 'Hobgoblin', 'Kobold', 'Lizardfolk', 'Minotaur', 'Shifter', 'Yuan-Ti']
+                label: 'Spelljammer and astral species',
+                source: 'Wildspace and cosmic fantasy',
+                species: ['Astral Elf', 'Autognome', 'Giff', 'Hadozee', 'Owlin', 'Plasmoid', 'Thri-Kreen']
+            },
+            {
+                label: 'Ravenloft and horror lineages',
+                source: 'Gothic and cursed options',
+                species: ['Dhampir', 'Hexblood', 'Reborn']
+            },
+            {
+                label: 'Eberron and setting-specific books',
+                source: 'Campaign-world species',
+                species: ['Kalashtar', 'Kender', 'Leonin', 'Loxodon', 'Shifter', 'Simic Hybrid', 'Warforged']
+            },
+            {
+                label: 'Supplemental and special releases',
+                source: 'Niche official releases',
+                species: ['Grung', 'Locathah', 'Verdan']
+            }
+        ],
+        lineage: [
+            {
+                label: 'Core Species',
+                source: "Player's Handbook 2024",
+                species: ['Aasimar', 'Dragonborn', 'Dwarf', 'Elf', 'Gnome', 'Goliath', 'Halfling', 'Human', 'Orc', 'Tiefling']
+            },
+            {
+                label: 'Planar and mystical lineages',
+                source: 'Celestial, fey, shadow, and psionic picks',
+                species: ['Astral Elf', 'Eladrin', 'Fairy', 'Githyanki', 'Githzerai', 'Hexblood', 'Kalashtar', 'Reborn', 'Shadar-Kai']
+            },
+            {
+                label: 'Wild and travel-ready folk',
+                source: 'Scouts, sailors, and wanderers',
+                species: ['Aarakocra', 'Firbolg', 'Giff', 'Hadozee', 'Harengon', 'Kenku', 'Leonin', 'Locathah', 'Owlin', 'Sea Elf', 'Tabaxi', 'Tortle', 'Triton']
+            },
+            {
+                label: 'Adaptive and altered bodies',
+                source: 'Shapeshifters, constructs, and uncanny options',
+                species: ['Autognome', 'Changeling', 'Dhampir', 'Loxodon', 'Plasmoid', 'Shifter', 'Simic Hybrid', 'Verdan', 'Warforged']
+            },
+            {
+                label: 'Monstrous ancestries',
+                source: 'Martial, primal, and underdark pressure',
+                species: [
+                    'Bugbear', 'Centaur', 'Deep Gnome', 'Duergar', 'Genasi (Air)', 'Genasi (Earth)', 'Genasi (Fire)',
+                    'Genasi (Water)', 'Goblin', 'Grung', 'Hobgoblin', 'Kender', 'Kobold', 'Lizardfolk', 'Minotaur',
+                    'Satyr', 'Thri-Kreen', 'Yuan-Ti'
+                ]
             }
         ],
         movement: [
             {
                 label: 'Natural Flyers',
-                source: 'Movement Profile',
+                source: 'Built-in flight or glide-heavy play',
                 species: ['Aarakocra', 'Fairy', 'Owlin']
             },
             {
-                label: 'Aquatic & Amphibious',
-                source: 'Movement Profile',
-                species: ['Locathah', 'Sea Elf', 'Triton', 'Grung', 'Lizardfolk']
+                label: 'Aquatic and amphibious',
+                source: 'Swim speed or water survival',
+                species: ['Genasi (Water)', 'Grung', 'Lizardfolk', 'Locathah', 'Sea Elf', 'Simic Hybrid', 'Tortle', 'Triton']
             },
             {
-                label: 'Fast Movers',
-                source: 'Movement Profile',
-                species: ['Centaur', 'Tabaxi', 'Harengon']
+                label: 'Climbers and infiltrators',
+                source: 'Wall movement, squeezing, or stealth mobility',
+                species: ['Changeling', 'Dhampir', 'Hadozee', 'Plasmoid', 'Tabaxi', 'Thri-Kreen']
             },
             {
-                label: 'Standard Grounded',
-                source: 'Movement Profile',
+                label: 'Fast movers',
+                source: 'Burst speed and battlefield repositioning',
+                species: ['Centaur', 'Goliath', 'Harengon', 'Leonin', 'Satyr']
+            },
+            {
+                label: 'Standard grounded',
+                source: 'Balanced pace with other standout perks',
                 species: [
-                    'Dragonborn', 'Dwarf', 'Elf', 'Gnome', 'Goliath', 'Halfling', 'Human', 'Orc', 'Tiefling',
-                    'Aasimar', 'Changeling', 'Deep Gnome', 'Duergar', 'Eladrin', 'Firbolg', 'Genasi (Air)',
-                    'Genasi (Earth)', 'Genasi (Fire)', 'Genasi (Water)', 'Githyanki', 'Githzerai', 'Goliath',
-                    'Kenku', 'Satyr', 'Shadar-Kai', 'Tortle', 'Verdan', 'Bugbear', 'Goblin', 'Hobgoblin',
-                    'Kobold', 'Minotaur', 'Orc', 'Shifter', 'Yuan-Ti'
+                    'Aasimar', 'Astral Elf', 'Autognome', 'Bugbear', 'Deep Gnome', 'Dragonborn', 'Duergar', 'Dwarf',
+                    'Eladrin', 'Elf', 'Firbolg', 'Genasi (Air)', 'Genasi (Earth)', 'Genasi (Fire)', 'Giff', 'Githyanki',
+                    'Githzerai', 'Gnome', 'Goblin', 'Halfling', 'Hexblood', 'Hobgoblin', 'Human', 'Kalashtar', 'Kender',
+                    'Kenku', 'Kobold', 'Loxodon', 'Minotaur', 'Orc', 'Reborn', 'Shadar-Kai', 'Shifter', 'Tiefling',
+                    'Verdan', 'Warforged', 'Yuan-Ti'
                 ]
             }
         ],
         world: [
             {
                 label: 'Civilized Realms',
-                source: 'World Affinity',
-                species: ['Human', 'Dwarf', 'Elf', 'Gnome', 'Halfling', 'Dragonborn', 'Tiefling']
+                source: 'Classic fantasy settlements and courts',
+                species: ['Aasimar', 'Dragonborn', 'Dwarf', 'Elf', 'Gnome', 'Goliath', 'Halfling', 'Human', 'Orc', 'Tiefling']
             },
             {
-                label: 'Fey & Planar',
-                source: 'World Affinity',
-                species: ['Eladrin', 'Fairy', 'Satyr', 'Shadar-Kai', 'Aasimar', 'Githyanki', 'Githzerai', 'Genasi (Air)', 'Genasi (Earth)', 'Genasi (Fire)', 'Genasi (Water)']
+                label: 'Astral and Wildspace',
+                source: 'Spelljammer crews and cosmic travelers',
+                species: ['Astral Elf', 'Autognome', 'Giff', 'Githyanki', 'Githzerai', 'Hadozee', 'Owlin', 'Plasmoid', 'Thri-Kreen']
             },
             {
-                label: 'Wildlands & Frontiers',
-                source: 'World Affinity',
-                species: ['Firbolg', 'Goliath', 'Harengon', 'Tabaxi', 'Tortle', 'Shifter', 'Orc', 'Centaur']
+                label: 'Fey and Shadow',
+                source: 'Feywild charm and darker echoes',
+                species: ['Eladrin', 'Fairy', 'Harengon', 'Hexblood', 'Reborn', 'Satyr', 'Shadar-Kai']
             },
             {
-                label: 'Underdark & Shadow',
-                source: 'World Affinity',
-                species: ['Deep Gnome', 'Duergar', 'Kobold', 'Goblin', 'Hobgoblin', 'Bugbear', 'Yuan-Ti']
+                label: 'Eberron and psionic paths',
+                source: 'Telepathy, identity, and constructed lives',
+                species: ['Changeling', 'Kalashtar', 'Shifter', 'Warforged']
             },
             {
-                label: 'Seas & Coasts',
-                source: 'World Affinity',
-                species: ['Locathah', 'Sea Elf', 'Triton', 'Grung', 'Lizardfolk']
+                label: 'Wildlands and frontiers',
+                source: 'Hunters, scouts, and giant-touched adventurers',
+                species: ['Aarakocra', 'Firbolg', 'Genasi (Air)', 'Genasi (Earth)', 'Genasi (Fire)', 'Genasi (Water)', 'Kenku', 'Leonin', 'Loxodon', 'Tabaxi', 'Tortle']
             },
             {
-                label: 'Nomads & Outsiders',
-                source: 'World Affinity',
-                species: ['Changeling', 'Kenku', 'Minotaur', 'Owlin', 'Verdan']
+                label: 'Underdark and monstrous',
+                source: 'Caverns, ambushers, and hard edges',
+                species: ['Bugbear', 'Centaur', 'Deep Gnome', 'Duergar', 'Goblin', 'Grung', 'Hobgoblin', 'Kobold', 'Lizardfolk', 'Minotaur', 'Yuan-Ti']
+            },
+            {
+                label: 'Seas and coasts',
+                source: 'Oceanic and amphibious cultures',
+                species: ['Locathah', 'Sea Elf', 'Simic Hybrid', 'Triton']
+            },
+            {
+                label: 'Nomads and outsiders',
+                source: 'One-off wanderers and unusual social roles',
+                species: ['Dhampir', 'Kender', 'Verdan']
             }
         ],
         complexity: [
             {
                 label: 'Beginner Friendly',
-                source: 'Complexity',
-                species: ['Human', 'Dwarf', 'Halfling', 'Goliath', 'Orc', 'Tortle']
+                source: 'Easy to run and easy to explain',
+                species: ['Dwarf', 'Goliath', 'Halfling', 'Human', 'Leonin', 'Orc', 'Tortle', 'Warforged']
             },
             {
                 label: 'Intermediate',
-                source: 'Complexity',
+                source: 'A few moving parts with clear payoffs',
                 species: [
-                    'Dragonborn', 'Elf', 'Gnome', 'Tiefling', 'Aarakocra', 'Aasimar', 'Firbolg',
-                    'Genasi (Air)', 'Genasi (Earth)', 'Genasi (Fire)', 'Genasi (Water)', 'Harengon', 'Tabaxi',
-                    'Sea Elf', 'Triton', 'Bugbear', 'Centaur', 'Goblin', 'Hobgoblin', 'Lizardfolk', 'Minotaur',
-                    'Shifter', 'Yuan-Ti', 'Locathah', 'Owlin', 'Satyr'
+                    'Aarakocra', 'Aasimar', 'Autognome', 'Dragonborn', 'Elf', 'Firbolg', 'Giff', 'Gnome', 'Harengon',
+                    'Hadozee', 'Kalashtar', 'Kender', 'Lizardfolk', 'Locathah', 'Loxodon', 'Sea Elf', 'Shifter',
+                    'Simic Hybrid', 'Tabaxi', 'Triton'
                 ]
             },
             {
                 label: 'Advanced',
-                source: 'Complexity',
-                species: ['Changeling', 'Deep Gnome', 'Duergar', 'Eladrin', 'Fairy', 'Githyanki', 'Githzerai', 'Kenku', 'Shadar-Kai', 'Verdan', 'Grung', 'Kobold']
+                source: 'Unusual rules or identity-heavy play',
+                species: [
+                    'Astral Elf', 'Bugbear', 'Centaur', 'Changeling', 'Deep Gnome', 'Dhampir', 'Duergar', 'Eladrin',
+                    'Fairy', 'Genasi (Air)', 'Genasi (Earth)', 'Genasi (Fire)', 'Genasi (Water)', 'Githyanki',
+                    'Githzerai', 'Goblin', 'Grung', 'Hexblood', 'Hobgoblin', 'Kenku', 'Kobold', 'Minotaur', 'Owlin',
+                    'Plasmoid', 'Reborn', 'Satyr', 'Shadar-Kai', 'Thri-Kreen', 'Tiefling', 'Verdan', 'Yuan-Ti'
+                ]
             }
         ]
     };
@@ -3473,6 +3564,19 @@ export class NewCharacterStandardPageComponent {
     readonly selectedSpeciesInfo = computed(() => {
         const name = this.selectedSpeciesName();
         return name ? speciesInfoMap[name] : null;
+    });
+    readonly selectedSpeciesSlug = computed(() => {
+        const name = this.selectedSpeciesName();
+        return name ? speciesNameToSlug(name) : '';
+    });
+    readonly selectedSpeciesImagePath = computed(() => {
+        const slug = this.selectedSpeciesSlug();
+        return slug ? getSpeciesImagePath(slug) : null;
+    });
+    readonly selectedSpeciesImageObjectPosition = computed(() => getSpeciesImageObjectPosition(this.selectedSpeciesSlug()));
+    readonly selectedSpeciesRulesLink = computed(() => {
+        const slug = this.selectedSpeciesSlug();
+        return slug ? ['/rules/species', slug] : ['/rules/species'];
     });
     readonly selectedSpeciesLanguageTrait = computed(() =>
         this.selectedSpeciesInfo()?.speciesDetails?.traitNotes.find((trait) => trait.title === 'Languages') ?? null

@@ -158,7 +158,7 @@
                     <div><span>Size</span><strong>{{ speciesDetails.size }}</strong></div>
                     <div><span>Speed</span><strong>{{ speciesDetails.speed }}</strong></div>
                 </div>
-                <a class="inline-action" [href]="speciesDetails.sourceUrl" target="_blank" rel="noopener noreferrer">Open lineage reference</a>
+                <a class="inline-action" [routerLink]="speciesRulesLink()" (click)="close()">Open species page</a>
             </section>
 
             <section class="details-block core-traits-block">
