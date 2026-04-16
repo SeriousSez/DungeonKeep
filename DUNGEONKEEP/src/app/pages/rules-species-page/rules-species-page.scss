@@ -56,9 +56,123 @@
     gap: 8px;
 }
 
+.species-filters {
+    position: relative;
+    z-index: 20;
+    display: grid;
+    gap: 14px;
+    padding: 20px 24px;
+}
+
+.filters-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: end;
+}
+
+.filters-heading h2 {
+    margin: 0;
+    font-family: var(--display-font);
+    color: var(--text-main);
+    font-size: 1.4rem;
+}
+
+.filters-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    align-items: end;
+}
+
+.filter-control {
+    position: relative;
+    display: grid;
+    gap: 6px;
+    z-index: 1;
+}
+
+.filter-control:has(app-dropdown.app-dropdown-host--open) {
+    z-index: 40;
+}
+
+.filter-control>span {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+}
+
+.filter-control app-dropdown {
+    width: 100%;
+}
+
+.species-search-input {
+    min-height: 44px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 1px solid var(--panel-border);
+    background: var(--surface-raised);
+    color: var(--text-main);
+    font: inherit;
+}
+
+.species-search-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 16%, transparent);
+}
+
+.species-group {
+    display: grid;
+    gap: 16px;
+    padding: 20px 24px 24px;
+}
+
+.species-group-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: end;
+}
+
+.species-group-heading h2 {
+    margin: 0;
+    font-family: var(--display-font);
+    color: var(--text-main);
+    font-size: 1.45rem;
+}
+
+.species-group-heading p:last-child {
+    margin: 0;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.species-empty-state {
+    display: grid;
+    gap: 10px;
+    padding: 24px;
+}
+
+.species-empty-state h2 {
+    margin: 0;
+    font-family: var(--display-font);
+    color: var(--text-main);
+}
+
+.species-empty-state p {
+    margin: 0;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
 /* ----- Grid ----- */
 
 .species-grid {
+    position: relative;
+    z-index: 1;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 20px;
@@ -184,7 +298,8 @@
 .harengon,
 .triton,
 .astral-elf,
-.autognome {
+.autognome,
+.verdan {
     object-position: center 15%;
 }
 
@@ -201,7 +316,8 @@
 .kender,
 .leonin,
 .loxodon,
-.plasmoid {
+.plasmoid,
+.warforged {
     object-position: center 10%;
 }
 
@@ -213,7 +329,9 @@
 .sea-elf,
 .shadar-kai,
 .kalashtar,
-.reborn {
+.reborn,
+.simic-hybrid,
+.thri-kreen {
     object-position: center 5%;
 }
 
@@ -339,6 +457,10 @@
 /* ----- Responsive ----- */
 
 @media (max-width: 1024px) {
+    .filters-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .species-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -351,6 +473,21 @@
 
     .hero-actions {
         justify-content: flex-start;
+    }
+
+    .filters-heading,
+    .species-group-heading {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .species-group-heading p:last-child {
+        max-width: none;
+        text-align: left;
+    }
+
+    .filters-row {
+        grid-template-columns: 1fr;
     }
 
     .species-grid {

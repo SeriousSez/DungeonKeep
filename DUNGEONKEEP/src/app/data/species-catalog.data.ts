@@ -1875,7 +1875,7 @@ export const speciesSlugsWithImages = new Set([
     'genasi-air', 'genasi-earth', 'genasi-fire', 'genasi-water', 'giff', 'githyanki', 'githzerai',
     'gnome', 'goblin', 'goliath', 'grung', 'hadozee', 'halfling', 'harengon', 'hexblood', 'hobgoblin',
     'human', 'kalashtar', 'kender', 'kenku', 'kobold', 'leonin', 'lizardfolk', 'locathah', 'loxodon', 'minotaur',
-    'orc', 'owlin', 'plasmoid', 'satyr', 'sea-elf', 'shadar-kai', 'shifter', 'tabaxi', 'tiefling', 'tortle', 'triton', 'reborn', 'yuan-ti',
+    'orc', 'owlin', 'plasmoid', 'satyr', 'sea-elf', 'shadar-kai', 'shifter', 'simic-hybrid', 'tabaxi', 'thri-kreen', 'tiefling', 'tortle', 'triton', 'reborn', 'verdan', 'warforged', 'yuan-ti',
 ]);
 
 export function getSpeciesImagePath(slug: string): string | null {

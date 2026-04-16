@@ -4,7 +4,7 @@
         <div class="hero-copy">
             <p class="eyebrow">Rules Library</p>
             <h1>Species</h1>
-            <p class="hero-text">Browse all {{ species.length }} available species. Click any species to explore its traits, key features, and what it brings to your adventuring party.</p>
+            <p class="hero-text">Browse all {{ species.length }} available species and narrow the roster by source, size, or standout traits. {{ resultsSummary() }}</p>
         </div>
         <div class="hero-actions">
             <a routerLink="/rules" class="ghost-button">
@@ -14,45 +14,106 @@
         </div>
     </section>
 
-    <section class="species-grid">
-        @for (sp of species; track sp.slug) {
-        <a class="species-card" [routerLink]="['/rules/species', sp.slug]" [class]="'species-card source-' + sp.sourceCategory">
-            <div class="card-banner">
-                @if (speciesImagePath(sp.slug); as imgSrc) {
-                <img class="banner-img" [ngClass]="sp.slug" [src]="imgSrc" [alt]="sp.name" loading="lazy" />
-                <div class="banner-overlay"></div>
-                } @else {
-                <div class="card-icon">
-                    <i [class]="'fa-duotone fa-thin fa-' + sp.icon"></i>
-                </div>
-                }
-                <span class="source-badge" [ngClass]="sp.slug">{{ sp.source }}</span>
+    <section class="species-filters panel">
+        <div class="filters-heading">
+            <div>
+                <p class="eyebrow">Browse Filters</p>
+                <h2>Find the right species faster</h2>
             </div>
-            <div class="card-body">
-                <h2 class="species-name">{{ sp.name }}</h2>
-                <p class="species-tagline">{{ sp.tagline }}</p>
-                <p class="species-summary">{{ sp.summary }}</p>
-                <div class="species-stats">
-                    <div class="stat-item">
-                        <span class="stat-label">Size</span>
-                        <span class="stat-value">{{ sp.size }}</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Speed</span>
-                        <span class="stat-value">{{ sp.speed }} ft.</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Darkvision</span>
-                        <span class="stat-value">{{ sp.darkvision ? sp.darkvision + ' ft.' : 'None' }}</span>
-                    </div>
-                </div>
-                <span class="view-details-btn">
-                    View {{ sp.name }} Details
-                    <i class="fa-duotone fa-thin fa-arrow-right"></i>
-                </span>
-            </div>
-        </a>
-        }
+
+            @if (hasActiveFilters()) {
+            <button type="button" class="ghost-button" (click)="clearFilters()">Clear filters</button>
+            }
+        </div>
+
+        <div class="filters-row">
+            <label class="filter-control filter-control--search" for="species-search">
+                <span>Search</span>
+                <input id="species-search" class="species-search-input" type="text" placeholder="Name, feature, source, language..." [value]="searchTerm()" (input)="onSearchChanged($any($event.target).value)" />
+            </label>
+
+            <label class="filter-control">
+                <span>Source</span>
+                <app-dropdown ariaLabel="Filter species by source" [value]="selectedSourceFilter()" [options]="sourceFilterOptions" [showSelectedDescription]="false" [showOptionDescriptions]="true" [optionDensity]="'dense'" [minWidth]="220" [panelMinWidth]="280" [maxPanelHeight]="240" size="compact"
+                    (changed)="onSourceFilterChanged($event)"></app-dropdown>
+            </label>
+
+            <label class="filter-control">
+                <span>Size</span>
+                <app-dropdown ariaLabel="Filter species by size" [value]="selectedSizeFilter()" [options]="sizeFilterOptions" [showSelectedDescription]="false" [showOptionDescriptions]="true" [optionDensity]="'dense'" [minWidth]="220" [panelMinWidth]="280" [maxPanelHeight]="240" size="compact"
+                    (changed)="onSizeFilterChanged($event)"></app-dropdown>
+            </label>
+
+            <label class="filter-control">
+                <span>Feature</span>
+                <app-dropdown ariaLabel="Filter species by standout feature" [value]="selectedFeatureFilter()" [options]="featureFilterOptions" [showSelectedDescription]="false" [showOptionDescriptions]="true" [optionDensity]="'dense'" [minWidth]="220" [panelMinWidth]="300" [maxPanelHeight]="250"
+                    size="compact" (changed)="onFeatureFilterChanged($event)"></app-dropdown>
+            </label>
+        </div>
     </section>
+
+    @if (groupedSpecies().length) {
+    @for (group of groupedSpecies(); track group.key) {
+    <section class="species-group panel">
+        <div class="species-group-heading">
+            <div>
+                <p class="eyebrow">Category</p>
+                <h2>{{ group.title }}</h2>
+            </div>
+            <p>{{ group.description }} • {{ group.items.length }} species</p>
+        </div>
+
+        <div class="species-grid">
+            @for (sp of group.items; track sp.slug) {
+            <a class="species-card" [routerLink]="['/rules/species', sp.slug]" [class]="'species-card source-' + sp.sourceCategory">
+                <div class="card-banner">
+                    @if (speciesImagePath(sp.slug); as imgSrc) {
+                    <img class="banner-img" [ngClass]="sp.slug" [src]="imgSrc" [alt]="sp.name" loading="lazy" />
+                    <div class="banner-overlay"></div>
+                    } @else {
+                    <div class="card-icon">
+                        <i [class]="'fa-duotone fa-thin fa-' + sp.icon"></i>
+                    </div>
+                    }
+                    <span class="source-badge" [ngClass]="sp.slug">{{ sp.source }}</span>
+                </div>
+                <div class="card-body">
+                    <h2 class="species-name">{{ sp.name }}</h2>
+                    <p class="species-tagline">{{ sp.tagline }}</p>
+                    <p class="species-summary">{{ sp.summary }}</p>
+                    <div class="species-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Size</span>
+                            <span class="stat-value">{{ sp.size }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Speed</span>
+                            <span class="stat-value">{{ sp.speed }} ft.</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Darkvision</span>
+                            <span class="stat-value">{{ sp.darkvision ? sp.darkvision + ' ft.' : 'None' }}</span>
+                        </div>
+                    </div>
+                    <span class="view-details-btn">
+                        View {{ sp.name }} Details
+                        <i class="fa-duotone fa-thin fa-arrow-right"></i>
+                    </span>
+                </div>
+            </a>
+            }
+        </div>
+    </section>
+    }
+    } @else {
+    <section class="species-empty-state panel">
+        <p class="eyebrow">No Matches</p>
+        <h2>No species match those filters.</h2>
+        <p>Try a broader search or clear the current filters to see the full roster again.</p>
+        <div>
+            <button type="button" class="ghost-button" (click)="clearFilters()">Reset species filters</button>
+        </div>
+    </section>
+    }
 
 </main>
