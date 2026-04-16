@@ -52,7 +52,7 @@
         <div class="premade-card">
             <div class="premade-portrait portrait-{{character.className.toLowerCase()}}">
                 @if (character.image) {
-                <img [src]="character.image" [alt]="character.name + ' portrait'" class="premade-img" />
+                <img [src]="character.image" [alt]="character.name + ' portrait'" class="premade-img" loading="lazy" decoding="async" (error)="onPremadeImageError($event)" />
                 }
             </div>
             <div class="premade-info">

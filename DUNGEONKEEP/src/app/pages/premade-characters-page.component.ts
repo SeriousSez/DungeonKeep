@@ -206,6 +206,15 @@ export class PremadeCharactersPageComponent {
         this.selectedSearchScope.set('full');
     }
 
+    onPremadeImageError(event: Event): void {
+        const target = event.target;
+        if (!(target instanceof HTMLImageElement) || !target.src.endsWith('.webp')) {
+            return;
+        }
+
+        target.src = target.src.replace(/\.webp$/i, '.png');
+    }
+
     private getCharacterComplexity(character: PremadeCharacter): string {
         const spellCount = character.spells?.length ?? 0;
         const featureCount = character.classFeatures?.length ?? 0;

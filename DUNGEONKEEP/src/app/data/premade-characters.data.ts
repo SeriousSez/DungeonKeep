@@ -126,6 +126,15 @@ function getAppearanceDefaults(character: PremadeCharacter): PremadeAppearancePr
     };
 }
 
+function normalizePremadeImagePath(value: string | undefined): string {
+    const trimmed = value?.trim() ?? '';
+    if (!trimmed) {
+        return '';
+    }
+
+    return trimmed.replace(/\.png$/i, '.webp');
+}
+
 function enrichPremade(character: PremadeCharacter): PremadeCharacter {
     const roleplayDefaults = getRoleplayDefaults(character);
 
@@ -135,7 +144,8 @@ function enrichPremade(character: PremadeCharacter): PremadeCharacter {
         ideals: character.ideals?.length ? character.ideals : roleplayDefaults.ideals,
         bonds: character.bonds?.length ? character.bonds : roleplayDefaults.bonds,
         flaws: character.flaws?.length ? character.flaws : roleplayDefaults.flaws,
-        appearance: character.appearance ?? getAppearanceDefaults(character)
+        appearance: character.appearance ?? getAppearanceDefaults(character),
+        image: normalizePremadeImagePath(character.image)
     };
 }
 
@@ -247,7 +257,7 @@ const basePremadeCharacters: PremadeCharacter[] = [
                 'Bless', 'Cure Wounds', 'Guiding Bolt', 'Healing Word', 'Shield of Faith'
             ]
         },
-        image: '/assets/images/bramla-stoneheart.png'
+        image: '/assets/images/premade/bramla-stoneheart.png'
     },
     {
         id: 'premade-elf-wizard',
@@ -297,7 +307,7 @@ const basePremadeCharacters: PremadeCharacter[] = [
                 'Magic Missile', 'Shield', 'Detect Magic', 'Identify'
             ]
         },
-        image: '/assets/images/ivelios-starwind.png'
+        image: '/assets/images/premade/ivelios-starwind.png'
     },
     {
         id: 'premade-goliath-barbarian',
@@ -333,7 +343,7 @@ const basePremadeCharacters: PremadeCharacter[] = [
             inventoryItem("Traveler's Clothes", 'Adventuring Gear')
         ],
         spells: [],
-        image: '/assets/images/brakka-stoneshield.png'
+        image: '/assets/images/premade/brakka-stoneshield.png'
     },
     {
         id: 'premade-halfling-rogue',
@@ -371,7 +381,7 @@ const basePremadeCharacters: PremadeCharacter[] = [
             inventoryItem("Thieves' Tools", 'Tools')
         ],
         spells: [],
-        image: '/assets/images/pip-underbough.png'
+        image: '/assets/images/premade/pip-underbough.png'
     },
     // ── Bard ─────────────────────────────────────────────────────────────
     {
@@ -422,7 +432,7 @@ const basePremadeCharacters: PremadeCharacter[] = [
         classPreparedSpells: {
             'Bard': ['Vicious Mockery', 'Minor Illusion', 'Charm Person', 'Cure Wounds', 'Dissonant Whispers', 'Sleep']
         },
-        image: '/assets/images/veshra-ashveil.png'
+        image: '/assets/images/premade/veshra-ashveil.png'
     },
     // ── Druid ────────────────────────────────────────────────────────────
     {
@@ -464,7 +474,7 @@ const basePremadeCharacters: PremadeCharacter[] = [
         classPreparedSpells: {
             'Druid': ['Druidcraft', 'Shillelagh', 'Entangle', 'Speak with Animals', 'Cure Wounds', 'Healing Word']
         },
-        image: '/assets/images/mira-thornwood.png'
+        image: '/assets/images/premade/mira-thornwood.png'
     },
     // ── Fighter ──────────────────────────────────────────────────────────
     {
@@ -502,7 +512,7 @@ const basePremadeCharacters: PremadeCharacter[] = [
             dungeoneersPack()
         ],
         spells: [],
-        image: '/assets/images/grommash-ironback.png'
+        image: '/assets/images/premade/grommash-ironback.png'
     },
     // ── Monk ─────────────────────────────────────────────────────────────
     {
@@ -538,7 +548,7 @@ const basePremadeCharacters: PremadeCharacter[] = [
             explorerPack()
         ],
         spells: [],
-        image: '/assets/images/kyra-swiftpaw.png'
+        image: '/assets/images/premade/kyra-swiftpaw.png'
     },
     // ── Paladin ──────────────────────────────────────────────────────────
     {
@@ -593,7 +603,7 @@ const basePremadeCharacters: PremadeCharacter[] = [
         classPreparedSpells: {
             'Paladin': ['Bless', 'Cure Wounds', 'Shield of Faith']
         },
-        image: '/assets/images/aldric-dawnblade.png'
+        image: '/assets/images/premade/aldric-dawnblade.png'
     },
     // ── Ranger ───────────────────────────────────────────────────────────
     {
@@ -634,7 +644,7 @@ const basePremadeCharacters: PremadeCharacter[] = [
         classPreparedSpells: {
             'Ranger': ["Hunter's Mark", 'Ensnaring Strike']
         },
-        image: '/assets/images/sylvara-moonstep.png'
+        image: '/assets/images/premade/sylvara-moonstep.png'
     },
     // ── Sorcerer ─────────────────────────────────────────────────────────
     {
@@ -673,7 +683,7 @@ const basePremadeCharacters: PremadeCharacter[] = [
         classPreparedSpells: {
             'Sorcerer': ['Sorcerous Burst', 'Fire Bolt', 'Mage Hand', 'Prestidigitation', 'Chromatic Orb', 'Mage Armor']
         },
-        image: "/assets/images/kaz'ra-emberfang.png"
+        image: "/assets/images/premade/kaz'ra-emberfang.png"
     },
     // ── Warlock ──────────────────────────────────────────────────────────
     {
@@ -713,7 +723,7 @@ const basePremadeCharacters: PremadeCharacter[] = [
         classPreparedSpells: {
             'Warlock': ['Eldritch Blast', 'Mage Hand', 'Armor of Agathys', 'Hex']
         },
-        image: '/assets/images/nym-wickthorn.png'
+        image: '/assets/images/premade/nym-wickthorn.png'
     }
 ];
 
