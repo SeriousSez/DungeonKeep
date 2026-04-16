@@ -1265,6 +1265,38 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         }
     }
 
+    [HttpPost("{campaignId:guid}/members/remove")]
+    public async Task<ActionResult<CampaignDto>> RemoveMember(Guid campaignId, [FromBody] RemoveCampaignMemberRequest request, CancellationToken cancellationToken)
+    {
+        if (request.UserId == Guid.Empty)
+        {
+            return BadRequest("Member user id is required.");
+        }
+
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        CampaignDto? updated;
+        try
+        {
+            updated = await campaignService.RemoveMemberAsync(campaignId, request, user.Id, cancellationToken);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+
+        if (updated is null)
+        {
+            return NotFound("Campaign or member was not found.");
+        }
+
+        return Ok(updated);
+    }
+
     [HttpPost("{campaignId:guid}/leave")]
     public async Task<IActionResult> Leave(Guid campaignId, CancellationToken cancellationToken)
     {

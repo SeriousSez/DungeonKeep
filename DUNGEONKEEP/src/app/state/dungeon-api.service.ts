@@ -284,7 +284,7 @@ export interface ApiCharacterDto {
     playerName: string;
     className: string;
     level: number;
-    status: 'Ready' | 'Resting' | 'Recovering';
+    status: 'Ready' | 'Resting' | 'Recovering' | 'Inactive';
     background: string;
     notes: string;
     backstory: string;
@@ -904,6 +904,10 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/invites`, { email }));
     }
 
+    async removeCampaignMember(campaignId: string, userId: string): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/members/remove`, { userId }));
+    }
+
     async getCharacters(campaignId: string): Promise<ApiCharacterDto[]> {
         return await firstValueFrom(this.http.get<ApiCharacterDto[]>(`${this.baseUrl}/campaigns/${campaignId}/characters`));
     }
@@ -1010,7 +1014,7 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.post<ApiDndChatResponse>(`${this.baseUrl}/assistant/dnd-chat`, payload));
     }
 
-    async updateCharacterStatus(characterId: string, status: 'Ready' | 'Resting' | 'Recovering'): Promise<ApiCharacterDto> {
+    async updateCharacterStatus(characterId: string, status: 'Ready' | 'Resting' | 'Recovering' | 'Inactive'): Promise<ApiCharacterDto> {
         return await firstValueFrom(this.http.put<ApiCharacterDto>(`${this.baseUrl}/characters/${characterId}/status`, { status }));
     }
 

@@ -462,6 +462,20 @@ export class DungeonStoreService {
         }
     }
 
+    async removeCampaignMember(campaignId: string, userId: string): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId) || !userId) {
+            return false;
+        }
+
+        try {
+            const updated = await this.api.removeCampaignMember(campaignId, userId);
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     async addCampaignWorldNote(campaignId: string, payload: { title: string; category: CampaignWorldNoteCategory; content: string }): Promise<boolean> {
         if (!this.canManageCampaignContent(campaignId)) {
             return false;
@@ -691,47 +705,32 @@ export class DungeonStoreService {
 
     async setCharacterCampaign(characterId: string, campaignId: string | null): Promise<boolean> {
         const current = this.characters().find((character) => character.id === characterId);
-        if (!current || current.canEdit === false) {
+        if (!current || !this.canManageCharacterInCampaign(current)) {
             return false;
         }
 
         try {
             const updated = await this.api.updateCharacterCampaign(characterId, campaignId ? [campaignId] : []);
-            this.characters.update((characters) =>
-                characters.map((character) =>
-                    character.id === characterId
-                        ? {
-                            ...character,
-                            campaignId: updated.campaignId,
-                            campaignIds: updated.campaignIds
-                        }
-                        : character
-                )
-            );
+            this.applyCharacterCampaignUpdate(characterId, updated);
+            return true;
+        } catch {
+            return false;
+        }
+    }
 
-            this.campaigns.update((campaigns) =>
-                campaigns.map((campaign) => {
-                    const isCurrentCampaign = campaign.partyCharacterIds.includes(characterId);
-                    const shouldContain = updated.campaignIds.includes(campaign.id);
+    async removeCharacterFromCampaign(characterId: string, campaignId: string): Promise<boolean> {
+        const current = this.characters().find((character) => character.id === characterId);
+        if (!current || !campaignId || !this.canManageCharacterInCampaign(current)) {
+            return false;
+        }
 
-                    if (isCurrentCampaign && !shouldContain) {
-                        return {
-                            ...campaign,
-                            partyCharacterIds: campaign.partyCharacterIds.filter((id) => id !== characterId)
-                        };
-                    }
+        const nextCampaignIds = Array.from(
+            new Set([current.campaignId, ...(current.campaignIds ?? [])].filter((id): id is string => Boolean(id) && id !== campaignId))
+        );
 
-                    if (!isCurrentCampaign && shouldContain) {
-                        return {
-                            ...campaign,
-                            partyCharacterIds: [...campaign.partyCharacterIds, characterId]
-                        };
-                    }
-
-                    return campaign;
-                })
-            );
-
+        try {
+            const updated = await this.api.updateCharacterCampaign(characterId, nextCampaignIds);
+            this.applyCharacterCampaignUpdate(characterId, updated);
             return true;
         } catch {
             return false;
@@ -756,6 +755,10 @@ export class DungeonStoreService {
 
     cycleStatus(characterId: string): void {
         void this.cycleStatusFromApi(characterId);
+    }
+
+    async setCharacterStatus(characterId: string, status: CharacterStatus): Promise<boolean> {
+        return await this.setCharacterStatusFromApi(characterId, status);
     }
 
     inviteMember(email: string): Promise<boolean> {
@@ -2393,25 +2396,14 @@ export class DungeonStoreService {
     private async cycleStatusFromApi(characterId: string): Promise<void> {
         const statusOrder: CharacterStatus[] = ['Ready', 'Resting', 'Recovering'];
         const current = this.characters().find((character) => character.id === characterId);
-        if (!current || current.canEdit === false) {
+        if (!current || !this.canManageCharacterInCampaign(current)) {
             return;
         }
 
-        const currentIndex = statusOrder.indexOf(current.status);
-        const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
-
-        try {
-            const updated = await this.api.updateCharacterStatus(characterId, nextStatus);
-            this.characters.update((characters) =>
-                characters.map((character) =>
-                    character.id === characterId
-                        ? { ...character, status: updated.status }
-                        : character
-                )
-            );
-        } catch {
-            return;
-        }
+        const normalizedCurrentStatus = current.status === 'Inactive' ? 'Ready' : current.status;
+        const currentIndex = statusOrder.indexOf(normalizedCurrentStatus);
+        const nextStatus = statusOrder[(currentIndex + 1 + statusOrder.length) % statusOrder.length];
+        await this.setCharacterStatusFromApi(characterId, nextStatus);
     }
 
     private async inviteMemberFromApi(email: string): Promise<boolean> {
@@ -2427,6 +2419,75 @@ export class DungeonStoreService {
                     campaign.id === selectedCampaign.id
                         ? this.mapCampaignFromApi(updated, campaign.partyCharacterIds)
                         : campaign
+                )
+            );
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    private applyCharacterCampaignUpdate(characterId: string, updated: ApiCharacterDto): void {
+        const nextCampaignIds = updated.campaignIds ?? (updated.campaignId ? [updated.campaignId] : []);
+
+        this.characters.update((characters) =>
+            characters.map((character) =>
+                character.id === characterId
+                    ? {
+                        ...character,
+                        campaignId: updated.campaignId,
+                        campaignIds: nextCampaignIds
+                    }
+                    : character
+            )
+        );
+
+        this.campaigns.update((campaigns) =>
+            campaigns.map((campaign) => {
+                const isCurrentCampaign = campaign.partyCharacterIds.includes(characterId);
+                const shouldContain = nextCampaignIds.includes(campaign.id);
+
+                if (isCurrentCampaign && !shouldContain) {
+                    return {
+                        ...campaign,
+                        partyCharacterIds: campaign.partyCharacterIds.filter((id) => id !== characterId)
+                    };
+                }
+
+                if (!isCurrentCampaign && shouldContain) {
+                    return {
+                        ...campaign,
+                        partyCharacterIds: [...campaign.partyCharacterIds, characterId]
+                    };
+                }
+
+                return campaign;
+            })
+        );
+    }
+
+    private canManageCharacterInCampaign(character: Character): boolean {
+        if (character.canEdit !== false) {
+            return true;
+        }
+
+        const campaignIds = Array.from(new Set([character.campaignId, ...(character.campaignIds ?? [])].filter(Boolean)));
+        return campaignIds.some((campaignId) => this.canManageCampaignContent(campaignId));
+    }
+
+    private async setCharacterStatusFromApi(characterId: string, status: CharacterStatus): Promise<boolean> {
+        const current = this.characters().find((character) => character.id === characterId);
+        if (!current || !this.canManageCharacterInCampaign(current)) {
+            return false;
+        }
+
+        try {
+            const updated = await this.api.updateCharacterStatus(characterId, status);
+            this.characters.update((characters) =>
+                characters.map((character) =>
+                    character.id === characterId
+                        ? { ...character, status: updated.status as CharacterStatus }
+                        : character
                 )
             );
             return true;

@@ -20,7 +20,7 @@ export type CampaignTone =
     | 'Heroic Tragedy';
 export type ThreatLevel = 'Low' | 'Moderate' | 'High' | 'Deadly';
 export type PartyRole = 'Tank' | 'Support' | 'Scout' | 'Striker' | 'Caster';
-export type CharacterStatus = 'Ready' | 'Resting' | 'Recovering';
+export type CharacterStatus = 'Ready' | 'Resting' | 'Recovering' | 'Inactive';
 export type CampaignMemberRole = 'Owner' | 'Member';
 export type CampaignMemberStatus = 'Active' | 'Pending';
 export type CampaignThreadVisibility = 'Party' | 'GMOnly';

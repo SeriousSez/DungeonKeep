@@ -1,0 +1,67 @@
+<section class="table-manager-shell">
+    @if (feedback()) {
+    <div class="manager-feedback">
+        <p>{{ feedback() }}</p>
+    </div>
+    }
+
+    @if (libraryMode() && importTargetCampaign(); as importCampaign) {
+    <section class="table-callout panel">
+        <p class="eyebrow">Import Target</p>
+        <h2>{{ importCampaign.name }}</h2>
+        <p>Pick any saved table below and import it into this campaign.</p>
+    </section>
+    }
+
+    <section class="table-panel panel">
+        <div class="table-panel-heading">
+            <div>
+                <p class="eyebrow">{{ libraryMode() ? 'Reusable Collection' : 'Campaign Prep' }}</p>
+                <h2>{{ libraryMode() ? 'Tables Library' : 'Custom Tables' }}</h2>
+            </div>
+            <div class="heading-actions">
+                @if (canEdit()) {
+                <button type="button" class="primary-button" (click)="openNewTable()">New Table</button>
+                <button type="button" class="ghost-button" (click)="clearAllTables()">{{ libraryMode() ? 'Clear Library' : 'Clear Tables' }}</button>
+                }
+            </div>
+        </div>
+
+        @if (allTables().length > 0) {
+        <div class="table-card-list">
+            @for (table of allTables(); track table.id) {
+            <article class="table-card" tabindex="0" role="link" [attr.aria-label]="'Open ' + table.title" (click)="openTable(table.id)" (keydown.enter)="openTable(table.id)" (keydown.space)="openTable(table.id); $event.preventDefault()">
+                <div class="table-card-copy">
+                    <strong>{{ table.title }}</strong>
+                    <p>{{ table.description || 'No description yet.' }}</p>
+                    <span>{{ table.entries.length }} entries</span>
+                </div>
+
+                <div class="table-card-actions">
+                    @if (canEdit()) {
+                    <button type="button" class="ghost-button" (click)="$event.stopPropagation(); openEditor(table.id)">Edit</button>
+                    }
+
+                    @if (!libraryMode() && canEdit()) {
+                    <button type="button" class="ghost-button" (click)="$event.stopPropagation(); saveTableToLibrary(table.id)">Save to Library</button>
+                    }
+
+                    @if (libraryMode() && importTargetCampaignId()) {
+                    <button type="button" class="ghost-button" (click)="$event.stopPropagation(); importLibraryTable(table.id)">Import</button>
+                    }
+
+                    @if (canEdit()) {
+                    <button type="button" class="ghost-button" (click)="$event.stopPropagation(); requestDeleteTable(table.id)">Delete</button>
+                    }
+                </div>
+            </article>
+            }
+        </div>
+        } @else {
+        <p class="empty-state">No tables yet. Create one for rumors, encounters, treasure, or anything else you want to roll at the table.</p>
+        }
+    </section>
+
+    <app-confirm-modal [open]="deleteCandidate() !== null" [title]="libraryMode() ? 'Delete Library Table?' : 'Delete Table?'" [message]="deleteCandidate() ? 'Remove ' + deleteCandidate()!.title + '?' : 'Delete table?'" confirmText="Delete" cancelText="Cancel" (confirmed)="confirmDeleteTable()"
+        (cancelled)="cancelDeleteTable()"></app-confirm-modal>
+</section>

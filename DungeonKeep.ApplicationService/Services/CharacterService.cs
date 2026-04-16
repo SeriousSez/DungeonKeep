@@ -168,9 +168,12 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
             return null;
         }
 
-        if (existing.OwnerUserId != userId)
+        var canManageCharacter = existing.OwnerUserId == userId
+            || await IsOwnerOfAnyCampaignAsync(ResolveCampaignIds(existing), userId, cancellationToken);
+
+        if (!canManageCharacter)
         {
-            throw new UnauthorizedAccessException("Only the character owner can change campaign assignment.");
+            throw new UnauthorizedAccessException("Only the character owner or a campaign owner can change campaign assignment.");
         }
 
         var normalizedCampaignIds = NormalizeCampaignIds(request.CampaignIds, request.CampaignId);
@@ -244,7 +247,7 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
     public async Task<CharacterDto?> UpdateStatusAsync(Guid characterId, UpdateCharacterStatusRequest request, Guid userId, CancellationToken cancellationToken = default)
     {
         var status = request.Status.Trim();
-        if (status is not ("Ready" or "Resting" or "Recovering"))
+        if (status is not ("Ready" or "Resting" or "Recovering" or "Inactive"))
         {
             return null;
         }
@@ -255,9 +258,12 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
             return null;
         }
 
-        if (existing.OwnerUserId != userId)
+        var canManageCharacter = existing.OwnerUserId == userId
+            || await IsOwnerOfAnyCampaignAsync(ResolveCampaignIds(existing), userId, cancellationToken);
+
+        if (!canManageCharacter)
         {
-            throw new UnauthorizedAccessException("Only the character owner can change status.");
+            throw new UnauthorizedAccessException("Only the character owner or a campaign owner can change status.");
         }
 
         var updated = await characterRepository.UpdateStatusAsync(characterId, status, cancellationToken);
@@ -279,6 +285,22 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
 
         var updated = await characterRepository.PromoteAsync(characterId, cancellationToken);
         return updated is null ? null : MapCharacter(updated, userId);
+    }
+
+    private async Task<bool> IsOwnerOfAnyCampaignAsync(IEnumerable<Guid> campaignIds, Guid userId, CancellationToken cancellationToken)
+    {
+        foreach (var campaignId in campaignIds.Where(id => id != Guid.Empty).Distinct())
+        {
+            var campaign = await campaignRepository.GetByIdAsync(campaignId, cancellationToken);
+            var membership = campaign?.Memberships.FirstOrDefault(member => member.UserId == userId && member.Status == "Active");
+
+            if (membership?.Role == "Owner")
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static CharacterDto MapCharacter(Character character, Guid currentUserId)

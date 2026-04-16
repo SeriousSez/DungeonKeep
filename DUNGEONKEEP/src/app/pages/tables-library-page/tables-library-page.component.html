@@ -1,0 +1,19 @@
+<main class="page-stack">
+    <section class="panel page-intro">
+        <div class="page-intro-header">
+            <div>
+                <p class="eyebrow">Reusable Tools</p>
+                <h1>Custom Tables Library</h1>
+                <p>Build reusable tables for rumors, random encounters, treasure drops, tavern chatter, downtime prompts, or anything else your campaign needs.</p>
+                @if (importCampaign(); as campaign) {
+                <p class="library-note">You are currently importing into <strong>{{ campaign.name }}</strong>.</p>
+                }
+            </div>
+            @if (importCampaign(); as campaign) {
+            <a class="ghost-button" [routerLink]="['/campaigns', campaign.id, 'tables']">Back to Campaign Tables</a>
+            }
+        </div>
+    </section>
+
+    <app-custom-table-manager [libraryMode]="true" [canEdit]="true" [importTargetCampaignId]="importCampaignId()"></app-custom-table-manager>
+</main>

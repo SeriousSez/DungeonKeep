@@ -821,6 +821,38 @@ public sealed class CampaignService(
         return MapCampaign(updated, user.Id);
     }
 
+    public async Task<CampaignDto?> RemoveMemberAsync(Guid campaignId, RemoveCampaignMemberRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        if (request.UserId == Guid.Empty)
+        {
+            return null;
+        }
+
+        var campaign = await campaignRepository.GetByIdAsync(campaignId, cancellationToken);
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var actingMembership = campaign.Memberships.FirstOrDefault(member => member.UserId == userId && member.Status == "Active");
+        if (actingMembership is null || actingMembership.Role != "Owner")
+        {
+            throw new UnauthorizedAccessException("Only campaign owners can remove members.");
+        }
+
+        var targetMembership = campaign.Memberships.FirstOrDefault(member => member.UserId == request.UserId);
+        if (targetMembership is null || targetMembership.Role == "Owner")
+        {
+            return null;
+        }
+
+        await characterRepository.UnassignOwnedByUserInCampaignAsync(campaignId, request.UserId, cancellationToken);
+        await campaignRepository.RemoveMemberAsync(campaignId, request.UserId, cancellationToken);
+
+        var updated = await campaignRepository.GetByIdAsync(campaignId, cancellationToken);
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
     public async Task LeaveAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default)
     {
         var campaign = await campaignRepository.GetByIdAsync(campaignId, cancellationToken);

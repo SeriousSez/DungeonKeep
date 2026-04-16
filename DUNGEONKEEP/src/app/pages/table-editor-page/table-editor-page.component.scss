@@ -1,0 +1,83 @@
+:host {
+    display: block;
+}
+
+.page-stack {
+    display: grid;
+    gap: 16px;
+}
+
+.panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 24px;
+    box-shadow: var(--panel-shadow);
+    padding: 20px;
+}
+
+.page-intro-header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.eyebrow {
+    margin: 0 0 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 0.72rem;
+    color: var(--text-soft);
+}
+
+.page-intro-header h1,
+.feedback-panel p {
+    margin: 0;
+}
+
+.page-intro-header p,
+.feedback-panel p {
+    color: var(--text-soft);
+}
+
+.editor-fields {
+    display: grid;
+    gap: 12px;
+}
+
+.editor-field {
+    display: grid;
+    gap: 6px;
+
+    span {
+        font-weight: 600;
+        color: var(--text-main);
+    }
+
+    input,
+    textarea {
+        width: 100%;
+        border-radius: 12px;
+        border: 1px solid var(--panel-border);
+        background: var(--color-surface);
+        color: var(--text-main);
+        padding: 10px 12px;
+        font: inherit;
+    }
+
+    small {
+        color: var(--text-soft);
+    }
+}
+
+.editor-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+@media (max-width: 800px) {
+    .page-intro-header {
+        flex-direction: column;
+    }
+}

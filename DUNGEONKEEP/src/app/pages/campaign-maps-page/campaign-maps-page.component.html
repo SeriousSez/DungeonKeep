@@ -44,6 +44,10 @@
             <span class="campaign-nav-label">NPCs</span>
             <span class="campaign-nav-meta">{{ campaign.npcs.length }} tracked</span>
         </a>
+        <a [routerLink]="['/campaigns', campaign.id, 'tables']" class="campaign-nav-link">
+            <span class="campaign-nav-label">Tables</span>
+            <span class="campaign-nav-meta">custom rolls</span>
+        </a>
         }
         <a [routerLink]="['/campaigns', campaign.id, 'loot']" class="campaign-nav-link">
             <span class="campaign-nav-label">Loot</span>

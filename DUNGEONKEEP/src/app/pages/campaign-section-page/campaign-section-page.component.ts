@@ -3,15 +3,16 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { NpcManagerComponent } from '../../components/npc-manager/npc-manager.component';
+import { CustomTableManagerComponent } from '../../components/custom-table-manager/custom-table-manager.component';
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
 import { ItemDetailModalComponent } from '../../components/item-detail-modal/item-detail-modal.component';
 import { equipmentCatalog } from '../../data/new-character-standard-page.data';
 import type { InventoryEntry } from '../../data/new-character-standard-page.types';
-import type { CampaignWorldNote, CampaignWorldNoteCategory } from '../../models/dungeon.models';
+import type { CampaignMember, CampaignWorldNote, CampaignWorldNoteCategory, Character, CharacterStatus } from '../../models/dungeon.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
-type CampaignSection = 'party' | 'sessions' | 'npcs' | 'loot' | 'threads' | 'notes' | 'members';
+type CampaignSection = 'party' | 'sessions' | 'npcs' | 'tables' | 'loot' | 'threads' | 'notes' | 'members';
 type ThreatLevel = 'Low' | 'Moderate' | 'High' | 'Deadly';
 type CampaignLootSummary = {
     name: string;
@@ -33,7 +34,7 @@ const equipmentCatalogByName = new Map(equipmentCatalog.map((item) => [item.name
 
 @Component({
     selector: 'app-campaign-section-page',
-    imports: [CommonModule, RouterLink, ConfirmModalComponent, DropdownComponent, NpcManagerComponent, ItemDetailModalComponent],
+    imports: [CommonModule, RouterLink, ConfirmModalComponent, DropdownComponent, NpcManagerComponent, CustomTableManagerComponent, ItemDetailModalComponent],
     templateUrl: './campaign-section-page.component.html',
     styleUrl: './campaign-section-page.component.scss',
     standalone: true,
@@ -53,6 +54,7 @@ export class CampaignSectionPageComponent {
             case 'party':
             case 'sessions':
             case 'npcs':
+            case 'tables':
             case 'loot':
             case 'threads':
             case 'notes':
@@ -63,7 +65,10 @@ export class CampaignSectionPageComponent {
         }
     });
 
-    readonly confirmAction = signal<'delete' | 'leave' | null>(null);
+    readonly confirmAction = signal<'delete' | 'leave' | 'remove-member' | 'remove-character' | null>(null);
+    readonly pendingMemberRemoval = signal<CampaignMember | null>(null);
+    readonly pendingCharacterRemoval = signal<Character | null>(null);
+    readonly characterActionInFlightId = signal('');
     readonly addThreadModalOpen = signal(false);
     readonly threadModalMode = signal<'add' | 'edit'>('add');
     readonly modalThreadId = signal<string | null>(null);
@@ -130,8 +135,10 @@ export class CampaignSectionPageComponent {
 
         return campaign.partyCharacterIds
             .map((id) => characterMap.get(id))
-            .filter((character) => character !== undefined);
+            .filter((character): character is Character => character !== undefined);
     });
+    readonly activePartyMembers = computed(() => this.partyMembers().filter((character) => character.status !== 'Inactive'));
+    readonly inactivePartyMembers = computed(() => this.partyMembers().filter((character) => character.status === 'Inactive'));
 
     readonly visibleThreads = computed(() => {
         const campaign = this.selectedCampaign();
@@ -235,6 +242,8 @@ export class CampaignSectionPageComponent {
                 return 'Campaign Sessions';
             case 'npcs':
                 return 'Campaign NPCs';
+            case 'tables':
+                return 'Custom Tables';
             case 'loot':
                 return 'Campaign Loot';
             case 'threads':
@@ -249,11 +258,13 @@ export class CampaignSectionPageComponent {
     readonly pageDescription = computed(() => {
         switch (this.section()) {
             case 'party':
-                return 'Track the active adventurers tied to this campaign, their roles, and who is ready for the next session.';
+                return 'Track which adventurers are actively in play, keep reserve characters attached to the campaign, and manage the roster between sessions.';
             case 'sessions':
                 return 'Review prepared sessions, important locations, and the next objective waiting on the table.';
             case 'npcs':
                 return 'Keep the campaign cast visible so important allies, patrons, rivals, and suspects stay easy to reference.';
+            case 'tables':
+                return 'Create custom random tables with their own title and description, then save your best ones into a reusable library.';
             case 'loot':
                 return 'Track treasure, clues, debts, and notable items the party has collected along the way.';
             case 'threads':
@@ -266,12 +277,47 @@ export class CampaignSectionPageComponent {
     });
 
     readonly confirmModalOpen = computed(() => this.confirmAction() !== null);
-    readonly confirmModalTitle = computed(() => this.confirmAction() === 'leave' ? 'Leave Campaign?' : 'Delete Campaign?');
-    readonly confirmModalMessage = computed(() =>
-        this.confirmAction() === 'leave'
-            ? 'Are you sure you want to leave this campaign? Your characters will be removed from the party and returned to your unassigned roster.'
-            : 'Are you sure you want to delete this campaign? This action cannot be undone.');
-    readonly confirmModalActionText = computed(() => this.confirmAction() === 'leave' ? 'Leave' : 'Delete');
+    readonly confirmModalTitle = computed(() => {
+        switch (this.confirmAction()) {
+            case 'leave':
+                return 'Leave Campaign?';
+            case 'remove-member':
+                return 'Remove Member?';
+            case 'remove-character':
+                return 'Remove Character?';
+            default:
+                return 'Delete Campaign?';
+        }
+    });
+    readonly confirmModalMessage = computed(() => {
+        switch (this.confirmAction()) {
+            case 'leave':
+                return 'Are you sure you want to leave this campaign? Your characters will be removed from the party and returned to your unassigned roster.';
+            case 'remove-member': {
+                const member = this.pendingMemberRemoval();
+                const memberName = member?.displayName?.trim() || member?.email || 'this member';
+                return `Remove ${memberName} from this campaign? Their characters will be returned to the unassigned roster.`;
+            }
+            case 'remove-character': {
+                const character = this.pendingCharacterRemoval();
+                const characterName = character?.name?.trim() || 'this character';
+                return `Remove ${characterName} from this campaign party? They will stay in the roster, but no longer be assigned here.`;
+            }
+            default:
+                return 'Are you sure you want to delete this campaign? This action cannot be undone.';
+        }
+    });
+    readonly confirmModalActionText = computed(() => {
+        switch (this.confirmAction()) {
+            case 'leave':
+                return 'Leave';
+            case 'remove-member':
+            case 'remove-character':
+                return 'Remove';
+            default:
+                return 'Delete';
+        }
+    });
 
     isActiveSection(section: CampaignSection): boolean {
         return this.section() === section;
@@ -295,6 +341,8 @@ export class CampaignSectionPageComponent {
             return;
         }
 
+        this.pendingMemberRemoval.set(null);
+        this.pendingCharacterRemoval.set(null);
         this.confirmAction.set('delete');
     }
 
@@ -303,7 +351,60 @@ export class CampaignSectionPageComponent {
             return;
         }
 
+        this.pendingMemberRemoval.set(null);
+        this.pendingCharacterRemoval.set(null);
         this.confirmAction.set('leave');
+    }
+
+    handleRequestRemoveMember(member: CampaignMember): void {
+        if (this.selectedCampaign()?.currentUserRole !== 'Owner' || member.role === 'Owner' || !member.userId) {
+            return;
+        }
+
+        this.pendingCharacterRemoval.set(null);
+        this.pendingMemberRemoval.set(member);
+        this.confirmAction.set('remove-member');
+    }
+
+    handleRequestRemoveCharacter(character: Character): void {
+        if (this.selectedCampaign()?.currentUserRole !== 'Owner') {
+            return;
+        }
+
+        this.pendingMemberRemoval.set(null);
+        this.pendingCharacterRemoval.set(character);
+        this.confirmAction.set('remove-character');
+    }
+
+    async toggleCharacterActive(character: Character): Promise<void> {
+        if (this.selectedCampaign()?.currentUserRole !== 'Owner') {
+            return;
+        }
+
+        const nextStatus: CharacterStatus = character.status === 'Inactive' ? 'Ready' : 'Inactive';
+        this.characterActionInFlightId.set(character.id);
+        this.sectionFeedback.set('');
+
+        try {
+            const updated = await this.store.setCharacterStatus(character.id, nextStatus);
+            if (!updated) {
+                this.sectionFeedback.set(nextStatus === 'Inactive'
+                    ? 'Could not deactivate that character.'
+                    : 'Could not reactivate that character.');
+                return;
+            }
+
+            this.sectionFeedback.set(nextStatus === 'Inactive'
+                ? `${character.name} is now inactive for this campaign.`
+                : `${character.name} is active again.`);
+        } finally {
+            this.characterActionInFlightId.set('');
+            this.cdr.detectChanges();
+        }
+    }
+
+    isCharacterActionPending(characterId: string): boolean {
+        return this.characterActionInFlightId() === characterId;
     }
 
     async handleConfirmAccepted(): Promise<void> {
@@ -323,14 +424,36 @@ export class CampaignSectionPageComponent {
             if (didLeave) {
                 await this.router.navigate(['/campaigns']);
             }
+        } else if (this.confirmAction() === 'remove-member') {
+            const member = this.pendingMemberRemoval();
+            if (member?.userId) {
+                const removed = await this.store.removeCampaignMember(id, member.userId);
+                if (!removed) {
+                    this.sectionFeedback.set('Could not remove that member.');
+                }
+            }
+        } else if (this.confirmAction() === 'remove-character') {
+            const character = this.pendingCharacterRemoval();
+            if (character?.id) {
+                const removed = await this.store.removeCharacterFromCampaign(character.id, id);
+                if (!removed) {
+                    this.sectionFeedback.set('Could not remove that character from the party.');
+                } else {
+                    this.sectionFeedback.set(`${character.name} was removed from the campaign party.`);
+                }
+            }
         }
 
         this.confirmAction.set(null);
+        this.pendingMemberRemoval.set(null);
+        this.pendingCharacterRemoval.set(null);
         this.cdr.detectChanges();
     }
 
     handleConfirmCancelled(): void {
         this.confirmAction.set(null);
+        this.pendingMemberRemoval.set(null);
+        this.pendingCharacterRemoval.set(null);
         this.cdr.detectChanges();
     }
 

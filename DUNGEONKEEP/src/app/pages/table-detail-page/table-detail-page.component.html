@@ -1,0 +1,90 @@
+<main class="page-stack">
+    <section class="panel page-intro">
+        <div class="page-intro-header">
+            <div>
+                <p class="eyebrow">{{ libraryMode() ? 'Reusable Tables' : 'Campaign Tables' }}</p>
+                <h1>{{ table()?.title || 'Table Details' }}</h1>
+                <p>{{ table()?.description || 'Review the table entries and roll a result when you need one.' }}</p>
+            </div>
+            <div class="header-actions">
+                @if (libraryMode()) {
+                <a class="ghost-button" [routerLink]="['/tables']" [queryParams]="importCampaignId() ? { campaignId: importCampaignId() } : {}">Back to Library</a>
+                } @else {
+                <a class="ghost-button" [routerLink]="['/campaigns', campaignId(), 'tables']">Back to Tables</a>
+                }
+
+                @if (canEdit()) {
+                @if (libraryMode()) {
+                <a class="primary-button" [routerLink]="['/tables', tableId(), 'edit']" [queryParams]="importCampaignId() ? { campaignId: importCampaignId() } : {}">Edit Table</a>
+                } @else {
+                <a class="primary-button" [routerLink]="['/campaigns', campaignId(), 'tables', tableId(), 'edit']">Edit Table</a>
+                }
+                }
+            </div>
+        </div>
+    </section>
+
+    @if (feedback()) {
+    <section class="panel feedback-panel">
+        <p>{{ feedback() }}</p>
+    </section>
+    }
+
+    @if (table(); as activeTable) {
+    <section class="panel table-summary-panel">
+        <div class="table-summary-row">
+            <div class="table-summary-grid">
+                <div>
+                    <span class="summary-label">Entries</span>
+                    <strong>{{ activeTable.entries.length }}</strong>
+                </div>
+                <div>
+                    <span class="summary-label">Updated</span>
+                    <strong>{{ activeTable.updatedAt | date:'mediumDate' }}</strong>
+                </div>
+            </div>
+
+            <div class="table-actions">
+                <div class="table-actions-secondary">
+                    @if (!libraryMode() && canEdit()) {
+                    <button type="button" class="ghost-button" (click)="saveToLibrary()">Save to Library</button>
+                    }
+                    @if (libraryMode() && importCampaign()) {
+                    <button type="button" class="ghost-button" (click)="importToCampaign()">Import to {{ importCampaign()!.name }}</button>
+                    }
+                </div>
+
+                <button type="button" class="primary-button table-roll-button" (click)="rollTable()">Roll Table</button>
+            </div>
+        </div>
+
+        @if (rollResult()) {
+        <div class="roll-result">
+            <p class="eyebrow">Rolled Result</p>
+            <strong>{{ rollResult() }}</strong>
+        </div>
+        }
+    </section>
+
+    <section class="panel entries-panel">
+        <div class="section-heading">
+            <h2>Table Entries</h2>
+            <span class="count-badge">{{ activeTable.entries.length }}</span>
+        </div>
+
+        <ol class="table-entry-list">
+            @for (entry of activeTable.entries; track entry; let index = $index) {
+            <li>
+                <span class="entry-index">{{ index + 1 }}</span>
+                <span class="entry-text">{{ entry }}</span>
+            </li>
+            }
+        </ol>
+    </section>
+    } @else {
+    <section class="panel empty-panel">
+        <h2>Table not found</h2>
+        <p>This table could not be loaded.</p>
+    </section>
+    }
+</main>

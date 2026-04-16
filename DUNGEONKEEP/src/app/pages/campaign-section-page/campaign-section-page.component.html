@@ -55,6 +55,10 @@
             <span class="campaign-nav-label">NPCs</span>
             <span class="campaign-nav-meta">{{ campaign.npcs.length }} tracked</span>
         </a>
+        <a [routerLink]="['/campaigns', campaign.id, 'tables']" class="campaign-nav-link" [class.is-active]="isActiveSection('tables')">
+            <span class="campaign-nav-label">Tables</span>
+            <span class="campaign-nav-meta">custom rolls</span>
+        </a>
         }
         <a [routerLink]="['/campaigns', campaign.id, 'loot']" class="campaign-nav-link" [class.is-active]="isActiveSection('loot')">
             <span class="campaign-nav-label">Loot</span>
@@ -85,23 +89,75 @@
 
         @switch (section()) {
         @case ('party') {
-        <div class="section-heading">
-            <h2>Party Members</h2>
+        <div class="section-heading section-heading--party">
+            <div class="party-section-copy">
+                <h2>Party Members</h2>
+                <p>Keep active characters ready for play and move reserve characters in or out as needed.</p>
+            </div>
             <span class="count-badge">{{ partyMembers().length }}</span>
         </div>
 
         @if (partyMembers().length > 0) {
+        @if (activePartyMembers().length > 0) {
         <div class="party-members-list">
-            @for (character of partyMembers(); track character.id) {
-            <a class="party-member-card" [routerLink]="['/character', character!.id]" [attr.aria-label]="'Open ' + character!.name">
-                <div class="member-info">
-                    <h3>{{ character!.name }}</h3>
-                    <p class="member-meta">{{ character!.className }} • Level {{ character!.level }} • {{ character!.status }}</p>
+            @for (character of activePartyMembers(); track character.id) {
+            <article class="party-member-card">
+                <a class="party-member-link" [routerLink]="['/character', character.id]" [attr.aria-label]="'Open ' + character.name">
+                    <div class="member-info">
+                        <h3>{{ character.name }}</h3>
+                        <p class="member-meta">{{ character.className }} • Level {{ character.level }} • {{ character.status }}</p>
+                    </div>
+                </a>
+                <div class="party-member-side">
+                    <div class="member-pill-group">
+                        <span class="role-badge">{{ character.role }}</span>
+                        <span class="member-status-pill">{{ character.status }}</span>
+                    </div>
+                    @if (campaign.currentUserRole === 'Owner') {
+                    <div class="member-actions">
+                        <button type="button" class="ghost-button" [disabled]="isCharacterActionPending(character.id)" (click)="toggleCharacterActive(character)">Deactivate</button>
+                        <button type="button" class="ghost-button" [disabled]="isCharacterActionPending(character.id)" (click)="handleRequestRemoveCharacter(character)">Remove</button>
+                    </div>
+                    }
                 </div>
-                <span class="role-badge">{{ character!.role }}</span>
-            </a>
+            </article>
             }
         </div>
+        } @else {
+        <p class="empty-state">No active party members are assigned right now.</p>
+        }
+
+        @if (inactivePartyMembers().length > 0) {
+        <div class="party-section-subheading">
+            <h3>Inactive / Reserve</h3>
+            <p>These characters are still part of the campaign, but they are not currently in active play.</p>
+        </div>
+
+        <div class="party-members-list">
+            @for (character of inactivePartyMembers(); track character.id) {
+            <article class="party-member-card party-member-card--inactive">
+                <a class="party-member-link" [routerLink]="['/character', character.id]" [attr.aria-label]="'Open ' + character.name">
+                    <div class="member-info">
+                        <h3>{{ character.name }}</h3>
+                        <p class="member-meta">{{ character.className }} • Level {{ character.level }} • Not currently active</p>
+                    </div>
+                </a>
+                <div class="party-member-side">
+                    <div class="member-pill-group">
+                        <span class="role-badge">{{ character.role }}</span>
+                        <span class="member-status-pill subdued-pill">Inactive</span>
+                    </div>
+                    @if (campaign.currentUserRole === 'Owner') {
+                    <div class="member-actions">
+                        <button type="button" class="ghost-button" [disabled]="isCharacterActionPending(character.id)" (click)="toggleCharacterActive(character)">Reactivate</button>
+                        <button type="button" class="ghost-button" [disabled]="isCharacterActionPending(character.id)" (click)="handleRequestRemoveCharacter(character)">Remove</button>
+                    </div>
+                    }
+                </div>
+            </article>
+            }
+        </div>
+        }
         } @else {
         <p class="empty-state">No party members assigned to this campaign yet.</p>
         }
@@ -158,6 +214,23 @@
 
         @if (campaign.currentUserRole === 'Owner') {
         <app-npc-manager [campaignId]="campaign.id" [canEdit]="true" [npcNames]="campaign.npcs" [listOnly]="true"></app-npc-manager>
+        }
+        }
+
+        @case ('tables') {
+        <div class="section-heading">
+            <h2>Custom Tables</h2>
+            <div class="threads-heading-actions">
+                @if (campaign.currentUserRole === 'Owner') {
+                <a class="ghost-button" [routerLink]="['/tables']" [queryParams]="{ campaignId: campaign.id }">Open Library</a>
+                }
+            </div>
+        </div>
+
+        @if (campaign.currentUserRole === 'Owner') {
+        <app-custom-table-manager [campaignId]="campaign.id" [canEdit]="true"></app-custom-table-manager>
+        } @else {
+        <p class="empty-state">Only the campaign owner can manage custom tables for this campaign.</p>
         }
         }
 
@@ -412,6 +485,9 @@
                 <div class="member-pill-group">
                     <span class="member-status-pill">{{ member.role }}</span>
                     <span class="member-status-pill subdued-pill">{{ member.status }}</span>
+                    @if (campaign.currentUserRole === 'Owner' && member.role !== 'Owner' && member.userId) {
+                    <button type="button" class="ghost-button" (click)="handleRequestRemoveMember(member)">Remove</button>
+                    }
                 </div>
             </article>
             }

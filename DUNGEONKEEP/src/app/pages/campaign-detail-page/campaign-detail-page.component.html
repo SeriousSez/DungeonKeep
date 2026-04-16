@@ -62,6 +62,10 @@
             <span class="campaign-nav-label">NPCs</span>
             <span class="campaign-nav-meta">{{ campaign.npcs.length }} tracked</span>
         </a>
+        <a [routerLink]="['/campaigns', campaign.id, 'tables']" class="campaign-nav-link">
+            <span class="campaign-nav-label">Tables</span>
+            <span class="campaign-nav-meta">custom rolls</span>
+        </a>
         }
         <a [routerLink]="['/campaigns', campaign.id, 'loot']" class="campaign-nav-link">
             <span class="campaign-nav-label">Loot</span>
@@ -152,6 +156,17 @@
                 <span class="count-badge">{{ campaign.npcs.length }}</span>
             </div>
             <p>{{ campaign.npcs.length > 0 ? campaign.npcs.slice(0, 2).join(' • ') : 'Track patrons, suspects, allies, and rivals from the NPC page.' }}</p>
+        </a>
+
+        <a class="panel workspace-preview-card" [routerLink]="['/campaigns', campaign.id, 'tables']">
+            <div class="workspace-preview-header">
+                <div>
+                    <p class="eyebrow">Tables</p>
+                    <h2>Custom Rolls</h2>
+                </div>
+                <span class="count-badge">GM</span>
+            </div>
+            <p>Create encounter, rumor, treasure, or downtime tables and save the best ones to your reusable library.</p>
         </a>
         }
 

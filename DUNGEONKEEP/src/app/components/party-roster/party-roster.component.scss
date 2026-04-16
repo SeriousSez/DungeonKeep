@@ -143,6 +143,11 @@
     background: rgba(163, 107, 49, 0.18);
 }
 
+.status-pill[data-status='Inactive'] {
+    background: color-mix(in srgb, var(--color-surface-solid) 82%, var(--color-border) 18%);
+    color: var(--color-text-muted, var(--color-text));
+}
+
 .empty-state {
     place-items: center;
     min-height: 240px;

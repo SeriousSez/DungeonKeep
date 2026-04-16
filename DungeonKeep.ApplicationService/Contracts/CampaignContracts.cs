@@ -278,6 +278,7 @@ public sealed record CreateCampaignThreadRequest(string Text, string Visibility)
 public sealed record UpdateCampaignThreadRequest(string Text, string Visibility);
 public sealed record ArchiveCampaignThreadRequest(Guid ThreadId);
 public sealed record InviteCampaignMemberRequest(string Email);
+public sealed record RemoveCampaignMemberRequest(Guid UserId);
 public sealed record CreateCampaignSessionRequest(string Title, string Date, string Location, string Objective, string Threat);
 public sealed record UpdateCampaignSessionRequest(string Title, string Date, string Location, string Objective, string Threat);
 public sealed record CreateCampaignNpcRequest(string Name);

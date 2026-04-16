@@ -18,6 +18,9 @@ import { NotFoundPage } from './pages/not-found-page/not-found-page';
 import { NpcEditorPageComponent } from './pages/npc-editor-page/npc-editor-page.component';
 import { NpcDetailPage } from './pages/npc-detail-page/npc-detail-page';
 import { NpcLibraryPageComponent } from './pages/npc-library-page/npc-library-page.component';
+import { TablesLibraryPageComponent } from './pages/tables-library-page/tables-library-page.component';
+import { TableDetailPageComponent } from './pages/table-detail-page/table-detail-page.component';
+import { TableEditorPageComponent } from './pages/table-editor-page/table-editor-page.component';
 import { PremadeCharactersPageComponent } from './pages/premade-characters-page.component';
 import { PublicHomePageComponent } from './pages/public-home-page/public-home-page.component';
 import { AuthShellComponent } from './components/auth-shell/auth-shell.component';
@@ -109,6 +112,26 @@ export const routes: Routes = [
         path: 'campaigns/:id/npcs/:npcId/edit',
         component: NpcEditorPageComponent,
         data: { title: 'Edit NPC', breadcrumb: 'Edit NPC', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }, { label: 'NPCs', url: '/campaigns/:id/npcs' }] }
+    },
+    {
+        path: 'campaigns/:id/tables',
+        component: CampaignSectionPageComponent,
+        data: { title: 'Campaign Tables', breadcrumb: 'Tables', section: 'tables', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }] }
+    },
+    {
+        path: 'campaigns/:id/tables/new',
+        component: TableEditorPageComponent,
+        data: { title: 'New Table', breadcrumb: 'New Table', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }, { label: 'Tables', url: '/campaigns/:id/tables' }] }
+    },
+    {
+        path: 'campaigns/:id/tables/:tableId',
+        component: TableDetailPageComponent,
+        data: { title: 'Table Details', breadcrumb: 'Table', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }, { label: 'Tables', url: '/campaigns/:id/tables' }] }
+    },
+    {
+        path: 'campaigns/:id/tables/:tableId/edit',
+        component: TableEditorPageComponent,
+        data: { title: 'Edit Table', breadcrumb: 'Edit Table', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }, { label: 'Tables', url: '/campaigns/:id/tables' }] }
     },
     {
         path: 'campaigns/:id/loot',
@@ -218,6 +241,26 @@ export const routes: Routes = [
         path: 'npcs',
         component: NpcLibraryPageComponent,
         data: { title: 'NPC Library', breadcrumb: 'NPC Library' }
+    },
+    {
+        path: 'tables',
+        component: TablesLibraryPageComponent,
+        data: { title: 'Table Library', breadcrumb: 'Tables' }
+    },
+    {
+        path: 'tables/new',
+        component: TableEditorPageComponent,
+        data: { title: 'New Library Table', breadcrumb: 'New Table', parentCrumbs: [{ label: 'Tables', url: '/tables' }] }
+    },
+    {
+        path: 'tables/:tableId',
+        component: TableDetailPageComponent,
+        data: { title: 'Table Details', breadcrumb: 'Table', parentCrumbs: [{ label: 'Tables', url: '/tables' }] }
+    },
+    {
+        path: 'tables/:tableId/edit',
+        component: TableEditorPageComponent,
+        data: { title: 'Edit Library Table', breadcrumb: 'Edit Table', parentCrumbs: [{ label: 'Tables', url: '/tables' }] }
     },
     {
         path: 'npcs/new',
