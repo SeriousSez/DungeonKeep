@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
@@ -10,10 +11,12 @@ import { equipmentCatalog } from '../../data/new-character-standard-page.data';
 import type { InventoryEntry } from '../../data/new-character-standard-page.types';
 import type { CampaignMember, CampaignWorldNote, CampaignWorldNoteCategory, Character, CharacterStatus } from '../../models/dungeon.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
+import { DungeonApiService } from '../../state/dungeon-api.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
 type CampaignSection = 'party' | 'sessions' | 'npcs' | 'tables' | 'loot' | 'threads' | 'notes' | 'members';
 type ThreatLevel = 'Low' | 'Moderate' | 'High' | 'Deadly';
+type NoteEditorDraftMode = 'standard' | 'ai';
 type CampaignLootSummary = {
     name: string;
     count: number;
@@ -42,6 +45,7 @@ const equipmentCatalogByName = new Map(equipmentCatalog.map((item) => [item.name
 })
 export class CampaignSectionPageComponent {
     readonly store = inject(DungeonStoreService);
+    private readonly api = inject(DungeonApiService);
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
     private readonly cdr = inject(ChangeDetectorRef);
@@ -88,10 +92,15 @@ export class CampaignSectionPageComponent {
     readonly selectedLootRarity = signal('All');
     readonly noteEditorOpen = signal(false);
     readonly noteEditorMode = signal<'add' | 'edit'>('add');
+    readonly noteDraftMode = signal<NoteEditorDraftMode>('standard');
     readonly noteEditorId = signal<string | null>(null);
     readonly noteTitle = signal('');
     readonly noteCategory = signal<CampaignWorldNoteCategory>('Lore');
+    readonly noteAiCategory = signal<'Any' | CampaignWorldNoteCategory>('Any');
     readonly noteContent = signal('');
+    readonly noteAiPrompt = signal('');
+    readonly noteAiGenerating = signal(false);
+    readonly noteAiError = signal('');
     readonly inviteEmail = signal('');
     readonly sectionFeedback = signal('');
 
@@ -113,6 +122,10 @@ export class CampaignSectionPageComponent {
         { value: 'Location', label: 'Location', description: 'Settlements, ruins, landmarks, and strongholds.' },
         { value: 'Lore', label: 'Lore', description: 'Setting truths, rumors, customs, and magical rules.' },
         { value: 'Custom', label: 'Custom', description: 'Anything that does not fit the main buckets.' }
+    ];
+    readonly worldNoteAiCategoryOptions: DropdownOption[] = [
+        { value: 'Any', label: 'Any', description: 'Let AI choose the best fit.' },
+        ...this.worldNoteCategoryOptions
     ];
 
     readonly selectedCampaign = computed(() => {
@@ -756,7 +769,11 @@ export class CampaignSectionPageComponent {
         }
 
         this.clearSectionFeedback();
+        this.noteAiError.set('');
+        this.noteAiPrompt.set('');
+        this.noteAiCategory.set('Any');
         this.noteEditorMode.set('add');
+        this.noteDraftMode.set('standard');
         this.noteEditorId.set(null);
         this.noteTitle.set('');
         this.noteCategory.set('Lore');
@@ -770,7 +787,11 @@ export class CampaignSectionPageComponent {
         }
 
         this.clearSectionFeedback();
+        this.noteAiError.set('');
+        this.noteAiPrompt.set('');
+        this.noteAiCategory.set('Any');
         this.noteEditorMode.set('edit');
+        this.noteDraftMode.set('standard');
         this.noteEditorId.set(note.id);
         this.noteTitle.set(note.title);
         this.noteCategory.set(note.category);
@@ -780,6 +801,9 @@ export class CampaignSectionPageComponent {
 
     closeWorldNoteForm(): void {
         this.noteEditorId.set(null);
+        this.noteAiError.set('');
+        this.noteAiPrompt.set('');
+        this.noteAiCategory.set('Any');
         this.noteEditorOpen.set(false);
     }
 
@@ -793,6 +817,66 @@ export class CampaignSectionPageComponent {
 
     updateWorldNoteContent(value: string): void {
         this.noteContent.set(value);
+    }
+
+    updateWorldNoteAiPrompt(value: string): void {
+        this.noteAiPrompt.set(value);
+        this.noteAiError.set('');
+    }
+
+    updateWorldNoteAiCategory(value: string | number): void {
+        const nextValue = String(value);
+        this.noteAiCategory.set(nextValue === 'Any' ? 'Any' : this.normalizeWorldNoteCategory(nextValue));
+        this.noteAiError.set('');
+    }
+
+    selectNoteDraftMode(mode: NoteEditorDraftMode): void {
+        this.noteDraftMode.set(mode);
+        this.noteAiError.set('');
+    }
+
+    async generateWorldNoteDraft(): Promise<void> {
+        const campaign = this.selectedCampaign();
+        if (!campaign || campaign.currentUserRole !== 'Owner' || this.noteAiGenerating()) {
+            return;
+        }
+
+        const titleHint = this.noteTitle().trim();
+        const contentHint = this.noteContent().trim();
+        const promptHint = this.noteAiPrompt().trim();
+
+        if (!titleHint && !contentHint && !promptHint) {
+            this.noteAiError.set('Add a short prompt or a few note hints first.');
+            this.cdr.detectChanges();
+            return;
+        }
+
+        this.noteAiGenerating.set(true);
+        this.noteAiError.set('');
+        this.sectionFeedback.set('');
+
+        try {
+            const generated = await this.api.generateWorldNoteDraft(campaign.id, {
+                titleHint,
+                categoryHint: this.noteAiCategory() === 'Any' ? '' : this.noteAiCategory(),
+                contentHint,
+                promptHint,
+                existingTitles: this.worldNotes()
+                    .filter((note) => note.id !== this.noteEditorId())
+                    .map((note) => note.title)
+            });
+
+            this.noteTitle.set(generated.title?.trim() || titleHint);
+            this.noteCategory.set(this.normalizeWorldNoteCategory(generated.category));
+            this.noteContent.set(generated.content?.trim() || contentHint);
+            this.noteDraftMode.set('standard');
+            this.sectionFeedback.set('AI world note draft generated. Review it and save when ready.');
+        } catch (error) {
+            this.noteAiError.set(this.readApiError(error, 'Could not generate a world note right now.'));
+        } finally {
+            this.noteAiGenerating.set(false);
+            this.cdr.detectChanges();
+        }
     }
 
     async submitWorldNote(): Promise<void> {
@@ -881,6 +965,22 @@ export class CampaignSectionPageComponent {
         this.store.selectCampaign(campaign.id);
         this.store.archiveThread(threadId);
         this.closeAddThreadModal();
+    }
+
+    private readApiError(error: unknown, fallback: string): string {
+        if (error instanceof HttpErrorResponse) {
+            if (typeof error.error === 'string' && error.error.trim()) {
+                return error.error.trim();
+            }
+
+            if (error.error && typeof error.error === 'object') {
+                const detail = 'detail' in error.error && typeof error.error.detail === 'string' ? error.error.detail : '';
+                const title = 'title' in error.error && typeof error.error.title === 'string' ? error.error.title : '';
+                return detail || title || fallback;
+            }
+        }
+
+        return fallback;
     }
 
     private normalizeWorldNoteCategory(value: string | number): CampaignWorldNoteCategory {

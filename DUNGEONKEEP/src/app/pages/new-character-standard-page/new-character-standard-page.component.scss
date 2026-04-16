@@ -1705,6 +1705,60 @@ input {
     width: 100%;
 }
 
+.note-editor-shell {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 10px;
+}
+
+.note-editor-field {
+    display: grid;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.note-editor-field input,
+.note-editor-field textarea,
+.note-custom-add-row input {
+    width: 100%;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    background: var(--surface-raised-solid);
+    color: var(--text-main);
+    padding: 8px 10px;
+}
+
+.note-editor-field textarea {
+    resize: vertical;
+    min-height: 110px;
+}
+
+.note-custom-add-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+}
+
+.note-custom-add-row button {
+    border: 1px solid var(--pill-border);
+    border-radius: 8px;
+    min-height: 32px;
+    padding: 0 12px;
+    background: var(--pill-bg);
+    color: var(--text-main);
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    cursor: pointer;
+}
+
+.note-preview {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--text-muted);
+    white-space: pre-wrap;
+}
+
 .backstory-generator {
     grid-column: 1 / -1;
     display: grid;

@@ -2321,7 +2321,7 @@ export class CharacterDetailPageComponent {
     readonly displayBackstoryText = computed(() => {
         const notes = this.parsedNotes().cleanedNotes.trim();
         if (!notes) return '';
-        const builderMarker = notes.search(/(?:^|\n)\s*(Builder class focus:|Species focus:|Alignment direction:|Lifestyle direction:|Emphasize these personality traits:|Include these ideals:|Include these bonds:|Reflect these flaws:|Physical characteristics:|Faith:)/i);
+        const builderMarker = notes.search(/(?:^|\n)\s*(Organizations:|Allies:|Enemies:|Other:|Builder class focus:|Species focus:|Alignment direction:|Lifestyle direction:|Emphasize these personality traits:|Include these ideals:|Include these bonds:|Reflect these flaws:|Physical characteristics:|Faith:)/i);
         if (builderMarker > 0) return notes.slice(0, builderMarker).trim();
         return notes;
     });
@@ -2372,6 +2372,7 @@ export class CharacterDetailPageComponent {
         const organizations = this.extractNoteList(notes, /(^|\n)Organizations:\s*(.+?)(?=\n|$)/i);
         const allies = this.extractNoteList(notes, /(^|\n)Allies:\s*(.+?)(?=\n|$)/i);
         const enemies = this.extractNoteList(notes, /(^|\n)Enemies:\s*(.+?)(?=\n|$)/i);
+        const other = this.extractNoteValue(notes, /(^|\n)Other:\s*(.+?)(?=\n|$)/i);
         const bonusActions = this.extractNoteList(notes, /(^|\n)Bonus Actions?:\s*(.+?)(?=\n|$)/i);
         const reactions = this.extractNoteList(notes, /(^|\n)Reactions?:\s*(.+?)(?=\n|$)/i);
         const attacksPerAction = this.extractNoteValue(notes, /(^|\n)Attacks? per Action:\s*(.+?)(?=\n|$)/i);
@@ -2391,6 +2392,7 @@ export class CharacterDetailPageComponent {
             organizations,
             allies,
             enemies,
+            other,
             bonusActions,
             reactions,
             attacksPerAction,

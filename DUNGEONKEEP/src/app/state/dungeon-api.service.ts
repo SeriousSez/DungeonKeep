@@ -775,6 +775,20 @@ export interface ApiGenerateTableDraftResponse {
     entries: string[];
 }
 
+export interface ApiGenerateWorldNoteDraftRequest {
+    titleHint: string;
+    categoryHint: string;
+    contentHint: string;
+    promptHint: string;
+    existingTitles: string[];
+}
+
+export interface ApiGenerateWorldNoteDraftResponse {
+    title: string;
+    category: ApiCampaignWorldNoteDto['category'];
+    content: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class DungeonApiService {
 
@@ -861,6 +875,10 @@ export class DungeonApiService {
 
     async generateTableDraft(payload: ApiGenerateTableDraftRequest): Promise<ApiGenerateTableDraftResponse> {
         return await firstValueFrom(this.http.post<ApiGenerateTableDraftResponse>(`${this.baseUrl}/campaigns/tables/generate-draft`, payload));
+    }
+
+    async generateWorldNoteDraft(campaignId: string, payload: ApiGenerateWorldNoteDraftRequest): Promise<ApiGenerateWorldNoteDraftResponse> {
+        return await firstValueFrom(this.http.post<ApiGenerateWorldNoteDraftResponse>(`${this.baseUrl}/campaigns/${campaignId}/world-notes/generate-draft`, payload));
     }
 
     async addCampaignLoot(campaignId: string, name: string): Promise<ApiCampaignDto> {

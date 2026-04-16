@@ -411,6 +411,56 @@
                 <button type="button" class="ghost-button" (click)="closeWorldNoteForm()">Cancel</button>
             </div>
 
+            <section class="creation-mode-panel" aria-label="World note drafting type">
+                <h3>Choose note drafting type</h3>
+                <div class="mode-options">
+                    <button type="button" class="mode-card" [class.mode-card-active]="noteDraftMode() === 'standard'" (click)="selectNoteDraftMode('standard')">
+                        <strong>Standard editing</strong>
+                        <span>Write the title, category, and details manually.</span>
+                    </button>
+                    <button type="button" class="mode-card" [class.mode-card-active]="noteDraftMode() === 'ai'" (click)="selectNoteDraftMode('ai')">
+                        <strong>AI generation</strong>
+                        <span>Give the model direction, then generate a world-note draft into the editor.</span>
+                    </button>
+                </div>
+            </section>
+
+            @if (noteDraftMode() === 'ai') {
+            <section class="generation-prompt-shell">
+                <div class="generation-prompt-header">
+                    <div>
+                        <p class="eyebrow">Generation Prompt</p>
+                        <h3>Guide the world note</h3>
+                        <p>Add a short direction and AI will draft the note.</p>
+                    </div>
+                </div>
+
+                <div class="world-note-form-grid">
+                    <div class="inline-creator-stack world-note-category-field">
+                        <label class="equipment-filter-label" for="world-note-ai-category">Category</label>
+                        <app-dropdown id="world-note-ai-category" [value]="noteAiCategory()" [options]="worldNoteAiCategoryOptions" [minWidth]="220" (changed)="updateWorldNoteAiCategory($event)"></app-dropdown>
+                    </div>
+                </div>
+
+                <label class="inline-creator-stack">
+                    <span class="equipment-filter-label">Generate with AI</span>
+                    <textarea id="world-note-ai-prompt" [value]="noteAiPrompt()" (input)="updateWorldNoteAiPrompt($any($event.target).value)" placeholder="Ex: an old lighthouse cult guiding ships toward a drowned saint's reef"></textarea>
+                </label>
+
+                @if (noteAiError()) {
+                <p class="generation-error">{{ noteAiError() }}</p>
+                }
+
+                <div class="generation-actions-row">
+                    <button type="button" class="ghost-button" (click)="selectNoteDraftMode('standard')">Back to editor</button>
+                    <button type="button" class="primary-button" [class.is-loading]="noteAiGenerating()" [disabled]="noteAiGenerating()" (click)="generateWorldNoteDraft()">
+                        {{ noteAiGenerating() ? 'Generating...' : 'Generate world note draft' }}
+                    </button>
+                </div>
+            </section>
+            }
+
+            @if (noteDraftMode() === 'standard') {
             <div class="world-note-form-grid">
                 <div class="inline-creator-stack">
                     <label class="equipment-filter-label" for="world-note-title">Title</label>
@@ -431,6 +481,7 @@
             <div class="world-note-editor-actions">
                 <button type="button" class="primary-button" [disabled]="!noteTitle().trim() || !noteContent().trim()" (click)="submitWorldNote()">{{ noteEditorMode() === 'edit' ? 'Save Changes' : 'Add Note' }}</button>
             </div>
+            }
         </div>
         }
 

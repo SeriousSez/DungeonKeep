@@ -42,6 +42,8 @@ type AbilityScoreImprovementMode = '' | 'plus-two' | 'plus-one-plus-one';
 type HitPointMode = 'fixed' | 'rolled';
 type HeightUnit = 'cm' | 'm' | 'ft' | 'in';
 type WeightUnit = 'kg' | 'lb';
+type CharacterNoteListKey = 'organizations' | 'allies' | 'enemies';
+type NoteSectionKey = CharacterNoteListKey | 'other';
 
 const equipmentRarityOrder = ['Common', 'Uncommon', 'Rare', 'Very Rare', 'Legendary', 'Artifact', 'Unique', '???'] as const;
 
@@ -158,6 +160,10 @@ interface PersistedBuilderState {
     physicalWeightUnit: WeightUnit;
     physicalAge: string;
     physicalGender: string;
+    noteOrganizations: string[];
+    noteAllies: string[];
+    noteEnemies: string[];
+    otherNotes: string;
     classPreparedSpells: Record<string, string[]>;
     classKnownSpellsByClass: Record<string, string[]>;
     wizardSpellbookByClass: Record<string, string[]>;
@@ -475,6 +481,92 @@ export class NewCharacterStandardPageComponent {
     readonly backstoryGenerationError = signal('');
     readonly isSavingGeneratedBackstory = signal(false);
     readonly backstorySaveMessage = signal('');
+    readonly noteOrganizations = signal<string[]>([]);
+    readonly noteAllies = signal<string[]>([]);
+    readonly noteEnemies = signal<string[]>([]);
+    readonly otherNotes = signal('');
+    readonly openNoteSections = signal<Record<NoteSectionKey, boolean>>({
+        organizations: false,
+        allies: false,
+        enemies: false,
+        other: false
+    });
+    readonly noteCustomDrafts = signal<Record<CharacterNoteListKey, string>>({
+        organizations: '',
+        allies: '',
+        enemies: ''
+    });
+    readonly organizationNoteGroups = computed<MultiSelectOptionGroup[]>(() => {
+        const campaigns = this.getNoteSourceCampaigns();
+
+        return campaigns
+            .map((campaign) => ({
+                label: campaign.name,
+                options: this.uniqueNoteEntries(
+                    (campaign.worldNotes ?? [])
+                        .filter((note) => note.category === 'Organization')
+                        .map((note) => note.title?.trim() || '')
+                        .filter((value) => value.length > 0)
+                )
+            }))
+            .filter((group) => group.options.length > 0);
+    });
+    readonly relationshipNoteGroups = computed<MultiSelectOptionGroup[]>(() => {
+        const campaigns = this.getNoteSourceCampaigns();
+        const characters = this.store.characters();
+        const activeCharacterId = this.activeBuilderCharacterId();
+        const currentName = this.completionCharacterName().trim().toLowerCase();
+
+        return campaigns.flatMap((campaign) => {
+            const partyCharacterIds = new Set(campaign.partyCharacterIds ?? []);
+            const characterOptions = this.uniqueNoteEntries(
+                characters
+                    .filter((character) => {
+                        const isInCampaign = partyCharacterIds.has(character.id)
+                            || character.campaignId === campaign.id
+                            || (character.campaignIds ?? []).includes(campaign.id);
+
+                        if (!isInCampaign) {
+                            return false;
+                        }
+
+                        if (activeCharacterId && character.id === activeCharacterId) {
+                            return false;
+                        }
+
+                        if (currentName && character.name.trim().toLowerCase() === currentName) {
+                            return false;
+                        }
+
+                        return true;
+                    })
+                    .map((character) => character.name?.trim() || '')
+                    .filter((value) => value.length > 0)
+            );
+            const npcOptions = this.uniqueNoteEntries(
+                (campaign.npcs ?? [])
+                    .map((name) => name.trim())
+                    .filter((value) => value.length > 0)
+            );
+            const groups: MultiSelectOptionGroup[] = [];
+
+            if (characterOptions.length > 0) {
+                groups.push({
+                    label: `${campaign.name} · Characters`,
+                    options: characterOptions
+                });
+            }
+
+            if (npcOptions.length > 0) {
+                groups.push({
+                    label: `${campaign.name} · NPCs`,
+                    options: npcOptions
+                });
+            }
+
+            return groups;
+        });
+    });
     readonly backstoryTargetCharacter = computed(() => {
         const activeBuilderCharacterId = this.activeBuilderCharacterId();
         if (activeBuilderCharacterId) {
@@ -6272,6 +6364,60 @@ export class NewCharacterStandardPageComponent {
         }
     };
 
+    readonly toggleNoteSection = (section: NoteSectionKey) => {
+        this.openNoteSections.update((current) => ({
+            ...current,
+            [section]: !current[section]
+        }));
+    };
+
+    readonly isNoteSectionOpen = (section: NoteSectionKey): boolean => this.openNoteSections()[section];
+
+    readonly getNoteEntries = (section: CharacterNoteListKey): string[] => {
+        switch (section) {
+            case 'organizations':
+                return this.noteOrganizations();
+            case 'allies':
+                return this.noteAllies();
+            case 'enemies':
+                return this.noteEnemies();
+        }
+    };
+
+    readonly getNoteCustomDraft = (section: CharacterNoteListKey): string => this.noteCustomDrafts()[section] ?? '';
+
+    readonly onNoteEntriesChanged = (section: CharacterNoteListKey, values: string[]) => {
+        this.setNoteEntries(section, this.uniqueNoteEntries(values));
+    };
+
+    readonly onNoteCustomDraftChanged = (section: CharacterNoteListKey, value: string) => {
+        this.noteCustomDrafts.update((current) => ({
+            ...current,
+            [section]: value
+        }));
+    };
+
+    readonly addCustomNoteEntry = (section: CharacterNoteListKey) => {
+        const draft = this.getNoteCustomDraft(section).trim();
+        if (!draft) {
+            return;
+        }
+
+        this.setNoteEntries(section, [...this.getNoteEntries(section), draft]);
+        this.onNoteCustomDraftChanged(section, '');
+    };
+
+    readonly removeNoteEntry = (section: CharacterNoteListKey, index: number) => {
+        this.setNoteEntries(
+            section,
+            this.getNoteEntries(section).filter((_, currentIndex) => currentIndex !== index)
+        );
+    };
+
+    readonly onOtherNotesChanged = (value: string) => {
+        this.otherNotes.set(value);
+    };
+
     readonly toggleBackstoryGenerator = () => {
         const nextOpen = !this.showBackstoryGenerator();
         this.showBackstoryGenerator.set(nextOpen);
@@ -6682,9 +6828,21 @@ export class NewCharacterStandardPageComponent {
             this.selectedBackgroundUrl.set(option?.url ?? '');
         }
 
+        const linkedCampaignIds = Array.from(new Set(
+            [character.campaignId, ...(character.campaignIds ?? [])]
+                .filter((campaignId): campaignId is string => typeof campaignId === 'string' && campaignId.trim().length > 0)
+        ));
+        if (linkedCampaignIds.length > 0) {
+            this.selectedCampaignIdsOnCreate.set(linkedCampaignIds);
+        }
+
         const parsedNotes = this.parsePersistedNotes(character.notes ?? '');
         const notes = parsedNotes.cleanedNotes.trim();
-        this.generatedBackstory.set(notes);
+        const parsedOrganizations = this.extractNoteListFromText(notes, 'Organizations');
+        const parsedAllies = this.extractNoteListFromText(notes, 'Allies');
+        const parsedEnemies = this.extractNoteListFromText(notes, 'Enemies');
+        const parsedOtherNotes = this.extractOtherNotes(notes);
+        this.generatedBackstory.set(this.extractVisibleBackstory(notes));
 
         const persisted = parsedNotes.state;
         if (persisted) {
@@ -6765,6 +6923,10 @@ export class NewCharacterStandardPageComponent {
             this.physicalWeightUnit.set(this.resolveWeightUnit(persisted.physicalWeightUnit, persisted.physicalWeight));
             this.physicalAge.set(persisted.physicalAge || '');
             this.physicalGender.set(persisted.physicalGender || '');
+            this.noteOrganizations.set(this.uniqueNoteEntries(Array.isArray(persisted.noteOrganizations) ? persisted.noteOrganizations : parsedOrganizations));
+            this.noteAllies.set(this.uniqueNoteEntries(Array.isArray(persisted.noteAllies) ? persisted.noteAllies : parsedAllies));
+            this.noteEnemies.set(this.uniqueNoteEntries(Array.isArray(persisted.noteEnemies) ? persisted.noteEnemies : parsedEnemies));
+            this.otherNotes.set(typeof persisted.otherNotes === 'string' ? persisted.otherNotes : parsedOtherNotes);
 
             this.classPreparedSpells.set(persisted.classPreparedSpells ?? {});
             this.classKnownSpellsByClass.set(persisted.classKnownSpellsByClass ?? {});
@@ -6776,15 +6938,28 @@ export class NewCharacterStandardPageComponent {
             this.syncPreparedSpellsForClass(character.className, resolvedLevel);
         } else {
             this.selectedFaith.set(this.extractFaithFromNotes(notes));
+            this.noteOrganizations.set(parsedOrganizations);
+            this.noteAllies.set(parsedAllies);
+            this.noteEnemies.set(parsedEnemies);
+            this.otherNotes.set(parsedOtherNotes);
         }
     }
 
     private buildPersistedNotes(): string {
         const faith = this.selectedFaith().trim();
-        const notesParts = [this.generatedBackstory().trim(), this.backstoryPromptDetails().trim()];
-        if (faith) {
-            notesParts.push(`Faith: ${faith}`);
-        }
+        const otherNotes = this.otherNotes().trim().replace(/\s*\n+\s*/g, ' ');
+        const structuredNoteLines = [
+            this.noteOrganizations().length > 0 ? `Organizations: ${this.noteOrganizations().join(', ')}` : '',
+            this.noteAllies().length > 0 ? `Allies: ${this.noteAllies().join(', ')}` : '',
+            this.noteEnemies().length > 0 ? `Enemies: ${this.noteEnemies().join(', ')}` : '',
+            otherNotes ? `Other: ${otherNotes}` : '',
+            faith ? `Faith: ${faith}` : ''
+        ].filter((part) => part.length > 0);
+        const notesParts = [
+            this.generatedBackstory().trim(),
+            structuredNoteLines.join('\n'),
+            this.backstoryPromptDetails().trim()
+        ];
 
         const visibleNotes = notesParts.filter((part) => part.length > 0).join('\n\n') || 'No field notes yet.';
         const state: PersistedBuilderState = {
@@ -6830,6 +7005,10 @@ export class NewCharacterStandardPageComponent {
             physicalWeightUnit: this.physicalWeightUnit(),
             physicalAge: this.physicalAge(),
             physicalGender: this.physicalGender(),
+            noteOrganizations: this.noteOrganizations(),
+            noteAllies: this.noteAllies(),
+            noteEnemies: this.noteEnemies(),
+            otherNotes: this.otherNotes(),
             classPreparedSpells: this.classPreparedSpells(),
             classKnownSpellsByClass: this.classKnownSpellsByClass(),
             wizardSpellbookByClass: this.wizardSpellbookByClass(),
@@ -6878,9 +7057,73 @@ export class NewCharacterStandardPageComponent {
         return Math.min(20, Math.max(1, Math.trunc(raw)));
     }
 
+    private setNoteEntries(section: CharacterNoteListKey, values: string[]): void {
+        const nextValues = this.uniqueNoteEntries(values);
+
+        switch (section) {
+            case 'organizations':
+                this.noteOrganizations.set(nextValues);
+                break;
+            case 'allies':
+                this.noteAllies.set(nextValues);
+                break;
+            case 'enemies':
+                this.noteEnemies.set(nextValues);
+                break;
+        }
+    }
+
+    private uniqueNoteEntries(values: string[]): string[] {
+        const seen = new Set<string>();
+        const normalizedValues: string[] = [];
+
+        for (const value of values) {
+            const trimmed = value.trim().replace(/\s+/g, ' ');
+            const key = trimmed.toLowerCase();
+            if (!trimmed || seen.has(key)) {
+                continue;
+            }
+
+            seen.add(key);
+            normalizedValues.push(trimmed);
+        }
+
+        return normalizedValues;
+    }
+
+    private getNoteSourceCampaigns() {
+        const selectedIds = new Set(this.selectedCampaignIdsOnCreate());
+        const campaigns = this.store.campaigns();
+
+        if (selectedIds.size === 0) {
+            return campaigns;
+        }
+
+        return campaigns.filter((campaign) => selectedIds.has(campaign.id));
+    }
+
+    private extractNoteListFromText(notes: string, label: 'Organizations' | 'Allies' | 'Enemies'): string[] {
+        const match = notes.match(new RegExp(`(?:^|\\n)${label}:\\s*(.+?)(?=\\n|$)`, 'i'));
+        return this.uniqueNoteEntries((match?.[1] ?? '').split(/,|;/));
+    }
+
+    private extractOtherNotes(notes: string): string {
+        const match = notes.match(/(?:^|\n)Other:\s*(.+?)(?=\n|$)/i);
+        return match?.[1]?.trim() ?? '';
+    }
+
     private extractFaithFromNotes(notes: string): string {
         const match = notes.match(/(?:^|\n)Faith:\s*(.+?)(?:\n|$)/i);
         return match?.[1]?.trim() ?? '';
+    }
+
+    private extractVisibleBackstory(notes: string): string {
+        const marker = notes.search(/(?:^|\n)\s*(Organizations:|Allies:|Enemies:|Other:|Faith:|Builder class focus:|Species focus:|Alignment direction:|Lifestyle direction:|Emphasize these personality traits:|Include these ideals:|Include these bonds:|Reflect these flaws:|Physical characteristics:)/i);
+        if (marker > 0) {
+            return notes.slice(0, marker).trim();
+        }
+
+        return notes.trim();
     }
 
     private buildAutoBackstoryDirection(): string {
@@ -6951,6 +7194,22 @@ export class NewCharacterStandardPageComponent {
         const flaws = this.flaws().slice(0, 2);
         if (flaws.length > 0) {
             lines.push(`Reflect these flaws: ${flaws.join('; ')}`);
+        }
+
+        if (this.noteOrganizations().length > 0) {
+            lines.push(`Known organizations: ${this.noteOrganizations().join('; ')}`);
+        }
+
+        if (this.noteAllies().length > 0) {
+            lines.push(`Known allies: ${this.noteAllies().join('; ')}`);
+        }
+
+        if (this.noteEnemies().length > 0) {
+            lines.push(`Known enemies: ${this.noteEnemies().join('; ')}`);
+        }
+
+        if (this.otherNotes().trim()) {
+            lines.push(`Other notes to include: ${this.otherNotes().trim()}`);
         }
 
         lines.push('Keep details grounded in campaign play and avoid contradicting known notes.');

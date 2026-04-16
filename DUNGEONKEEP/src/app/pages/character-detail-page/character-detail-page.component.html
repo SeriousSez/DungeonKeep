@@ -808,8 +808,10 @@
                         }
                     </div>
                     }
-                    @if (activeNotesFilter() === 'other') {
-                    <p class="notes-block">No other notes recorded yet.</p>
+                    @if (activeNotesFilter() === 'all' || activeNotesFilter() === 'other') {
+                    <div class="training-block"><span class="label">Other</span>
+                        <p>{{ noteContext().other || 'No other notes recorded yet.' }}</p>
+                    </div>
                     }
                 </div>
                 } @else {

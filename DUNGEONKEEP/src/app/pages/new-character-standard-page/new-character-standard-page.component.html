@@ -1326,9 +1326,105 @@
             <details>
                 <summary>Notes</summary>
                 <div class="tag-rows">
-                    <div class="tag-row"><span>Organizations</span><button type="button">Add Notes</button></div>
-                    <div class="tag-row"><span>Allies</span><button type="button">Add Notes</button></div>
-                    <div class="tag-row"><span>Enemies</span><button type="button">Add Notes</button></div>
+                    <div class="tag-row">
+                        <span>Organizations</span>
+                        <button type="button" (click)="toggleNoteSection('organizations')">{{ isNoteSectionOpen('organizations') ? 'Hide Notes' : (noteOrganizations().length ? 'Edit Notes' : 'Add Notes') }}</button>
+                        @if (noteOrganizations().length > 0) {
+                        <div class="tag-list">
+                            @for (organization of noteOrganizations(); track organization; let index = $index) {
+                            <div class="characteristic-tag">
+                                <span>{{ organization }}</span>
+                                <button type="button" class="remove-btn" (click)="removeNoteEntry('organizations', index)" aria-label="Remove organization">
+                                    <i class="fa-duotone fa-thin fa-xmark"></i>
+                                </button>
+                            </div>
+                            }
+                        </div>
+                        }
+                        @if (isNoteSectionOpen('organizations')) {
+                        <div class="note-editor-shell">
+                            <p class="field-description">Choose an organization from your campaigns or add your own.</p>
+                            @if (organizationNoteGroups().length > 0) {
+                            <label class="note-editor-field">
+                                <span>Campaign organizations</span>
+                                <app-multi-select-dropdown [groups]="organizationNoteGroups()" [value]="noteOrganizations()" selectionMode="multiple" [searchable]="true" [placeholder]="'Choose organizations'" (changed)="onNoteEntriesChanged('organizations', $event)"></app-multi-select-dropdown>
+                            </label>
+                            } @else {
+                            <p class="field-description">No campaign organizations are available yet. You can still add a custom one below.</p>
+                            }
+                            <div class="note-custom-add-row">
+                                <input type="text" [value]="getNoteCustomDraft('organizations')" (input)="onNoteCustomDraftChanged('organizations', $any($event.target).value)" (keydown.enter)="addCustomNoteEntry('organizations'); $event.preventDefault()" placeholder="Add a custom organization" />
+                                <button type="button" (click)="addCustomNoteEntry('organizations')">Add</button>
+                            </div>
+                        </div>
+                        }
+                    </div>
+                    <div class="tag-row">
+                        <span>Allies</span>
+                        <button type="button" (click)="toggleNoteSection('allies')">{{ isNoteSectionOpen('allies') ? 'Hide Notes' : (noteAllies().length ? 'Edit Notes' : 'Add Notes') }}</button>
+                        @if (noteAllies().length > 0) {
+                        <div class="tag-list">
+                            @for (ally of noteAllies(); track ally; let index = $index) {
+                            <div class="characteristic-tag">
+                                <span>{{ ally }}</span>
+                                <button type="button" class="remove-btn" (click)="removeNoteEntry('allies', index)" aria-label="Remove ally">
+                                    <i class="fa-duotone fa-thin fa-xmark"></i>
+                                </button>
+                            </div>
+                            }
+                        </div>
+                        }
+                        @if (isNoteSectionOpen('allies')) {
+                        <div class="note-editor-shell">
+                            <p class="field-description">Pick from other campaign characters or NPCs, or add a custom ally.</p>
+                            @if (relationshipNoteGroups().length > 0) {
+                            <label class="note-editor-field">
+                                <span>Campaign characters and NPCs</span>
+                                <app-multi-select-dropdown [groups]="relationshipNoteGroups()" [value]="noteAllies()" selectionMode="multiple" [searchable]="true" [placeholder]="'Choose allies'" (changed)="onNoteEntriesChanged('allies', $event)"></app-multi-select-dropdown>
+                            </label>
+                            } @else {
+                            <p class="field-description">No linked characters or NPCs are available yet. You can still add a custom ally below.</p>
+                            }
+                            <div class="note-custom-add-row">
+                                <input type="text" [value]="getNoteCustomDraft('allies')" (input)="onNoteCustomDraftChanged('allies', $any($event.target).value)" (keydown.enter)="addCustomNoteEntry('allies'); $event.preventDefault()" placeholder="Add a custom ally" />
+                                <button type="button" (click)="addCustomNoteEntry('allies')">Add</button>
+                            </div>
+                        </div>
+                        }
+                    </div>
+                    <div class="tag-row">
+                        <span>Enemies</span>
+                        <button type="button" (click)="toggleNoteSection('enemies')">{{ isNoteSectionOpen('enemies') ? 'Hide Notes' : (noteEnemies().length ? 'Edit Notes' : 'Add Notes') }}</button>
+                        @if (noteEnemies().length > 0) {
+                        <div class="tag-list">
+                            @for (enemy of noteEnemies(); track enemy; let index = $index) {
+                            <div class="characteristic-tag">
+                                <span>{{ enemy }}</span>
+                                <button type="button" class="remove-btn" (click)="removeNoteEntry('enemies', index)" aria-label="Remove enemy">
+                                    <i class="fa-duotone fa-thin fa-xmark"></i>
+                                </button>
+                            </div>
+                            }
+                        </div>
+                        }
+                        @if (isNoteSectionOpen('enemies')) {
+                        <div class="note-editor-shell">
+                            <p class="field-description">Pick from other campaign characters or NPCs, or add a custom enemy.</p>
+                            @if (relationshipNoteGroups().length > 0) {
+                            <label class="note-editor-field">
+                                <span>Campaign characters and NPCs</span>
+                                <app-multi-select-dropdown [groups]="relationshipNoteGroups()" [value]="noteEnemies()" selectionMode="multiple" [searchable]="true" [placeholder]="'Choose enemies'" (changed)="onNoteEntriesChanged('enemies', $event)"></app-multi-select-dropdown>
+                            </label>
+                            } @else {
+                            <p class="field-description">No linked characters or NPCs are available yet. You can still add a custom enemy below.</p>
+                            }
+                            <div class="note-custom-add-row">
+                                <input type="text" [value]="getNoteCustomDraft('enemies')" (input)="onNoteCustomDraftChanged('enemies', $any($event.target).value)" (keydown.enter)="addCustomNoteEntry('enemies'); $event.preventDefault()" placeholder="Add a custom enemy" />
+                                <button type="button" (click)="addCustomNoteEntry('enemies')">Add</button>
+                            </div>
+                        </div>
+                        }
+                    </div>
                     <div class="tag-row">
                         <span>Backstory</span>
                         <button type="button" (click)="toggleBackstoryGenerator()">{{ showBackstoryGenerator() ? 'Hide Generator' : 'Generate Backstory' }}</button>
@@ -1371,7 +1467,21 @@
                         </div>
                         }
                     </div>
-                    <div class="tag-row"><span>Other</span><button type="button">Add Notes</button></div>
+                    <div class="tag-row">
+                        <span>Other</span>
+                        <button type="button" (click)="toggleNoteSection('other')">{{ isNoteSectionOpen('other') ? 'Hide Notes' : (otherNotes().trim() ? 'Edit Notes' : 'Add Notes') }}</button>
+                        @if (otherNotes().trim()) {
+                        <p class="note-preview">{{ otherNotes() }}</p>
+                        }
+                        @if (isNoteSectionOpen('other')) {
+                        <div class="note-editor-shell">
+                            <label class="note-editor-field">
+                                <span>Other notes</span>
+                                <textarea [value]="otherNotes()" (input)="onOtherNotesChanged($any($event.target).value)" rows="4" placeholder="Write any extra notes you want to keep with this character."></textarea>
+                            </label>
+                        </div>
+                        }
+                    </div>
                 </div>
             </details>
         </div>

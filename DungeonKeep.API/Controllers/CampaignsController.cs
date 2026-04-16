@@ -483,6 +483,76 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         }
     }
 
+    [HttpPost("{campaignId:guid}/world-notes/generate-draft")]
+    public async Task<ActionResult<GenerateWorldNoteDraftResponse>> GenerateWorldNoteDraft(Guid campaignId, [FromBody] GenerateWorldNoteDraftRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var campaign = await GetCampaignContextAsync(campaignId, user.Id, cancellationToken);
+        if (campaign is null)
+        {
+            return NotFound("Campaign was not found.");
+        }
+
+        if (!string.Equals(campaign.CurrentUserRole, "Owner", StringComparison.OrdinalIgnoreCase))
+        {
+            return StatusCode(403);
+        }
+
+        if (!TryGetOpenAiConfiguration(out var apiKey, out var responsesUrl, out var model))
+        {
+            return Problem(title: "World note generation unavailable.", detail: "OpenAI API key is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
+        try
+        {
+            var text = await SendOpenAiPromptAsync(
+                apiKey,
+                responsesUrl,
+                model,
+                BuildWorldNoteDraftPrompt(campaign, request),
+                referenceImageUrl: null,
+                temperature: 0.8,
+                maxOutputTokens: 1200,
+                textFormat: null,
+                fallbackToPlainTextOnBadRequest: false,
+                cancellationToken: cancellationToken);
+
+            var generated = TryParseGeneratedWorldNoteDraftPayload(text);
+            if (generated is null)
+            {
+                var repairedText = await RepairJsonAsync(
+                    apiKey,
+                    responsesUrl,
+                    model,
+                    BuildWorldNoteDraftRepairPrompt(text),
+                    maxOutputTokens: 1600,
+                    cancellationToken);
+
+                generated = TryParseGeneratedWorldNoteDraftPayload(repairedText);
+            }
+
+            if (generated is null)
+            {
+                return Problem(title: "World note generation failed.", detail: "Model output was not valid JSON.", statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            return Ok(NormalizeWorldNoteDraft(generated, request));
+        }
+        catch (HttpRequestException exception)
+        {
+            return Problem(title: "World note generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return Problem(title: "World note generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+    }
+
     [HttpPost("{campaignId:guid}/npcs/remove")]
     public async Task<ActionResult<CampaignDto>> RemoveNpc(Guid campaignId, [FromBody] RemoveCampaignNpcRequest request, CancellationToken cancellationToken)
     {
@@ -2710,6 +2780,56 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         ]);
     }
 
+    private static string BuildWorldNoteDraftPrompt(CampaignDto campaign, GenerateWorldNoteDraftRequest request)
+    {
+        var titleHint = string.IsNullOrWhiteSpace(request.TitleHint) ? "No title hint provided" : request.TitleHint.Trim();
+        var categoryHint = NormalizeGeneratedWorldNoteCategory(request.CategoryHint);
+        var contentHint = string.IsNullOrWhiteSpace(request.ContentHint) ? "No note details provided" : request.ContentHint.Trim();
+        var promptHint = string.IsNullOrWhiteSpace(request.PromptHint) ? "No prompt provided" : request.PromptHint.Trim();
+        var existingTitles = request.ExistingTitles is { Count: > 0 }
+            ? FormatList(request.ExistingTitles)
+            : "None provided";
+
+        return string.Join('\n',
+        [
+            "Generate a Dungeons & Dragons campaign world note draft for DungeonKeep.",
+            "Return only valid JSON.",
+            "Use these exact fields: title, category, content.",
+            "category must be exactly one of: Backstory, Organization, Ally, Enemy, Location, Lore, Custom.",
+            "title should be concise and easy to scan in a campaign notes list.",
+            "content should be 1-3 short paragraphs with practical setting information a DM can reference later.",
+            "Ground the note in the existing campaign context and avoid contradicting the hook, summary, or stored world notes.",
+            "Prefer concrete lore, motives, rumors, landmarks, factions, or threats over vague prose.",
+            string.Empty,
+            $"Campaign name: {campaign.Name}",
+            $"Setting: {campaign.Setting}",
+            $"Tone: {campaign.Tone}",
+            $"Hook: {campaign.Hook}",
+            $"Summary: {campaign.Summary}",
+            $"Existing world notes: {(campaign.WorldNotes.Count == 0 ? "None recorded." : string.Join(" | ", campaign.WorldNotes.Take(8).Select(note => $"{note.Category}: {note.Title} - {note.Content}")))}",
+            string.Empty,
+            $"Title hint: {titleHint}",
+            $"Preferred category: {categoryHint}",
+            $"Current note details hint: {contentHint}",
+            $"Prompt hint: {promptHint}",
+            $"Existing titles to avoid duplicating: {existingTitles}"
+        ]);
+    }
+
+    private static string BuildWorldNoteDraftRepairPrompt(string invalidOutput)
+    {
+        return string.Join('\n',
+        [
+            "Convert the provided world note content into valid JSON only.",
+            "Do not add markdown, explanations, or code fences.",
+            "Use these exact fields: title, category, content.",
+            "category must be exactly one of: Backstory, Organization, Ally, Enemy, Location, Lore, Custom.",
+            string.Empty,
+            "Content to repair:",
+            invalidOutput
+        ]);
+    }
+
     private static string NormalizeTone(string? generatedTone, string? requestedTone)
     {
         var candidate = string.IsNullOrWhiteSpace(generatedTone)
@@ -2868,6 +2988,28 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             Title: FirstNonEmpty(generated.Title, request.TitleHint, request.ThemeHint, request.DescriptionHint, "Generated Table"),
             Description: FirstNonEmpty(generated.Description, request.DescriptionHint, request.ThemeHint, request.TitleHint, "AI-generated random table."),
             Entries: normalizedEntries);
+    }
+
+    private static GenerateWorldNoteDraftResponse NormalizeWorldNoteDraft(GenerateWorldNoteDraftPayload generated, GenerateWorldNoteDraftRequest request)
+    {
+        return new GenerateWorldNoteDraftResponse(
+            Title: FirstNonEmpty(generated.Title, request.TitleHint, request.PromptHint, request.ContentHint, "Generated World Note"),
+            Category: NormalizeGeneratedWorldNoteCategory(FirstNonEmpty(generated.Category, request.CategoryHint, null, null, "Lore")),
+            Content: FirstNonEmpty(generated.Content, request.ContentHint, request.PromptHint, request.TitleHint, "AI-generated world note."));
+    }
+
+    private static string NormalizeGeneratedWorldNoteCategory(string? value)
+    {
+        return value?.Trim() switch
+        {
+            "Backstory" => "Backstory",
+            "Organization" => "Organization",
+            "Ally" => "Ally",
+            "Enemy" => "Enemy",
+            "Location" => "Location",
+            "Custom" => "Custom",
+            _ => "Lore"
+        };
     }
 
     private static string[] BuildFallbackTableEntries(GenerateTableDraftRequest request, int count)
@@ -4061,6 +4203,66 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         return null;
     }
 
+    private static GenerateWorldNoteDraftPayload? TryParseGeneratedWorldNoteDraftPayload(string rawText)
+    {
+        foreach (var candidate in BuildJsonCandidates(rawText))
+        {
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<GenerateWorldNoteDraftPayload>(candidate, SerializerOptions);
+                if (parsed is not null)
+                {
+                    return parsed;
+                }
+            }
+            catch (JsonException)
+            {
+            }
+
+            try
+            {
+                using var document = JsonDocument.Parse(candidate);
+                var root = document.RootElement;
+
+                if (root.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var propertyName in new[] { "worldNote", "note", "draft", "data", "result", "response" })
+                    {
+                        if (TryGetPropertyIgnoreCase(root, propertyName, out var nested) && nested.ValueKind == JsonValueKind.Object)
+                        {
+                            root = nested;
+                            break;
+                        }
+                    }
+                }
+
+                if (root.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
+
+                var title = GetOptionalString(root, "title");
+                var category = GetOptionalString(root, "category");
+                var content = GetOptionalString(root, "content")
+                    ?? GetOptionalString(root, "description")
+                    ?? GetOptionalString(root, "details")
+                    ?? GetOptionalString(root, "body");
+
+                if (!string.IsNullOrWhiteSpace(title)
+                    || !string.IsNullOrWhiteSpace(category)
+                    || !string.IsNullOrWhiteSpace(content))
+                {
+                    return new GenerateWorldNoteDraftPayload(title, category, content);
+                }
+            }
+            catch (JsonException)
+            {
+            }
+        }
+
+        return null;
+    }
+
     private static JsonElement SelectNpcDraftRoot(JsonElement root)
     {
         if (root.ValueKind != JsonValueKind.Object)
@@ -4619,6 +4821,18 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         string Description,
         IReadOnlyList<string> Entries);
 
+    public sealed record GenerateWorldNoteDraftRequest(
+        string? TitleHint,
+        string? CategoryHint,
+        string? ContentHint,
+        string? PromptHint,
+        IReadOnlyList<string>? ExistingTitles);
+
+    public sealed record GenerateWorldNoteDraftResponse(
+        string Title,
+        string Category,
+        string Content);
+
     public sealed record GenerateSessionSceneResponse(string Title, string Description, string Trigger, IReadOnlyList<string> KeyEvents, IReadOnlyList<string> PossibleOutcomes);
     public sealed record GenerateSessionNpcResponse(string Name, string Role, string Personality, string Motivation, string VoiceNotes);
     public sealed record GenerateSessionMonsterResponse(string Name, string Type, string ChallengeRating, int Hp, string KeyAbilities, string Notes);
@@ -4704,6 +4918,11 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         string? Title,
         string? Description,
         List<string>? Entries);
+
+    private sealed record GenerateWorldNoteDraftPayload(
+        string? Title,
+        string? Category,
+        string? Content);
 
     private sealed record GenerateSessionScenePayload(string? Title, string? Description, string? Trigger, List<string>? KeyEvents, List<string>? PossibleOutcomes);
     private sealed record GenerateSessionNpcPayload(string? Name, string? Role, string? Personality, string? Motivation, string? VoiceNotes);
