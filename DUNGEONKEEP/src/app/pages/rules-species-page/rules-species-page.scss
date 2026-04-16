@@ -150,6 +150,11 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+
+    &.triton {
+        left: unset;
+        right: 12px;
+    }
 }
 
 .banner-img {
@@ -165,27 +170,50 @@
     object-position: center 25%;
 }
 
-.yuan-ti {
+.yuan-ti,
+.grung {
     object-position: center 20%;
 }
 
 .kobold,
 .owlin,
-.dwarf {
+.dwarf,
+.deep-gnome,
+.duergar,
+.fairy,
+.harengon,
+.triton,
+.astral-elf,
+.autognome {
     object-position: center 15%;
 }
 
 .lizardfolk,
 .changeling,
 .kenku,
-.dragonborn {
+.dragonborn,
+.githyanki,
+.locathah,
+.shifter,
+.dhampir,
+.giff,
+.hadozee,
+.kender,
+.leonin,
+.loxodon,
+.plasmoid {
     object-position: center 10%;
 }
 
 .githzerai,
 .hobgoblin,
-.satyrm,
-.gnome {
+.satyr,
+.gnome,
+.eladrin,
+.sea-elf,
+.shadar-kai,
+.kalashtar,
+.reborn {
     object-position: center 5%;
 }
 

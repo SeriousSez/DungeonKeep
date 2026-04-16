@@ -295,6 +295,21 @@ export const routes: Routes = [
         data: { title: 'Spell Detail', breadcrumb: 'Spell', parentCrumbs: [{ label: 'Rules', url: '/rules' }, { label: 'Spells', url: '/rules/spells' }] }
     },
     {
+        path: 'rules/character-sheets',
+        redirectTo: '/404',
+        pathMatch: 'full'
+    },
+    {
+        path: 'rules/srd',
+        redirectTo: '/404',
+        pathMatch: 'full'
+    },
+    {
+        path: 'rules/playtest',
+        redirectTo: '/404',
+        pathMatch: 'full'
+    },
+    {
         path: 'rules/:slug',
         component: RulesDetailPage,
         data: { title: 'Rules Reference', breadcrumb: 'Reference', parentCrumbs: [{ label: 'Rules', url: '/rules' }] }

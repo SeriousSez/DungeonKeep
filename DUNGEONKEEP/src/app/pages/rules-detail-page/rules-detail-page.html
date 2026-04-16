@@ -12,6 +12,7 @@
         </div>
     </section>
 
+    @if (!isCatalogPage() && !isRulesGlossaryPage()) {
     <section class="detail-facts panel">
         <div class="section-heading section-heading--stacked">
             <p class="eyebrow">Quick Facts</p>
@@ -43,12 +44,299 @@
             }
         </div>
     </section>
+    }
 
+    @if (isRulesGlossaryPage()) {
+    <section class="detail-facts panel glossary-conventions-panel">
+        <div class="section-heading section-heading--stacked">
+            <p class="eyebrow">Glossary Conventions</p>
+            <h2>How to read this reference</h2>
+        </div>
+
+        <div class="glossary-convention-grid">
+            @for (entry of glossaryConventions; track entry.title) {
+            <article class="glossary-convention-card">
+                <h3>{{ entry.title }}</h3>
+                <p>{{ entry.text }}</p>
+            </article>
+            }
+        </div>
+    </section>
+
+    <section class="detail-section panel glossary-reference-section">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Rules Definitions</p>
+                <h2>Search the glossary</h2>
+            </div>
+            <p>Look up actions, conditions, movement rules, and magic language without leaving the page.</p>
+        </div>
+
+        <div class="glossary-controls">
+            <label class="equipment-filter-label" for="rules-glossary-search">Search terms</label>
+            <input id="rules-glossary-search" class="equipment-search-input" type="text" placeholder="Action, condition, spell term..." [value]="glossarySearchTerm()" (input)="onGlossarySearchChanged($any($event.target).value)" />
+        </div>
+
+        <div class="equipment-source-list">
+            @for (category of glossaryCategories(); track category) {
+            <button type="button" class="equipment-source-chip" [class.active]="selectedGlossaryCategory() === category" (click)="onGlossaryCategorySelected(category)">
+                {{ category }}
+            </button>
+            }
+        </div>
+
+        <div class="glossary-jumpbar">
+            <p class="eyebrow">A–Z</p>
+            <div class="glossary-jump-links">
+                @for (letter of glossaryAlphabet; track letter) {
+                @if (glossaryAvailableLetters().has(letter)) {
+                <button type="button" class="glossary-jump-link" (click)="jumpToGlossaryLetter(letter)">{{ letter }}</button>
+                } @else {
+                <span class="glossary-jump-link is-disabled">{{ letter }}</span>
+                }
+                }
+            </div>
+        </div>
+
+        <div class="glossary-table-block">
+            <p class="eyebrow">Common abbreviations</p>
+            <div class="glossary-table-wrap">
+                <table class="glossary-table">
+                    <thead>
+                        <tr>
+                            <th>Short form</th>
+                            <th>Meaning</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (row of glossaryAbbreviations; track row.short) {
+                        <tr>
+                            <td>{{ row.short }}</td>
+                            <td>{{ row.meaning }}</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="glossary-term-groups">
+            @for (group of glossaryTermGroups(); track group.letter) {
+            <section class="glossary-letter-group" [attr.id]="'glossary-' + group.letter">
+                <div class="glossary-letter-heading">
+                    <span>{{ group.letter }}</span>
+                </div>
+
+                <div class="glossary-term-list">
+                    @for (term of group.terms; track term.term) {
+                    <article class="glossary-term-card" [attr.id]="glossaryAnchorId(term.term)">
+                        <div class="glossary-term-header">
+                            <h3>{{ term.term }}</h3>
+                            @if (term.tag) {
+                            <span class="glossary-term-tag">{{ term.tag }}</span>
+                            }
+                        </div>
+                        <p class="glossary-term-summary">
+                            @for (segment of glossaryTextSegments(term.summary); track $index) {
+                            @if (segment.target) {
+                            <button type="button" class="glossary-inline-link" (click)="jumpToGlossaryTerm(segment.target)">{{ segment.text }}</button>
+                            } @else {
+                            <span>{{ segment.text }}</span>
+                            }
+                            }
+                        </p>
+                        <ul class="glossary-term-details">
+                            @for (detail of term.details; track detail) {
+                            <li>
+                                @for (segment of glossaryTextSegments(detail); track $index) {
+                                @if (segment.target) {
+                                <button type="button" class="glossary-inline-link" (click)="jumpToGlossaryTerm(segment.target)">{{ segment.text }}</button>
+                                } @else {
+                                <span>{{ segment.text }}</span>
+                                }
+                                }
+                            </li>
+                            }
+                        </ul>
+                        @if (term.seeAlso?.length) {
+                        <p class="glossary-term-see-also">
+                            <strong>See also:</strong>
+                            @for (reference of term.seeAlso!; track reference; let isLast = $last) {
+                            @if (isGlossaryReference(reference)) {
+                            <button type="button" class="glossary-inline-link glossary-inline-link--see-also" (click)="jumpToGlossaryTerm(reference)">{{ reference }}</button>
+                            } @else {
+                            <span>{{ reference }}</span>
+                            }
+                            @if (!isLast) {
+                            <span class="glossary-see-separator"> • </span>
+                            }
+                            }
+                        </p>
+                        }
+                    </article>
+                    }
+                </div>
+            </section>
+            }
+
+            @if (glossaryTermGroups().length === 0) {
+            <p class="muted">No glossary terms match your current search.</p>
+            }
+        </div>
+    </section>
+    }
+
+    @if (isCatalogPage()) {
+    <section class="detail-section panel equipment-catalog-section">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Reference Catalog</p>
+                <h2>Browse the list</h2>
+            </div>
+            <p>Use the same searchable item catalog available from character setup.</p>
+        </div>
+
+        <div class="equipment-catalog-controls">
+            <label class="equipment-filter-label" for="rules-equipment-search">Filter items</label>
+            <input id="rules-equipment-search" class="equipment-search-input" type="text" placeholder="Item name, category, notes..." [value]="equipmentSearchTerm()" (input)="onEquipmentSearchChanged($any($event.target).value)" />
+        </div>
+
+        <div class="equipment-source-list">
+            @for (category of equipmentCategories(); track category) {
+            <button type="button" class="equipment-source-chip" [class.active]="selectedEquipmentCategory() === category" (click)="onEquipmentCategorySelected(category)">
+                {{ category }}
+            </button>
+            }
+        </div>
+
+        <div class="equipment-item-list">
+            @for (item of filteredEquipmentItems(); track item.name) {
+            <div class="equipment-item-card" [class.is-expanded]="isEquipmentExpanded(item)">
+                <div class="equipment-item-row">
+                    <button type="button" class="equipment-item-info-btn" (click)="toggleEquipmentDetails(item)">
+                        <strong>{{ item.name }}</strong>
+                        <p>
+                            {{ item.category }}
+                            @if (item.costGp != null) {
+                            • {{ item.costGp }} gp
+                            }
+                            @if (item.weight != null) {
+                            • {{ item.weight }} lb.
+                            }
+                        </p>
+                    </button>
+
+                    <button type="button" class="equipment-expand-button" (click)="toggleEquipmentDetails(item)" [attr.aria-expanded]="isEquipmentExpanded(item)">
+                        <span>{{ isEquipmentExpanded(item) ? 'Hide details' : 'Show details' }}</span>
+                        <i class="fa-duotone fa-thin" [class.fa-chevron-down]="!isEquipmentExpanded(item)" [class.fa-chevron-up]="isEquipmentExpanded(item)"></i>
+                    </button>
+                </div>
+
+                @if (isEquipmentExpanded(item)) {
+                <div class="equipment-item-details">
+                    <div class="equipment-detail-facts">
+                        <article class="equipment-detail-fact">
+                            <span class="equipment-detail-label">Category</span>
+                            <strong>{{ item.category }}</strong>
+                        </article>
+
+                        <article class="equipment-detail-fact">
+                            <span class="equipment-detail-label">Cost</span>
+                            <strong>{{ item.costGp != null ? (item.costGp + ' gp') : '—' }}</strong>
+                        </article>
+
+                        <article class="equipment-detail-fact">
+                            <span class="equipment-detail-label">Weight</span>
+                            <strong>{{ item.weight != null ? (item.weight + ' lb.') : '—' }}</strong>
+                        </article>
+
+                        <article class="equipment-detail-fact">
+                            <span class="equipment-detail-label">Rarity</span>
+                            <strong>{{ item.rarity || 'Standard' }}</strong>
+                        </article>
+                    </div>
+
+                    @if (equipmentDescription(item); as description) {
+                    <div class="equipment-detail-copy">
+                        <p class="eyebrow">Description</p>
+                        <p class="equipment-item-notes equipment-item-notes--primary">{{ description }}</p>
+                    </div>
+                    }
+
+                    @if (equipmentSpellRows(item); as spellRows) {
+                    @if (spellRows.length) {
+                    <div class="equipment-detail-copy">
+                        <p class="eyebrow">Spells</p>
+                        <div class="equipment-spell-table-wrap">
+                            <table class="equipment-spell-table">
+                                <thead>
+                                    <tr>
+                                        <th>Spell</th>
+                                        <th>Casting details</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (row of spellRows; track row.spell + row.details) {
+                                    <tr>
+                                        <td>{{ row.spell }}</td>
+                                        <td>{{ row.details }}</td>
+                                    </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    }
+                    }
+
+                    @if (equipmentDetailLines(item); as detailLines) {
+                    @if (detailLines.length) {
+                    <div class="equipment-detail-copy">
+                        <p class="eyebrow">Key effects</p>
+                        <ul class="equipment-item-bullets">
+                            @for (detail of detailLines; track detail) {
+                            <li>{{ detail }}</li>
+                            }
+                        </ul>
+                    </div>
+                    }
+                    }
+
+                    <div class="equipment-detail-footer">
+                        <div class="equipment-item-meta">
+                            @if (item.rarity) {
+                            <span class="equipment-meta-chip">{{ item.rarity }}</span>
+                            }
+                            @if (item.attunement) {
+                            <span class="equipment-meta-chip">{{ item.attunement }}</span>
+                            }
+                            @if (item.sourceLabel) {
+                            <span class="equipment-meta-chip">{{ item.sourceLabel }}</span>
+                            }
+                        </div>
+
+                        @if (item.sourceUrl) {
+                        <a class="ghost-button equipment-source-link" [href]="item.sourceUrl" target="_blank" rel="noopener noreferrer">View details page</a>
+                        }
+                    </div>
+                </div>
+                }
+            </div>
+            }
+
+            @if (filteredEquipmentItems().length === 0) {
+            <p class="muted">No items match your current filters.</p>
+            }
+        </div>
+    </section>
+    }
+
+    @if (!isCatalogPage() && !isRulesGlossaryPage()) {
     @for (section of page.sections; track section.heading) {
     <section class="detail-section panel">
         <div class="section-heading">
             <div>
-                <p class="eyebrow">Deep Dive</p>
+                <p class="eyebrow">{{ isBasicRulesPage() ? 'Jump To' : 'Deep Dive' }}</p>
                 <h2>{{ section.heading }}</h2>
             </div>
             <p>{{ section.intro }}</p>
@@ -57,10 +345,22 @@
         @if (section.entries?.length) {
         <div class="entry-grid">
             @for (entry of section.entries; track entry.label) {
+            @if (sectionEntryRoute(entry); as routePath) {
+            <a class="entry-card entry-card--link" [routerLink]="routePath">
+                <span class="entry-card-copy">
+                    <h3>{{ entry.label }}</h3>
+                    <p>{{ entry.text }}</p>
+                </span>
+                <span class="entry-card-arrow">
+                    <i class="fa-duotone fa-thin fa-arrow-right"></i>
+                </span>
+            </a>
+            } @else {
             <article class="entry-card">
                 <h3>{{ entry.label }}</h3>
                 <p>{{ entry.text }}</p>
             </article>
+            }
             }
         </div>
         }
@@ -73,6 +373,7 @@
         </ul>
         }
     </section>
+    }
     }
 
     @if (relatedEntries().length) {
@@ -103,6 +404,7 @@
         </div>
     </section>
     }
+
 </main>
 } @else {
 <main class="rules-detail-page">

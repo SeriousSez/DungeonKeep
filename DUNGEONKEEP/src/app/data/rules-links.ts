@@ -13,6 +13,7 @@ export interface RulesHighlight {
 export interface RulesSectionEntry {
     label: string;
     text: string;
+    routeSlug?: string;
 }
 
 export interface RulesSection {
@@ -164,7 +165,7 @@ export const rulesEntries = [
                 ]
             }
         ],
-        relatedSlugs: ['classes', 'species', 'character-sheets']
+        relatedSlugs: ['classes', 'species', 'basic-rules']
     },
     {
         slug: 'species',
@@ -397,7 +398,7 @@ export const rulesEntries = [
                 ]
             }
         ],
-        relatedSlugs: ['magic-items', 'character-sheets', 'basic-rules']
+        relatedSlugs: ['magic-items', 'monsters', 'basic-rules']
     },
     {
         slug: 'magic-items',
@@ -452,7 +453,7 @@ export const rulesEntries = [
                 ]
             }
         ],
-        relatedSlugs: ['equipment', 'monsters', 'srd']
+        relatedSlugs: ['equipment', 'monsters']
     },
     {
         slug: 'monsters',
@@ -565,7 +566,7 @@ export const rulesEntries = [
                 ]
             }
         ],
-        relatedSlugs: ['basic-rules', 'character-sheets', 'classes']
+        relatedSlugs: ['basic-rules', 'rules-glossary', 'classes']
     },
     {
         slug: 'basic-rules',
@@ -573,55 +574,67 @@ export const rulesEntries = [
         label: 'D&D Basic Rules',
         icon: 'book',
         category: 'resource',
-        description: 'A guided map of the free 2024 rules, including the best reading order for players and DMs.',
+        description: 'A practical map through the 2024 free rules so players and DMs can jump to the right topic fast.',
         eyebrow: 'Reference Map',
-        heroTitle: 'The Basic Rules are the fastest complete starting point for a new table.',
-        heroSummary: 'The free rules are broad enough to teach the rhythm of play, character creation, combat, conditions, monsters, and DM basics without requiring a full product library. The trick is knowing what to read first. Most groups do better with a guided path than with a cover-to-cover trudge.',
+        heroTitle: 'D&D Basic Rules',
+        heroSummary: 'This page is tuned for DungeonKeep rather than copied wholesale from a publisher hub. It gives the table the fastest route to player onboarding, DM guidance, monster reading, and glossary answers during prep or live play.',
         quickFacts: [
-            { label: 'Major sections', value: 'Players, Dungeon Masters, Monsters, and the Rules Glossary form the main structure.' },
-            { label: 'Player essentials', value: 'Playing the Game, Character Creation, Character Classes, Character Origins, Feats, Equipment, and Spells are the highest-value chapters.' },
-            { label: 'DM essentials', value: 'The Basics, the DM\'s Toolbox, and Magic Items cover early campaign needs.' },
-            { label: 'Best approach', value: 'Read in role-based passes instead of trying to absorb everything at once.' }
+            { label: 'Top-level structure', value: 'Players, Dungeon Masters, Monsters, and the Rules Glossary anchor the full reference.' },
+            { label: 'Best first click', value: 'Playing the Game is still the strongest starting point for almost every new player.' },
+            { label: 'Table use', value: 'Use this page as a shortcut layer when you need the right chapter quickly, not a full cover-to-cover read.' },
+            { label: 'DM path', value: 'Running the Table, Monsters, Magic Items, and the glossary form the most practical starter arc for session prep.' }
         ],
         highlights: [
-            { title: 'Players chapter flow', text: 'Start with how the game works before studying your own build choices.' },
-            { title: 'DM chapter flow', text: 'Read session prep and encounter tools before worrying about deep edge cases.' },
-            { title: 'Glossary backup', text: 'When a keyword is unclear, the glossary is often the cleanest answer.' }
+            { title: 'Built for quick navigation', text: 'This page helps your group reach the right answer quickly instead of dumping every rule at once.' },
+            { title: 'Player-first reading flow', text: 'The structure moves from how the game works to how a character is built, equipped, and played.' },
+            { title: 'Practical DM support', text: 'Monster use, treasure checks, and glossary lookups are surfaced for actual table prep.' }
         ],
         sections: [
             {
-                heading: 'Recommended reading order for players',
-                intro: 'This path gets new players table-ready without overload.',
+                heading: 'Players',
+                intro: 'The player side of the Basic Rules starts with the rhythm of play and then branches into the pages most people actually use during character creation and session play.',
                 entries: [
-                    { label: 'Playing the Game', text: 'Learn the basic loop, d20 tests, actions, combat, and conditions first.' },
-                    { label: 'Character Creation', text: 'Understand how level, progression, and the sheet fit together.' },
-                    { label: 'Classes and Origins', text: 'Choose the broad identity of the character before finer optimization.' },
-                    { label: 'Feats, Equipment, and Spells', text: 'Use these chapters as build support once the core identity is locked in.' },
-                    { label: 'Glossary', text: 'Return here when a keyword or condition is blocking play.' }
+                    { label: 'Playing the Game', text: 'Start here for the turn loop, d20 tests, actions, exploration, combat, damage, healing, and conditions.', routeSlug: 'how-to-play' },
+                    { label: 'Classes', text: 'Use this page to understand party role, class tempo, and the broad shape of a character before building deeper.', routeSlug: 'classes' },
+                    { label: 'Backgrounds', text: 'Open this for origin ideas, roleplay hooks, and practical starting identity at the table.', routeSlug: 'backgrounds' },
+                    { label: 'Species', text: 'Review senses, movement, resistances, and baseline fantasy identity in one place.', routeSlug: 'species' },
+                    { label: 'Feats', text: 'Use feats to fine-tune a build once the core identity and play style are already clear.', routeSlug: 'feats' },
+                    { label: 'Equipment', text: 'Review armor, weapons, kits, and adventuring gear once the character’s broad plan is locked in.', routeSlug: 'equipment' },
+                    { label: 'Spells', text: 'Spell lists and casting details matter most after the turn loop and the character’s role both make sense.', routeSlug: 'spells' },
+                    { label: 'Rules Glossary', text: 'Use it as the fast keyword index whenever a condition, action, or timing term decides what is legal.', routeSlug: 'rules-glossary' }
                 ]
             },
             {
-                heading: 'Recommended reading order for DMs',
-                intro: 'DMs need confidence in pacing and consequences more than encyclopedic memory.',
+                heading: 'Dungeon Masters',
+                intro: 'The DM side of the Basic Rules works best as a quick toolkit for session flow, rulings, monsters, treasure, and edge-case checks.',
                 entries: [
-                    { label: 'The Basics', text: 'Focus on what a DM does, how to prepare a session, and how to keep the table fun.' },
-                    { label: 'DM\'s Toolbox', text: 'Use this for travel, hazards, traps, and other adventure scaffolding.' },
-                    { label: 'Monsters', text: 'Learn how stat blocks are structured before choosing encounter threats.' },
-                    { label: 'Magic Items', text: 'Use later, when the campaign starts handing out meaningful treasure.' }
+                    { label: 'Running the Table', text: 'Start with session flow, stakes, adjudication habits, and what a DM is actually responsible for moment to moment.', routeSlug: 'how-to-play' },
+                    { label: 'Monsters', text: 'Use the monster pages for encounter reading, stat blocks, and threat selection during prep or live play.', routeSlug: 'monsters' },
+                    { label: 'Magic Items', text: 'Review treasure categories, rarity, attunement, and reward pacing when the campaign begins handing out meaningful gear.', routeSlug: 'magic-items' },
+                    { label: 'Rules Glossary', text: 'Open the glossary when an action, condition, or timing question needs a fast ruling at the table.', routeSlug: 'rules-glossary' }
                 ]
             },
             {
-                heading: 'When to open the Basic Rules mid-session',
-                intro: 'Treat it as a reference document, not a script.',
+                heading: 'Monsters',
+                intro: 'The monster portion of the Basic Rules is most useful when paired with the glossary so the whole table can parse what a creature is actually doing.',
+                entries: [
+                    { label: 'How to Read a Stat Block', text: 'Use the monster reference to understand AC, hit points, movement, traits, actions, and combat pacing.', routeSlug: 'monsters' },
+                    { label: 'Creature Catalog', text: 'Browse the actual roster when you need encounter material instead of a purely theoretical overview.', routeSlug: 'monsters' },
+                    { label: 'Combat Terms', text: 'Pair monster entries with the glossary when conditions, reactions, or movement wording change the outcome.', routeSlug: 'rules-glossary' }
+                ]
+            },
+            {
+                heading: 'Recommended reading order',
+                intro: 'Use the page in focused passes rather than reading it like a novel.',
                 bullets: [
-                    'Open it when a keyword determines stakes, such as concentration, grapple, cover, or a condition.',
-                    'Do not freeze play for every edge case. Make a ruling, note it, and verify after the scene if needed.',
-                    'If the same issue returns every session, add a quick table note in DungeonKeep rather than re-reading the whole chapter.',
-                    'Use chapter structure to narrow your search before jumping directly into the glossary.'
+                    'New players should begin with Playing the Game, then jump into classes, species, and backgrounds that fit the character idea.',
+                    'After that, feats, equipment, and spells work best as support reading instead of first-pass reading.',
+                    'DMs should start with Running the Table, then monster reference, and only later spend time on treasure and edge-case wording.',
+                    'If a live rules question blocks play, jump to the glossary first rather than scanning entire chapters.'
                 ]
             }
         ],
-        relatedSlugs: ['how-to-play', 'rules-glossary', 'character-sheets']
+        relatedSlugs: ['how-to-play', 'rules-glossary', 'monsters']
     },
     {
         slug: 'rules-glossary',
@@ -629,10 +642,10 @@ export const rulesEntries = [
         label: 'Rules Glossary',
         icon: 'list-tree',
         category: 'resource',
-        description: 'Definitions for actions, conditions, movement, cover, concentration, and other terms that decide how scenes resolve.',
+        description: 'A searchable rules reference for actions, conditions, combat timing, movement, and spell language.',
         eyebrow: 'Keyword Reference',
-        heroTitle: 'The glossary is where vague table arguments become clear mechanical language.',
-        heroSummary: 'Most rules confusion is really terminology confusion. If the table agrees on what a condition, action, or timing phrase means, play speeds up immediately. This page does not try to restate every glossary entry. It shows you how to use the glossary, which entries matter most, and what terms repeatedly decide outcomes.',
+        heroTitle: 'Rules Glossary',
+        heroSummary: 'Use this page like a table-side index. It gathers the terms that most often decide rulings in play and organizes them into a cleaner reference flow inspired by the 2024 rules glossary style.',
         quickFacts: [
             { label: 'Purpose', value: 'The glossary defines current rules terms only and cross-links related entries.' },
             { label: 'Action value', value: 'Many of the most important entries describe actions, conditions, cover, movement, and concentration.' },
@@ -679,171 +692,6 @@ export const rulesEntries = [
             }
         ],
         relatedSlugs: ['basic-rules', 'spells', 'monsters']
-    },
-    {
-        slug: 'character-sheets',
-        routePath: '/rules/character-sheets',
-        label: 'D&D Character Sheets',
-        icon: 'file-lines',
-        category: 'resource',
-        description: 'What belongs on a sheet, how to maintain it between sessions, and which fields matter most during play.',
-        eyebrow: 'Table Tools',
-        heroTitle: 'A clean character sheet keeps your turn fast and your roleplay grounded.',
-        heroSummary: 'The sheet is the table-facing version of the character. If it is organized, turns move faster, rests are easier to track, and players spend less time re-deriving information they already earned. This page is written to help players maintain a usable sheet, not just fill every box once.',
-        quickFacts: [
-            { label: 'Core fields', value: 'Ability scores, proficiencies, HP, armor class, speed, attacks, gear, spells, and notes should always be current.' },
-            { label: 'Turn speed', value: 'The most-used information belongs in easy reach: attack bonuses, save DC, key resources, and common actions.' },
-            { label: 'Rest rhythm', value: 'Hit points, spell slots, limited uses, and consumables should be updated after every meaningful rest.' },
-            { label: 'Best practice', value: 'If you keep checking the same rule every session, add a short note directly to the sheet.' }
-        ],
-        highlights: [
-            { title: 'Front-load the essentials', text: 'Put action economy, attack math, and passive numbers where you can see them instantly.' },
-            { title: 'Track what changes', text: 'A sheet becomes unreliable when temporary values and one-use resources are left floating.' },
-            { title: 'Notes are mechanics too', text: 'Contacts, oaths, debts, and signatures from your background belong on the sheet if they change play.' }
-        ],
-        sections: [
-            {
-                heading: 'How to structure a useful sheet',
-                intro: 'Think in terms of table decisions, not form fields.',
-                entries: [
-                    { label: 'Identity block', text: 'Name, class, background, species, and a one-line motivation help roleplay stay visible.' },
-                    { label: 'Combat block', text: 'HP, AC, speed, initiative, attacks, save DC, and limited-use class features belong together.' },
-                    { label: 'Exploration and social block', text: 'Passive Perception, languages, tools, and standout proficiencies should be easy to reference.' },
-                    { label: 'Inventory block', text: 'Weapons, armor, consumables, money, and utility gear need current counts.' },
-                    { label: 'Spell block', text: 'Prepared list, slots, concentration reminders, and favorite reactions should be clearly marked.' }
-                ]
-            },
-            {
-                heading: 'Between-session upkeep',
-                intro: 'Five minutes of maintenance prevents fifteen minutes of table delay later.',
-                bullets: [
-                    'Update hit points, slots, and limited uses after rests before the next session starts.',
-                    'Write down new items, debts, NPC names, and promises while the session is fresh.',
-                    'Remove clutter from inventory and notes so the important pieces stay visible.',
-                    'If leveling happened, rewrite attack bonuses and save DCs clearly instead of trusting memory.'
-                ]
-            },
-            {
-                heading: 'Fast-turn checklist',
-                intro: 'Use this if a player freezes during combat.',
-                bullets: [
-                    'Where are you standing and what threatens you right now?',
-                    'What can you do with your action, bonus action, and movement this turn?',
-                    'Is concentration already active, and do you need to protect it?',
-                    'Which option helps the party objective, not just your personal damage total?'
-                ]
-            }
-        ],
-        relatedSlugs: ['how-to-play', 'basic-rules', 'equipment']
-    },
-    {
-        slug: 'srd',
-        routePath: '/rules/srd',
-        label: 'System Reference Document (SRD)',
-        icon: 'books',
-        category: 'resource',
-        description: 'What the SRD is for, what 5.2.1 covers, and why creators, DMs, and advanced players should care.',
-        eyebrow: 'Open Rules Reference',
-        heroTitle: 'The SRD is the open rules foundation, not the full branded game library.',
-        heroSummary: 'The System Reference Document exists so creators and advanced groups can work with a legally open slice of D&D rules content. It is powerful, but it is intentionally incomplete. This page focuses on what the SRD is for, what changed in 5.2.x, and when it matters to ordinary table play inside DungeonKeep.',
-        quickFacts: [
-            { label: 'Current version', value: 'D&D Beyond lists SRD v5.2.1 as the latest English release.' },
-            { label: 'License', value: 'SRD 5.2.x is published under Creative Commons Attribution 4.0.' },
-            { label: 'Best use', value: 'Reference it for open content, creator work, conversions, and legal clarity.' },
-            { label: 'Important limit', value: 'It does not include every class, species, spell, item, or monster from the core branded books.' }
-        ],
-        highlights: [
-            { title: 'Open, not exhaustive', text: 'The SRD gives a robust playable foundation without reproducing all protected D&D identity elements.' },
-            { title: 'Creator-friendly', text: 'It is the cleanest route for people building compatible material who need clarity about what is open.' },
-            { title: 'Mechanically current', text: 'The 5.2 series reflects 5.5e wording and adds newer glossary and rules structure support.' }
-        ],
-        sections: [
-            {
-                heading: 'What the SRD includes',
-                intro: 'Think of it as an open toolkit with boundaries.',
-                entries: [
-                    { label: 'Core rules content', text: 'Gameplay structure, character creation support, classes, origins, feats, equipment, spells, monsters, and a rules glossary.' },
-                    { label: 'Creator guidance value', text: 'It provides a stable base for compatible products without requiring a private license agreement.' },
-                    { label: 'Version history', text: 'Older SRD versions remain available, which matters for published projects and conversions.' }
-                ]
-            },
-            {
-                heading: 'Notable 5.2.x changes',
-                intro: 'These updates are relevant even if you are not publishing anything.',
-                bullets: [
-                    'SRD 5.2 adds a rules glossary and aligns wording with the newer 5.5e rules presentation.',
-                    'It expands backgrounds, feats, equipment support, spells, magic items, and monsters compared with older SRD baselines.',
-                    'Some names differ from the full core books because the SRD avoids protected identity terms where needed.',
-                    'Not every beloved option is present, so players should not assume SRD completeness when building from memory.'
-                ]
-            },
-            {
-                heading: 'When this matters at the table',
-                intro: 'The SRD is not only for publishers.',
-                bullets: [
-                    'DMs can use it to separate open rules structure from setting-specific assumptions.',
-                    'Homebrew-minded groups can check whether a reference is broadly open before building on it.',
-                    'Players using third-party material should understand that some options are open equivalents rather than one-to-one branded reproductions.',
-                    'If your campaign notes may become public reference material, the SRD is the safer rules vocabulary to lean on.'
-                ]
-            }
-        ],
-        relatedSlugs: ['basic-rules', 'magic-items', 'playtest']
-    },
-    {
-        slug: 'playtest',
-        routePath: '/rules/playtest',
-        label: 'Unearthed Arcana',
-        icon: 'flask-round-poison',
-        category: 'resource',
-        description: 'How to evaluate playtest material, communicate table expectations, and keep experimental content from derailing a campaign.',
-        eyebrow: 'Experimental Material',
-        heroTitle: 'Playtest content works best when the table treats it as a living draft.',
-        heroSummary: 'Unearthed Arcana and other playtest-style releases are exciting because they offer new ideas early. They are risky for the same reason. Features can change, disappear, or prove unstable in actual campaign play. This page gives DungeonKeep groups a simple policy for trying experiments without letting them quietly rewrite the campaign every two weeks.',
-        quickFacts: [
-            { label: 'Status', value: 'Playtest content is provisional and should never be assumed final.' },
-            { label: 'Table rule', value: 'Use it only with clear DM approval and explicit group expectations.' },
-            { label: 'Main risk', value: 'Balance, wording, and future compatibility can all shift during feedback cycles.' },
-            { label: 'Best use', value: 'Short arcs, one-shots, or tightly reviewed campaign experiments.' }
-        ],
-        highlights: [
-            { title: 'Consent matters', text: 'A group should know whether experimental material may be revised or replaced mid-campaign.' },
-            { title: 'Documentation matters', text: 'Track which draft is being used so future disputes are about choices, not memory.' },
-            { title: 'Revisions are normal', text: 'If a playtest option changes, that is not a betrayal. It is the point of playtesting.' }
-        ],
-        sections: [
-            {
-                heading: 'How to evaluate a playtest option',
-                intro: 'Do not ask only whether it looks fun. Ask whether it is stable in your campaign.',
-                bullets: [
-                    'Check whether the option creates repeatable advantage, extra actions, or unusual resource refunds.',
-                    'Ask how much table time it consumes compared with an ordinary official option in the same role.',
-                    'Decide whether the campaign can survive a rewrite if the option proves awkward after three sessions.',
-                    'Look for wording gaps that force the DM to invent new rules every time the feature appears.'
-                ]
-            },
-            {
-                heading: 'Recommended table policy',
-                intro: 'A simple policy prevents future resentment.',
-                bullets: [
-                    'Record the source and version date of the experimental option in the campaign notes.',
-                    'Agree up front that the DM may adjust, replace, or retire the option if it harms play.',
-                    'Offer rebuild windows so the player does not feel punished for trying something creative.',
-                    'Review the option after a few sessions instead of waiting for it to become a long-running argument.'
-                ]
-            },
-            {
-                heading: 'Best places to use playtest material',
-                intro: 'Some campaign structures absorb experimentation better than others.',
-                entries: [
-                    { label: 'One-shots', text: 'Best environment for bold ideas because the consequences are contained.' },
-                    { label: 'Mini-campaigns', text: 'Good compromise when the group wants to learn whether the option has legs.' },
-                    { label: 'Long campaigns', text: 'Only use if the group is comfortable revisiting the decision openly and without drama.' },
-                    { label: 'Public-facing notes or guides', text: 'Mark playtest content clearly so other readers do not mistake it for settled rules.' }
-                ]
-            }
-        ],
-        relatedSlugs: ['srd', 'basic-rules', 'how-to-play']
     }
 ] as const satisfies readonly RulesLink[];
 

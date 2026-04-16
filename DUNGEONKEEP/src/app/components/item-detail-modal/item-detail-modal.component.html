@@ -80,6 +80,7 @@
             </div>
             }
 
+            @if (showAddAction()) {
             <div class="item-add-row">
                 <span class="item-add-label">Amount to add</span>
                 <div class="qty-control">
@@ -93,6 +94,7 @@
                 </div>
                 <button type="button" class="add-item-btn" (click)="requestAdd()">Add Item</button>
             </div>
+            }
         </div>
     </article>
 </div>

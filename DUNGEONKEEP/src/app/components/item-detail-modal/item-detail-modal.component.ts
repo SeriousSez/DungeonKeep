@@ -12,6 +12,7 @@ import type { InventoryEntry } from '../../data/new-character-standard-page.type
 })
 export class ItemDetailModalComponent {
     readonly item = input.required<InventoryEntry>();
+    readonly showAddAction = input(true);
     readonly closed = output<void>();
     readonly addRequested = output<number>();
     readonly addQuantity = signal(1);

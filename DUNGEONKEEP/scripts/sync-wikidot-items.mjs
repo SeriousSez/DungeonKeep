@@ -84,27 +84,12 @@ function splitNarrativeClauses(text) {
     .replace(/\bThese\b\s+/i, '')
     .trim();
 
-  const primarySegments = normalized
-    .split(/(?<=[.!?;])\s+/)
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-
-  const clauses = [];
-  for (const segment of primarySegments) {
-    const secondarySegments = segment
-      .split(/\s+and\s+/i)
-      .map((part) => part.trim())
-      .filter(Boolean);
-
-    if (secondarySegments.length > 1 && segment.length > 60) {
-      clauses.push(...secondarySegments.map((part) => ensureSentence(stripTrailingPunctuation(part))));
-      continue;
-    }
-
-    clauses.push(ensureSentence(stripTrailingPunctuation(segment)));
-  }
-
-  return [...new Set(clauses.filter(Boolean))].slice(0, 6);
+  return [...new Set(
+    normalized
+      .split(/(?<=[.!?;])\s+/)
+      .map((segment) => ensureSentence(stripTrailingPunctuation(segment.trim())))
+      .filter(Boolean)
+  )].slice(0, 6);
 }
 
 function describeCategory(item) {
@@ -397,6 +382,113 @@ function createItem(item) {
   return Object.fromEntries(Object.entries(item).filter(([, value]) => value !== undefined && value !== ''));
 }
 
+function extractBonusVariants(name) {
+  const match = name.match(/^(.*?),\s*(\+\d(?:,\s*\+\d)*(?:,\s*or\s*\+\d|,\s*\+\d)*)$/i);
+  if (!match) {
+    return null;
+  }
+
+  const bonuses = [...match[2].matchAll(/\+(\d+)/g)].map((bonusMatch) => Number.parseInt(bonusMatch[1], 10));
+  if (bonuses.length < 2) {
+    return null;
+  }
+
+  return {
+    baseName: match[1].trim(),
+    bonuses
+  };
+}
+
+function extractRarityByBonus(...texts) {
+  const mapping = new Map();
+
+  for (const text of texts) {
+    if (!text) {
+      continue;
+    }
+
+    for (const match of text.matchAll(/\b(artifact|legendary|very rare|rare|uncommon|common|\?{3}|unknown rarity)\s*\(\+(\d+)\)/gi)) {
+      mapping.set(Number.parseInt(match[2], 10), titleCaseWords(match[1]));
+    }
+  }
+
+  return mapping;
+}
+
+function defaultRarityByBonus(baseName, bonus) {
+  if (baseName === 'Armor') {
+    return new Map([[1, 'Rare'], [2, 'Very Rare'], [3, 'Legendary']]).get(bonus);
+  }
+
+  return new Map([[1, 'Uncommon'], [2, 'Rare'], [3, 'Very Rare']]).get(bonus);
+}
+
+function rewriteBonusText(text, bonus, rarity) {
+  if (!text) {
+    return text;
+  }
+
+  return text
+    .replace(
+      /\b(?:artifact|legendary|very rare|rare|uncommon|common|\?{3}|unknown rarity)\s*\(\+\d+\)(?:,\s*(?:or\s+)?)?(?:(?:artifact|legendary|very rare|rare|uncommon|common|\?{3}|unknown rarity)\s*\(\+\d+\)(?:,\s*(?:or\s+)?)?)+/gi,
+      `${rarity.toLowerCase()} (+${bonus})`
+    )
+    .replace(/\ba bonus to\b/gi, `a +${bonus} bonus to`)
+    .replace(/\bThis bonus is determined by (?:its rarity|the [a-z']+ rarity)\./gi, `This bonus is +${bonus}.`)
+    .replace(/\bThe bonus is determined by (?:its rarity|the [a-z']+ rarity)\./gi, `The bonus is +${bonus}.`);
+}
+
+function expandVariableBonusItems(item) {
+  const variants = extractBonusVariants(item.name);
+  if (!variants) {
+    return [item];
+  }
+
+  const rarityByBonus = extractRarityByBonus(item.summary, item.notes, ...(item.detailLines ?? []));
+
+  return variants.bonuses.map((bonus) => {
+    const selectedRarity = rarityByBonus.get(bonus) ?? defaultRarityByBonus(variants.baseName, bonus) ?? item.rarity ?? 'Magic';
+    return createItem({
+      ...item,
+      name: `${variants.baseName} +${bonus}`,
+      rarity: selectedRarity === 'Magic' ? item.rarity : selectedRarity,
+      summary: rewriteBonusText(item.summary, bonus, selectedRarity),
+      notes: rewriteBonusText(item.notes, bonus, selectedRarity),
+      detailLines: item.detailLines?.map((line) => rewriteBonusText(line, bonus, selectedRarity))
+    });
+  });
+}
+
+function expandPotionOfHealingItems(item) {
+  if (item.name !== 'Potion of Healing') {
+    return [item];
+  }
+
+  const sourceUrl = 'https://www.dndbeyond.com/magic-items/4708-potions-of-healing';
+  const variants = [
+    { name: 'Potion of Healing', rarity: 'Common', healing: '2d4 + 2', costGp: 50, weight: 0.5 },
+    { name: 'Potion of Healing (Greater)', rarity: 'Uncommon', healing: '4d4 + 4' },
+    { name: 'Potion of Healing (Superior)', rarity: 'Rare', healing: '8d4 + 8' },
+    { name: 'Potion of Healing (Supreme)', rarity: 'Very Rare', healing: '10d4 + 20' }
+  ];
+
+  return variants.map((variant) => createItem({
+    ...item,
+    name: variant.name,
+    rarity: variant.rarity,
+    sourceUrl,
+    costGp: variant.costGp ?? item.costGp,
+    weight: variant.weight ?? item.weight,
+    summary: `Potion, ${variant.rarity.toLowerCase()}.`,
+    notes: `When you drink this potion, you regain ${variant.healing} hit points. The potion's red liquid glimmers when agitated.`,
+    detailLines: [
+      `Regain ${variant.healing} hit points when you drink this potion.`,
+      `Rarity: ${variant.rarity}.`,
+      `The potion's red liquid glimmers when agitated.`
+    ]
+  }));
+}
+
 function weaponAlias(name) {
   const aliases = new Map([
     ['Crossbow, light', 'Crossbow, Light'],
@@ -662,7 +754,10 @@ async function main() {
     .map((item) => item.sourceUrl)
     .filter((url) => url && !sourcePageUrlSet.has(url)))];
   const pageHtmlByUrl = await fetchHtmlMap(itemPageUrls);
-  const generatedItems = sortItems(parsedItems.map((item) => authorItem(item, pageHtmlByUrl, sourcePageUrlSet)));
+  const generatedItems = sortItems(parsedItems
+    .map((item) => authorItem(item, pageHtmlByUrl, sourcePageUrlSet))
+    .flatMap((item) => expandVariableBonusItems(item))
+    .flatMap((item) => expandPotionOfHealingItems(item)));
 
   const output = `import type { EquipmentItem } from './new-character-standard-page.types';\n\nexport const officialWikidotEquipmentCatalog: ReadonlyArray<EquipmentItem> = [\n${generatedItems.map(serializeItem).join(',\n')}\n];\n`;
   const outputPath = resolve('src/app/data/wikidot-items.generated.ts');

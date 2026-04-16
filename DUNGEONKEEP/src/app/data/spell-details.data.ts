@@ -1900,15 +1900,17 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
 
     // Auto-generated compendium coverage entries
     'Absorb Elements': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Abjuration',
+        castingTime: '1 reaction',
+        range: 'Self',
+        components: 'S',
+        duration: '1 round',
         concentration: false,
         ritual: false,
-        description: 'Absorb Elements is a 1-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        damageEffect: 'Elemental defense',
+        description: 'When you take acid, cold, fire, lightning, or thunder damage, you can seize some of that energy and blunt the blow. The spell gives you resistance against the triggering damage type until the start of your next turn, and your next melee hit can discharge extra matching energy.',
+        higherLevels: 'When cast with a higher-level slot, the extra damage on your next melee hit increases.',
+        tags: ['ABJURATION', 'REACTION', 'DEFENSE', 'ELEMENTAL']
     },
     'Alarm': {
         school: 'Abjuration',
@@ -2023,26 +2025,27 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['DIVINATION', 'CONCENTRATION', 'UTILITY']
     },
     'Arcane Gate': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Conjuration',
+        castingTime: '1 action',
+        range: '500 feet',
+        components: 'V, S',
+        duration: 'Up to 10 minutes',
+        concentration: true,
         ritual: false,
-        description: 'Arcane Gate is a 6-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        description: 'You open two linked portals that connect distant points you can see. Creatures can move through one gate and emerge from the other, making the spell excellent for rapid repositioning, escape routes, and battlefield tricks.',
+        tags: ['CONJURATION', 'CONCENTRATION', 'TELEPORTATION', 'UTILITY']
     },
     'Arcane Vigor': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Transmutation',
+        castingTime: '1 action',
+        range: 'Self',
+        components: 'V, S',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Arcane Vigor is a 2-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        damageEffect: 'Healing',
+        description: 'You flood your body with stabilizing arcane energy and recover hit points in a fast magical burst. It serves as a self-directed recovery tool when you need to stay standing without outside help.',
+        tags: ['TRANSMUTATION', 'HEALING', 'UTILITY']
     },
     'Astral Projection': {
         school: 'Necromancy',
@@ -2056,15 +2059,15 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['NECROMANCY', 'HEALING', 'DAMAGE', 'UTILITY']
     },
     'Aura of Purity': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Abjuration',
+        castingTime: '1 action',
+        range: 'Self (30-foot radius)',
+        components: 'V',
+        duration: 'Up to 10 minutes',
+        concentration: true,
         ritual: false,
-        description: 'Aura of Purity is a 4-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        description: 'Pure magic radiates from you to protect nearby allies. Creatures of your choice in the aura gain strong protection against disease, poison, and several debilitating conditions, making this a superb defensive support spell.',
+        tags: ['ABJURATION', 'CONCENTRATION', 'AURA', 'SUPPORT', 'DEFENSE']
     },
     'Awaken': {
         school: 'Transmutation',
@@ -2090,15 +2093,16 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['ENCHANTMENT', 'CONCENTRATION', 'DAMAGE', 'SAVE']
     },
     'Banishing Smite': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Abjuration',
+        castingTime: '1 bonus action',
+        range: 'Self',
+        components: 'V',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Banishing Smite is a 5-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        damageEffect: 'Force',
+        description: 'You empower your weapon with banishing force. The next time you hit with a weapon attack before the spell ends, the strike deals heavy extra force damage, and a weakened target can be shunted to a harmless demiplane for a short time.',
+        tags: ['ABJURATION', 'CONCENTRATION', 'DAMAGE', 'UTILITY', 'WEAPON']
     },
     'Barkskin': {
         school: 'Transmutation',
@@ -2112,26 +2116,28 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['TRANSMUTATION', 'CONCENTRATION']
     },
     'Beast Sense': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
-        ritual: false,
-        description: 'Beast Sense is a 2-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        school: 'Divination',
+        castingTime: '1 action',
+        range: 'Touch',
+        components: 'S',
+        duration: 'Up to 1 hour',
+        concentration: true,
+        ritual: true,
+        description: 'You touch a willing beast and perceive through its senses for the spell’s duration. While doing so, you are blind and deaf to your own surroundings, making this a strong scouting and reconnaissance tool.',
+        tags: ['DIVINATION', 'CONCENTRATION', 'RITUAL', 'UTILITY']
     },
     'Befuddlement': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Enchantment',
+        castingTime: '1 action',
+        range: '150 feet',
+        components: 'V, S, M (a key ring with no keys)',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Befuddlement is a 8-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'INT Save',
+        damageEffect: 'Psychic',
+        description: 'You blast a creature’s mind with disorienting magic. The target makes an Intelligence saving throw, taking severe psychic damage on a failed save or half as much on a success. On a failed save, the target is also left so mentally scrambled that it cannot cast spells or take the Magic action until the effect is broken by powerful magic or a successful repeat save after a long interval.',
+        tags: ['ENCHANTMENT', 'DAMAGE', 'PSYCHIC', 'SAVE']
     },
     'Bestow Curse': {
         school: 'Necromancy',
@@ -2146,15 +2152,18 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['NECROMANCY', 'CONCENTRATION', 'DAMAGE', 'UTILITY', 'SAVE']
     },
     'Bigby\'s Hand': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Evocation',
+        castingTime: '1 action',
+        range: '120 feet',
+        components: 'V, S, M (an eggshell and a snakeskin glove)',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Bigby\'s Hand is a 5-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'Melee Spell Attack / STR Contest',
+        damageEffect: 'Force / Control',
+        description: 'You conjure a Large hand of shimmering force in an unoccupied space you can see. When you cast the spell and as a bonus action on later turns, you can move the hand and command it to strike, shove, grapple, crush, or interpose itself to protect you. It excels at battlefield control while also dealing force damage.',
+        higherLevels: 'When you cast this spell using a 6th-level or higher slot, the hand’s damaging options become stronger for each slot level above 5th.',
+        tags: ['EVOCATION', 'CONCENTRATION', 'DAMAGE', 'UTILITY']
     },
     'Blade Barrier': {
         school: 'Evocation',
@@ -2168,15 +2177,15 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['EVOCATION', 'CONCENTRATION', 'DAMAGE', 'SAVE']
     },
     'Blade Ward': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Abjuration',
+        castingTime: '1 action',
+        range: 'Self',
+        components: 'V, S',
+        duration: '1 round',
         concentration: false,
         ritual: false,
-        description: 'Blade Ward is a cantrip spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        description: 'You trace a protective sigil in the air that wards you until the end of your next turn. While it lasts, you have resistance to bludgeoning, piercing, and slashing damage from weapon attacks.',
+        tags: ['ABJURATION', 'BUFF', 'DEFENSE']
     },
     'Blight': {
         school: 'Necromancy',
@@ -2191,15 +2200,16 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['NECROMANCY', 'DAMAGE', 'SAVE']
     },
     'Blinding Smite': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Evocation',
+        castingTime: '1 bonus action',
+        range: 'Self',
+        components: 'V',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Blinding Smite is a 3-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        damageEffect: 'Radiant',
+        description: 'Your weapon blazes with searing light. The next time you hit with a melee weapon attack before the spell ends, the attack deals extra radiant damage and can leave the target blinded if it fails its saving throw.',
+        tags: ['EVOCATION', 'CONCENTRATION', 'DAMAGE', 'RADIANT', 'WEAPON']
     },
     'Blindness/Deafness': {
         school: 'Necromancy',
@@ -2236,15 +2246,18 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['ILLUSION', 'CONCENTRATION', 'DAMAGE']
     },
     'Booming Blade': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Evocation',
+        castingTime: '1 action',
+        range: 'Self (5-foot radius)',
+        components: 'S, M (a melee weapon worth at least 1 sp)',
+        duration: '1 round',
         concentration: false,
         ritual: false,
-        description: 'Booming Blade is a cantrip spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'Melee Weapon Attack',
+        damageEffect: 'Thunder',
+        description: 'You brandish the weapon used in the casting and make a melee attack against a nearby creature. On a hit, the strike deals its normal weapon damage and wraps the target in unstable thunderous energy that punishes it if it moves before your next turn.',
+        higherLevels: 'At 5th, 11th, and 17th level, the attack deals extra thunder damage on the hit and the movement-triggered burst becomes stronger.',
+        tags: ['EVOCATION', 'DAMAGE', 'THUNDER', 'WEAPON']
     },
     'Calm Emotions': {
         school: 'Enchantment',
@@ -2258,37 +2271,42 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['ENCHANTMENT', 'CONCENTRATION', 'DAMAGE', 'SAVE']
     },
     'Catapult': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Transmutation',
+        castingTime: '1 action',
+        range: '60 feet',
+        components: 'S',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Catapult is a 1-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'DEX Save',
+        damageEffect: 'Bludgeoning',
+        description: 'Choose a loose object and launch it through the air with violent force. A creature in its path must dodge or take bludgeoning damage from the hurled missile.',
+        higherLevels: 'The bludgeoning damage increases when you cast the spell with a higher-level slot.',
+        tags: ['TRANSMUTATION', 'DAMAGE', 'SAVE']
     },
     'Catnap': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Enchantment',
+        castingTime: '1 action',
+        range: '30 feet',
+        components: 'S, M (a pinch of sand)',
+        duration: '10 minutes',
         concentration: false,
         ritual: false,
-        description: 'Catnap is a 3-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        description: 'You lull willing creatures into a brief magical sleep that counts as a short rest if they remain asleep for the full duration. It is a strong recovery tool when the party needs to recharge quickly.',
+        tags: ['ENCHANTMENT', 'REST', 'UTILITY']
     },
     'Charm Monster': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Enchantment',
+        castingTime: '1 action',
+        range: '30 feet',
+        components: 'V, S',
+        duration: '1 hour',
         concentration: false,
         ritual: false,
-        description: 'Charm Monster is a 4-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'WIS Save',
+        description: 'You attempt to beguile a creature you can see within range. On a failed Wisdom save, it regards you as a friendly acquaintance until the spell ends unless you or your allies harm it.',
+        higherLevels: 'When cast with a higher-level slot, you can target additional creatures.',
+        tags: ['ENCHANTMENT', 'SOCIAL', 'SAVE', 'UTILITY']
     },
     'Charm Person': {
         school: 'Enchantment',
@@ -2303,15 +2321,18 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['ENCHANTMENT', 'SAVE']
     },
     'Chromatic Orb': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Evocation',
+        castingTime: '1 action',
+        range: '90 feet',
+        components: 'V, S, M (a diamond worth at least 50 gp)',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Chromatic Orb is a 1-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'Ranged Spell Attack',
+        damageEffect: 'Acid, Cold, Fire, Lightning, Poison, or Thunder',
+        description: 'You hurl a shining sphere of energy at a target. On a hit, it deals substantial damage of a type you choose, making it a flexible answer to resistances and vulnerabilities.',
+        higherLevels: 'The orb deals extra damage when cast with a higher-level slot.',
+        tags: ['EVOCATION', 'DAMAGE', 'ELEMENTAL']
     },
     'Circle of Death': {
         school: 'Necromancy',
@@ -2348,15 +2369,17 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['NECROMANCY', 'HEALING']
     },
     'Cloud of Daggers': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Conjuration',
+        castingTime: '1 action',
+        range: '60 feet',
+        components: 'V, S, M (a sliver of glass)',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Cloud of Daggers is a 2-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        damageEffect: 'Slashing',
+        description: 'You create a tight cube of spinning blades that shreds creatures caught inside it. Enemies take slashing damage when they enter the space or start their turn there.',
+        higherLevels: 'The slashing damage increases when cast with a higher-level slot.',
+        tags: ['CONJURATION', 'CONCENTRATION', 'DAMAGE', 'AREA']
     },
     'Cloudkill': {
         school: 'Conjuration',
@@ -2439,15 +2462,17 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['ENCHANTMENT', 'CONCENTRATION', 'DAMAGE', 'UTILITY', 'SAVE']
     },
     'Conjure Barrage': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Conjuration',
+        castingTime: '1 action',
+        range: 'Self (60-foot cone)',
+        components: 'V, S, M (one piece of ammunition or a thrown weapon)',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Conjure Barrage is a 3-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN', 'SUMMONING']
+        attackSave: 'DEX Save',
+        damageEffect: 'Weapon damage',
+        description: 'You throw or fire one weapon and multiply it into a broad magical spray. Creatures in the cone must dodge or take damage from the burst of spectral projectiles.',
+        tags: ['CONJURATION', 'DAMAGE', 'AREA', 'SAVE', 'WEAPON']
     },
     'Conjure Celestial': {
         school: 'Conjuration',
@@ -2576,26 +2601,29 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['TRANSMUTATION', 'CONCENTRATION']
     },
     'Cordon of Arrows': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Transmutation',
+        castingTime: '1 action',
+        range: '5 feet',
+        components: 'V, S, M (four or more arrows or bolts)',
+        duration: '8 hours',
         concentration: false,
         ritual: false,
-        description: 'Cordon of Arrows is a 2-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        description: 'You plant ammunition around an area as a magical perimeter trap. When hostile creatures approach, the stored arrows fly out to strike them automatically until the cordon is exhausted.',
+        tags: ['TRANSMUTATION', 'TRAP', 'DEFENSE', 'UTILITY']
     },
     'Create Bonfire': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Conjuration',
+        castingTime: '1 action',
+        range: '60 feet',
+        components: 'V, S',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Create Bonfire is a cantrip spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'DEX Save',
+        damageEffect: 'Fire',
+        description: 'You conjure a magical bonfire on the ground in a space you can see. Creatures that enter the flames or start their turn there risk taking fire damage, and the blaze can ignite unattended flammable objects.',
+        higherLevels: 'The fire damage increases as you gain levels.',
+        tags: ['CONJURATION', 'CONCENTRATION', 'DAMAGE', 'FIRE']
     },
     'Create or Destroy Water': {
         school: 'Transmutation',
@@ -2634,15 +2662,16 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['ILLUSION']
     },
     'Crown of Madness': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Enchantment',
+        castingTime: '1 action',
+        range: '120 feet',
+        components: 'V, S',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Crown of Madness is a 2-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'WIS Save',
+        description: 'A twisted crown of magic appears on a creature’s head and destabilizes its judgment. On a failed save, the target is charmed and forced into erratic violence against those around it.',
+        tags: ['ENCHANTMENT', 'CONCENTRATION', 'CONTROL', 'SAVE']
     },
     'Dancing Lights': {
         school: 'Evocation',
@@ -2781,15 +2810,17 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['ENCHANTMENT', 'CONCENTRATION', 'DAMAGE', 'UTILITY', 'SAVE']
     },
     'Dragon\'s Breath': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Transmutation',
+        castingTime: '1 bonus action',
+        range: 'Touch',
+        components: 'V, S, M (a hot pepper)',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Dragon\'s Breath is a 2-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        damageEffect: 'Acid, cold, fire, lightning, or poison',
+        description: 'You empower a willing creature to exhale destructive elemental energy in a short cone. Each blast can scorch clustered foes with the damage type you chose when casting the spell.',
+        higherLevels: 'The breath weapon becomes stronger when cast with a higher-level slot.',
+        tags: ['TRANSMUTATION', 'CONCENTRATION', 'DAMAGE', 'ELEMENTAL']
     },
     'Dream': {
         school: 'Illusion',
@@ -2803,37 +2834,40 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['ILLUSION', 'DAMAGE', 'UTILITY', 'SAVE']
     },
     'Elemental Bane': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Transmutation',
+        castingTime: '1 action',
+        range: '90 feet',
+        components: 'V, S',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Elemental Bane is a 4-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'CON Save',
+        description: 'You weaken a creature’s defenses against one chosen energy type. A failed save strips away resistance to that element and causes the target to take extra damage the first time it suffers that type each round.',
+        tags: ['TRANSMUTATION', 'CONCENTRATION', 'DEBUFF', 'ELEMENTAL', 'SAVE']
     },
     'Elemental Weapon': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Transmutation',
+        castingTime: '1 action',
+        range: 'Touch',
+        components: 'V, S',
+        duration: 'Up to 1 hour',
+        concentration: true,
         ritual: false,
-        description: 'Elemental Weapon is a 3-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        damageEffect: 'Acid, cold, fire, lightning, or thunder',
+        description: 'You infuse a nonmagical weapon with elemental force. The weapon becomes magical, gains a bonus to hit, and deals extra energy damage of a type you choose.',
+        higherLevels: 'Using a higher-level slot increases the weapon bonus and extra elemental damage.',
+        tags: ['TRANSMUTATION', 'CONCENTRATION', 'BUFF', 'WEAPON', 'ELEMENTAL']
     },
     'Elementalism': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Transmutation',
+        castingTime: '1 action',
+        range: '30 feet',
+        components: 'V, S',
+        duration: 'Instantaneous or up to 1 hour',
         concentration: false,
         ritual: false,
-        description: 'Elementalism is a cantrip spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        description: 'You shape a minor expression of elemental power to create a small practical effect involving air, earth, fire, or water. It is a utility cantrip meant for flavor, problem-solving, and light environmental interaction rather than direct damage.',
+        tags: ['TRANSMUTATION', 'UTILITY', 'ELEMENTAL']
     },
     'Enhance Ability': {
         school: 'Transmutation',
@@ -2938,15 +2972,15 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['TRANSMUTATION', 'DAMAGE']
     },
     'Feign Death': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Necromancy',
+        castingTime: '1 action',
+        range: 'Touch',
+        components: 'V, S, M (a pinch of graveyard dirt)',
+        duration: '1 hour',
         concentration: false,
-        ritual: false,
-        description: 'Feign Death is a 3-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        ritual: true,
+        description: 'You place a willing creature into a deathlike trance. It appears dead to outward inspection, resists poison and disease, and can be hidden, transported, or protected while the magic lasts.',
+        tags: ['NECROMANCY', 'RITUAL', 'UTILITY', 'DEFENSE']
     },
     'Find the Path': {
         school: 'Divination',
@@ -2993,15 +3027,16 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['EVOCATION', 'DAMAGE']
     },
     'Flame Arrows': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Transmutation',
+        castingTime: '1 action',
+        range: 'Touch',
+        components: 'V, S',
+        duration: 'Up to 1 hour',
+        concentration: true,
         ritual: false,
-        description: 'Flame Arrows is a 3-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        damageEffect: 'Fire',
+        description: 'You enchant ammunition so it burns with magical flame. A number of hits made with the affected arrows or bolts deal extra fire damage before the enchantment is spent.',
+        tags: ['TRANSMUTATION', 'CONCENTRATION', 'DAMAGE', 'FIRE', 'WEAPON']
     },
     'Flame Blade': {
         school: 'Evocation',
@@ -3050,37 +3085,41 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['ABJURATION', 'RITUAL', 'DAMAGE', 'UTILITY']
     },
     'Fount of Moonlight': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Evocation',
+        castingTime: '1 bonus action',
+        range: 'Self',
+        components: 'V, S',
+        duration: 'Up to 10 minutes',
+        concentration: true,
         ritual: false,
-        description: 'Fount of Moonlight is a 4-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        damageEffect: 'Radiant',
+        description: 'Moonlit power pours from you in a bright supernatural glow. The spell lights the area and empowers your offense with radiant energy, making you feel like a living beacon in battle.',
+        tags: ['EVOCATION', 'CONCENTRATION', 'RADIANT', 'AURA', 'BUFF']
     },
     'Friends': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Enchantment',
+        castingTime: '1 action',
+        range: 'Self',
+        components: 'S, M (a bit of makeup applied to the face)',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Friends is a cantrip spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        description: 'You subtly influence a creature for a short conversation, gaining advantage on Charisma checks directed at it while the spell lasts. When the magic ends, the creature realizes you used magic to affect its mood.',
+        tags: ['ENCHANTMENT', 'CONCENTRATION', 'SOCIAL', 'UTILITY']
     },
     'Frostbite': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Evocation',
+        castingTime: '1 action',
+        range: '60 feet',
+        components: 'V, S',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Frostbite is a cantrip spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'CON Save',
+        damageEffect: 'Cold',
+        description: 'You numb a creature with killing frost. On a failed Constitution save it takes cold damage, and the chill throws it off balance enough to hinder its next weapon attack.',
+        higherLevels: 'The cold damage increases at higher character levels.',
+        tags: ['EVOCATION', 'DAMAGE', 'COLD', 'DEBUFF', 'SAVE']
     },
     'Gaseous Form': {
         school: 'Transmutation',
@@ -3139,26 +3178,29 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['ABJURATION', 'DAMAGE', 'SUMMONING', 'UTILITY', 'SAVE']
     },
     'Grasping Vine': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Conjuration',
+        castingTime: '1 bonus action',
+        range: '30 feet',
+        components: 'V, S',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Grasping Vine is a 4-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        description: 'You conjure a magical vine that lashes out and drags creatures across the battlefield. It is primarily a positioning and control spell rather than a direct damage tool.',
+        tags: ['CONJURATION', 'CONCENTRATION', 'CONTROL', 'UTILITY']
     },
     'Green-Flame Blade': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Evocation',
+        castingTime: '1 action',
+        range: 'Self (5-foot radius)',
+        components: 'S, M (a melee weapon worth at least 1 sp)',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Green-Flame Blade is a cantrip spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'Melee Weapon Attack',
+        damageEffect: 'Fire',
+        description: 'You make a melee weapon attack wrapped in green magical fire. On a hit, the target takes the weapon’s normal damage, and the flame can leap to a second nearby creature and burn it as well.',
+        higherLevels: 'At 5th, 11th, and 17th level, both the primary hit and the leaping flame deal more fire damage.',
+        tags: ['EVOCATION', 'DAMAGE', 'FIRE', 'WEAPON']
     },
     'Guards and Wards': {
         school: 'Abjuration',
@@ -3183,15 +3225,17 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['EVOCATION', 'CONCENTRATION', 'UTILITY', 'SAVE']
     },
     'Hail of Thorns': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Conjuration',
+        castingTime: '1 bonus action',
+        range: 'Self',
+        components: 'V',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Hail of Thorns is a 1-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        damageEffect: 'Piercing',
+        description: 'The next time you hit with a ranged weapon attack before the spell ends, the shot erupts into a spray of thorns. The target and nearby creatures can take piercing damage if they fail their save.',
+        higherLevels: 'The piercing burst becomes stronger when cast with a higher-level slot.',
+        tags: ['CONJURATION', 'CONCENTRATION', 'DAMAGE', 'WEAPON']
     },
     'Hallow': {
         school: 'Evocation',
@@ -3273,26 +3317,30 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['ENCHANTMENT', 'CONCENTRATION', 'SAVE']
     },
     'Hunger of Hadar': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Conjuration',
+        castingTime: '1 action',
+        range: '150 feet',
+        components: 'V, S, M (a pickled octopus tentacle)',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Hunger of Hadar is a 3-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        damageEffect: 'Cold and acid',
+        description: 'You open a writhing void of otherworldly darkness that chills and tears at creatures trapped within it. The area is hard to navigate, blocks vision, and punishes enemies at the start and end of their turns.',
+        tags: ['CONJURATION', 'CONCENTRATION', 'DAMAGE', 'AREA', 'CONTROL']
     },
     'Ice Knife': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Conjuration',
+        castingTime: '1 action',
+        range: '60 feet',
+        components: 'S, M (a drop of water or a piece of ice)',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Ice Knife is a 1-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'Ranged Spell Attack / DEX Save',
+        damageEffect: 'Piercing and cold',
+        description: 'You hurl a shard of ice at a creature. On a hit it deals piercing damage, then it explodes in a burst of freezing magic that can injure nearby creatures.',
+        higherLevels: 'The cold burst becomes stronger when cast with a higher-level slot.',
+        tags: ['CONJURATION', 'DAMAGE', 'COLD', 'AREA']
     },
     'Ice Storm': {
         school: 'Evocation',
@@ -3375,26 +3423,27 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['CONJURATION', 'CONCENTRATION', 'DAMAGE', 'SAVE']
     },
     'Intellect Fortress': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Abjuration',
+        castingTime: '1 action',
+        range: '30 feet',
+        components: 'V',
+        duration: 'Up to 1 hour',
+        concentration: true,
         ritual: false,
-        description: 'Intellect Fortress is a 3-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        description: 'You reinforce a mind with psionic defenses. The protected creature gains resistance to psychic harm and improved resilience against effects that assault Intelligence, Wisdom, or Charisma.',
+        tags: ['ABJURATION', 'CONCENTRATION', 'DEFENSE', 'SUPPORT']
     },
     'Jallarzi\'s Storm of Radiance': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Evocation',
+        castingTime: '1 action',
+        range: '120 feet',
+        components: 'V, S, M',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Jallarzi\'s Storm of Radiance is a 5-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        damageEffect: 'Radiant',
+        description: 'You call down a brilliant magical storm that batters and pressures enemies in a chosen area. The spell blends battlefield control with repeated radiant punishment and strong visual disruption.',
+        tags: ['EVOCATION', 'CONCENTRATION', 'RADIANT', 'AREA', 'CONTROL']
     },
     'Jump': {
         school: 'Transmutation',
@@ -3430,26 +3479,26 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['DIVINATION']
     },
     'Leomund\'s Secret Chest': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Conjuration',
+        castingTime: '1 action',
+        range: 'Touch',
+        components: 'V, S, M (an exquisite chest and tiny replica worth at least 5,050 gp)',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Leomund\'s Secret Chest is a 4-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        description: 'You hide a valuable chest and its contents on the Ethereal Plane and can later recall it using a miniature replica. It is ideal for secure storage, though letting too much time pass risks losing the chest forever.',
+        tags: ['CONJURATION', 'UTILITY', 'STORAGE']
     },
     'Leomund\'s Tiny Hut': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Evocation',
+        castingTime: '1 minute',
+        range: 'Self (10-foot-radius hemisphere)',
+        components: 'V, S, M (a small crystal bead)',
+        duration: '8 hours',
         concentration: false,
-        ritual: false,
-        description: 'Leomund\'s Tiny Hut is a 3-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        ritual: true,
+        description: 'A stationary dome of force shelters you and your companions from the weather and from many outside threats. It is one of the strongest safe-rest spells for overland travel and wilderness camps.',
+        tags: ['EVOCATION', 'RITUAL', 'DEFENSE', 'UTILITY']
     },
     'Levitate': {
         school: 'Transmutation',
@@ -3486,15 +3535,18 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['EVOCATION', 'DAMAGE', 'SAVE']
     },
     'Lightning Lure': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Evocation',
+        castingTime: '1 action',
+        range: 'Self (15-foot radius)',
+        components: 'V',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Lightning Lure is a cantrip spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'STR Save',
+        damageEffect: 'Lightning',
+        description: 'You lash out with a strand of crackling energy at a creature near you. On a failed Strength save, the target is pulled closer, and if it ends up within reach it takes lightning damage.',
+        higherLevels: 'The lightning damage increases at higher character levels.',
+        tags: ['EVOCATION', 'DAMAGE', 'LIGHTNING', 'CONTROL', 'SAVE']
     },
     'Locate Animals or Plants': {
         school: 'Divination',
@@ -3530,15 +3582,17 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['ILLUSION', 'RITUAL', 'UTILITY']
     },
     'Magic Stone': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Transmutation',
+        castingTime: '1 bonus action',
+        range: 'Touch',
+        components: 'V, S',
+        duration: '1 minute',
         concentration: false,
         ritual: false,
-        description: 'Magic Stone is a cantrip spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'Ranged Spell Attack',
+        damageEffect: 'Bludgeoning',
+        description: 'You imbue up to three pebbles with magic. You or someone else can hurl them or sling them as magical attacks, and a hit deals bludgeoning damage using your spellcasting ability.',
+        tags: ['TRANSMUTATION', 'DAMAGE', 'UTILITY', 'WEAPON']
     },
     'Major Image': {
         school: 'Illusion',
@@ -3609,26 +3663,32 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['ABJURATION', 'DAMAGE']
     },
     'Mind Sliver': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Enchantment',
+        castingTime: '1 action',
+        range: '60 feet',
+        components: 'V',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Mind Sliver is a cantrip spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'INT Save',
+        damageEffect: 'Psychic',
+        description: 'You drive a spike of psychic static into a creature’s mind. On a failed Intelligence save, it takes psychic damage and becomes more vulnerable to the next saving throw it makes before your next turn ends.',
+        higherLevels: 'The psychic damage increases as you gain levels.',
+        tags: ['ENCHANTMENT', 'DAMAGE', 'PSYCHIC', 'DEBUFF', 'SAVE']
     },
     'Mind Spike': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Divination',
+        castingTime: '1 action',
+        range: '60 feet',
+        components: 'S',
+        duration: 'Up to 1 hour',
+        concentration: true,
         ritual: false,
-        description: 'Mind Spike is a 2-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'WIS Save',
+        damageEffect: 'Psychic',
+        description: 'You drive psychic pain into a creature and lock onto its presence. A failed save deals psychic damage, and the spell lets you keep track of the target’s location for the duration.',
+        higherLevels: 'The psychic damage increases when cast with a higher-level slot.',
+        tags: ['DIVINATION', 'CONCENTRATION', 'DAMAGE', 'PSYCHIC', 'TRACKING']
     },
     'Mirage Arcane': {
         school: 'Illusion',
@@ -3676,37 +3736,38 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['ENCHANTMENT', 'CONCENTRATION', 'HEALING', 'DAMAGE', 'UTILITY', 'SAVE']
     },
     'Mordenkainen\'s Faithful Hound': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Conjuration',
+        castingTime: '1 action',
+        range: '30 feet',
+        components: 'V, S, M (a tiny silver whistle, a piece of bone, and a thread)',
+        duration: '8 hours',
         concentration: false,
         ritual: false,
-        description: 'Mordenkainen\'s Faithful Hound is a 4-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        description: 'You summon an invisible watchdog that guards a chosen point and bites intruders that come too near. It is a dependable warding spell for camps, rooms, or treasure caches.',
+        tags: ['CONJURATION', 'DEFENSE', 'TRAP', 'UTILITY']
     },
     'Mordenkainen\'s Magnificent Mansion': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Conjuration',
+        castingTime: '1 minute',
+        range: '300 feet',
+        components: 'V, S, M (a miniature portal carved from ivory, a small piece of polished marble, and a tiny silver spoon)',
+        duration: '24 hours',
         concentration: false,
         ritual: false,
-        description: 'Mordenkainen\'s Magnificent Mansion is a 7-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        description: 'You create a lavish extradimensional residence with servants, meals, and comfortable shelter for you and your guests. It is among the best long-rest and downtime sanctuaries in the game.',
+        tags: ['CONJURATION', 'UTILITY', 'SHELTER']
     },
     'Mordenkainen\'s Sword': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Evocation',
+        castingTime: '1 bonus action',
+        range: '60 feet',
+        components: 'V, S, M (a miniature platinum sword with a grip and pommel of copper and zinc, worth 250 gp)',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Mordenkainen\'s Sword is a 7-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        damageEffect: 'Force',
+        description: 'A floating sword of force appears and slashes at creatures you direct. It is a mobile source of force damage that can be repositioned from turn to turn.',
+        tags: ['EVOCATION', 'CONCENTRATION', 'DAMAGE', 'FORCE']
     },
     'Move Earth': {
         school: 'Transmutation',
@@ -3731,37 +3792,41 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['ABJURATION']
     },
     'Otiluke\'s Freezing Sphere': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Evocation',
+        castingTime: '1 action',
+        range: '300 feet',
+        components: 'V, S, M (a small crystal sphere)',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Otiluke\'s Freezing Sphere is a 6-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'CON Save',
+        damageEffect: 'Cold',
+        description: 'You launch a freezing globe that erupts in a punishing blast of cold. It can devastate creatures in a large area and can also freeze bodies of water for tactical use.',
+        higherLevels: 'The cold damage increases when cast with a higher-level slot.',
+        tags: ['EVOCATION', 'DAMAGE', 'COLD', 'AREA', 'SAVE']
     },
     'Otiluke\'s Resilient Sphere': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Evocation',
+        castingTime: '1 action',
+        range: '30 feet',
+        components: 'V, S, M (a hemispherical piece of clear crystal and a matching hemispherical piece of gum arabic)',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Otiluke\'s Resilient Sphere is a 4-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'DEX Save',
+        description: 'You trap a creature or object inside a nearly indestructible sphere of force. The target is sealed off from outside influence, making this a potent control and protection effect.',
+        tags: ['EVOCATION', 'CONCENTRATION', 'CONTROL', 'DEFENSE', 'SAVE']
     },
     'Otto\'s Irresistible Dance': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Enchantment',
+        castingTime: '1 action',
+        range: '30 feet',
+        components: 'V',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Otto\'s Irresistible Dance is a 6-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        description: 'You overwhelm a creature with compulsive dance magic. The victim lurches into motion, struggles to defend itself, and can spend actions trying to shake the spell off.',
+        tags: ['ENCHANTMENT', 'CONCENTRATION', 'CONTROL', 'DEBUFF']
     },
     'Passwall': {
         school: 'Transmutation',
@@ -3775,15 +3840,16 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['TRANSMUTATION']
     },
     'Phantasmal Force': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Illusion',
+        castingTime: '1 action',
+        range: '60 feet',
+        components: 'V, S, M (a bit of fleece)',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Phantasmal Force is a 2-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'INT Save',
+        description: 'You create a convincing illusion inside a creature’s mind, making it believe the phantasm is real. Clever use of the spell can distract, restrain behavior, or even inflict psychosomatic harm.',
+        tags: ['ILLUSION', 'CONCENTRATION', 'CONTROL', 'SAVE', 'UTILITY']
     },
     'Phantasmal Killer': {
         school: 'Illusion',
@@ -3843,26 +3909,28 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['CONJURATION', 'DAMAGE', 'SAVE']
     },
     'Power Word Fortify': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Enchantment',
+        castingTime: '1 action',
+        range: '60 feet',
+        components: 'V',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Power Word Fortify is a 7-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        damageEffect: 'Healing / temp HP',
+        description: 'You speak a word of supernatural reinforcement that toughens allies for the fight ahead. The spell restores durability and bolsters a small group with powerful defensive staying power.',
+        tags: ['ENCHANTMENT', 'SUPPORT', 'HEALING', 'DEFENSE']
     },
     'Power Word Heal': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Evocation',
+        castingTime: '1 action',
+        range: 'Touch',
+        components: 'V, S',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Power Word Heal is a 9-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN', 'HEALING']
+        damageEffect: 'Healing',
+        description: 'You speak a supreme word of restoration and pour overwhelming life back into a creature. It regains a tremendous amount of health and can be freed from several crippling conditions at once.',
+        tags: ['EVOCATION', 'HEALING', 'SUPPORT']
     },
     'Power Word Kill': {
         school: 'Enchantment',
@@ -3942,26 +4010,26 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['ABJURATION', 'CONCENTRATION', 'DAMAGE']
     },
     'Pyrotechnics': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Transmutation',
+        castingTime: '1 action',
+        range: '60 feet',
+        components: 'V, S',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Pyrotechnics is a 2-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        description: 'Using an existing flame, you either explode it into dazzling fireworks or transform it into a cloud of thick smoke. The spell offers either battlefield confusion or vision control depending on your choice.',
+        tags: ['TRANSMUTATION', 'UTILITY', 'CONTROL']
     },
     'Rary\'s Telepathic Bond': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Divination',
+        castingTime: '1 action',
+        range: '30 feet',
+        components: 'V, S, M (pieces of eggshell from two different kinds of creatures)',
+        duration: '1 hour',
         concentration: false,
-        ritual: false,
-        description: 'Rary\'s Telepathic Bond is a 5-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        ritual: true,
+        description: 'You link willing creatures in a private telepathic network so they can communicate across distance without speaking aloud. It is one of the best coordination spells for scouting and tactical play.',
+        tags: ['DIVINATION', 'RITUAL', 'UTILITY', 'COMMUNICATION']
     },
     'Ray of Enfeeblement': {
         school: 'Necromancy',
@@ -3975,15 +4043,18 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['NECROMANCY', 'CONCENTRATION', 'DAMAGE', 'SAVE']
     },
     'Ray of Sickness': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Necromancy',
+        castingTime: '1 action',
+        range: '60 feet',
+        components: 'V, S',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Ray of Sickness is a 1-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'Ranged Spell Attack / CON Save',
+        damageEffect: 'Poison',
+        description: 'A ray of nauseating green energy lashes out at a target. On a hit it deals poison damage, and the creature may also be left poisoned if it fails its saving throw.',
+        higherLevels: 'The poison damage increases when cast with a higher-level slot.',
+        tags: ['NECROMANCY', 'DAMAGE', 'POISON', 'DEBUFF']
     },
     'Regenerate': {
         school: 'Transmutation',
@@ -4140,26 +4211,26 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['ILLUSION', 'HEALING', 'DAMAGE']
     },
     'Skill Empowerment': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Transmutation',
+        castingTime: '1 action',
+        range: 'Touch',
+        components: 'V, S',
+        duration: 'Up to 1 hour',
+        concentration: true,
         ritual: false,
-        description: 'Skill Empowerment is a 5-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        description: 'You magnify a creature’s ability with one chosen skill, granting exceptional competence for the spell’s duration. It is an excellent exploration and social utility buff when precision matters.',
+        tags: ['TRANSMUTATION', 'CONCENTRATION', 'BUFF', 'UTILITY']
     },
     'Skywrite': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
-        ritual: false,
-        description: 'Skywrite is a 2-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        school: 'Transmutation',
+        castingTime: '1 action',
+        range: 'Sight',
+        components: 'V, S',
+        duration: 'Up to 1 hour',
+        concentration: true,
+        ritual: true,
+        description: 'You shape clouds into a visible message in the sky. It is a flavorful but genuinely useful spell for signaling, warnings, announcements, and dramatic entrances.',
+        tags: ['TRANSMUTATION', 'CONCENTRATION', 'RITUAL', 'UTILITY']
     },
     'Sleep': {
         school: 'Enchantment',
@@ -4196,26 +4267,29 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['TRANSMUTATION', 'CONCENTRATION', 'DAMAGE', 'SAVE']
     },
     'Snare': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Abjuration',
+        castingTime: '1 minute',
+        range: 'Touch',
+        components: 'S, M (25 feet of rope)',
+        duration: 'Until dispelled or triggered',
         concentration: false,
-        ritual: false,
-        description: 'Snare is a 1-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        ritual: true,
+        description: 'You create a nearly invisible magical trap using rope. When a creature enters the warded space, the snare springs and hoists the target, making it a strong ambush or camp-defense tool.',
+        tags: ['ABJURATION', 'RITUAL', 'TRAP', 'CONTROL']
     },
     'Sorcerous Burst': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Evocation',
+        castingTime: '1 action',
+        range: '120 feet',
+        components: 'V, S',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Sorcerous Burst is a cantrip spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'Ranged Spell Attack',
+        damageEffect: 'Acid, Cold, Fire, Lightning, Poison, Psychic, or Thunder',
+        description: 'You fire raw sorcerous energy at a creature or object within range. On a hit, it takes damage of a type you choose, and exceptional rolls can cause the burst to surge for even more damage.',
+        higherLevels: 'The spell’s damage increases at 5th, 11th, and 17th level.',
+        tags: ['EVOCATION', 'DAMAGE', 'ELEMENTAL']
     },
     'Spare the Dying': {
         school: 'Necromancy',
@@ -4273,37 +4347,43 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['TRANSMUTATION', 'CONCENTRATION', 'UTILITY']
     },
     'Staggering Smite': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Evocation',
+        castingTime: '1 bonus action',
+        range: 'Self',
+        components: 'V',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Staggering Smite is a 4-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        damageEffect: 'Psychic',
+        description: 'You charge your next melee strike with destabilizing magic. On a hit, the attack deals extra psychic damage and can leave the target disoriented, weakened, and easier to pressure.',
+        tags: ['EVOCATION', 'CONCENTRATION', 'DAMAGE', 'PSYCHIC', 'WEAPON']
     },
     'Starry Wisp': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Evocation',
+        castingTime: '1 action',
+        range: '60 feet',
+        components: 'V, S',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Starry Wisp is a cantrip spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'Ranged Spell Attack',
+        damageEffect: 'Radiant',
+        description: 'You launch a mote of starlight at a creature or object within range. On a hit, it takes radiant damage, sheds dim light, and cannot benefit from being invisible until the end of your next turn.',
+        higherLevels: 'The radiant damage increases at 5th, 11th, and 17th level.',
+        tags: ['EVOCATION', 'DAMAGE', 'RADIANT', 'UTILITY']
     },
     'Steel Wind Strike': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Conjuration',
+        castingTime: '1 action',
+        range: '30 feet',
+        components: 'S, M (a melee weapon worth at least 1 sp)',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Steel Wind Strike is a 5-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'Melee Spell Attack',
+        damageEffect: 'Force',
+        description: 'You blur across the battlefield and strike multiple creatures with impossible speed. Each target can take force damage, and afterward you can teleport to one of the spaces near your victims.',
+        tags: ['CONJURATION', 'DAMAGE', 'FORCE', 'MOBILITY']
     },
     'Stinking Cloud': {
         school: 'Conjuration',
@@ -4339,92 +4419,92 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['CONJURATION', 'CONCENTRATION', 'DAMAGE', 'SAVE']
     },
     'Summon Aberration': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Conjuration',
+        castingTime: '1 action',
+        range: '90 feet',
+        components: 'V, S, M',
+        duration: 'Up to 1 hour',
+        concentration: true,
         ritual: false,
-        description: 'Summon Aberration is a 4-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN', 'SUMMONING']
+        description: 'You call forth an aberrant spirit to serve you in combat. Its warped form brings a durable summoned ally with strange movement and unsettling supernatural abilities.',
+        tags: ['CONJURATION', 'CONCENTRATION', 'SUMMONING', 'UTILITY']
     },
     'Summon Beast': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Conjuration',
+        castingTime: '1 action',
+        range: '90 feet',
+        components: 'V, S, M',
+        duration: 'Up to 1 hour',
+        concentration: true,
         ritual: false,
-        description: 'Summon Beast is a 2-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN', 'SUMMONING']
+        description: 'You summon a bestial spirit that can scout, fight, and harry enemies on your behalf. It is a flexible primal companion for exploration and combat.',
+        tags: ['CONJURATION', 'CONCENTRATION', 'SUMMONING', 'UTILITY']
     },
     'Summon Celestial': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Conjuration',
+        castingTime: '1 action',
+        range: '90 feet',
+        components: 'V, S, M',
+        duration: 'Up to 1 hour',
+        concentration: true,
         ritual: false,
-        description: 'Summon Celestial is a 5-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN', 'SUMMONING']
+        description: 'You summon a radiant celestial spirit to protect companions or strike down foes. The ally it creates is sturdy, holy, and highly effective in sustained fights.',
+        tags: ['CONJURATION', 'CONCENTRATION', 'SUMMONING', 'RADIANT', 'SUPPORT']
     },
     'Summon Construct': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Conjuration',
+        castingTime: '1 action',
+        range: '90 feet',
+        components: 'V, S, M',
+        duration: 'Up to 1 hour',
+        concentration: true,
         ritual: false,
-        description: 'Summon Construct is a 4-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN', 'SUMMONING']
+        description: 'You summon a construct spirit into a physical frame and direct it in battle. It specializes in toughness, obedience, and occupying valuable space on the field.',
+        tags: ['CONJURATION', 'CONCENTRATION', 'SUMMONING', 'UTILITY']
     },
     'Summon Elemental': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Conjuration',
+        castingTime: '1 action',
+        range: '90 feet',
+        components: 'V, S, M',
+        duration: 'Up to 1 hour',
+        concentration: true,
         ritual: false,
-        description: 'Summon Elemental is a 4-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN', 'SUMMONING']
+        description: 'You call forth an elemental spirit in a form tied to air, earth, fire, or water. It gives you a customizable summoned ally suited to different battlefield roles.',
+        tags: ['CONJURATION', 'CONCENTRATION', 'SUMMONING', 'ELEMENTAL']
     },
     'Summon Fey': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Conjuration',
+        castingTime: '1 action',
+        range: '90 feet',
+        components: 'V, S, M',
+        duration: 'Up to 1 hour',
+        concentration: true,
         ritual: false,
-        description: 'Summon Fey is a 3-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN', 'SUMMONING']
+        description: 'You call a fey spirit into the world as a nimble magical ally. It blends mobility and trickery, making it especially effective for harassment and control.',
+        tags: ['CONJURATION', 'CONCENTRATION', 'SUMMONING', 'UTILITY']
     },
     'Summon Fiend': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Conjuration',
+        castingTime: '1 action',
+        range: '90 feet',
+        components: 'V, S, M',
+        duration: 'Up to 1 hour',
+        concentration: true,
         ritual: false,
-        description: 'Summon Fiend is a 6-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN', 'SUMMONING']
+        description: 'You summon a fiendish spirit to serve as a terrifying attacker. The spell brings aggressive offense and menace while keeping the creature bound to your command.',
+        tags: ['CONJURATION', 'CONCENTRATION', 'SUMMONING', 'DAMAGE']
     },
     'Summon Undead': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Necromancy',
+        castingTime: '1 action',
+        range: '90 feet',
+        components: 'V, S, M',
+        duration: 'Up to 1 hour',
+        concentration: true,
         ritual: false,
-        description: 'Summon Undead is a 3-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN', 'SUMMONING']
+        description: 'You bind an undead spirit into a temporary body and direct it in combat. It gives necromancers a focused summoned horror that can pressure enemies and hold the line.',
+        tags: ['NECROMANCY', 'CONCENTRATION', 'SUMMONING', 'UTILITY']
     },
     'Sunbeam': {
         school: 'Evocation',
@@ -4449,15 +4529,18 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['EVOCATION', 'DAMAGE', 'SAVE']
     },
     'Sword Burst': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Conjuration',
+        castingTime: '1 action',
+        range: 'Self (5-foot radius)',
+        components: 'V',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Sword Burst is a cantrip spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'DEX Save',
+        damageEffect: 'Force',
+        description: 'You conjure a brief circle of spectral blades that flashes around you. Nearby creatures must dodge the burst or take force damage.',
+        higherLevels: 'The force damage increases as you gain levels.',
+        tags: ['CONJURATION', 'DAMAGE', 'FORCE', 'SAVE']
     },
     'Symbol': {
         school: 'Abjuration',
@@ -4471,26 +4554,29 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['ABJURATION', 'DAMAGE', 'UTILITY', 'SAVE']
     },
     'Tasha\'s Bubbling Cauldron': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Conjuration',
+        castingTime: '1 action',
+        range: '5 feet',
+        components: 'V, S, M',
+        duration: '10 minutes',
         concentration: false,
         ritual: false,
-        description: 'Tasha\'s Bubbling Cauldron is a 6-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        description: 'You conjure a magical cauldron that brews potent restorative or empowering concoctions for your group. It is a flavorful support spell focused on preparation and magical sustenance.',
+        tags: ['CONJURATION', 'SUPPORT', 'UTILITY']
     },
     'Tasha\'s Caustic Brew': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Evocation',
+        castingTime: '1 action',
+        range: 'Self (30-foot line)',
+        components: 'V, S, M (a bit of rotten food)',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Tasha\'s Caustic Brew is a 1-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'DEX Save',
+        damageEffect: 'Acid',
+        description: 'You spray a line of bubbling acid that clings to creatures it hits. The magic continues burning until the target scrapes it off or the spell ends.',
+        higherLevels: 'The acid damage increases when cast with a higher-level slot.',
+        tags: ['EVOCATION', 'CONCENTRATION', 'DAMAGE', 'ACID', 'AREA']
     },
     'Telekinesis': {
         school: 'Transmutation',
@@ -4526,26 +4612,32 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['CONJURATION', 'UTILITY']
     },
     'Thorn Whip': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Transmutation',
+        castingTime: '1 action',
+        range: '30 feet',
+        components: 'V, S, M (the stem of a plant with thorns)',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Thorn Whip is a cantrip spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'Melee Spell Attack',
+        damageEffect: 'Piercing',
+        description: 'You create a vine-like lash covered in thorns and strike a creature within range. On a hit, it takes piercing damage and is pulled closer to you.',
+        higherLevels: 'The piercing damage increases as you gain levels.',
+        tags: ['TRANSMUTATION', 'DAMAGE', 'CONTROL', 'WEAPON']
     },
     'Thunderclap': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Evocation',
+        castingTime: '1 action',
+        range: 'Self (5-foot radius)',
+        components: 'S',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Thunderclap is a cantrip spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'CON Save',
+        damageEffect: 'Thunder',
+        description: 'You create a sudden peal of explosive sound around yourself. Creatures close to you must withstand the blast or take thunder damage.',
+        higherLevels: 'The thunder damage increases as you gain levels.',
+        tags: ['EVOCATION', 'DAMAGE', 'THUNDER', 'SAVE']
     },
     'Thunderwave': {
         school: 'Evocation',
@@ -4571,26 +4663,29 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['TRANSMUTATION', 'UTILITY']
     },
     'Tiny Servant': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Transmutation',
+        castingTime: '1 minute',
+        range: 'Touch',
+        components: 'V, S',
+        duration: '8 hours',
         concentration: false,
         ritual: false,
-        description: 'Tiny Servant is a 3-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        description: 'You animate a Tiny object and give it simple instructions. The result is a useful helper for chores, scouting, carrying, or light tactical support.',
+        tags: ['TRANSMUTATION', 'UTILITY', 'SUMMONING']
     },
     'Toll the Dead': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Necromancy',
+        castingTime: '1 action',
+        range: '60 feet',
+        components: 'V, S',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Toll the Dead is a cantrip spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'WIS Save',
+        damageEffect: 'Necrotic',
+        description: 'You point at a creature and ring it with a haunting funeral bell. A failed Wisdom save causes necrotic damage, and already-wounded targets suffer an even harsher toll.',
+        higherLevels: 'The spell’s damage increases as you gain levels.',
+        tags: ['NECROMANCY', 'DAMAGE', 'NECROTIC', 'SAVE']
     },
     'Tongues': {
         school: 'Divination',
@@ -4604,15 +4699,15 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['DIVINATION']
     },
     'Transmute Rock': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Transmutation',
+        castingTime: '1 action',
+        range: '120 feet',
+        components: 'V, S, M (clay and water)',
+        duration: 'Until dispelled',
         concentration: false,
         ritual: false,
-        description: 'Transmute Rock is a 5-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        description: 'You transform stone into thick mud or harden mud into stone over a broad area. The spell is excellent for reshaping terrain, trapping enemies, and controlling movement.',
+        tags: ['TRANSMUTATION', 'CONTROL', 'TERRAIN', 'UTILITY']
     },
     'Transport via Plants': {
         school: 'Conjuration',
@@ -4670,15 +4765,16 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['DIVINATION', 'CONCENTRATION', 'DAMAGE']
     },
     'Tsunami': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Conjuration',
+        castingTime: '1 minute',
+        range: 'Sight',
+        components: 'V, S',
+        duration: 'Up to 6 rounds',
+        concentration: true,
         ritual: false,
-        description: 'Tsunami is a 8-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        damageEffect: 'Bludgeoning',
+        description: 'You raise an enormous wall of water and send it crashing across the battlefield. The wave batters, carries, and scatters creatures while dominating the terrain around it.',
+        tags: ['CONJURATION', 'CONCENTRATION', 'DAMAGE', 'AREA', 'CONTROL']
     },
     'Unseen Servant': {
         school: 'Conjuration',
@@ -4704,15 +4800,17 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['NECROMANCY', 'CONCENTRATION', 'HEALING', 'DAMAGE']
     },
     'Vitriolic Sphere': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
+        school: 'Evocation',
+        castingTime: '1 action',
+        range: '150 feet',
+        components: 'V, S, M (a drop of bile)',
+        duration: 'Instantaneous',
         concentration: false,
         ritual: false,
-        description: 'Vitriolic Sphere is a 4-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'DEX Save',
+        damageEffect: 'Acid',
+        description: 'You hurl a corrosive orb that bursts into acid. Creatures in the area take an initial blast and, on a failed save, continue to burn from the lingering chemical magic.',
+        tags: ['EVOCATION', 'DAMAGE', 'ACID', 'AREA', 'SAVE']
     },
     'Wall of Ice': {
         school: 'Evocation',
@@ -4816,15 +4914,18 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['EVOCATION', 'CONCENTRATION', 'DAMAGE', 'SAVE']
     },
     'Witch Bolt': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Evocation',
+        castingTime: '1 action',
+        range: '30 feet',
+        components: 'V, S, M (a twig from a tree struck by lightning)',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Witch Bolt is a 1-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        attackSave: 'Ranged Spell Attack',
+        damageEffect: 'Lightning',
+        description: 'A crackling beam of lightning links you to a creature. If the opening attack hits, you can continue pouring energy into the target on later turns while maintaining concentration.',
+        higherLevels: 'The initial lightning damage increases when cast with a higher-level slot.',
+        tags: ['EVOCATION', 'CONCENTRATION', 'DAMAGE', 'LIGHTNING']
     },
     'Word of Recall': {
         school: 'Conjuration',
@@ -4838,15 +4939,15 @@ export const spellDetailsMap: Readonly<Record<string, SpellDetail>> = {
         tags: ['CONJURATION', 'UTILITY']
     },
     'Yolande\'s Regal Presence': {
-        school: 'Unknown',
-        castingTime: 'See official rules',
-        range: 'See official rules',
-        components: 'See official rules',
-        duration: 'See official rules',
-        concentration: false,
+        school: 'Enchantment',
+        castingTime: '1 action',
+        range: 'Self',
+        components: 'V, S, M',
+        duration: 'Up to 1 minute',
+        concentration: true,
         ritual: false,
-        description: 'Yolande\'s Regal Presence is a 5-level spell in the current catalog. Detailed local rules text is not yet available; use the source reference link for complete wording.',
-        tags: ['UNKNOWN']
+        description: 'You radiate sovereign magical authority that forces foes to react to your commanding presence. The spell emphasizes control, intimidation, and battlefield disruption through sheer royal force of will.',
+        tags: ['ENCHANTMENT', 'CONCENTRATION', 'CONTROL', 'AURA']
     },
 
 };
