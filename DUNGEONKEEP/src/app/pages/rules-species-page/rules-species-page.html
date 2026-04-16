@@ -68,7 +68,7 @@
             <a class="species-card" [routerLink]="['/rules/species', sp.slug]" [class]="'species-card source-' + sp.sourceCategory">
                 <div class="card-banner">
                     @if (speciesImagePath(sp.slug); as imgSrc) {
-                    <img class="banner-img" [ngClass]="sp.slug" [src]="imgSrc" [alt]="sp.name" loading="lazy" />
+                    <img class="banner-img" [ngClass]="sp.slug" [src]="imgSrc" [alt]="sp.name" [attr.loading]="group.key === 'phb2024' && $index < 6 ? 'eager' : 'lazy'" [attr.fetchpriority]="group.key === 'phb2024' && $index < 6 ? 'high' : 'auto'" decoding="async" />
                     <div class="banner-overlay"></div>
                     } @else {
                     <div class="card-icon">

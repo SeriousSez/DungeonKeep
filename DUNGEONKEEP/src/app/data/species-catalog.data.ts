@@ -1879,5 +1879,5 @@ export const speciesSlugsWithImages = new Set([
 ]);
 
 export function getSpeciesImagePath(slug: string): string | null {
-    return speciesSlugsWithImages.has(slug) ? `/assets/images/species/${slug}.png` : null;
+    return speciesSlugsWithImages.has(slug) ? `/assets/images/species/${slug}.webp` : null;
 }

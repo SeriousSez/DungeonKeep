@@ -5,7 +5,7 @@
     <section class="detail-hero panel" [class]="'detail-hero panel source-' + entry.sourceCategory">
         @if (speciesImagePath(entry.slug); as imgSrc) {
         <div class="hero-portrait">
-            <img [src]="imgSrc" [alt]="entry.name" />
+            <img [src]="imgSrc" [alt]="entry.name" loading="eager" fetchpriority="high" decoding="async" />
         </div>
         } @else {
         <div class="hero-icon">
