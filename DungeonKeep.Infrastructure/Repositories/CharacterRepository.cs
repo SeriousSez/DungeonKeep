@@ -9,14 +9,25 @@ public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : IChara
 {
     public async Task<IReadOnlyList<Character>> GetAccessibleByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return await dbContext.Characters
-            .Include(c => c.OwnerUser)
-            .Include(c => c.CampaignAssignments)
-            .Where(c => c.OwnerUserId == userId
-                || c.CampaignAssignments.Any(assignment => assignment.Campaign != null
-                    && assignment.Campaign.Memberships.Any(membership => membership.UserId == userId && membership.Status == "Active")))
-            .OrderByDescending(c => c.CreatedAtUtc)
-            .ToListAsync(cancellationToken);
+        try
+        {
+            return await dbContext.Characters
+                .Include(c => c.OwnerUser)
+                .Include(c => c.CampaignAssignments)
+                .Where(c => c.OwnerUserId == userId
+                    || c.CampaignAssignments.Any(assignment => assignment.Campaign != null
+                        && assignment.Campaign.Memberships.Any(membership => membership.UserId == userId && membership.Status == "Active")))
+                .OrderByDescending(c => c.CreatedAtUtc)
+                .ToListAsync(cancellationToken);
+        }
+        catch (Exception)
+        {
+            return await dbContext.Characters
+                .Include(c => c.OwnerUser)
+                .Where(c => c.OwnerUserId == userId)
+                .OrderByDescending(c => c.CreatedAtUtc)
+                .ToListAsync(cancellationToken);
+        }
     }
 
     public async Task<bool> DeleteAsync(Guid characterId, CancellationToken cancellationToken = default)
@@ -32,22 +43,44 @@ public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : IChara
     }
     public async Task<IReadOnlyList<Character>> GetByCampaignIdAsync(Guid campaignId, CancellationToken cancellationToken = default)
     {
-        return await dbContext.Characters
-            .Include(c => c.OwnerUser)
-            .Include(c => c.CampaignAssignments)
-            .Where(c => c.CampaignAssignments.Any(assignment => assignment.CampaignId == campaignId))
-            .OrderByDescending(c => c.CreatedAtUtc)
-            .ToListAsync(cancellationToken);
+        try
+        {
+            return await dbContext.Characters
+                .Include(c => c.OwnerUser)
+                .Include(c => c.CampaignAssignments)
+                .Where(c => c.CampaignAssignments.Any(assignment => assignment.CampaignId == campaignId))
+                .OrderByDescending(c => c.CreatedAtUtc)
+                .ToListAsync(cancellationToken);
+        }
+        catch (Exception)
+        {
+            return await dbContext.Characters
+                .Include(c => c.OwnerUser)
+                .Where(c => c.CampaignId == campaignId)
+                .OrderByDescending(c => c.CreatedAtUtc)
+                .ToListAsync(cancellationToken);
+        }
     }
 
     public async Task<IReadOnlyList<Character>> GetUnassignedOwnedByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return await dbContext.Characters
-            .Include(c => c.OwnerUser)
-            .Include(c => c.CampaignAssignments)
-            .Where(c => c.OwnerUserId == userId && !c.CampaignAssignments.Any())
-            .OrderByDescending(c => c.CreatedAtUtc)
-            .ToListAsync(cancellationToken);
+        try
+        {
+            return await dbContext.Characters
+                .Include(c => c.OwnerUser)
+                .Include(c => c.CampaignAssignments)
+                .Where(c => c.OwnerUserId == userId && !c.CampaignAssignments.Any())
+                .OrderByDescending(c => c.CreatedAtUtc)
+                .ToListAsync(cancellationToken);
+        }
+        catch (Exception)
+        {
+            return await dbContext.Characters
+                .Include(c => c.OwnerUser)
+                .Where(c => c.OwnerUserId == userId && (c.CampaignId == null || c.CampaignId == Guid.Empty))
+                .OrderByDescending(c => c.CreatedAtUtc)
+                .ToListAsync(cancellationToken);
+        }
     }
 
     public async Task<Character> AddAsync(Character character, CancellationToken cancellationToken = default)

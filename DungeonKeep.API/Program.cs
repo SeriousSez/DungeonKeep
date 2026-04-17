@@ -131,7 +131,7 @@ static void EnsureBaseSqliteSchema(DungeonKeepDbContext dbContext)
     );
 
     dbContext.Database.ExecuteSqlRaw(
-        "CREATE TABLE IF NOT EXISTS Campaigns (Id TEXT NOT NULL CONSTRAINT PK_Campaigns PRIMARY KEY, Name TEXT NOT NULL, Setting TEXT NOT NULL DEFAULT '', Tone TEXT NOT NULL DEFAULT 'Heroic', LevelStart INTEGER NOT NULL DEFAULT 1, LevelEnd INTEGER NOT NULL DEFAULT 4, Hook TEXT NOT NULL DEFAULT '', NextSession TEXT NOT NULL DEFAULT '', Summary TEXT NOT NULL DEFAULT '', SessionsJson TEXT NOT NULL DEFAULT '[]', NpcsJson TEXT NOT NULL DEFAULT '[]', LootJson TEXT NOT NULL DEFAULT '[]', OpenThreadsJson TEXT NOT NULL DEFAULT '[]', WorldNotesJson TEXT NOT NULL DEFAULT '[]', CampaignMapJson TEXT NOT NULL DEFAULT '{}', CreatedAtUtc TEXT NOT NULL DEFAULT '');"
+        "CREATE TABLE IF NOT EXISTS Campaigns (Id TEXT NOT NULL CONSTRAINT PK_Campaigns PRIMARY KEY, Name TEXT NOT NULL, Setting TEXT NOT NULL DEFAULT '', Tone TEXT NOT NULL DEFAULT 'Heroic', LevelStart INTEGER NOT NULL DEFAULT 1, LevelEnd INTEGER NOT NULL DEFAULT 4, Hook TEXT NOT NULL DEFAULT '', NextSession TEXT NOT NULL DEFAULT '', Summary TEXT NOT NULL DEFAULT '', SessionsJson TEXT NOT NULL DEFAULT '[]', NpcsJson TEXT NOT NULL DEFAULT '[]', LootJson TEXT NOT NULL DEFAULT '[]', OpenThreadsJson TEXT NOT NULL DEFAULT '[]', WorldNotesJson TEXT NOT NULL DEFAULT '[]', CampaignMapJson TEXT NOT NULL DEFAULT '{{}}', CreatedAtUtc TEXT NOT NULL DEFAULT '');"
     );
 
     dbContext.Database.ExecuteSqlRaw(
