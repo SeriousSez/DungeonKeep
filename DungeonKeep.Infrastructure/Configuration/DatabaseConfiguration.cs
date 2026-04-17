@@ -112,7 +112,7 @@ public static class DatabaseConfiguration
             ? dataSource
             : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, dataSource));
 
-        if (TryEnsureDirectoryExists(primaryPath))
+        if (CanWriteToSqlitePath(primaryPath))
         {
             return primaryPath;
         }
@@ -124,11 +124,12 @@ public static class DatabaseConfiguration
         }
 
         var fallbackPath = Path.Combine(fallbackRoot, "DungeonKeep", "App_Data", Path.GetFileName(dataSource));
-        TryEnsureDirectoryExists(fallbackPath);
-        return fallbackPath;
+        return CanWriteToSqlitePath(fallbackPath)
+            ? fallbackPath
+            : primaryPath;
     }
 
-    private static bool TryEnsureDirectoryExists(string filePath)
+    private static bool CanWriteToSqlitePath(string filePath)
     {
         var directory = Path.GetDirectoryName(filePath);
         if (string.IsNullOrWhiteSpace(directory))
@@ -139,6 +140,26 @@ public static class DatabaseConfiguration
         try
         {
             Directory.CreateDirectory(directory);
+        }
+        catch
+        {
+            return false;
+        }
+
+        try
+        {
+            if (File.Exists(filePath))
+            {
+                using var existingFileStream = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+                return true;
+            }
+
+            var probeFilePath = Path.Combine(directory, $".write-test-{Guid.NewGuid():N}.tmp");
+            using (var probeFileStream = new FileStream(probeFilePath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+            }
+
+            File.Delete(probeFilePath);
             return true;
         }
         catch
