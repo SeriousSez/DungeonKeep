@@ -70,10 +70,10 @@ if (args.Contains("--migrate-sqlite-to-mysql", StringComparer.OrdinalIgnoreCase)
     return;
 }
 
-await SqliteToMySqlMigrator.MigrateOnStartupIfNeededAsync(builder.Configuration, app.Logger);
-
 try
 {
+    await SqliteToMySqlMigrator.MigrateOnStartupIfNeededAsync(builder.Configuration, app.Logger);
+
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<DungeonKeepDbContext>();
     dbContext.Database.EnsureCreated();
@@ -86,6 +86,10 @@ try
     }
 
     EnsureCharacterRichTextStorage(dbContext, databaseProvider);
+}
+catch (Exception exception) when (!app.Environment.IsDevelopment())
+{
+    app.Logger.LogError(exception, "{DatabaseProvider} schema initialization failed during startup. Continuing with the existing database state.", databaseProvider);
 }
 catch (Exception exception)
 {
