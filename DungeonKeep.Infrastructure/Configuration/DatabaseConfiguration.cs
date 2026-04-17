@@ -25,9 +25,11 @@ public static class DatabaseConfiguration
 
     public static string GetSqliteConnectionString(IConfiguration configuration)
     {
-        return configuration.GetConnectionString("DungeonKeepSqlite")
+        var connectionString = configuration.GetConnectionString("DungeonKeepSqlite")
             ?? configuration.GetConnectionString("DungeonKeep")
             ?? DefaultSqliteConnectionString;
+
+        return NormalizeSqliteConnectionString(connectionString);
     }
 
     public static string GetMySqlConnectionString(IConfiguration configuration)
@@ -83,9 +85,36 @@ public static class DatabaseConfiguration
         var connectionString = GetMySqlConnectionString(configuration);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            throw new InvalidOperationException("A MySQL connection string is required when Database:Provider is set to MySql.");
+            throw new InvalidOperationException("A MySQL connection string is required when Database:Provider is set to MySql. Set ConnectionStrings__DungeonKeepMySql or switch Database:Provider to Sqlite.");
         }
 
         return connectionString;
+    }
+
+    private static string NormalizeSqliteConnectionString(string connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            connectionString = DefaultSqliteConnectionString;
+        }
+
+        var builder = new SqliteConnectionStringBuilder(connectionString);
+        if (string.IsNullOrWhiteSpace(builder.DataSource) || builder.DataSource == ":memory:")
+        {
+            return connectionString;
+        }
+
+        var resolvedPath = Path.IsPathRooted(builder.DataSource)
+            ? builder.DataSource
+            : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, builder.DataSource));
+
+        var directory = Path.GetDirectoryName(resolvedPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        builder.DataSource = resolvedPath;
+        return builder.ToString();
     }
 }

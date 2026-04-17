@@ -54,6 +54,16 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+if (databaseProvider == DatabaseProvider.Sqlite)
+{
+    var sqlitePath = DatabaseConfiguration.TryResolveSqliteDatabasePath(DatabaseConfiguration.GetSqliteConnectionString(builder.Configuration));
+    app.Logger.LogInformation("Using SQLite database at {SqlitePath}", sqlitePath);
+}
+else
+{
+    app.Logger.LogInformation("Using MySQL database provider for DungeonKeep API startup.");
+}
+
 if (args.Contains("--migrate-sqlite-to-mysql", StringComparer.OrdinalIgnoreCase))
 {
     await SqliteToMySqlMigrator.MigrateAsync(builder.Configuration, app.Logger);
