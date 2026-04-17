@@ -2755,7 +2755,7 @@ export const classSubclassSnapshots: Record<string, { summary: string; details: 
     }
 };
 
-const langTrait = (knownLangs: string, choices = 2, choiceLabel = 'Origin') => ({
+const langTrait = (knownLangs: string, choices = 0, choiceLabel = 'Origin') => ({
     title: 'Languages',
     summary: choices === 0
         ? knownLangs
@@ -2883,8 +2883,14 @@ const phbSpeciesDetails: Record<string, BuilderInfo> = {
                 },
                 {
                     title: 'Elven Lineage',
-                    summary: 'Choose your elven subrace and innate spells.',
-                    details: 'You are part of an elven lineage that grants you additional traits. Choose one of the following: Drow (Darkvision 120 ft., Drow Magic spells), High Elf (Cantrip from Wizard spell list, +1 language), Wood Elf (Speed 35 ft., Mask of the Wild). Each lineage also grants additional spells as you level up.',
+                    summary: 'Choose Drow, High Elf, or Wood Elf.',
+                    details: 'Choose a lineage from the Elven Lineages table. Drow increases your Darkvision to 120 feet and grants Dancing Lights at level 1, Faerie Fire at level 3, and Darkness at level 5. High Elf grants Prestidigitation at level 1, Detect Magic at level 3, and Misty Step at level 5. Wood Elf increases your Speed to 35 feet, grants Druidcraft at level 1, Longstrider at level 3, and Pass without Trace at level 5.',
+                    choices: 1
+                },
+                {
+                    title: 'Lineage Spellcasting Ability',
+                    summary: 'Choose Intelligence, Wisdom, or Charisma for your lineage spells.',
+                    details: 'When you choose your elven lineage, also choose whether Intelligence, Wisdom, or Charisma is the spellcasting ability for the spells granted by that lineage.',
                     choices: 1
                 },
                 {

@@ -324,7 +324,8 @@ export class PremadeCharactersPageComponent {
         const composedVisibleNotes = `${visibleNotes}\n\n${roleplayLines.join('\n')}`;
         const state: Record<string, unknown> = {
             inventoryEntries: character.inventoryEntries,
-            currency: this.getStartingCurrencyForPremade(character)
+            currency: this.getStartingCurrencyForPremade(character),
+            selectedSpeciesTraitChoices: character.speciesTraitChoices ?? {}
         };
         if (character.classPreparedSpells) {
             state['classPreparedSpells'] = character.classPreparedSpells;

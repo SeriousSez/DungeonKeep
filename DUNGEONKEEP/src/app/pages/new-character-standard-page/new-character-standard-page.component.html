@@ -1564,13 +1564,15 @@
                     @if (isTraitOpen(trait.title)) {
                     <div class="trait-accordion-body" (click)="$event.stopPropagation()">
                         <p class="trait-accordion-copy">{{ trait.details }}</p>
-                        @if (trait.title === 'Languages' && trait.choices) {
+                        @if (trait.title === 'Languages') {
                         <div class="trait-language-picker">
                             @if (speciesKnownLanguages().length > 0) {
-                            <p class="muted">Known by default: {{ speciesKnownLanguages().join(', ') }}</p>
+                            <p class="muted">Selected by default: {{ speciesKnownLanguages().join(', ') }}</p>
                             }
+                            @if (trait.choices) {
                             <app-multi-select-dropdown [groups]="languageGroups" [value]="selectedSpeciesLanguages()" [disabledOptions]="speciesLanguageDisabledOptions()" [maxSelections]="trait.choices" [placeholder]="speciesLanguagePlaceholder()"
                                 (changed)="onSpeciesLanguagesChanged($event)"></app-multi-select-dropdown>
+                            }
                         </div>
                         } @else if (trait.choices) {
                         <div class="trait-choice-picker">

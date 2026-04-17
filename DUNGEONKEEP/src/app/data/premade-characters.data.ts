@@ -14,6 +14,7 @@ export interface PremadeCharacter extends Character {
     inventoryEntries: InventoryEntry[];
     classPreparedSpells?: Record<string, string[]>;
     wizardSpellbookByClass?: Record<string, string[]>;
+    speciesTraitChoices?: Record<string, string[]>;
     appearance?: PremadeAppearanceProfile;
 }
 
@@ -270,7 +271,7 @@ const basePremadeCharacters: PremadeCharacter[] = [
         lifestyle: 'Modest',
         classFeatures: ['Spellcasting', 'Divine Domain: Life', 'Channel Divinity', 'Turn Undead'],
         speciesTraits: ['Darkvision', 'Dwarven Resilience', 'Stonecunning'],
-        languages: ['Common', 'Dwarvish'],
+        languages: ['Common', 'Dwarvish', 'Celestial', 'Elvish'],
         equipment: ['Mace', 'Scale Mail', 'Shield', 'Holy Symbol', 'Explorer’s Pack'],
         inventoryEntries: [
             inventoryItem('Mace', 'Weapon'),
@@ -311,11 +312,15 @@ const basePremadeCharacters: PremadeCharacter[] = [
         traits: ['Darkvision', 'Fey Ancestry', 'Trance', 'Spellcasting'],
         gender: 'Male',
         alignment: 'Neutral Good',
-        faith: 'Corellon',
+        faith: 'Corellon Larethian',
         lifestyle: 'Scholar',
         classFeatures: ['Spellcasting', 'Arcane Recovery'],
         speciesTraits: ['Darkvision', 'Fey Ancestry', 'Trance', 'Keen Senses'],
-        languages: ['Common', 'Elvish'],
+        speciesTraitChoices: {
+            'Elven Lineage': ['High Elf'],
+            'Lineage Spellcasting Ability': ['Intelligence']
+        },
+        languages: ['Common', 'Elvish', 'Draconic', 'Celestial'],
         equipment: ['Quarterstaff', 'Component Pouch', 'Spellbook', 'Scholar’s Pack'],
         inventoryEntries: [
             inventoryItem('Quarterstaff', 'Weapon'),
@@ -607,7 +612,7 @@ const basePremadeCharacters: PremadeCharacter[] = [
         lifestyle: 'Comfortable',
         classFeatures: ['Divine Sense', 'Lay on Hands (5 HP)', 'Divine Smite', 'Spellcasting'],
         speciesTraits: ['Darkvision', 'Celestial Resistance', 'Healing Hands', 'Light Bearer'],
-        languages: ['Common', 'Celestial'],
+        languages: ['Common', 'Celestial', 'Elvish', 'Dwarvish'],
         equipment: ['Longsword', 'Shield', 'Chain Mail', 'Holy Symbol', "Priest's Pack"],
         inventoryEntries: [
             inventoryItem('Longsword', 'Weapon'),
@@ -703,7 +708,7 @@ const basePremadeCharacters: PremadeCharacter[] = [
         lifestyle: 'Comfortable',
         classFeatures: ['Spellcasting', 'Font of Magic', 'Draconic Bloodline: Red Dragon', 'Draconic Resilience'],
         speciesTraits: ['Draconic Ancestry (Fire)', 'Breath Weapon', 'Damage Resistance (Fire)'],
-        languages: ['Common', 'Draconic'],
+        languages: ['Common', 'Draconic', 'Elvish'],
         equipment: ['Dagger (2)', 'Component Pouch', "Dungeoneer's Pack"],
         inventoryEntries: [
             inventoryItem('Dagger', 'Weapon', 2),
@@ -782,7 +787,7 @@ const basePremadeCharacters: PremadeCharacter[] = [
         lifestyle: 'Comfortable',
         classFeatures: ['Magical Tinkering', 'Spellcasting'],
         speciesTraits: ['Darkvision', 'Fey Ancestry', 'Fury of the Small', 'Nimble Escape'],
-        languages: ['Common', 'Goblin'],
+        languages: ['Common', 'Goblin', 'Dwarvish'],
         equipment: ['Light Crossbow', 'Scale Mail', "Thieves' Tools", "Tinker's Tools", "Explorer's Pack"],
         inventoryEntries: [
             inventoryItem('Light Crossbow', 'Weapon'),
@@ -824,7 +829,7 @@ const basePremadeCharacters: PremadeCharacter[] = [
         lifestyle: 'Wanderer',
         classFeatures: ['Hunter’s Bane', 'Blood Maledict', 'Crimson Rite'],
         speciesTraits: ['Blessing of the Raven Queen', 'Darkvision', 'Fey Ancestry', 'Necrotic Resistance', 'Trance'],
-        languages: ['Common', 'Elvish'],
+        languages: ['Common', 'Elvish', 'Abyssal'],
         equipment: ['Rapier', 'Hand Crossbow', 'Studded Leather', "Monster Hunter's Pack"],
         inventoryEntries: [
             inventoryItem('Rapier', 'Weapon'),

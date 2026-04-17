@@ -29,7 +29,7 @@ import { normalizePreparedLeveledSpellNames } from '../../rules/spell-preparatio
 import { getWizardCantripLimit, getWizardFreeLeveledSpellLimit, getWizardPreparedSpellLimit, isWizardClassName, isWizardSpellbookCantripAlwaysPrepared } from '../../rules/wizard-class.rules';
 import { deitiesList } from '../../data/deities.data';
 import { subclassFeatureProgressionByClass as sharedSubclassFeatureProgressionByClass, subclassConfigs as sharedSubclassConfigs, subclassChoiceTitles as sharedSubclassChoiceTitles, subclassOptionsByClass as sharedSubclassOptionsByClass, type SubclassConfig } from '../../data/subclass-features.data';
-import { premadeCharacters } from '../../data/premade-characters.data';
+import { premadeCharacters, type PremadeCharacter } from '../../data/premade-characters.data';
 import { getSpeciesImagePath, speciesNameToSlug } from '../../data/species-catalog.data';
 
 type StandardStep = 'home' | 'class' | 'species' | 'background' | 'abilities' | 'equipment' | 'whats-next';
@@ -363,22 +363,45 @@ export class NewCharacterStandardPageComponent {
     }
 
     populateFromPremade(premade: Character) {
-        // Set builder state from premade character
+        const matchedPremade = this.findMatchingPremadeCharacter(premade);
+        const appearance = this.resolvePremadeAppearance(premade, matchedPremade);
+
+        this.multiclassList.set({ [premade.className]: Math.max(1, premade.level || 1) });
+        this.setClassPanelTab(premade.className, 'class-features');
+        this.syncPreparedSpellsForClass(premade.className, Math.max(1, premade.level || 1));
         this.selectedClass.set(premade.className);
         this.selectedSpeciesName.set(premade.race);
         this.selectedBackgroundName.set(premade.background);
-        this.characterLevel.set(premade.level);
-        this.abilityBaseScores.set({
-            Strength: premade.abilityScores.strength,
-            Dexterity: premade.abilityScores.dexterity,
-            Constitution: premade.abilityScores.constitution,
-            Intelligence: premade.abilityScores.intelligence,
-            Wisdom: premade.abilityScores.wisdom,
-            Charisma: premade.abilityScores.charisma
-        });
-        this.personalityTraits.set(premade.traits || []);
-        // Set skills, notes, etc. as needed
-        // ...
+        const backgroundOption = this.backgroundOptions.find((entry) => entry.name.toLowerCase() === premade.background.toLowerCase());
+        this.selectedBackgroundUrl.set(backgroundOption?.url ?? '');
+        this.characterLevel.set(Math.max(1, premade.level || 1));
+        this.completionCharacterName.set(premade.name);
+        this.selectedAlignment.set(this.normalizeAlignmentSelection((premade.alignment || matchedPremade?.alignment || '').trim()));
+        this.selectedFaith.set((premade.faith || matchedPremade?.faith || '').trim());
+        this.selectedLifestyle.set(this.normalizeLifestyleSelection((premade.lifestyle || matchedPremade?.lifestyle || '').trim()));
+        this.classFeatureSelections.set(this.inferClassFeatureSelectionsFromCharacter(premade));
+        const inferredBackgroundState = this.inferBackgroundStateFromCharacter(premade);
+        this.selectedLanguages.set(inferredBackgroundState.selectedLanguages);
+        this.selectedSpeciesLanguages.set(inferredBackgroundState.selectedSpeciesLanguages);
+        this.selectedSpeciesTraitChoices.set(matchedPremade?.speciesTraitChoices ?? {});
+        this.backgroundChoiceSelections.set(inferredBackgroundState.backgroundChoiceSelections);
+        this.bgAbilityMode.set(inferredBackgroundState.bgAbilityMode);
+        this.bgAbilityScoreFor2.set(inferredBackgroundState.bgAbilityScoreFor2);
+        this.bgAbilityScoreFor1.set(inferredBackgroundState.bgAbilityScoreFor1);
+        this.selectedAbilityMethod.set('manual-rolled');
+        this.abilityBaseScores.set(this.inferAbilityBaseScoresFromCharacter(premade));
+        this.personalityTraits.set(matchedPremade?.personalityTraits || premade.personalityTraits || []);
+        this.ideals.set(matchedPremade?.ideals || premade.ideals || []);
+        this.bonds.set(matchedPremade?.bonds || premade.bonds || []);
+        this.flaws.set(matchedPremade?.flaws || premade.flaws || []);
+        this.physicalHair.set(appearance?.hair ?? '');
+        this.physicalSkin.set(appearance?.skin ?? '');
+        this.physicalEyes.set(appearance?.eyes ?? '');
+        this.physicalHeight.set(appearance?.height ?? '');
+        this.physicalWeight.set(appearance?.weight ?? '');
+        this.physicalAge.set(appearance?.age ?? '');
+        this.physicalGender.set(premade.gender ?? matchedPremade?.gender ?? '');
+        this.generatedBackstory.set(this.extractVisibleBackstory(premade.notes || ''));
         this.cdr.detectChanges();
     }
 
@@ -3691,12 +3714,8 @@ export class NewCharacterStandardPageComponent {
     readonly backgroundLanguageChoiceInChoices = computed(() =>
         this.selectedBackgroundDetail()?.choices.some((c) => this.isLanguageChoiceKey(c.key)) ?? false
     );
-    readonly speciesLanguageDisabledOptions = computed(() =>
-        this.selectedLanguages().filter((language) => !this.selectedSpeciesLanguages().includes(language))
-    );
-    readonly backgroundLanguageDisabledOptions = computed(() =>
-        this.selectedSpeciesLanguages().filter((language) => !this.selectedLanguages().includes(language))
-    );
+    readonly speciesLanguageDisabledOptions = computed(() => this.getLanguageDisabledOptions(this.selectedSpeciesLanguages()));
+    readonly backgroundLanguageDisabledOptions = computed(() => this.getLanguageDisabledOptions(this.selectedLanguages()));
     readonly suggestedPlayerName = computed(() => this.session.currentUser()?.displayName ?? 'Player');
     readonly canCompleteCharacter = computed(() => {
         const hasName = this.completionCharacterName().trim().length > 0;
@@ -3734,6 +3753,14 @@ export class NewCharacterStandardPageComponent {
             return '- Choose an Origin Feat -';
         }
 
+        if (traitTitle === 'Elven Lineage') {
+            return '- Choose an Elven Lineage -';
+        }
+
+        if (traitTitle === 'Lineage Spellcasting Ability') {
+            return '- Choose a Spellcasting Ability -';
+        }
+
         return '- Choose an Option -';
     }
 
@@ -3742,7 +3769,11 @@ export class NewCharacterStandardPageComponent {
             ? this.speciesSkillChoiceOptions
             : traitTitle === 'Versatile'
                 ? this.speciesOriginFeatOptions
-                : [];
+                : traitTitle === 'Elven Lineage'
+                    ? ['Drow', 'High Elf', 'Wood Elf']
+                    : traitTitle === 'Lineage Spellcasting Ability'
+                        ? ['Intelligence', 'Wisdom', 'Charisma']
+                        : [];
 
         const selected = this.selectedSpeciesTraitChoices()[traitTitle] ?? [];
 
@@ -6553,6 +6584,11 @@ export class NewCharacterStandardPageComponent {
         const selectedCampaignId = this.selectedCampaignIdsOnCreate()[0] || undefined;
         const level = this.getPrimaryClassLevel();
         const maxHitPoints = this.getResolvedHitPointTotal(className, level);
+        const savedLanguages = this.uniqueNoteEntries([
+            ...this.speciesKnownLanguages(),
+            ...this.selectedSpeciesLanguages(),
+            ...this.selectedLanguages()
+        ]);
 
         return {
             name: characterName,
@@ -6565,9 +6601,26 @@ export class NewCharacterStandardPageComponent {
             notes,
             campaignId: selectedCampaignId,
             campaignIds: this.selectedCampaignIdsOnCreate(),
+            abilityScores: {
+                strength: this.getTotalScore('Strength'),
+                dexterity: this.getTotalScore('Dexterity'),
+                constitution: this.getTotalScore('Constitution'),
+                intelligence: this.getTotalScore('Intelligence'),
+                wisdom: this.getTotalScore('Wisdom'),
+                charisma: this.getTotalScore('Charisma')
+            },
             hitPoints: maxHitPoints,
             maxHitPoints,
-            image: this.completionPortraitImageUrl()
+            image: this.completionPortraitImageUrl(),
+            gender: this.physicalGender().trim(),
+            alignment: this.getSelectedAlignmentLabel(),
+            faith: this.selectedFaith().trim(),
+            lifestyle: this.getSelectedLifestyleLabel(),
+            languages: savedLanguages,
+            personalityTraits: this.personalityTraits(),
+            ideals: this.ideals(),
+            bonds: this.bonds(),
+            flaws: this.flaws()
         };
     }
 
@@ -6819,7 +6872,14 @@ export class NewCharacterStandardPageComponent {
         this.characterLevel.set(resolvedLevel);
         this.selectedClass.set('');
 
+        const matchedPremade = this.findMatchingPremadeCharacter(character);
+        const premadeAppearance = this.resolvePremadeAppearance(character, matchedPremade);
+
         this.selectedSpeciesName.set(character.race);
+        this.selectedAlignment.set(this.normalizeAlignmentSelection((character.alignment || matchedPremade?.alignment || '').trim()));
+        this.selectedFaith.set((character.faith || matchedPremade?.faith || '').trim());
+        this.selectedLifestyle.set(this.normalizeLifestyleSelection((character.lifestyle || matchedPremade?.lifestyle || '').trim()));
+        this.physicalGender.set(character.gender || matchedPremade?.gender || '');
 
         const backgroundName = character.background.trim();
         if (backgroundName) {
@@ -6842,6 +6902,7 @@ export class NewCharacterStandardPageComponent {
         const parsedAllies = this.extractNoteListFromText(notes, 'Allies');
         const parsedEnemies = this.extractNoteListFromText(notes, 'Enemies');
         const parsedOtherNotes = this.extractOtherNotes(notes);
+        const parsedPhysical = this.extractPhysicalCharacteristicsFromText(notes);
         this.generatedBackstory.set(this.extractVisibleBackstory(notes));
 
         const persisted = parsedNotes.state;
@@ -6854,21 +6915,48 @@ export class NewCharacterStandardPageComponent {
                 this.selectedBackgroundUrl.set(persisted.selectedBackgroundUrl.trim());
             }
 
-            this.selectedAlignment.set(persisted.selectedAlignment || this.selectedAlignment());
-            this.selectedLifestyle.set(persisted.selectedLifestyle || this.selectedLifestyle());
-            this.selectedFaith.set(persisted.selectedFaith || this.extractFaithFromNotes(notes));
+            this.selectedAlignment.set(this.normalizeAlignmentSelection((persisted.selectedAlignment || this.selectedAlignment() || matchedPremade?.alignment || '').trim()));
+            this.selectedLifestyle.set(this.normalizeLifestyleSelection((persisted.selectedLifestyle || this.selectedLifestyle() || matchedPremade?.lifestyle || '').trim()));
+            this.selectedFaith.set((persisted.selectedFaith || this.extractFaithFromNotes(notes) || this.selectedFaith() || matchedPremade?.faith || '').trim());
 
-            this.selectedLanguages.set(Array.isArray(persisted.selectedLanguages) ? persisted.selectedLanguages : []);
-            this.selectedSpeciesLanguages.set(Array.isArray(persisted.selectedSpeciesLanguages) ? persisted.selectedSpeciesLanguages : []);
-            this.selectedSpeciesTraitChoices.set(persisted.selectedSpeciesTraitChoices ?? {});
+            const inferredBackgroundState = this.inferBackgroundStateFromCharacter(character);
+            const restoredBackgroundLanguages = Array.isArray(persisted.selectedLanguages)
+                ? this.uniqueNoteEntries(persisted.selectedLanguages).filter((language) => !this.speciesKnownLanguages().includes(language))
+                : inferredBackgroundState.selectedLanguages;
+            const restoredSpeciesLanguages = Array.isArray(persisted.selectedSpeciesLanguages)
+                ? this.uniqueNoteEntries(persisted.selectedSpeciesLanguages).filter((language) =>
+                    !this.speciesKnownLanguages().includes(language) && !restoredBackgroundLanguages.includes(language)
+                )
+                : inferredBackgroundState.selectedSpeciesLanguages.filter((language) => !restoredBackgroundLanguages.includes(language));
 
-            this.classFeatureSelections.set(persisted.classFeatureSelections ?? {});
+            this.selectedLanguages.set(restoredBackgroundLanguages);
+            this.selectedSpeciesLanguages.set(restoredSpeciesLanguages);
+            const persistedSpeciesTraitChoices = persisted.selectedSpeciesTraitChoices;
+            this.selectedSpeciesTraitChoices.set(
+                persistedSpeciesTraitChoices && Object.keys(persistedSpeciesTraitChoices).length > 0
+                    ? persistedSpeciesTraitChoices
+                    : (matchedPremade?.speciesTraitChoices ?? {})
+            );
+
+            const inferredFeatureSelections = this.inferClassFeatureSelectionsFromCharacter(character);
+            const persistedFeatureSelections = persisted.classFeatureSelections ?? {};
+            this.classFeatureSelections.set({
+                ...inferredFeatureSelections,
+                ...persistedFeatureSelections
+            });
             this.abilityScoreImprovementChoices.set(persisted.abilityScoreImprovementChoices ?? {});
             this.featFollowUpChoices.set(persisted.featFollowUpChoices ?? {});
-            this.backgroundChoiceSelections.set(persisted.backgroundChoiceSelections ?? {});
+            this.backgroundChoiceSelections.set({
+                ...inferredBackgroundState.backgroundChoiceSelections,
+                ...(persisted.backgroundChoiceSelections ?? {})
+            });
 
-            this.selectedAbilityMethod.set((persisted.selectedAbilityMethod as AbilityGenerationMethod) || '');
-            this.abilityBaseScores.set(persisted.abilityBaseScores ?? this.abilityBaseScores());
+            const persistedAbilityMethod = persisted.selectedAbilityMethod as AbilityGenerationMethod;
+            this.selectedAbilityMethod.set(
+                persistedAbilityMethod === 'standard-array' || persistedAbilityMethod === 'point-buy' || persistedAbilityMethod === 'manual-rolled'
+                    ? persistedAbilityMethod
+                    : 'manual-rolled'
+            );
             this.abilityOtherModifiers.set(persisted.abilityOtherModifiers ?? this.abilityOtherModifiers());
             this.abilityOverrideScores.set(persisted.abilityOverrideScores ?? this.abilityOverrideScores());
             this.standardArraySelections.set(persisted.standardArraySelections ?? this.standardArraySelections());
@@ -6880,9 +6968,20 @@ export class NewCharacterStandardPageComponent {
                     : this.manualRollGroupCount()
             );
 
-            this.bgAbilityMode.set(persisted.bgAbilityMode || this.bgAbilityMode());
-            this.bgAbilityScoreFor2.set(persisted.bgAbilityScoreFor2 || this.bgAbilityScoreFor2());
-            this.bgAbilityScoreFor1.set(persisted.bgAbilityScoreFor1 || this.bgAbilityScoreFor1());
+            this.bgAbilityMode.set(persisted.bgAbilityMode || inferredBackgroundState.bgAbilityMode || this.bgAbilityMode());
+            this.bgAbilityScoreFor2.set(persisted.bgAbilityScoreFor2 || inferredBackgroundState.bgAbilityScoreFor2 || this.bgAbilityScoreFor2());
+            this.bgAbilityScoreFor1.set(persisted.bgAbilityScoreFor1 || inferredBackgroundState.bgAbilityScoreFor1 || this.bgAbilityScoreFor1());
+
+            const persistedAbilityBaseScores = persisted.abilityBaseScores;
+            const hasPersistedAbilityBaseScores = !!persistedAbilityBaseScores && this.abilityTiles.some((ability) => {
+                const score = persistedAbilityBaseScores[ability];
+                return typeof score === 'number' && Number.isFinite(score) && score > 0;
+            });
+            this.abilityBaseScores.set(
+                hasPersistedAbilityBaseScores
+                    ? persistedAbilityBaseScores
+                    : this.inferAbilityBaseScoresFromCharacter(character)
+            );
             this.hitPointMode.set(persisted.hitPointMode === 'rolled' ? 'rolled' : 'fixed');
             this.rolledHitPointTotal.set(
                 typeof persisted.rolledHitPointTotal === 'number' && Number.isFinite(persisted.rolledHitPointTotal)
@@ -6909,20 +7008,20 @@ export class NewCharacterStandardPageComponent {
                 });
             }
 
-            this.personalityTraits.set(Array.isArray(persisted.personalityTraits) ? persisted.personalityTraits : []);
-            this.ideals.set(Array.isArray(persisted.ideals) ? persisted.ideals : []);
-            this.bonds.set(Array.isArray(persisted.bonds) ? persisted.bonds : []);
-            this.flaws.set(Array.isArray(persisted.flaws) ? persisted.flaws : []);
+            this.personalityTraits.set(Array.isArray(persisted.personalityTraits) && persisted.personalityTraits.length > 0 ? persisted.personalityTraits : (character.personalityTraits ?? matchedPremade?.personalityTraits ?? []));
+            this.ideals.set(Array.isArray(persisted.ideals) && persisted.ideals.length > 0 ? persisted.ideals : (character.ideals ?? matchedPremade?.ideals ?? []));
+            this.bonds.set(Array.isArray(persisted.bonds) && persisted.bonds.length > 0 ? persisted.bonds : (character.bonds ?? matchedPremade?.bonds ?? []));
+            this.flaws.set(Array.isArray(persisted.flaws) && persisted.flaws.length > 0 ? persisted.flaws : (character.flaws ?? matchedPremade?.flaws ?? []));
 
-            this.physicalHair.set(persisted.physicalHair || '');
-            this.physicalSkin.set(persisted.physicalSkin || '');
-            this.physicalEyes.set(persisted.physicalEyes || '');
-            this.physicalHeight.set(persisted.physicalHeight || '');
-            this.physicalHeightUnit.set(this.resolveHeightUnit(persisted.physicalHeightUnit, persisted.physicalHeight));
-            this.physicalWeight.set(persisted.physicalWeight || '');
-            this.physicalWeightUnit.set(this.resolveWeightUnit(persisted.physicalWeightUnit, persisted.physicalWeight));
-            this.physicalAge.set(persisted.physicalAge || '');
-            this.physicalGender.set(persisted.physicalGender || '');
+            this.physicalHair.set(persisted.physicalHair || parsedPhysical.hair || premadeAppearance?.hair || '');
+            this.physicalSkin.set(persisted.physicalSkin || parsedPhysical.skin || premadeAppearance?.skin || '');
+            this.physicalEyes.set(persisted.physicalEyes || parsedPhysical.eyes || premadeAppearance?.eyes || '');
+            this.physicalHeight.set(persisted.physicalHeight || parsedPhysical.height || premadeAppearance?.height || '');
+            this.physicalHeightUnit.set(this.resolveHeightUnit(persisted.physicalHeightUnit, persisted.physicalHeight || parsedPhysical.height || premadeAppearance?.height || ''));
+            this.physicalWeight.set(persisted.physicalWeight || parsedPhysical.weight || premadeAppearance?.weight || '');
+            this.physicalWeightUnit.set(this.resolveWeightUnit(persisted.physicalWeightUnit, persisted.physicalWeight || parsedPhysical.weight || premadeAppearance?.weight || ''));
+            this.physicalAge.set(persisted.physicalAge || parsedPhysical.age || premadeAppearance?.age || '');
+            this.physicalGender.set(persisted.physicalGender || parsedPhysical.gender || character.gender || matchedPremade?.gender || '');
             this.noteOrganizations.set(this.uniqueNoteEntries(Array.isArray(persisted.noteOrganizations) ? persisted.noteOrganizations : parsedOrganizations));
             this.noteAllies.set(this.uniqueNoteEntries(Array.isArray(persisted.noteAllies) ? persisted.noteAllies : parsedAllies));
             this.noteEnemies.set(this.uniqueNoteEntries(Array.isArray(persisted.noteEnemies) ? persisted.noteEnemies : parsedEnemies));
@@ -6937,12 +7036,38 @@ export class NewCharacterStandardPageComponent {
             // Re-apply class limits after persisted spell state loads.
             this.syncPreparedSpellsForClass(character.className, resolvedLevel);
         } else {
-            this.selectedFaith.set(this.extractFaithFromNotes(notes));
+            const inferredBackgroundState = this.inferBackgroundStateFromCharacter(character);
+            this.selectedFaith.set((this.extractFaithFromNotes(notes) || this.selectedFaith()).trim());
+            this.classFeatureSelections.set(this.inferClassFeatureSelectionsFromCharacter(character));
+            this.selectedLanguages.set(inferredBackgroundState.selectedLanguages);
+            this.selectedSpeciesLanguages.set(inferredBackgroundState.selectedSpeciesLanguages);
+            this.selectedSpeciesTraitChoices.set(matchedPremade?.speciesTraitChoices ?? {});
+            this.backgroundChoiceSelections.set(inferredBackgroundState.backgroundChoiceSelections);
+            this.bgAbilityMode.set(inferredBackgroundState.bgAbilityMode);
+            this.bgAbilityScoreFor2.set(inferredBackgroundState.bgAbilityScoreFor2);
+            this.bgAbilityScoreFor1.set(inferredBackgroundState.bgAbilityScoreFor1);
+            this.selectedAbilityMethod.set('manual-rolled');
+            this.abilityBaseScores.set(this.inferAbilityBaseScoresFromCharacter(character));
+            this.personalityTraits.set(character.personalityTraits?.length ? character.personalityTraits : (matchedPremade?.personalityTraits ?? []));
+            this.ideals.set(character.ideals?.length ? character.ideals : (matchedPremade?.ideals ?? []));
+            this.bonds.set(character.bonds?.length ? character.bonds : (matchedPremade?.bonds ?? []));
+            this.flaws.set(character.flaws?.length ? character.flaws : (matchedPremade?.flaws ?? []));
+            this.physicalHair.set(parsedPhysical.hair || premadeAppearance?.hair || '');
+            this.physicalSkin.set(parsedPhysical.skin || premadeAppearance?.skin || '');
+            this.physicalEyes.set(parsedPhysical.eyes || premadeAppearance?.eyes || '');
+            this.physicalHeight.set(parsedPhysical.height || premadeAppearance?.height || '');
+            this.physicalWeight.set(parsedPhysical.weight || premadeAppearance?.weight || '');
+            this.physicalAge.set(parsedPhysical.age || premadeAppearance?.age || '');
+            this.physicalGender.set(parsedPhysical.gender || this.physicalGender() || '');
+            this.physicalHeightUnit.set(this.resolveHeightUnit(this.physicalHeightUnit(), this.physicalHeight()));
+            this.physicalWeightUnit.set(this.resolveWeightUnit(this.physicalWeightUnit(), this.physicalWeight()));
             this.noteOrganizations.set(parsedOrganizations);
             this.noteAllies.set(parsedAllies);
             this.noteEnemies.set(parsedEnemies);
             this.otherNotes.set(parsedOtherNotes);
         }
+
+        this.applyPremadeFallbackValues(character, matchedPremade, premadeAppearance);
     }
 
     private buildPersistedNotes(): string {
@@ -7073,6 +7198,334 @@ export class NewCharacterStandardPageComponent {
         }
     }
 
+    private inferClassFeatureSelectionsFromCharacter(character: Character): Record<string, string[]> {
+        const inferredSelections: Record<string, string[]> = {};
+        const classProgression = classLevelOneFeatures[character.className] ?? [];
+        const selectedSkills = this.getCharacterSkillLabels(character);
+        const featureHints = [
+            ...(character.classFeatures ?? []),
+            ...(character.traits ?? []),
+            ...(character.speciesTraits ?? []),
+            ...(character.spells ?? [])
+        ].map((value) => value.trim()).filter((value) => value.length > 0);
+
+        for (const levelEntry of classProgression) {
+            if (levelEntry.level > Math.max(1, character.level || 1)) {
+                continue;
+            }
+
+            for (const feature of levelEntry.features) {
+                if (!feature.choices) {
+                    continue;
+                }
+
+                const key = this.getFeatureSelectionKey(character.className, feature);
+                const options = feature.choices.options ?? [];
+
+                const skillMatches = options.filter((option) => selectedSkills.includes(option)).slice(0, feature.choices!.count);
+                if (skillMatches.length > 0) {
+                    inferredSelections[key] = skillMatches;
+                    continue;
+                }
+
+                const hintMatches = options.filter((option) => this.matchesFeatureHint(option, featureHints)).slice(0, feature.choices!.count);
+                if (hintMatches.length > 0) {
+                    inferredSelections[key] = hintMatches;
+                }
+            }
+        }
+
+        return inferredSelections;
+    }
+
+    private inferBackgroundStateFromCharacter(character: Character): {
+        selectedLanguages: string[];
+        selectedSpeciesLanguages: string[];
+        backgroundChoiceSelections: Record<string, string>;
+        bgAbilityMode: string;
+        bgAbilityScoreFor2: string;
+        bgAbilityScoreFor1: string;
+    } {
+        const selectedBackground = this.selectedBackground();
+        const detail = this.selectedBackgroundDetail();
+        const knownSpeciesLanguages = new Set(this.speciesKnownLanguages());
+        const extraLanguages = this.uniqueNoteEntries(character.languages ?? [])
+            .filter((language) => !knownSpeciesLanguages.has(language));
+        const languageChoiceCount = this.backgroundLanguageChoiceCount();
+        const selectedLanguages = languageChoiceCount > 0
+            ? extraLanguages.slice(Math.max(0, extraLanguages.length - languageChoiceCount))
+            : [];
+        const selectedSpeciesLanguages = extraLanguages.filter((language) => !selectedLanguages.includes(language));
+
+        const scoredAbilities = this.currentBgAbilityScores()
+            .map((ability) => ({ ability, score: this.getCharacterAbilityScore(character, ability) }))
+            .sort((left, right) => right.score - left.score);
+
+        let bgAbilityMode = '';
+        let bgAbilityScoreFor2 = '';
+        let bgAbilityScoreFor1 = '';
+
+        if (scoredAbilities.length >= 3 && scoredAbilities[0].score - scoredAbilities[2].score <= 1) {
+            bgAbilityMode = 'Increase three scores (+1 / +1 / +1)';
+        } else if (scoredAbilities.length >= 2) {
+            bgAbilityMode = 'Increase two scores (+2 / +1)';
+            bgAbilityScoreFor2 = scoredAbilities[0]?.ability ?? '';
+            bgAbilityScoreFor1 = scoredAbilities.find((entry) => entry.ability !== bgAbilityScoreFor2)?.ability ?? '';
+        } else if (scoredAbilities.length > 0) {
+            bgAbilityMode = 'Increase three scores (+1 / +1 / +1)';
+        }
+
+        const backgroundChoiceSelections: Record<string, string> = {};
+        if (selectedBackground && detail) {
+            for (const choice of detail.choices) {
+                if (choice.key === 'ability-scores') {
+                    continue;
+                }
+
+                const compositeKey = `${selectedBackground.name}:${choice.key}`;
+                let selectedValue = '';
+
+                if (this.isLanguageChoiceKey(choice.key)) {
+                    selectedValue = selectedLanguages[0] ?? '';
+                } else if (choice.key === 'characteristics-focus') {
+                    selectedValue = choice.options.find((option) => option.toLowerCase().includes('roleplay')) ?? choice.options[0] ?? '';
+                } else {
+                    selectedValue = choice.options[0] ?? '';
+                }
+
+                if (selectedValue) {
+                    backgroundChoiceSelections[compositeKey] = selectedValue;
+                }
+            }
+        }
+
+        return {
+            selectedLanguages,
+            selectedSpeciesLanguages,
+            backgroundChoiceSelections,
+            bgAbilityMode,
+            bgAbilityScoreFor2,
+            bgAbilityScoreFor1
+        };
+    }
+
+    private findMatchingPremadeCharacter(character: Character | null): PremadeCharacter | null {
+        if (!character) {
+            return null;
+        }
+
+        const key = this.buildPremadeLookupKey(character);
+        const normalizedImage = this.normalizePremadeMatchValue(character.image);
+
+        const exactMatch = premadeCharacters.find((entry) => this.buildPremadeLookupKey(entry) === key);
+        if (exactMatch) {
+            return exactMatch;
+        }
+
+        if (normalizedImage) {
+            const imageMatch = premadeCharacters.find((entry) => this.normalizePremadeMatchValue(entry.image) === normalizedImage);
+            if (imageMatch) {
+                return imageMatch;
+            }
+        }
+
+        const raceClassBackgroundMatch = premadeCharacters.find((entry) =>
+            this.normalizePremadeMatchValue(entry.race) === this.normalizePremadeMatchValue(character.race)
+            && this.normalizePremadeMatchValue(entry.className) === this.normalizePremadeMatchValue(character.className)
+            && this.normalizePremadeMatchValue(entry.background) === this.normalizePremadeMatchValue(character.background)
+        );
+        if (raceClassBackgroundMatch) {
+            return raceClassBackgroundMatch;
+        }
+
+        return premadeCharacters.find((entry) =>
+            this.normalizePremadeMatchValue(entry.race) === this.normalizePremadeMatchValue(character.race)
+            && this.normalizePremadeMatchValue(entry.className) === this.normalizePremadeMatchValue(character.className)
+        ) ?? null;
+    }
+
+    private resolvePremadeAppearance(character: Pick<Character, 'race'>, matchedPremade: PremadeCharacter | null): PremadeCharacter['appearance'] | undefined {
+        const normalizedRace = this.normalizePremadeMatchValue(character.race);
+        const raceAppearance = premadeCharacters.find((entry) => this.normalizePremadeMatchValue(entry.race) === normalizedRace)?.appearance;
+
+        if (!matchedPremade?.appearance) {
+            return raceAppearance;
+        }
+
+        return {
+            age: matchedPremade.appearance.age || raceAppearance?.age || '',
+            height: matchedPremade.appearance.height || raceAppearance?.height || '',
+            weight: matchedPremade.appearance.weight || raceAppearance?.weight || '',
+            hair: matchedPremade.appearance.hair || raceAppearance?.hair || '',
+            eyes: matchedPremade.appearance.eyes || raceAppearance?.eyes || '',
+            skin: matchedPremade.appearance.skin || raceAppearance?.skin || ''
+        };
+    }
+
+    private normalizePremadeMatchValue(value: string | undefined | null): string {
+        return (value ?? '').trim().toLowerCase();
+    }
+
+    private applyPremadeFallbackValues(character: Character, matchedPremade: PremadeCharacter | null, premadeAppearance: PremadeCharacter['appearance'] | undefined): void {
+        if (!this.selectedAlignment()) {
+            this.selectedAlignment.set(this.normalizeAlignmentSelection((character.alignment || matchedPremade?.alignment || '').trim()));
+        }
+
+        if (!this.selectedFaith().trim()) {
+            this.selectedFaith.set((character.faith || matchedPremade?.faith || '').trim());
+        }
+
+        if (!this.selectedLifestyle()) {
+            this.selectedLifestyle.set(this.normalizeLifestyleSelection((character.lifestyle || matchedPremade?.lifestyle || '').trim()));
+        }
+
+        if (!this.personalityTraits().length && matchedPremade?.personalityTraits?.length) {
+            this.personalityTraits.set(matchedPremade.personalityTraits);
+        }
+
+        if (!this.ideals().length && matchedPremade?.ideals?.length) {
+            this.ideals.set(matchedPremade.ideals);
+        }
+
+        if (!this.bonds().length && matchedPremade?.bonds?.length) {
+            this.bonds.set(matchedPremade.bonds);
+        }
+
+        if (!this.flaws().length && matchedPremade?.flaws?.length) {
+            this.flaws.set(matchedPremade.flaws);
+        }
+
+        if (!this.physicalHair().trim()) {
+            this.physicalHair.set(premadeAppearance?.hair ?? '');
+        }
+
+        if (!this.physicalSkin().trim()) {
+            this.physicalSkin.set(premadeAppearance?.skin ?? '');
+        }
+
+        if (!this.physicalEyes().trim()) {
+            this.physicalEyes.set(premadeAppearance?.eyes ?? '');
+        }
+
+        if (!this.physicalHeight().trim()) {
+            this.physicalHeight.set(premadeAppearance?.height ?? '');
+        }
+
+        if (!this.physicalWeight().trim()) {
+            this.physicalWeight.set(premadeAppearance?.weight ?? '');
+        }
+
+        if (!this.physicalAge().trim()) {
+            this.physicalAge.set(premadeAppearance?.age ?? '');
+        }
+
+        if (!this.physicalGender().trim()) {
+            this.physicalGender.set(character.gender || matchedPremade?.gender || '');
+        }
+
+        this.physicalHeightUnit.set(this.resolveHeightUnit(this.physicalHeightUnit(), this.physicalHeight()));
+        this.physicalWeightUnit.set(this.resolveWeightUnit(this.physicalWeightUnit(), this.physicalWeight()));
+    }
+
+    private buildPremadeLookupKey(character: Pick<Character, 'name' | 'race' | 'className' | 'background'>): string {
+        return [character.name, character.race, character.className, character.background]
+            .map((value) => value.trim().toLowerCase())
+            .join('|');
+    }
+
+    private normalizeAlignmentSelection(value: string): string {
+        const normalized = value.trim().toLowerCase().replace(/\s+/g, '-');
+        return this.alignmentOptions.some((option) => option.value === normalized) ? normalized : '';
+    }
+
+    private normalizeLifestyleSelection(value: string): string {
+        const normalized = value.trim().toLowerCase();
+        const aliases: Readonly<Record<string, string>> = {
+            wretched: 'wretched',
+            squalid: 'squalid',
+            poor: 'poor',
+            modest: 'modest',
+            comfortable: 'comfortable',
+            wealthy: 'wealthy',
+            aristocratic: 'aristocratic',
+            scholar: 'modest',
+            wanderer: 'poor'
+        };
+        const resolved = aliases[normalized] ?? normalized;
+        return this.lifestyleOptions.some((option) => option.value === resolved) ? resolved : '';
+    }
+
+    private getSelectedAlignmentLabel(): string {
+        const selected = this.selectedAlignment();
+        return this.alignmentOptions.find((option) => option.value === selected)?.label ?? '';
+    }
+
+    private getSelectedLifestyleLabel(): string {
+        const selected = this.selectedLifestyle();
+        return this.lifestyleOptions.find((option) => option.value === selected)?.label ?? '';
+    }
+
+    private getCharacterSkillLabels(character: Character): string[] {
+        const skillMap: ReadonlyArray<[keyof Character['skills'], string]> = [
+            ['acrobatics', 'Acrobatics'],
+            ['animalHandling', 'Animal Handling'],
+            ['arcana', 'Arcana'],
+            ['athletics', 'Athletics'],
+            ['deception', 'Deception'],
+            ['history', 'History'],
+            ['insight', 'Insight'],
+            ['intimidation', 'Intimidation'],
+            ['investigation', 'Investigation'],
+            ['medicine', 'Medicine'],
+            ['nature', 'Nature'],
+            ['perception', 'Perception'],
+            ['performance', 'Performance'],
+            ['persuasion', 'Persuasion'],
+            ['sleightOfHand', 'Sleight of Hand'],
+            ['stealth', 'Stealth'],
+            ['survival', 'Survival']
+        ];
+
+        return skillMap
+            .filter(([key]) => character.skills?.[key])
+            .map(([, label]) => label);
+    }
+
+    private getCharacterAbilityScore(character: Character, ability: string): number {
+        switch (ability) {
+            case 'Strength':
+                return character.abilityScores.strength;
+            case 'Dexterity':
+                return character.abilityScores.dexterity;
+            case 'Constitution':
+                return character.abilityScores.constitution;
+            case 'Intelligence':
+                return character.abilityScores.intelligence;
+            case 'Wisdom':
+                return character.abilityScores.wisdom;
+            case 'Charisma':
+                return character.abilityScores.charisma;
+            default:
+                return 10;
+        }
+    }
+
+    private matchesFeatureHint(option: string, hints: string[]): boolean {
+        const normalizedOption = option.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+        if (!normalizedOption) {
+            return false;
+        }
+
+        const optionWords = normalizedOption.split(' ').filter((word) => word.length > 2);
+
+        return hints.some((hint) => {
+            const normalizedHint = hint.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+            return normalizedHint.includes(normalizedOption)
+                || normalizedOption.includes(normalizedHint)
+                || optionWords.every((word) => normalizedHint.includes(word));
+        });
+    }
+
     private uniqueNoteEntries(values: string[]): string[] {
         const seen = new Set<string>();
         const normalizedValues: string[] = [];
@@ -7114,6 +7567,34 @@ export class NewCharacterStandardPageComponent {
 
     private extractFaithFromNotes(notes: string): string {
         const match = notes.match(/(?:^|\n)Faith:\s*(.+?)(?:\n|$)/i);
+        return match?.[1]?.trim() ?? '';
+    }
+
+    private extractPhysicalCharacteristicsFromText(notes: string): { gender: string; age: string; height: string; weight: string; hair: string; eyes: string; skin: string } {
+        const physicalSummary = this.extractSingleNoteValue(notes, 'Physical characteristics');
+        const readValue = (label: 'Gender' | 'Age' | 'Height' | 'Weight' | 'Hair' | 'Eyes' | 'Skin') => {
+            const summaryMatch = physicalSummary.match(new RegExp(`${label}:\\s*([^;]+)`, 'i'));
+            if (summaryMatch?.[1]?.trim()) {
+                return summaryMatch[1].trim();
+            }
+
+            return this.extractSingleNoteValue(notes, label);
+        };
+
+        return {
+            gender: readValue('Gender'),
+            age: readValue('Age'),
+            height: readValue('Height'),
+            weight: readValue('Weight'),
+            hair: readValue('Hair'),
+            eyes: readValue('Eyes'),
+            skin: readValue('Skin')
+        };
+    }
+
+    private extractSingleNoteValue(notes: string, label: string): string {
+        const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const match = notes.match(new RegExp(`(?:^|\\n)${escapedLabel}:\\s*(.+?)(?=\\n|$)`, 'i'));
         return match?.[1]?.trim() ?? '';
     }
 
@@ -7454,9 +7935,9 @@ export class NewCharacterStandardPageComponent {
     }
 
     onBackgroundLanguagesChanged(values: string[]): void {
-        const blockedBySpecies = new Set(this.selectedSpeciesLanguages());
+        const blockedBySpecies = new Set([...this.speciesKnownLanguages(), ...this.selectedSpeciesLanguages()]);
         const maxCount = this.backgroundLanguageChoiceCount() || 1;
-        const nextValues = values
+        const nextValues = this.uniqueNoteEntries(values)
             .filter((value) => !blockedBySpecies.has(value))
             .slice(0, maxCount);
 
@@ -7465,8 +7946,12 @@ export class NewCharacterStandardPageComponent {
     }
 
     onSpeciesLanguagesChanged(values: string[]): void {
-        const blockedByBackground = new Set(this.selectedLanguages());
-        this.selectedSpeciesLanguages.set(values.filter((value) => !blockedByBackground.has(value)));
+        const blockedByBackground = new Set([...this.speciesKnownLanguages(), ...this.selectedLanguages()]);
+        const maxCount = this.speciesLanguageChoiceCount() || 0;
+        const nextValues = this.uniqueNoteEntries(values)
+            .filter((value) => !blockedByBackground.has(value));
+
+        this.selectedSpeciesLanguages.set(maxCount > 0 ? nextValues.slice(0, maxCount) : []);
     }
 
     onClassSortModeChanged(value: string | number): void {
@@ -7564,16 +8049,22 @@ export class NewCharacterStandardPageComponent {
         return choiceKey.toLowerCase().includes('language');
     }
 
+    private getLanguageDisabledOptions(currentSelections: string[]): string[] {
+        const currentSet = new Set(currentSelections);
+        return this.uniqueNoteEntries([
+            ...this.speciesKnownLanguages(),
+            ...this.selectedLanguages(),
+            ...this.selectedSpeciesLanguages()
+        ]).filter((language) => !currentSet.has(language));
+    }
+
     getBackgroundChoiceDisabledOptions(choiceKey: string): string[] {
         if (!this.isLanguageChoiceKey(choiceKey)) {
             return [];
         }
 
         const current = this.getBackgroundChoiceSelection(choiceKey);
-        const blockedBySpecies = this.selectedSpeciesLanguages();
-        return this.selectedLanguages()
-            .filter((language) => language !== current)
-            .concat(blockedBySpecies.filter((language) => language !== current));
+        return this.getLanguageDisabledOptions(current ? [current] : []);
     }
 
     onCompletionCampaignSelectionChanged(campaignIds: string[]): void {
@@ -7784,6 +8275,30 @@ export class NewCharacterStandardPageComponent {
         return `${trimmed} ${unit}`;
     }
 
+    private inferAbilityBaseScoresFromCharacter(character: Character): Record<string, number> {
+        const abilityMap: Record<string, number> = {
+            Strength: character.abilityScores.strength,
+            Dexterity: character.abilityScores.dexterity,
+            Constitution: character.abilityScores.constitution,
+            Intelligence: character.abilityScores.intelligence,
+            Wisdom: character.abilityScores.wisdom,
+            Charisma: character.abilityScores.charisma
+        };
+
+        return this.abilityTiles.reduce<Record<string, number>>((scores, ability) => {
+            const total = Number(abilityMap[ability]);
+            const fallback = this.abilityBaseScores()[ability] ?? 10;
+            if (!Number.isFinite(total)) {
+                scores[ability] = fallback;
+                return scores;
+            }
+
+            const calculatedBonus = this.getCalculatedAbilityScoreBonus(ability);
+            scores[ability] = Math.max(1, Math.min(20, Math.trunc(total - calculatedBonus)));
+            return scores;
+        }, {});
+    }
+
     private convertHeightValue(rawValue: string, fromUnit: HeightUnit, toUnit: HeightUnit): string | null {
         const parsed = this.parseLeadingNumber(rawValue);
         if (parsed == null) {
@@ -7875,20 +8390,24 @@ export class NewCharacterStandardPageComponent {
     }
 
     private getLanguageChoiceCount(languageRule: string): number {
-        const normalized = languageRule.toLowerCase();
-        if (normalized.includes('two')) {
-            return 2;
+        const normalized = languageRule.toLowerCase().trim();
+        if (!normalized || normalized === 'none' || normalized.includes('common +') || normalized.includes('common and')) {
+            return 0;
         }
 
         if (normalized.includes('three')) {
             return 3;
         }
 
-        if (normalized.includes('one')) {
+        if (normalized.includes('two')) {
+            return 2;
+        }
+
+        if (normalized.includes('one') || normalized.includes('a language of your choice') || normalized.includes('any language of your choice')) {
             return 1;
         }
 
-        return 1;
+        return 0;
     }
 
     private extractKnownLanguages(details: string): string[] {

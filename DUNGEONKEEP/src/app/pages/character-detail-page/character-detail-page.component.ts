@@ -1811,20 +1811,18 @@ export class CharacterDetailPageComponent {
     });
 
     readonly languageList = computed(() => {
+        const char = this.character();
         const persisted = this.persistedBuilderState();
         const selected = [
+            ...(char?.languages ?? []),
             ...(persisted?.selectedLanguages ?? []),
-            ...(persisted?.selectedSpeciesLanguages ?? [])
+            ...(persisted?.selectedSpeciesLanguages ?? []),
+            ...(this.raceInfo()?.languages ?? [])
         ]
             .map((entry) => entry.trim())
             .filter((entry) => entry.length > 0);
 
-        const uniqueSelected = [...new Set(selected)];
-        if (uniqueSelected.length > 0) {
-            return uniqueSelected;
-        }
-
-        return this.raceInfo()?.languages ?? [];
+        return [...new Set(selected)];
     });
 
     readonly senses = computed(() => {
@@ -2299,7 +2297,9 @@ export class CharacterDetailPageComponent {
         }
 
         const baseTraits = [...(char.traits ?? [])];
-        const choiceMap = this.persistedBuilderState()?.selectedSpeciesTraitChoices ?? {};
+        const persistedChoiceMap = this.persistedBuilderState()?.selectedSpeciesTraitChoices ?? {};
+        const premadeChoiceMap = this.getPremadeCharacter(char)?.speciesTraitChoices ?? {};
+        const choiceMap = Object.keys(persistedChoiceMap).length > 0 ? persistedChoiceMap : premadeChoiceMap;
 
         if (Object.keys(choiceMap).length === 0) {
             return baseTraits;
