@@ -56,9 +56,7 @@ public static class DatabaseConfiguration
             return null;
         }
 
-        return Path.IsPathRooted(builder.DataSource)
-            ? builder.DataSource
-            : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, builder.DataSource));
+        return ResolveSqliteDatabasePath(builder.DataSource);
     }
 
     public static string GetActiveConnectionString(IConfiguration configuration)
@@ -104,17 +102,48 @@ public static class DatabaseConfiguration
             return connectionString;
         }
 
-        var resolvedPath = Path.IsPathRooted(builder.DataSource)
-            ? builder.DataSource
-            : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, builder.DataSource));
+        builder.DataSource = ResolveSqliteDatabasePath(builder.DataSource);
+        return builder.ToString();
+    }
 
-        var directory = Path.GetDirectoryName(resolvedPath);
-        if (!string.IsNullOrWhiteSpace(directory))
+    private static string ResolveSqliteDatabasePath(string dataSource)
+    {
+        var primaryPath = Path.IsPathRooted(dataSource)
+            ? dataSource
+            : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, dataSource));
+
+        if (TryEnsureDirectoryExists(primaryPath))
         {
-            Directory.CreateDirectory(directory);
+            return primaryPath;
         }
 
-        builder.DataSource = resolvedPath;
-        return builder.ToString();
+        var fallbackRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(fallbackRoot))
+        {
+            fallbackRoot = Path.GetTempPath();
+        }
+
+        var fallbackPath = Path.Combine(fallbackRoot, "DungeonKeep", "App_Data", Path.GetFileName(dataSource));
+        TryEnsureDirectoryExists(fallbackPath);
+        return fallbackPath;
+    }
+
+    private static bool TryEnsureDirectoryExists(string filePath)
+    {
+        var directory = Path.GetDirectoryName(filePath);
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            return true;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(directory);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }
