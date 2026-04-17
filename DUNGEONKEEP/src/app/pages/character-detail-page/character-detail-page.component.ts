@@ -1148,7 +1148,7 @@ export class CharacterDetailPageComponent {
                 species: char.race,
                 alignment: char.alignment ?? '',
                 gender: char.gender ?? '',
-                additionalDirection: this.portraitPromptDetails().trim()
+                additionalDirection: this.buildPortraitAdditionalDirection(this.portraitPromptDetails().trim())
             });
 
             this.storePortraitOriginalImageUrl(this.characterId, response.imageUrl);
@@ -1160,6 +1160,21 @@ export class CharacterDetailPageComponent {
             this.cdr.detectChanges();
         }
     };
+
+    private buildPortraitAdditionalDirection(manualDirection: string): string {
+        const appearanceDetails = this.appearanceRows()
+            .map((row) => ({ label: row.label, value: row.value.trim() }))
+            .filter((row) => row.value.length > 0 && row.value.toLowerCase() !== 'not set');
+
+        if (appearanceDetails.length === 0) {
+            return manualDirection;
+        }
+
+        const appearanceSummary = `Use these known appearance details: ${appearanceDetails.map((row) => `${row.label}: ${row.value}`).join('; ')}`;
+        return manualDirection
+            ? `${appearanceSummary}\nRequested art direction: ${manualDirection}`
+            : appearanceSummary;
+    }
 
     readonly clearPortrait = async () => {
         const char = this.character();
@@ -1818,11 +1833,9 @@ export class CharacterDetailPageComponent {
             ...(persisted?.selectedLanguages ?? []),
             ...(persisted?.selectedSpeciesLanguages ?? []),
             ...(this.raceInfo()?.languages ?? [])
-        ]
-            .map((entry) => entry.trim())
-            .filter((entry) => entry.length > 0);
+        ];
 
-        return [...new Set(selected)];
+        return this.sanitizeLanguageList(selected);
     });
 
     readonly senses = computed(() => {
@@ -6389,6 +6402,38 @@ export class CharacterDetailPageComponent {
             eyes: parsed['eyes'] ?? '',
             skin: parsed['skin'] ?? ''
         };
+    }
+
+    private sanitizeLanguageList(values: string[]): string[] {
+        const seen = new Set<string>();
+        const results: string[] = [];
+
+        for (const value of values) {
+            const trimmed = value.trim().replace(/\s+/g, ' ');
+            if (!trimmed) {
+                continue;
+            }
+
+            const baseText = trimmed.replace(/^Your character knows\s+/i, '').replace(/\.$/, '');
+            const parts = baseText
+                .replace(/\s+and\s+/gi, ',')
+                .split(/,|;/)
+                .map((part) => part.trim())
+                .filter((part) => part.length > 0)
+                .filter((part) => !/additional language|of your choice|determined by/i.test(part));
+
+            for (const part of parts) {
+                const key = part.toLowerCase();
+                if (seen.has(key)) {
+                    continue;
+                }
+
+                seen.add(key);
+                results.push(part);
+            }
+        }
+
+        return results;
     }
 
     private formatHeightForDisplay(rawValue: string): string {

@@ -6785,7 +6785,7 @@ export class NewCharacterStandardPageComponent {
                 species: this.selectedSpeciesName() || 'Human',
                 alignment: this.selectedAlignment() || '',
                 gender: this.physicalGender() || '',
-                additionalDirection: this.completionPortraitPromptDetails().trim()
+                additionalDirection: this.buildCompletionPortraitDirection(this.completionPortraitPromptDetails().trim())
             });
 
             this.completionPortraitOriginalImageUrl.set(response.imageUrl);
@@ -6797,6 +6797,27 @@ export class NewCharacterStandardPageComponent {
             this.cdr.detectChanges();
         }
     };
+
+    private buildCompletionPortraitDirection(manualDirection: string): string {
+        const appearanceDetails = [
+            ['Gender', this.physicalGender().trim()],
+            ['Age', this.physicalAge().trim()],
+            ['Height', this.formatPhysicalMeasurement(this.physicalHeight().trim(), this.physicalHeightUnit())],
+            ['Weight', this.formatPhysicalMeasurement(this.physicalWeight().trim(), this.physicalWeightUnit())],
+            ['Hair', this.physicalHair().trim()],
+            ['Eyes', this.physicalEyes().trim()],
+            ['Skin', this.physicalSkin().trim()]
+        ].filter(([, value]) => value.length > 0);
+
+        if (appearanceDetails.length === 0) {
+            return manualDirection;
+        }
+
+        const appearanceSummary = `Use these known appearance details: ${appearanceDetails.map(([label, value]) => `${label}: ${value}`).join('; ')}`;
+        return manualDirection
+            ? `${appearanceSummary}\nRequested art direction: ${manualDirection}`
+            : appearanceSummary;
+    }
 
     private readImageFile(file: File): Promise<string> {
         if (!file.type.startsWith('image/')) {
