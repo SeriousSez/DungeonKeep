@@ -108,13 +108,22 @@ public static class DatabaseConfiguration
 
     private static string ResolveSqliteDatabasePath(string dataSource)
     {
-        var primaryPath = Path.IsPathRooted(dataSource)
-            ? dataSource
-            : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, dataSource));
+        var candidates = GetSqlitePathCandidates(dataSource).ToArray();
 
-        if (CanWriteToSqlitePath(primaryPath))
+        foreach (var candidate in candidates)
         {
-            return primaryPath;
+            if (File.Exists(candidate) && CanWriteToSqlitePath(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        foreach (var candidate in candidates)
+        {
+            if (CanWriteToSqlitePath(candidate))
+            {
+                return candidate;
+            }
         }
 
         var fallbackRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -126,7 +135,36 @@ public static class DatabaseConfiguration
         var fallbackPath = Path.Combine(fallbackRoot, "DungeonKeep", "App_Data", Path.GetFileName(dataSource));
         return CanWriteToSqlitePath(fallbackPath)
             ? fallbackPath
-            : primaryPath;
+            : candidates[0];
+    }
+
+    private static IEnumerable<string> GetSqlitePathCandidates(string dataSource)
+    {
+        if (Path.IsPathRooted(dataSource))
+        {
+            yield return dataSource;
+            yield break;
+        }
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var currentDirectoryCandidate = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), dataSource));
+        if (seen.Add(currentDirectoryCandidate))
+        {
+            yield return currentDirectoryCandidate;
+        }
+
+        var projectDirectoryCandidate = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", dataSource));
+        if (seen.Add(projectDirectoryCandidate))
+        {
+            yield return projectDirectoryCandidate;
+        }
+
+        var baseDirectoryCandidate = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, dataSource));
+        if (seen.Add(baseDirectoryCandidate))
+        {
+            yield return baseDirectoryCandidate;
+        }
     }
 
     private static bool CanWriteToSqlitePath(string filePath)

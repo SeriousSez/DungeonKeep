@@ -97,6 +97,173 @@ interface PersistedExtrasEntry {
     customNotes?: string;
 }
 
+type PersistedDefenseType = 'resistance' | 'immunity' | 'vulnerability' | 'condition-immunity';
+type PersistedConditionKey = 'blinded' | 'charmed' | 'deafened' | 'frightened' | 'grappled' | 'incapacitated' | 'invisible' | 'paralyzed' | 'petrified' | 'poisoned' | 'prone' | 'restrained' | 'stunned' | 'unconscious';
+type ConditionPanelKey = PersistedConditionKey | 'exhaustion';
+
+interface PersistedDefenseEntry {
+    type: PersistedDefenseType;
+    value: string;
+    note?: string;
+}
+
+interface ConditionDefinition {
+    key: PersistedConditionKey;
+    label: string;
+    icon: string;
+    bullets: string[];
+}
+
+const CONDITION_DEFINITIONS: ReadonlyArray<ConditionDefinition> = [
+    {
+        key: 'blinded',
+        label: 'Blinded',
+        icon: 'fa-eye-slash',
+        bullets: [
+            "You can't see and automatically fail checks that require sight.",
+            'Attack rolls against you have advantage.',
+            'Your attack rolls have disadvantage.'
+        ]
+    },
+    {
+        key: 'charmed',
+        label: 'Charmed',
+        icon: 'fa-heart',
+        bullets: [
+            "You can't attack the charmer or target them with harmful effects.",
+            'The charmer has advantage on social checks involving you.'
+        ]
+    },
+    {
+        key: 'deafened',
+        label: 'Deafened',
+        icon: 'fa-ear-deaf',
+        bullets: [
+            "You can't hear.",
+            'Checks that require hearing automatically fail.'
+        ]
+    },
+    {
+        key: 'frightened',
+        label: 'Frightened',
+        icon: 'fa-skull',
+        bullets: [
+            'You have disadvantage on attacks and ability checks while the fear source is in sight.',
+            "You can't willingly move closer to the source of fear."
+        ]
+    },
+    {
+        key: 'grappled',
+        label: 'Grappled',
+        icon: 'fa-hand-back-fist',
+        bullets: [
+            'Your speed becomes 0 and cannot increase.',
+            'You have disadvantage on attacks against targets other than the grappler.'
+        ]
+    },
+    {
+        key: 'incapacitated',
+        label: 'Incapacitated',
+        icon: 'fa-user-slash',
+        bullets: [
+            "You can't take actions, bonus actions, or reactions.",
+            'Your concentration ends, and you cannot speak.'
+        ]
+    },
+    {
+        key: 'invisible',
+        label: 'Invisible',
+        icon: 'fa-user-secret',
+        bullets: [
+            "You can't be seen without magic or a special sense.",
+            'Attack rolls against you have disadvantage, and your attacks have advantage.'
+        ]
+    },
+    {
+        key: 'paralyzed',
+        label: 'Paralyzed',
+        icon: 'fa-bolt',
+        bullets: [
+            'You are incapacitated and your speed is 0.',
+            'You automatically fail Strength and Dexterity saves.',
+            'Hits from creatures within 5 feet are critical hits.'
+        ]
+    },
+    {
+        key: 'petrified',
+        label: 'Petrified',
+        icon: 'fa-gem',
+        bullets: [
+            'You turn into an inanimate substance, usually stone.',
+            'You are incapacitated, your speed is 0, and attacks against you have advantage.',
+            'You gain resistance to all damage.'
+        ]
+    },
+    {
+        key: 'poisoned',
+        label: 'Poisoned',
+        icon: 'fa-skull-crossbones',
+        bullets: [
+            'You have disadvantage on attack rolls and ability checks.'
+        ]
+    },
+    {
+        key: 'prone',
+        label: 'Prone',
+        icon: 'fa-person-falling',
+        bullets: [
+            'Your movement is limited to crawling unless you stand up.',
+            'You have disadvantage on attacks.',
+            'Nearby melee attackers gain advantage against you.'
+        ]
+    },
+    {
+        key: 'restrained',
+        label: 'Restrained',
+        icon: 'fa-hands-bound',
+        bullets: [
+            'Your speed becomes 0 and cannot increase.',
+            'Attacks against you have advantage, and your attacks have disadvantage.',
+            'You have disadvantage on Dexterity saving throws.'
+        ]
+    },
+    {
+        key: 'stunned',
+        label: 'Stunned',
+        icon: 'fa-stars',
+        bullets: [
+            'You are incapacitated.',
+            'You automatically fail Strength and Dexterity saves.',
+            'Attack rolls against you have advantage.'
+        ]
+    },
+    {
+        key: 'unconscious',
+        label: 'Unconscious',
+        icon: 'fa-bed',
+        bullets: [
+            'You are incapacitated and prone and drop what you are holding.',
+            'Your speed becomes 0, and you are unaware of your surroundings.',
+            'Hits from attackers within 5 feet are critical hits.'
+        ]
+    }
+];
+
+const CONDITION_KEY_ORDER = CONDITION_DEFINITIONS.map((entry) => entry.key) as PersistedConditionKey[];
+const CONDITION_LABEL_LOOKUP = CONDITION_DEFINITIONS.reduce((lookup, entry) => {
+    lookup[entry.key] = entry.label;
+    return lookup;
+}, {} as Record<PersistedConditionKey, string>);
+
+const EXHAUSTION_LEVEL_RULES: ReadonlyArray<{ level: number; effect: string }> = [
+    { level: 1, effect: 'Subtract 2 from all D20 Tests.' },
+    { level: 2, effect: 'Subtract 4 from all D20 Tests and reduce Speed by 10 feet.' },
+    { level: 3, effect: 'Subtract 6 from all D20 Tests and reduce Speed by 15 feet.' },
+    { level: 4, effect: 'Subtract 8 from all D20 Tests and reduce Speed by 20 feet.' },
+    { level: 5, effect: 'Subtract 10 from all D20 Tests and reduce Speed by 25 feet.' },
+    { level: 6, effect: 'Death.' }
+];
+
 interface PersistedBuilderState {
     selectedBackgroundName?: string;
     selectedLanguages?: string[];
@@ -124,6 +291,9 @@ interface PersistedBuilderState {
     deathSaveFailures?: number;
     deathSaveSuccesses?: number;
     extrasEntries?: PersistedExtrasEntry[];
+    defenseEntries?: PersistedDefenseEntry[];
+    activeConditions?: PersistedConditionKey[];
+    exhaustionLevel?: number;
     detailBackgroundTheme?: DetailBackgroundTheme;
     detailBackgroundImageUrl?: string;
 }
@@ -196,6 +366,47 @@ export class CharacterDetailPageComponent {
         { value: 'moonlit', label: 'Moonlit' },
         { value: 'storm', label: 'Storm' },
         { value: 'custom', label: 'Custom Image' }
+    ];
+
+    readonly defenseTypeOptions: ReadonlyArray<DropdownOption> = [
+        { value: 'resistance', label: 'Resistance' },
+        { value: 'immunity', label: 'Immunity' },
+        { value: 'vulnerability', label: 'Vulnerability' },
+        { value: 'condition-immunity', label: 'Condition Immunity' }
+    ];
+
+    readonly damageDefenseSubtypeOptions: ReadonlyArray<DropdownOption> = [
+        { value: 'Acid', label: 'Acid' },
+        { value: 'Bludgeoning', label: 'Bludgeoning' },
+        { value: 'Cold', label: 'Cold' },
+        { value: 'Fire', label: 'Fire' },
+        { value: 'Force', label: 'Force' },
+        { value: 'Lightning', label: 'Lightning' },
+        { value: 'Necrotic', label: 'Necrotic' },
+        { value: 'Piercing', label: 'Piercing' },
+        { value: 'Poison', label: 'Poison' },
+        { value: 'Psychic', label: 'Psychic' },
+        { value: 'Radiant', label: 'Radiant' },
+        { value: 'Slashing', label: 'Slashing' },
+        { value: 'Thunder', label: 'Thunder' }
+    ];
+
+    readonly conditionDefenseSubtypeOptions: ReadonlyArray<DropdownOption> = [
+        { value: 'Blinded', label: 'Blinded' },
+        { value: 'Charmed', label: 'Charmed' },
+        { value: 'Deafened', label: 'Deafened' },
+        { value: 'Exhaustion', label: 'Exhaustion' },
+        { value: 'Frightened', label: 'Frightened' },
+        { value: 'Grappled', label: 'Grappled' },
+        { value: 'Incapacitated', label: 'Incapacitated' },
+        { value: 'Invisible', label: 'Invisible' },
+        { value: 'Paralyzed', label: 'Paralyzed' },
+        { value: 'Petrified', label: 'Petrified' },
+        { value: 'Poisoned', label: 'Poisoned' },
+        { value: 'Prone', label: 'Prone' },
+        { value: 'Restrained', label: 'Restrained' },
+        { value: 'Stunned', label: 'Stunned' },
+        { value: 'Unconscious', label: 'Unconscious' }
     ];
 
     private readonly weaponDamageMap: Record<string, string> = {
@@ -462,6 +673,12 @@ export class CharacterDetailPageComponent {
     readonly inventoryDraftCostGp = signal('');
     readonly inventoryDraftNotes = signal('');
     readonly extrasManagerOpen = signal(false);
+    readonly defenseManagerOpen = signal(false);
+    readonly conditionsManagerOpen = signal(false);
+    readonly defenseCustomizeOpen = signal(true);
+    readonly expandedConditionKey = signal<ConditionPanelKey | ''>('exhaustion');
+    readonly defenseDraftType = signal<PersistedDefenseType>('resistance');
+    readonly defenseDraftSubtype = signal('');
     readonly extrasCatalogType = signal<ExtrasCatalogType>('Familiar');
     readonly extrasCatalogExpandedItem = signal('');
     readonly extrasMonsterSearchTerm = signal('');
@@ -727,6 +944,8 @@ export class CharacterDetailPageComponent {
         this.spellManagerOpen.set(false);
         this.inventoryManagerOpen.set(false);
         this.extrasManagerOpen.set(false);
+        this.defenseManagerOpen.set(false);
+        this.conditionsManagerOpen.set(false);
         this.headerManageOpen.set(false);
     }
 
@@ -832,6 +1051,9 @@ export class CharacterDetailPageComponent {
         'Attack', 'Dash', 'Disengage', 'Dodge', 'Grapple', 'Help',
         'Hide', 'Improvise', 'Influence', 'Magic', 'Ready', 'Search', 'Shove', 'Study', 'Utilize'
     ];
+    readonly conditionDefinitions = CONDITION_DEFINITIONS;
+    readonly exhaustionLevelRules = EXHAUSTION_LEVEL_RULES;
+    readonly exhaustionLevels = [0, 1, 2, 3, 4, 5, 6];
     readonly STANDARD_BONUS_COMBAT_ACTIONS = ['Two-Weapon Fighting'];
     readonly STANDARD_REACTIONS = ['Opportunity Attack'];
     readonly STANDARD_OTHER_ACTIONS = ['Interact with an Object'];
@@ -2026,23 +2248,92 @@ export class CharacterDetailPageComponent {
 
     readonly hasLeveledSpells = computed(() => this.spellsByLevel().length > 0);
 
+    readonly customDefenseEntries = computed(() => {
+        const persistedEntries = this.persistedBuilderState()?.defenseEntries ?? [];
+        return persistedEntries
+            .map((entry) => this.normalizeDefenseEntry(entry))
+            .filter((entry): entry is PersistedDefenseEntry => entry !== null);
+    });
+
+    readonly defenseSubtypeOptions = computed<ReadonlyArray<DropdownOption>>(() =>
+        this.defenseDraftType() === 'condition-immunity'
+            ? this.conditionDefenseSubtypeOptions
+            : this.damageDefenseSubtypeOptions
+    );
+
+    readonly defenseSubtypePlaceholder = computed(() => `-- Choose a ${this.defenseTypeLabel(this.defenseDraftType())} --`);
+
+    readonly customDefenseSections = computed(() => {
+        const entries = this.customDefenseEntries();
+        const orderedTypes: PersistedDefenseType[] = ['resistance', 'immunity', 'vulnerability', 'condition-immunity'];
+
+        return orderedTypes
+            .map((type) => {
+                const groupedEntries = entries.filter((entry) => entry.type === type);
+
+                return {
+                    type,
+                    heading: this.defenseTypeHeading(type),
+                    entries: groupedEntries,
+                    summaryText: groupedEntries.map((entry) => `${entry.value}*`).join(', ')
+                };
+            })
+            .filter((section) => section.entries.length > 0);
+    });
+
+    readonly activeConditionKeys = computed(() => {
+        const keys = new Set<PersistedConditionKey>();
+
+        for (const value of this.persistedBuilderState()?.activeConditions ?? []) {
+            const normalized = this.normalizeConditionKey(value);
+            if (normalized) {
+                keys.add(normalized);
+            }
+        }
+
+        return keys;
+    });
+
+    readonly exhaustionLevel = computed(() => this.normalizeExhaustionLevel(this.persistedBuilderState()?.exhaustionLevel));
+
+    readonly conditionEntries = computed(() =>
+        this.conditionDefinitions.map((entry) => ({
+            ...entry,
+            active: this.activeConditionKeys().has(entry.key)
+        }))
+    );
+
     readonly defenses = computed(() => {
         const char = this.character();
         if (!char) {
             return [] as string[];
         }
 
+        const persistedEntries = this.customDefenseEntries().map((entry) => this.describeDefenseEntry(entry));
         const traitResistances = (char.traits ?? [])
-            .filter((trait) => /resistance|resil|immune/i.test(trait))
-            .map((trait) => trait.replace(/^[^:]*:\s*/, '').trim());
+            .filter((trait) => /resistance|resil|immune|vulnerab/i.test(trait))
+            .map((trait) => trait.replace(/^[^:]*:\s*/, '').trim())
+            .filter((trait) => trait.length > 0);
 
-        return traitResistances;
+        return Array.from(new Set([...persistedEntries, ...traitResistances]));
     });
 
     readonly conditionSummary = computed(() => {
         const char = this.character();
         if (!char) {
             return 'No active conditions';
+        }
+
+        const activeLabels = CONDITION_KEY_ORDER
+            .filter((key) => this.activeConditionKeys().has(key))
+            .map((key) => CONDITION_LABEL_LOOKUP[key]);
+
+        if (this.exhaustionLevel() > 0) {
+            activeLabels.push(`Exhaustion ${this.exhaustionLevel()}`);
+        }
+
+        if (activeLabels.length > 0) {
+            return activeLabels.join(', ');
         }
 
         return char.status === 'Recovering' ? 'Recovering from previous encounter' : 'No active conditions';
@@ -2721,6 +3012,8 @@ export class CharacterDetailPageComponent {
         this.hpManagerOpen.set(false);
         this.inventoryManagerOpen.set(false);
         this.extrasManagerOpen.set(false);
+        this.defenseManagerOpen.set(false);
+        this.conditionsManagerOpen.set(false);
         this.activeExtrasStatEntry.set(null);
         this.detailSecondaryExpanded.set(true);
         this.activeDetailDrawer.set(content);
@@ -2736,6 +3029,8 @@ export class CharacterDetailPageComponent {
         this.activeDetailDrawer.set(null);
         this.inventoryManagerOpen.set(false);
         this.extrasManagerOpen.set(false);
+        this.defenseManagerOpen.set(false);
+        this.conditionsManagerOpen.set(false);
         this.hpDraftCurrent.set(char.hitPoints);
         this.hpDraftMax.set(char.maxHitPoints);
         this.hpDraftTemp.set(this.tempHitPoints());
@@ -4834,6 +5129,290 @@ export class CharacterDetailPageComponent {
         this.activeSpellFilter.set(filter);
     }
 
+    defenseTypeLabel(type: PersistedDefenseType): string {
+        switch (type) {
+            case 'resistance':
+                return 'Resistance';
+            case 'immunity':
+                return 'Immunity';
+            case 'vulnerability':
+                return 'Vulnerability';
+            case 'condition-immunity':
+                return 'Condition Immunity';
+            default:
+                return 'Defense';
+        }
+    }
+
+    defenseTypeHeading(type: PersistedDefenseType): string {
+        switch (type) {
+            case 'resistance':
+                return 'RESISTANCES';
+            case 'immunity':
+                return 'IMMUNITIES';
+            case 'vulnerability':
+                return 'VULNERABILITIES';
+            case 'condition-immunity':
+                return 'CONDITION IMMUNITIES';
+            default:
+                return 'DEFENSES';
+        }
+    }
+
+    defenseTypeIcon(type: PersistedDefenseType): string {
+        switch (type) {
+            case 'resistance':
+                return 'fa-shield-halved';
+            case 'immunity':
+                return 'fa-shield-check';
+            case 'vulnerability':
+                return 'fa-shield-exclamation';
+            case 'condition-immunity':
+                return 'fa-shield-virus';
+            default:
+                return 'fa-shield';
+        }
+    }
+
+    toggleDefenseCustomize(): void {
+        this.defenseCustomizeOpen.update((current) => !current);
+    }
+
+    openDefensesPopup(): void {
+        const char = this.character();
+        if (!char) {
+            return;
+        }
+
+        this.requestCloseChat();
+        this.activeDetailDrawer.set(null);
+        this.activeExtrasStatEntry.set(null);
+        this.hpManagerOpen.set(false);
+        this.coinManagerOpen.set(false);
+        this.spellManagerOpen.set(false);
+        this.inventoryManagerOpen.set(false);
+        this.extrasManagerOpen.set(false);
+        this.conditionsManagerOpen.set(false);
+        this.defenseCustomizeOpen.set(true);
+        this.defenseDraftType.set('resistance');
+        this.defenseDraftSubtype.set('');
+        this.defenseManagerOpen.set(true);
+    }
+
+    closeDefensesPopup(): void {
+        this.defenseManagerOpen.set(false);
+        this.defenseDraftSubtype.set('');
+    }
+
+    openConditionsPopup(): void {
+        const char = this.character();
+        if (!char) {
+            return;
+        }
+
+        this.requestCloseChat();
+        this.activeDetailDrawer.set(null);
+        this.activeExtrasStatEntry.set(null);
+        this.hpManagerOpen.set(false);
+        this.coinManagerOpen.set(false);
+        this.spellManagerOpen.set(false);
+        this.inventoryManagerOpen.set(false);
+        this.extrasManagerOpen.set(false);
+        this.defenseManagerOpen.set(false);
+        this.expandedConditionKey.set(this.exhaustionLevel() > 0 ? 'exhaustion' : 'blinded');
+        this.conditionsManagerOpen.set(true);
+    }
+
+    closeConditionsPopup(): void {
+        this.conditionsManagerOpen.set(false);
+    }
+
+    toggleConditionPanel(key: ConditionPanelKey): void {
+        this.expandedConditionKey.update((current) => current === key ? '' : key);
+    }
+
+    async toggleCondition(key: PersistedConditionKey): Promise<void> {
+        const char = this.character();
+        if (!char?.canEdit) {
+            return;
+        }
+
+        const nextKeys = new Set(this.activeConditionKeys());
+        if (nextKeys.has(key)) {
+            nextKeys.delete(key);
+        } else {
+            nextKeys.add(key);
+        }
+
+        await this.persistConditionState([...nextKeys], this.exhaustionLevel());
+    }
+
+    async setExhaustionLevel(level: number): Promise<void> {
+        const char = this.character();
+        if (!char?.canEdit) {
+            return;
+        }
+
+        await this.persistConditionState([...this.activeConditionKeys()], level);
+    }
+
+    onDefenseTypeChanged(value: string | number): void {
+        const nextType = String(value);
+        if (nextType === 'resistance' || nextType === 'immunity' || nextType === 'vulnerability' || nextType === 'condition-immunity') {
+            this.defenseDraftType.set(nextType);
+        } else {
+            this.defenseDraftType.set('resistance');
+        }
+
+        this.defenseDraftSubtype.set('');
+    }
+
+    onDefenseSubtypeChanged(value: string | number): void {
+        const nextValue = String(value ?? '').trim();
+        this.defenseDraftSubtype.set(nextValue);
+
+        if (nextValue) {
+            void this.addDefenseEntry();
+        }
+    }
+
+    async addDefenseEntry(): Promise<void> {
+        const char = this.character();
+        if (!char?.canEdit) {
+            return;
+        }
+
+        const nextEntry = this.normalizeDefenseEntry({
+            type: this.defenseDraftType(),
+            value: this.defenseDraftSubtype(),
+            note: ''
+        });
+
+        if (!nextEntry) {
+            return;
+        }
+
+        const currentEntries = this.customDefenseEntries();
+        const alreadyExists = currentEntries.some((entry) =>
+            entry.type === nextEntry.type && entry.value.toLowerCase() === nextEntry.value.toLowerCase()
+        );
+
+        if (alreadyExists) {
+            this.defenseDraftSubtype.set('');
+            return;
+        }
+
+        await this.persistDefenseEntries([...currentEntries, nextEntry]);
+        this.defenseDraftSubtype.set('');
+    }
+
+    async removeDefenseEntry(entryToRemove: PersistedDefenseEntry): Promise<void> {
+        const char = this.character();
+        if (!char?.canEdit) {
+            return;
+        }
+
+        const nextEntries = this.customDefenseEntries().filter((entry) =>
+            !(entry.type === entryToRemove.type && entry.value.toLowerCase() === entryToRemove.value.toLowerCase())
+        );
+
+        await this.persistDefenseEntries(nextEntries);
+    }
+
+    async updateDefenseEntryNote(entryToUpdate: PersistedDefenseEntry, value: string): Promise<void> {
+        const char = this.character();
+        if (!char?.canEdit) {
+            return;
+        }
+
+        const nextNote = value.trim();
+        const nextEntries = this.customDefenseEntries().map((entry) =>
+            entry.type === entryToUpdate.type && entry.value.toLowerCase() === entryToUpdate.value.toLowerCase()
+                ? { ...entry, note: nextNote }
+                : entry
+        );
+
+        await this.persistDefenseEntries(nextEntries);
+    }
+
+    private normalizeDefenseEntry(entry: PersistedDefenseEntry | null | undefined): PersistedDefenseEntry | null {
+        const value = String(entry?.value ?? '').trim();
+        if (!value) {
+            return null;
+        }
+
+        const note = String(entry?.note ?? '').trim();
+
+        switch (entry?.type) {
+            case 'resistance':
+            case 'immunity':
+            case 'vulnerability':
+            case 'condition-immunity':
+                return {
+                    type: entry.type,
+                    value,
+                    note
+                };
+            default:
+                return null;
+        }
+    }
+
+    private describeDefenseEntry(entry: PersistedDefenseEntry): string {
+        return `${this.defenseTypeLabel(entry.type)}: ${entry.value}`;
+    }
+
+    private normalizeConditionKey(value: unknown): PersistedConditionKey | null {
+        switch (String(value ?? '').trim().toLowerCase()) {
+            case 'blinded':
+            case 'charmed':
+            case 'deafened':
+            case 'frightened':
+            case 'grappled':
+            case 'incapacitated':
+            case 'invisible':
+            case 'paralyzed':
+            case 'petrified':
+            case 'poisoned':
+            case 'prone':
+            case 'restrained':
+            case 'stunned':
+            case 'unconscious':
+                return String(value).trim().toLowerCase() as PersistedConditionKey;
+            default:
+                return null;
+        }
+    }
+
+    private normalizeExhaustionLevel(value: unknown): number {
+        const numeric = Math.trunc(Number(value));
+        if (!Number.isFinite(numeric)) {
+            return 0;
+        }
+
+        return Math.min(6, Math.max(0, numeric));
+    }
+
+    conditionBulletLead(bullet: string): string {
+        const normalized = bullet.trim();
+        const firstPeriodIndex = normalized.indexOf('.');
+        if (firstPeriodIndex <= 0) {
+            return '';
+        }
+
+        return normalized.slice(0, firstPeriodIndex + 1);
+    }
+
+    conditionBulletText(bullet: string): string {
+        const normalized = bullet.trim();
+        const firstPeriodIndex = normalized.indexOf('.');
+        if (firstPeriodIndex <= 0) {
+            return normalized;
+        }
+
+        return normalized.slice(firstPeriodIndex + 1).trim();
+    }
+
     openSpellManagerPopup(): void {
         const char = this.character();
         if (!char?.canEdit) {
@@ -4846,6 +5425,8 @@ export class CharacterDetailPageComponent {
         this.coinManagerOpen.set(false);
         this.inventoryManagerOpen.set(false);
         this.extrasManagerOpen.set(false);
+        this.defenseManagerOpen.set(false);
+        this.conditionsManagerOpen.set(false);
         this.spellManagerTab.set('prepared');
         this.spellManagerSearch.set('');
         this.spellManagerLevelFilter.set('all');
@@ -5154,6 +5735,8 @@ export class CharacterDetailPageComponent {
             this.coinManagerOpen.set(false);
             this.spellManagerOpen.set(false);
             this.extrasManagerOpen.set(false);
+            this.defenseManagerOpen.set(false);
+            this.conditionsManagerOpen.set(false);
             this.inventoryManagerSearch.set('');
             this.inventoryCurrentExpanded.set(true);
             this.inventoryManagerExpandedSections.set(new Set());
@@ -6844,6 +7427,8 @@ export class CharacterDetailPageComponent {
         this.coinManagerOpen.set(false);
         this.spellManagerOpen.set(false);
         this.inventoryManagerOpen.set(false);
+        this.defenseManagerOpen.set(false);
+        this.conditionsManagerOpen.set(false);
         this.extrasCatalogType.set('Familiar');
         this.extrasCatalogExpandedItem.set('');
         this.resetExtrasMonsterFilters();
@@ -6863,6 +7448,8 @@ export class CharacterDetailPageComponent {
         this.spellManagerOpen.set(false);
         this.inventoryManagerOpen.set(false);
         this.extrasManagerOpen.set(false);
+        this.defenseManagerOpen.set(false);
+        this.conditionsManagerOpen.set(false);
         this.activeExtrasStatEntry.set(entry);
     }
 
@@ -7008,6 +7595,82 @@ export class CharacterDetailPageComponent {
             cr: statBlock?.challengeRating || undefined,
             size: statBlock?.size || undefined
         };
+    }
+
+    private async persistDefenseEntries(entries: PersistedDefenseEntry[]): Promise<void> {
+        const char = this.character();
+        if (!char || !char.canEdit) {
+            return;
+        }
+
+        const normalizedEntries = entries
+            .map((entry) => this.normalizeDefenseEntry(entry))
+            .filter((entry): entry is PersistedDefenseEntry => entry !== null);
+
+        const dedupedEntries = normalizedEntries.filter((entry, index, allEntries) =>
+            allEntries.findIndex((candidate) =>
+                candidate.type === entry.type && candidate.value.toLowerCase() === entry.value.toLowerCase()
+            ) === index
+        );
+
+        const currentState: PersistedBuilderState = this.persistedBuilderState() ?? {};
+        const updatedState: PersistedBuilderState = { ...currentState, defenseEntries: dedupedEntries };
+        const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
+
+        await this.store.updateCharacter(this.characterId, {
+            name: char.name,
+            playerName: char.playerName,
+            race: char.race,
+            className: char.className,
+            role: char.role,
+            level: char.level,
+            background: char.background,
+            notes: updatedNotes,
+            campaignId: char.campaignId,
+            hitPoints: char.hitPoints,
+            maxHitPoints: char.maxHitPoints
+        });
+
+        this.cdr.detectChanges();
+    }
+
+    private async persistConditionState(activeKeys: PersistedConditionKey[], exhaustionLevel: number): Promise<void> {
+        const char = this.character();
+        if (!char || !char.canEdit) {
+            return;
+        }
+
+        const uniqueKeys = new Set<PersistedConditionKey>();
+        for (const key of activeKeys) {
+            const normalized = this.normalizeConditionKey(key);
+            if (normalized) {
+                uniqueKeys.add(normalized);
+            }
+        }
+
+        const orderedKeys = CONDITION_KEY_ORDER.filter((key) => uniqueKeys.has(key));
+        const updatedState: PersistedBuilderState = {
+            ...(this.persistedBuilderState() ?? {}),
+            activeConditions: orderedKeys,
+            exhaustionLevel: this.normalizeExhaustionLevel(exhaustionLevel)
+        };
+        const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
+
+        await this.store.updateCharacter(this.characterId, {
+            name: char.name,
+            playerName: char.playerName,
+            race: char.race,
+            className: char.className,
+            role: char.role,
+            level: char.level,
+            background: char.background,
+            notes: updatedNotes,
+            campaignId: char.campaignId,
+            hitPoints: char.hitPoints,
+            maxHitPoints: char.maxHitPoints
+        });
+
+        this.cdr.detectChanges();
     }
 
     private async persistExtrasEntries(entries: PersistedExtrasEntry[]): Promise<void> {

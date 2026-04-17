@@ -325,20 +325,37 @@
         <div class="right-column">
             <section class="panel">
                 <div class="defense-condition-grid">
-                    <div>
-                        <h3 class="subsection-title">Defenses</h3>
-                        <ul class="mini-list">
-                            @for (item of defenses(); track $index) {
+                    <div class="detail-trigger-card" role="button" tabindex="0" (click)="openDefensesPopup()" (keydown.enter)="openDefensesPopup()" (keydown.space)="openDefensesPopup(); $event.preventDefault()">
+                        <div class="subsection-title-row">
+                            <h3 class="subsection-title">Defenses</h3>
+                            @if (char.canEdit) {
+                            <small>Click to manage</small>
+                            }
+                        </div>
+                        <ul class="mini-list defense-mini-list">
+                            @for (section of customDefenseSections(); track section.type) {
+                            <li>
+                                <i class="fa-duotone fa-thin {{ defenseTypeIcon(section.type) }} defense-summary-icon" [class.is-resistance]="section.type === 'resistance'" [class.is-immunity]="section.type === 'immunity'" [class.is-vulnerability]="section.type === 'vulnerability'"
+                                    [class.is-condition]="section.type === 'condition-immunity'"></i>
+                                <span>{{ section.summaryText }}</span>
+                            </li>
+                            }
+                            @if (!customDefenseSections().length) {
+                            @for (item of defenses(); track item) {
                             <li>{{ item }}</li>
+                            }
                             }
                             @if (!defenses().length) {
                             <li>No defenses recorded</li>
                             }
                         </ul>
                     </div>
-                    <div>
-                        <h3 class="subsection-title">Conditions</h3>
-                        <p class="notes-block">{{ conditionSummary() }}</p>
+                    <div class="detail-trigger-card" role="button" tabindex="0" (click)="openConditionsPopup()" (keydown.enter)="openConditionsPopup()" (keydown.space)="openConditionsPopup(); $event.preventDefault()">
+                        <div class="subsection-title-row">
+                            <h3 class="subsection-title">Conditions</h3>
+                            <small>{{ char.canEdit ? 'Click to manage' : 'Click to view' }}</small>
+                        </div>
+                        <p class="notes-block condition-summary-note">{{ conditionSummary() }}</p>
                     </div>
                 </div>
             </section>
@@ -2035,6 +2052,161 @@
             </div>
         </section>
         }
+    </aside>
+    }
+
+    @if (defenseManagerOpen()) {
+    <aside class="panel spell-popup defense-popup" role="dialog" aria-label="Manage defenses popup">
+        <header class="spell-popup-header defense-popup-header">
+            <div>
+                <h3>Defenses</h3>
+            </div>
+            <button type="button" class="ghost-button" (click)="closeDefensesPopup()">Close</button>
+        </header>
+
+        @if (customDefenseSections().length > 0) {
+        <section class="defense-summary-stack">
+            @for (section of customDefenseSections(); track section.type) {
+            <div class="defense-summary-group">
+                <p class="defense-section-label">{{ section.heading }}</p>
+                <ul class="defense-summary-list">
+                    <li>
+                        <i class="fa-duotone fa-thin {{ defenseTypeIcon(section.type) }} defense-summary-icon" [class.is-resistance]="section.type === 'resistance'" [class.is-immunity]="section.type === 'immunity'" [class.is-vulnerability]="section.type === 'vulnerability'"
+                            [class.is-condition]="section.type === 'condition-immunity'"></i>
+                        <span class="defense-summary-value">{{ section.summaryText }}</span>
+                        <span class="defense-summary-meta">(Custom)</span>
+                    </li>
+                </ul>
+            </div>
+            }
+        </section>
+        }
+
+        <section class="defense-customize-card">
+            <button type="button" class="defense-customize-toggle" [attr.aria-expanded]="defenseCustomizeOpen()" (click)="toggleDefenseCustomize()">
+                <span>Customize</span>
+                <i class="fa-duotone fa-thin fa-chevron-up" [class.defense-customize-toggle-icon--collapsed]="!defenseCustomizeOpen()"></i>
+            </button>
+
+            @if (defenseCustomizeOpen()) {
+            <div class="spell-popup-controls defense-popup-controls">
+                <label class="field">
+                    <span>Defense Type</span>
+                    <app-dropdown [value]="defenseDraftType()" [options]="defenseTypeOptions" [placeholder]="'Choose a defense type'" size="wide" (changed)="onDefenseTypeChanged($event)"></app-dropdown>
+                </label>
+                <label class="field">
+                    <span>Defense Sub-Type</span>
+                    <app-dropdown [value]="defenseDraftSubtype()" [options]="defenseSubtypeOptions()" [placeholder]="defenseSubtypePlaceholder()" [searchable]="true" [searchPlaceholder]="'Search options...'" size="wide" (changed)="onDefenseSubtypeChanged($event)"></app-dropdown>
+                </label>
+            </div>
+            }
+        </section>
+
+        @for (section of customDefenseSections(); track section.type) {
+        <section class="defense-entry-group">
+            <p class="defense-section-label">{{ section.heading }}</p>
+            <div class="defense-entry-list">
+                @for (entry of section.entries; track entry.type + entry.value) {
+                <article class="defense-entry-row">
+                    <button type="button" class="defense-delete-btn" (click)="removeDefenseEntry(entry)">Delete</button>
+                    <span class="defense-entry-name">{{ entry.value }}</span>
+                    <input class="defense-note-input" type="text" [value]="entry.note ?? ''" placeholder="Enter Source Note..." (change)="updateDefenseEntryNote(entry, $any($event.target).value)" />
+                </article>
+                }
+            </div>
+        </section>
+        }
+
+        @if (!customDefenseSections().length) {
+        <section class="coin-popup-section">
+            <p class="muted">Choose a defense type and subtype to add one here.</p>
+        </section>
+        }
+    </aside>
+    }
+
+    @if (conditionsManagerOpen()) {
+    <aside class="panel spell-popup defense-popup conditions-popup" role="dialog" aria-label="Manage conditions popup">
+        <header class="spell-popup-header defense-popup-header">
+            <div>
+                <h3>Conditions</h3>
+                <p class="conditions-popup-copy">Review active status effects and track exhaustion.</p>
+            </div>
+            <button type="button" class="ghost-button" (click)="closeConditionsPopup()">Close</button>
+        </header>
+
+        <section class="condition-card exhaustion-card" [class.is-active]="exhaustionLevel() > 0">
+            <div class="condition-card-header">
+                <button type="button" class="condition-expand-btn" [attr.aria-expanded]="expandedConditionKey() === 'exhaustion'" (click)="toggleConditionPanel('exhaustion')">
+                    <span class="condition-card-title">
+                        <i class="fa-duotone fa-thin fa-person-running condition-card-icon"></i>
+                        <span>Exhaustion</span>
+                    </span>
+                    <i class="fa-duotone fa-thin fa-chevron-down" [class.condition-card-chevron--expanded]="expandedConditionKey() === 'exhaustion'"></i>
+                </button>
+                <span class="condition-level-readout" [class.is-active]="exhaustionLevel() > 0">Level {{ exhaustionLevel() }}</span>
+            </div>
+
+            @if (expandedConditionKey() === 'exhaustion') {
+            <div class="condition-card-details">
+                <p class="conditions-popup-copy">Exhaustion is cumulative. Each level worsens D20 Tests and reduces Speed. You die at level 6, and a Long Rest removes 1 level.</p>
+                <div class="exhaustion-level-row">
+                    @for (level of exhaustionLevels; track level) {
+                    <button type="button" class="exhaustion-level-btn" [class.is-selected]="exhaustionLevel() === level" [disabled]="!character()?.canEdit" (click)="setExhaustionLevel(level)">
+                        {{ level }}
+                    </button>
+                    }
+                </div>
+                <div class="exhaustion-rule-grid">
+                    @for (rule of exhaustionLevelRules; track rule.level) {
+                    <div class="exhaustion-rule-row" [class.is-current]="exhaustionLevel() === rule.level">
+                        <strong>Level {{ rule.level }}</strong>
+                        <span>{{ rule.effect }}</span>
+                    </div>
+                    }
+                </div>
+            </div>
+            }
+        </section>
+
+        <section class="conditions-list">
+            @for (condition of conditionEntries(); track condition.key) {
+            <article class="condition-card" [class.is-active]="condition.active">
+                <div class="condition-card-header">
+                    <button type="button" class="condition-expand-btn" [attr.aria-expanded]="expandedConditionKey() === condition.key" (click)="toggleConditionPanel(condition.key)">
+                        <span class="condition-card-title">
+                            <i class="fa-duotone fa-thin {{ condition.icon }} condition-card-icon"></i>
+                            <span>{{ condition.label }}</span>
+                        </span>
+                        <i class="fa-duotone fa-thin fa-chevron-down" [class.condition-card-chevron--expanded]="expandedConditionKey() === condition.key"></i>
+                    </button>
+                    <button type="button" class="condition-toggle" [class.is-active]="condition.active" [disabled]="!character()?.canEdit" [attr.aria-pressed]="condition.active" [attr.aria-label]="condition.active ? 'Deactivate ' + condition.label : 'Activate ' + condition.label"
+                        (click)="toggleCondition(condition.key)">
+                        <span class="condition-toggle-track">
+                            <span class="condition-toggle-thumb"></span>
+                        </span>
+                    </button>
+                </div>
+
+                @if (expandedConditionKey() === condition.key) {
+                <div class="condition-card-details">
+                    <ul class="condition-bullets">
+                        @for (bullet of condition.bullets; track bullet) {
+                        <li>
+                            @if (conditionBulletLead(bullet)) {
+                            <strong>{{ conditionBulletLead(bullet) }}</strong>
+                            }
+                            @if (conditionBulletText(bullet)) {
+                            <span>{{ conditionBulletText(bullet) }}</span>
+                            }
+                        </li>
+                        }
+                    </ul>
+                </div>
+                }
+            </article>
+            }
+        </section>
     </aside>
     }
 

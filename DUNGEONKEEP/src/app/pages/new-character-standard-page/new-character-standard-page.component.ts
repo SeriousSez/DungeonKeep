@@ -288,6 +288,26 @@ export class NewCharacterStandardPageComponent {
         });
 
         effect(() => {
+            this.session.initialized();
+            this.store.initialized();
+
+            if (this.store.isHydrating()) {
+                return;
+            }
+
+            const campaigns = this.getNoteSourceCampaigns();
+            if (campaigns.length === 0) {
+                return;
+            }
+
+            for (const campaign of campaigns) {
+                if (!campaign.detailsLoaded && !this.store.isCampaignDetailsLoading(campaign.id)) {
+                    void this.store.ensureCampaignLoaded(campaign.id);
+                }
+            }
+        });
+
+        effect(() => {
             const characterId = this.activeBuilderCharacterId();
             if (!characterId) {
                 return;
