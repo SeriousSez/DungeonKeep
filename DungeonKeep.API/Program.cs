@@ -75,7 +75,7 @@ try
         EnsureCurrentSqliteSchema(dbContext);
     }
 
-    EnsureCharacterPortraitStorage(dbContext, databaseProvider);
+    EnsureCharacterRichTextStorage(dbContext, databaseProvider);
 }
 catch (Exception exception)
 {
@@ -189,12 +189,15 @@ static void EnsureCharactersCampaignIdIsNullable(DungeonKeepDbContext dbContext)
     }
 }
 
-static void EnsureCharacterPortraitStorage(DungeonKeepDbContext dbContext, DatabaseProvider databaseProvider)
+static void EnsureCharacterRichTextStorage(DungeonKeepDbContext dbContext, DatabaseProvider databaseProvider)
 {
-    if (databaseProvider == DatabaseProvider.MySql)
+    if (databaseProvider != DatabaseProvider.MySql)
     {
-        dbContext.Database.ExecuteSqlRaw("ALTER TABLE Characters MODIFY COLUMN PortraitUrl LONGTEXT NOT NULL;");
+        return;
     }
+
+    EnsureMySqlLongTextColumnExists(dbContext, "Characters", "PortraitUrl");
+    EnsureMySqlLongTextColumnExists(dbContext, "Characters", "DetailBackgroundImageUrl");
 }
 
 static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)
@@ -246,6 +249,7 @@ static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)
     EnsureColumnExists(dbContext, "Characters", "Spells", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "Characters", "ExperiencePoints", "INTEGER NOT NULL DEFAULT 0");
     EnsureColumnExists(dbContext, "Characters", "PortraitUrl", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Characters", "DetailBackgroundImageUrl", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "Characters", "Goals", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "Characters", "Secrets", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "Characters", "SessionHistory", "TEXT NOT NULL DEFAULT ''");
@@ -293,5 +297,30 @@ static void EnsureIndexExists(DungeonKeepDbContext dbContext, string indexName, 
 {
 #pragma warning disable EF1002
     dbContext.Database.ExecuteSqlRaw($"CREATE INDEX IF NOT EXISTS \"{indexName}\" ON \"{tableName}\" (\"{columnName}\");");
+#pragma warning restore EF1002
+}
+
+static void EnsureMySqlLongTextColumnExists(DungeonKeepDbContext dbContext, string tableName, string columnName)
+{
+    using var connection = dbContext.Database.GetDbConnection();
+    if (connection.State != ConnectionState.Open)
+    {
+        connection.Open();
+    }
+
+    using var existsCommand = connection.CreateCommand();
+    existsCommand.CommandText = $"SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{tableName}' AND COLUMN_NAME = '{columnName}' LIMIT 1;";
+    var exists = existsCommand.ExecuteScalar() is not null;
+
+    if (!exists)
+    {
+#pragma warning disable EF1002
+        dbContext.Database.ExecuteSqlRaw($"ALTER TABLE `{tableName}` ADD COLUMN `{columnName}` LONGTEXT NULL;");
+#pragma warning restore EF1002
+        return;
+    }
+
+#pragma warning disable EF1002
+    dbContext.Database.ExecuteSqlRaw($"ALTER TABLE `{tableName}` MODIFY COLUMN `{columnName}` LONGTEXT NULL;");
 #pragma warning restore EF1002
 }

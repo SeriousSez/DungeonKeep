@@ -35,6 +35,7 @@ public sealed class Character
     public string Spells { get; set; } = string.Empty; // JSON or delimited
     public int ExperiencePoints { get; set; } = 0;
     public string PortraitUrl { get; set; } = string.Empty;
+    public string DetailBackgroundImageUrl { get; set; } = string.Empty;
     public string Goals { get; set; } = string.Empty; // JSON or delimited
     public string Secrets { get; set; } = string.Empty; // JSON or delimited
     public string SessionHistory { get; set; } = string.Empty; // JSON or delimited

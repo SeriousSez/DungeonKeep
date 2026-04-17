@@ -307,6 +307,7 @@ export interface ApiCharacterDto {
     spells: string;
     experiencePoints: number;
     portraitUrl: string;
+    detailBackgroundImageUrl: string;
     goals: string;
     secrets: string;
     sessionHistory: string;
@@ -986,6 +987,7 @@ export class DungeonApiService {
         spells?: string;
         experiencePoints?: number;
         portraitUrl?: string;
+        detailBackgroundImageUrl?: string;
         goals?: string;
         secrets?: string;
         sessionHistory?: string;
@@ -1021,6 +1023,7 @@ export class DungeonApiService {
         spells?: string;
         experiencePoints?: number;
         portraitUrl?: string;
+        detailBackgroundImageUrl?: string;
         goals?: string;
         secrets?: string;
         sessionHistory?: string;

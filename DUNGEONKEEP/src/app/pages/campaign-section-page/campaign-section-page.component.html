@@ -103,6 +103,13 @@
             @for (character of activePartyMembers(); track character.id) {
             <article class="party-member-card">
                 <a class="party-member-link" [routerLink]="['/character', character.id]" [attr.aria-label]="'Open ' + character.name">
+                    <div class="member-portrait" aria-hidden="true">
+                        @if (getCharacterPortraitUrl(character)) {
+                        <img [src]="getCharacterPortraitUrl(character)" [alt]="" />
+                        } @else {
+                        <span class="member-portrait-placeholder">{{ getCharacterInitials(character.name) }}</span>
+                        }
+                    </div>
                     <div class="member-info">
                         <h3>{{ character.name }}</h3>
                         <p class="member-meta">{{ character.className }} • Level {{ character.level }} • {{ character.status }}</p>
@@ -137,6 +144,13 @@
             @for (character of inactivePartyMembers(); track character.id) {
             <article class="party-member-card party-member-card--inactive">
                 <a class="party-member-link" [routerLink]="['/character', character.id]" [attr.aria-label]="'Open ' + character.name">
+                    <div class="member-portrait" aria-hidden="true">
+                        @if (getCharacterPortraitUrl(character)) {
+                        <img [src]="getCharacterPortraitUrl(character)" [alt]="" />
+                        } @else {
+                        <span class="member-portrait-placeholder">{{ getCharacterInitials(character.name) }}</span>
+                        }
+                    </div>
                     <div class="member-info">
                         <h3>{{ character.name }}</h3>
                         <p class="member-meta">{{ character.className }} • Level {{ character.level }} • Not currently active</p>

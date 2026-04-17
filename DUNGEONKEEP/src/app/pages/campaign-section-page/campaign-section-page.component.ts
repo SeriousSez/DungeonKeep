@@ -233,6 +233,19 @@ export class CampaignSectionPageComponent {
     });
     readonly totalLootWeight = computed(() => this.lootSummaries().reduce((total, item) => total + ((item.weight ?? 0) * item.count), 0));
 
+    getCharacterPortraitUrl(character: Character): string {
+        return character.image?.trim() ?? '';
+    }
+
+    getCharacterInitials(name: string): string {
+        const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
+        if (parts.length === 0) {
+            return '?';
+        }
+
+        return parts.map((part) => part.charAt(0).toUpperCase()).join('');
+    }
+
     constructor() {
         void this.ensureCampaignDetails();
     }

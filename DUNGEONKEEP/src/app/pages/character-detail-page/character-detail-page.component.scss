@@ -1,5 +1,40 @@
 :host {
+    --detail-page-bg:
+        radial-gradient(circle at top left, color-mix(in srgb, var(--accent-primary) 14%, transparent), transparent 40%),
+        linear-gradient(180deg, color-mix(in srgb, var(--panel-bg) 96%, var(--surface-raised) 4%), color-mix(in srgb, var(--surface-raised) 92%, var(--panel-bg) 8%));
+    --detail-panel-surface: var(--panel-bg);
+    --detail-card-surface: var(--surface-raised);
+    --detail-theme-border: var(--panel-border);
+    position: relative;
     display: block;
+    width: 100%;
+    min-height: 100%;
+    box-sizing: border-box;
+    border-radius: 24px;
+    isolation: isolate;
+}
+
+.custom-background-viewport {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.custom-background-image,
+.custom-background-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.custom-background-image {
+    object-fit: cover;
+}
+
+.custom-background-overlay {
+    background: linear-gradient(rgba(15, 23, 42, 0.18), rgba(15, 23, 42, 0.18));
 }
 
 @keyframes dkFadeUp {
@@ -31,6 +66,9 @@
     gap: 18px;
     width: 100%;
     min-width: 0;
+    position: relative;
+    z-index: 1;
+    isolation: isolate;
 
     >* {
         opacity: 0;
@@ -52,6 +90,84 @@
     > :nth-child(4) {
         animation-delay: 190ms;
     }
+}
+
+:host([data-detail-background='forest']) {
+    --detail-page-bg:
+        radial-gradient(circle at top left, color-mix(in srgb, #547a55 24%, transparent), transparent 38%),
+        radial-gradient(circle at bottom right, color-mix(in srgb, #355c46 18%, transparent), transparent 44%),
+        linear-gradient(180deg, color-mix(in srgb, var(--panel-bg) 95%, #547a55 5%), color-mix(in srgb, var(--surface-raised) 92%, #355c46 8%));
+    --detail-panel-surface: color-mix(in srgb, var(--panel-bg-solid) 90%, #e5f0e2 10%);
+    --detail-card-surface: color-mix(in srgb, var(--surface-raised-solid-alt) 82%, #dcebd8 18%);
+    --detail-theme-border: color-mix(in srgb, #547a55 28%, var(--panel-border));
+}
+
+:host([data-detail-background='ember']) {
+    --detail-page-bg:
+        radial-gradient(circle at top right, color-mix(in srgb, #b86b3b 24%, transparent), transparent 38%),
+        radial-gradient(circle at bottom left, color-mix(in srgb, #7f3f2d 18%, transparent), transparent 42%),
+        linear-gradient(180deg, color-mix(in srgb, var(--panel-bg) 95%, #b86b3b 5%), color-mix(in srgb, var(--surface-raised) 92%, #7f3f2d 8%));
+    --detail-panel-surface: color-mix(in srgb, var(--panel-bg-solid) 90%, #f4e0d2 10%);
+    --detail-card-surface: color-mix(in srgb, var(--surface-raised-solid-alt) 82%, #edd2c2 18%);
+    --detail-theme-border: color-mix(in srgb, #b86b3b 30%, var(--panel-border));
+}
+
+:host([data-detail-background='moonlit']) {
+    --detail-page-bg:
+        radial-gradient(circle at top left, color-mix(in srgb, #6880b8 24%, transparent), transparent 38%),
+        radial-gradient(circle at bottom right, color-mix(in srgb, #465d8f 18%, transparent), transparent 44%),
+        linear-gradient(180deg, color-mix(in srgb, var(--panel-bg) 95%, #6880b8 5%), color-mix(in srgb, var(--surface-raised) 92%, #465d8f 8%));
+    --detail-panel-surface: color-mix(in srgb, var(--panel-bg-solid) 90%, #dde4f5 10%);
+    --detail-card-surface: color-mix(in srgb, var(--surface-raised-solid-alt) 82%, #d2dbf0 18%);
+    --detail-theme-border: color-mix(in srgb, #6880b8 28%, var(--panel-border));
+}
+
+:host([data-detail-background='storm']) {
+    --detail-page-bg:
+        radial-gradient(circle at top center, color-mix(in srgb, #6b7586 22%, transparent), transparent 38%),
+        radial-gradient(circle at bottom left, color-mix(in srgb, #465262 16%, transparent), transparent 42%),
+        linear-gradient(180deg, color-mix(in srgb, var(--panel-bg) 96%, #6b7586 4%), color-mix(in srgb, var(--surface-raised) 93%, #465262 7%));
+    --detail-panel-surface: color-mix(in srgb, var(--panel-bg-solid) 90%, #dde2e9 10%);
+    --detail-card-surface: color-mix(in srgb, var(--surface-raised-solid-alt) 82%, #d1d7e0 18%);
+    --detail-theme-border: color-mix(in srgb, #6b7586 28%, var(--panel-border));
+}
+
+:host([data-detail-background='custom']) {
+    --detail-page-bg: transparent;
+    background: transparent;
+    border-color: color-mix(in srgb, var(--panel-border) 38%, transparent);
+}
+
+:host([data-detail-background='custom']) .header-content,
+:host([data-detail-background='custom']) .panel {
+    background: var(--surface-raised-solid-alt);
+    border-color: var(--panel-border);
+    backdrop-filter: none;
+}
+
+:host-context(.theme-dark) {
+    border-color: color-mix(in srgb, var(--panel-border) 88%, transparent);
+}
+
+:host-context(.theme-dark):host([data-detail-background='custom']) .header-content,
+:host-context(.theme-dark):host([data-detail-background='custom']) .panel {
+    background: var(--surface-raised-solid-alt);
+}
+
+:host([data-detail-background='forest']) :is(.header-content, .panel),
+:host([data-detail-background='ember']) :is(.header-content, .panel),
+:host([data-detail-background='moonlit']) :is(.header-content, .panel),
+:host([data-detail-background='storm']) :is(.header-content, .panel) {
+    background: var(--detail-panel-surface);
+    border-color: var(--detail-theme-border);
+}
+
+:host([data-detail-background='forest']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
+:host([data-detail-background='ember']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
+:host([data-detail-background='moonlit']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
+:host([data-detail-background='storm']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row) {
+    background: var(--detail-card-surface);
+    border-color: var(--detail-theme-border);
 }
 
 .page-shell :is(button, a, input, .panel, .summary-item, .save-card, .skill-row, .training-block, .info-row, .passive-row, .action-filter, .combat-tab, .action-chip, .spell-chip, .slot-pill, .inventory-row, .container-header, .detail-trigger-row, .detail-trigger-card) {
@@ -256,6 +372,98 @@
     gap: 10px;
     width: 100%;
     min-width: 0;
+}
+
+.header-theme-controls {
+    display: grid;
+    gap: 6px;
+    width: 100%;
+    justify-items: end;
+}
+
+.header-manage-menu {
+    position: relative;
+    display: grid;
+    justify-items: end;
+    width: 100%;
+}
+
+.header-manage-trigger {
+    min-width: 120px;
+}
+
+.header-manage-popup {
+    background: var(--panel-bg-solid) !important;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: min(420px, 100%);
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    z-index: 80;
+}
+
+.header-manage-popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.header-manage-popup-header h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.header-manage-popup .header-theme-controls {
+    justify-items: stretch;
+}
+
+.header-manage-popup .theme-upload-actions {
+    justify-content: flex-start;
+}
+
+.header-manage-popup .campaign-assignment-controls {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.header-manage-popup .campaign-assignment-buttons {
+    justify-self: stretch;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.theme-upload-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.theme-upload-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+}
+
+.theme-upload-label span {
+    width: 100%;
+    text-align: center;
+}
+
+.theme-upload-input {
+    display: none;
+}
+
+.theme-control-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-soft);
 }
 
 .header-status-row {

@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { ChangeDetectorRef, Component, DestroyRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -8,6 +8,7 @@ import { marked } from 'marked';
 import { CharacterPortraitCropModalComponent } from '../../components/character-portrait-crop-modal/character-portrait-crop-modal.component';
 import { CharacterPortraitModalComponent } from '../../components/character-portrait-modal/character-portrait-modal.component';
 import { DropdownComponent, type DropdownOption } from '../../components/dropdown/dropdown.component';
+import { MultiSelectDropdownComponent, type MultiSelectOptionGroup } from '../../components/multi-select-dropdown/multi-select-dropdown.component';
 import { classLevelOneFeatures } from '../../data/class-features.data';
 import { monsterCatalog } from '../../data/monster-catalog.generated';
 import { premadeCharacters, type PremadeCharacter } from '../../data/premade-characters.data';
@@ -52,6 +53,7 @@ type FeaturesFilter = 'all' | 'class-features' | 'species-traits' | 'feats';
 type NotesFilter = 'all' | 'orgs' | 'allies' | 'enemies' | 'backstory' | 'other';
 type MeasurementSystem = 'imperial' | 'metric';
 type InventoryDraftField = 'name' | 'category' | 'quantity' | 'weight' | 'costGp' | 'notes';
+type DetailBackgroundTheme = 'parchment' | 'forest' | 'ember' | 'moonlit' | 'storm' | 'custom';
 
 interface PersistedInventoryEntry {
     name: string;
@@ -122,6 +124,8 @@ interface PersistedBuilderState {
     deathSaveFailures?: number;
     deathSaveSuccesses?: number;
     extrasEntries?: PersistedExtrasEntry[];
+    detailBackgroundTheme?: DetailBackgroundTheme;
+    detailBackgroundImageUrl?: string;
 }
 
 interface CombatRow {
@@ -156,9 +160,13 @@ interface DetailDrawerContent {
 
 @Component({
     selector: 'app-character-detail-page',
-    imports: [CommonModule, RouterLink, DropdownComponent, CharacterPortraitModalComponent, CharacterPortraitCropModalComponent],
+    imports: [CommonModule, RouterLink, DropdownComponent, MultiSelectDropdownComponent, CharacterPortraitModalComponent, CharacterPortraitCropModalComponent],
     templateUrl: './character-detail-page.component.html',
-    styleUrl: './character-detail-page.component.scss'
+    styleUrl: './character-detail-page.component.scss',
+    host: {
+        '[attr.data-detail-background]': 'detailBackgroundTheme()',
+        '[style.--character-page-custom-bg]': 'detailBackgroundCssValue()'
+    }
 })
 export class CharacterDetailPageComponent {
     private static readonly UNASSIGNED_CAMPAIGN_ID = '00000000-0000-0000-0000-000000000000';
@@ -166,6 +174,7 @@ export class CharacterDetailPageComponent {
     private readonly store = inject(DungeonStoreService);
     private readonly api = inject(DungeonApiService);
     private readonly route = inject(ActivatedRoute);
+    private readonly document = inject(DOCUMENT);
     private readonly cdr = inject(ChangeDetectorRef);
     private readonly destroyRef = inject(DestroyRef);
     private readonly campaignHub = inject(CampaignHubService);
@@ -180,6 +189,14 @@ export class CharacterDetailPageComponent {
     private readonly premadeCharacterLookup = new Map<string, PremadeCharacter>(
         premadeCharacters.map((character) => [this.getPremadeLookupKey(character), character])
     );
+    readonly detailBackgroundOptions: ReadonlyArray<DropdownOption> = [
+        { value: 'parchment', label: 'Parchment' },
+        { value: 'forest', label: 'Forest' },
+        { value: 'ember', label: 'Ember' },
+        { value: 'moonlit', label: 'Moonlit' },
+        { value: 'storm', label: 'Storm' },
+        { value: 'custom', label: 'Custom Image' }
+    ];
 
     private readonly weaponDamageMap: Record<string, string> = {
         'club': '1d4 Bludgeoning',
@@ -387,7 +404,7 @@ export class CharacterDetailPageComponent {
     readonly inventorySearchTerm = signal('');
     readonly activeFeaturesFilter = signal<FeaturesFilter>('all');
     readonly activeNotesFilter = signal<NotesFilter>('all');
-    readonly selectedCampaignAssignment = signal('');
+    readonly selectedCampaignAssignments = signal<string[]>([]);
     readonly isUpdatingCampaign = signal(false);
     readonly campaignUpdateError = signal('');
     readonly portraitPromptDetails = signal('');
@@ -399,6 +416,8 @@ export class CharacterDetailPageComponent {
     readonly portraitCropModalOpen = signal(false);
     readonly portraitCropSourceImageUrl = signal('');
     readonly portraitOriginalImageUrl = signal('');
+    readonly detailBackgroundCachedImageUrl = signal('');
+    readonly headerManageOpen = signal(false);
     readonly usedSpellSlotsByLevel = signal<Record<number, number>>({});
     readonly expandedContainers = signal<Set<string>>(new Set());
     readonly activeDetailDrawer = signal<DetailDrawerContent | null>(null);
@@ -586,6 +605,23 @@ export class CharacterDetailPageComponent {
     private saveSpellSlotTimeout: ReturnType<typeof setTimeout> | null = null;
 
     constructor() {
+        effect(() => {
+            const body = this.document?.body;
+            if (!body) {
+                return;
+            }
+
+            body.classList.add('character-detail-page-active');
+            body.setAttribute('data-character-page-theme', this.detailBackgroundTheme());
+
+            const cssValue = this.detailBackgroundCssValue();
+            if (this.detailBackgroundTheme() === 'custom' && cssValue !== 'none') {
+                body.style.setProperty('--character-page-custom-bg', cssValue);
+            } else {
+                body.style.removeProperty('--character-page-custom-bg');
+            }
+        });
+
         // Join SignalR campaign group when campaign is available; leave on destroy.
         effect(() => {
             const campaign = this.currentCampaign();
@@ -605,6 +641,10 @@ export class CharacterDetailPageComponent {
             });
 
         this.destroyRef.onDestroy(() => {
+            const body = this.document?.body;
+            body?.classList.remove('character-detail-page-active');
+            body?.removeAttribute('data-character-page-theme');
+            body?.style.removeProperty('--character-page-custom-bg');
             void this.campaignHub.disconnect();
         });
 
@@ -628,6 +668,7 @@ export class CharacterDetailPageComponent {
 
             this.lastPortraitSourceCharacterId = characterId;
             this.portraitOriginalImageUrl.set(characterId ? this.readStoredPortraitOriginalImageUrl(characterId) : '');
+            this.detailBackgroundCachedImageUrl.set(characterId ? this.readStoredDetailBackgroundImageUrl(characterId) : '');
         });
 
         effect(() => {
@@ -652,6 +693,29 @@ export class CharacterDetailPageComponent {
         effect(() => {
             this.heroicInspiration.set(this.persistedBuilderState()?.heroicInspiration ?? false);
         });
+
+        effect(() => {
+            const char = this.character();
+            if (!char) {
+                this.selectedCampaignAssignments.set([]);
+                return;
+            }
+
+            const nextCampaignIds = Array.from(new Set((char.campaignIds ?? []).filter((id) => !!id)));
+            this.selectedCampaignAssignments.set(nextCampaignIds);
+        });
+    }
+
+    @HostListener('document:click', ['$event'])
+    onDocumentClick(event: MouseEvent): void {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) {
+            return;
+        }
+
+        if (!target.closest('.header-manage-menu')) {
+            this.headerManageOpen.set(false);
+        }
     }
 
     @HostListener('document:dungeonkeep-close-popups')
@@ -663,6 +727,7 @@ export class CharacterDetailPageComponent {
         this.spellManagerOpen.set(false);
         this.inventoryManagerOpen.set(false);
         this.extrasManagerOpen.set(false);
+        this.headerManageOpen.set(false);
     }
 
     private requestCloseChat(): void {
@@ -1049,6 +1114,24 @@ export class CharacterDetailPageComponent {
 
     readonly portraitInitials = computed(() => this.buildCharacterInitials(this.character()?.name ?? ''));
     readonly displayPortraitImageUrl = computed(() => this.character()?.image?.trim() || this.portraitOriginalImageUrl().trim() || '');
+    readonly detailBackgroundImageUrl = computed(() =>
+        this.character()?.detailBackgroundImageUrl?.trim()
+        || this.detailBackgroundCachedImageUrl().trim()
+        || this.persistedBuilderState()?.detailBackgroundImageUrl?.trim()
+        || ''
+    );
+    readonly detailBackgroundTheme = computed<DetailBackgroundTheme>(() => {
+        const persistedTheme = this.persistedBuilderState()?.detailBackgroundTheme;
+        if (persistedTheme) {
+            return this.normalizeDetailBackgroundTheme(persistedTheme);
+        }
+
+        return this.detailBackgroundImageUrl() ? 'custom' : 'parchment';
+    });
+    readonly detailBackgroundCssValue = computed(() => {
+        const imageUrl = this.detailBackgroundImageUrl();
+        return imageUrl ? `url("${imageUrl.replace(/"/g, '\\"')}")` : 'none';
+    });
 
     readonly partyCurrency = computed<PersistedCurrencyState>(() => {
         const campaign = this.currentCampaign();
@@ -1065,10 +1148,158 @@ export class CharacterDetailPageComponent {
         this.store.campaigns().map((campaign) => ({ value: campaign.id, label: campaign.name }))
     );
 
+    readonly assignableCampaignGroups = computed<MultiSelectOptionGroup[]>(() => [
+        {
+            label: '',
+            options: this.assignableCampaignOptions().map((campaign) => ({
+                value: String(campaign.value),
+                label: campaign.label
+            }))
+        }
+    ]);
+
     readonly onPortraitPromptDetailsChanged = (value: string) => {
         this.portraitPromptDetails.set(value);
         this.portraitGenerationError.set('');
         this.portraitSaveMessage.set('');
+    };
+
+    readonly toggleHeaderManageMenu = (event?: Event) => {
+        event?.stopPropagation();
+        this.headerManageOpen.update((open) => !open);
+    };
+
+    readonly closeHeaderManageMenu = () => {
+        this.headerManageOpen.set(false);
+    };
+
+    readonly onDetailBackgroundThemeChanged = async (value: string | number) => {
+        const char = this.character();
+        if (!char || !char.canEdit) {
+            return;
+        }
+
+        const nextTheme = this.normalizeDetailBackgroundTheme(String(value));
+        const currentState: PersistedBuilderState = this.persistedBuilderState() ?? {};
+        if (currentState.detailBackgroundTheme === nextTheme) {
+            return;
+        }
+
+        const updatedState: PersistedBuilderState = {
+            ...currentState,
+            detailBackgroundTheme: nextTheme
+        };
+        const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
+
+        try {
+            await this.store.updateCharacter(this.characterId, {
+                name: char.name,
+                playerName: char.playerName,
+                race: char.race,
+                className: char.className,
+                role: char.role,
+                level: char.level,
+                background: char.background,
+                notes: updatedNotes,
+                campaignId: char.campaignId,
+                hitPoints: char.hitPoints,
+                maxHitPoints: char.maxHitPoints,
+                image: char.image
+            });
+        } finally {
+            this.cdr.detectChanges();
+        }
+    };
+
+    readonly onDetailBackgroundImageSelected = async (event: Event) => {
+        const char = this.character();
+        if (!char || !char.canEdit) {
+            return;
+        }
+
+        const input = event.target as HTMLInputElement | null;
+        const file = input?.files?.[0] ?? null;
+        if (!file) {
+            return;
+        }
+
+        try {
+            this.campaignUpdateError.set('');
+
+            const imageUrl = await this.readPortraitFile(file);
+            this.storeDetailBackgroundImageUrl(this.characterId, imageUrl);
+            const currentState: PersistedBuilderState = this.persistedBuilderState() ?? {};
+            const updatedState: PersistedBuilderState = {
+                ...currentState,
+                detailBackgroundTheme: 'custom'
+            };
+            delete updatedState.detailBackgroundImageUrl;
+            const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
+
+            const updated = await this.store.updateCharacter(this.characterId, {
+                name: char.name,
+                playerName: char.playerName,
+                race: char.race,
+                className: char.className,
+                role: char.role,
+                level: char.level,
+                background: char.background,
+                notes: updatedNotes,
+                campaignId: char.campaignId,
+                hitPoints: char.hitPoints,
+                maxHitPoints: char.maxHitPoints,
+                image: char.image,
+                detailBackgroundImageUrl: imageUrl
+            });
+
+            if (!updated) {
+                this.campaignUpdateError.set('Background image saved on this device, but sync is unavailable right now.');
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unable to upload that background image right now.';
+            this.campaignUpdateError.set(message);
+        } finally {
+            if (input) {
+                input.value = '';
+            }
+
+            this.cdr.detectChanges();
+        }
+    };
+
+    readonly clearDetailBackgroundImage = async () => {
+        const char = this.character();
+        if (!char || !char.canEdit) {
+            return;
+        }
+
+        const currentState: PersistedBuilderState = this.persistedBuilderState() ?? {};
+        const updatedState: PersistedBuilderState = {
+            ...currentState,
+            detailBackgroundTheme: 'parchment'
+        };
+        delete updatedState.detailBackgroundImageUrl;
+        const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
+
+        this.storeDetailBackgroundImageUrl(this.characterId, '');
+
+        await this.store.updateCharacter(this.characterId, {
+            name: char.name,
+            playerName: char.playerName,
+            race: char.race,
+            className: char.className,
+            role: char.role,
+            level: char.level,
+            background: char.background,
+            notes: updatedNotes,
+            campaignId: char.campaignId,
+            hitPoints: char.hitPoints,
+            maxHitPoints: char.maxHitPoints,
+            image: char.image,
+            detailBackgroundImageUrl: ''
+        });
+
+        this.cdr.detectChanges();
     };
 
     readonly openPortraitModal = () => {
@@ -2427,9 +2658,9 @@ export class CharacterDetailPageComponent {
 
     async assignCharacterToCampaign(): Promise<void> {
         const char = this.character();
-        const targetCampaignId = this.selectedCampaignAssignment();
+        const targetCampaignIds = this.selectedCampaignAssignments();
 
-        if (!char || !targetCampaignId || this.isUpdatingCampaign()) {
+        if (!char || targetCampaignIds.length === 0 || this.isUpdatingCampaign()) {
             return;
         }
 
@@ -2437,9 +2668,9 @@ export class CharacterDetailPageComponent {
         this.campaignUpdateError.set('');
 
         try {
-            const didUpdate = await this.store.setCharacterCampaign(char.id, targetCampaignId);
+            const didUpdate = await this.store.setCharacterCampaign(char.id, targetCampaignIds);
             if (!didUpdate) {
-                this.campaignUpdateError.set('Unable to assign character to that campaign right now.');
+                this.campaignUpdateError.set('Unable to update campaign assignments right now.');
             }
         } finally {
             this.isUpdatingCampaign.set(false);
@@ -2467,8 +2698,8 @@ export class CharacterDetailPageComponent {
         }
     }
 
-    onCampaignAssignmentChanged(value: string | number): void {
-        this.selectedCampaignAssignment.set(String(value));
+    onCampaignAssignmentChanged(values: string[]): void {
+        this.selectedCampaignAssignments.set(values);
         this.campaignUpdateError.set('');
     }
 
@@ -2947,6 +3178,29 @@ export class CharacterDetailPageComponent {
                 globalThis.localStorage?.removeItem(`dungeonkeep-portrait-original:${characterId}`);
             } else {
                 globalThis.localStorage?.setItem(`dungeonkeep-portrait-original:${characterId}`, trimmed);
+            }
+        } catch {
+            // Ignore browser storage failures and fall back to in-memory state.
+        }
+    }
+
+    private readStoredDetailBackgroundImageUrl(characterId: string): string {
+        try {
+            return globalThis.localStorage?.getItem(`dungeonkeep-detail-background:${characterId}`)?.trim() ?? '';
+        } catch {
+            return '';
+        }
+    }
+
+    private storeDetailBackgroundImageUrl(characterId: string, imageUrl: string): void {
+        const trimmed = imageUrl.trim();
+        this.detailBackgroundCachedImageUrl.set(trimmed);
+
+        try {
+            if (!trimmed) {
+                globalThis.localStorage?.removeItem(`dungeonkeep-detail-background:${characterId}`);
+            } else {
+                globalThis.localStorage?.setItem(`dungeonkeep-detail-background:${characterId}`, trimmed);
             }
         } catch {
             // Ignore browser storage failures and fall back to in-memory state.
@@ -6403,6 +6657,19 @@ export class CharacterDetailPageComponent {
             eyes: parsed['eyes'] ?? '',
             skin: parsed['skin'] ?? ''
         };
+    }
+
+    private normalizeDetailBackgroundTheme(value: string): DetailBackgroundTheme {
+        switch (value) {
+            case 'forest':
+            case 'ember':
+            case 'moonlit':
+            case 'storm':
+            case 'custom':
+                return value;
+            default:
+                return 'parchment';
+        }
     }
 
     private sanitizeLanguageList(values: string[]): string[] {

@@ -44,4 +44,17 @@ export class PartyRosterComponent {
         const profBonus = character.skills.perception ? character.proficiencyBonus : 0;
         return 10 + wisdomMod + profBonus;
     }
+
+    getCharacterPortraitUrl(character: Character): string {
+        return character.image?.trim() ?? '';
+    }
+
+    getCharacterInitials(name: string): string {
+        const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
+        if (parts.length === 0) {
+            return '?';
+        }
+
+        return parts.map((part) => part.charAt(0).toUpperCase()).join('');
+    }
 }

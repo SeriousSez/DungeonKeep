@@ -35,6 +35,7 @@ public sealed record CharacterDto(
     , string Spells
     , int ExperiencePoints
     , string PortraitUrl
+    , string DetailBackgroundImageUrl
     , string Goals
     , string Secrets
     , string SessionHistory
@@ -68,6 +69,7 @@ public sealed record CreateCharacterRequest(
     , string Spells = ""
     , int ExperiencePoints = 0
     , string PortraitUrl = ""
+    , string DetailBackgroundImageUrl = ""
     , string Goals = ""
     , string Secrets = ""
     , string SessionHistory = ""
@@ -128,6 +130,7 @@ public sealed record UpdateCharacterRequest(
     , string? Spells = null
     , int? ExperiencePoints = null
     , string? PortraitUrl = null
+    , string? DetailBackgroundImageUrl = null
     , string? Goals = null
     , string? Secrets = null
     , string? SessionHistory = null

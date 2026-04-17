@@ -306,6 +306,7 @@ export interface Character {
     spells?: string[];
     experiencePoints?: number;
     image?: string;
+    detailBackgroundImageUrl?: string;
 }
 
 export interface CampaignDraft {
@@ -354,6 +355,7 @@ export interface CharacterDraft {
     spells?: string[];
     experiencePoints?: number;
     image?: string;
+    detailBackgroundImageUrl?: string;
     goals?: string;
     secrets?: string;
     sessionHistory?: string;

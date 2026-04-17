@@ -11,9 +11,18 @@
         @for (character of selectedParty; track character.id) {
         <article class="character-card" [routerLink]="['/character', character.id]">
             <div class="character-card-top">
-                <div>
-                    <h3>{{ character.name }}</h3>
-                    <p>{{ character.race }} {{ character.className }} · Level {{ character.level }}</p>
+                <div class="character-card-identity">
+                    <div class="character-card-portrait" aria-hidden="true">
+                        @if (getCharacterPortraitUrl(character)) {
+                        <img [src]="getCharacterPortraitUrl(character)" [alt]="" />
+                        } @else {
+                        <span>{{ getCharacterInitials(character.name) }}</span>
+                        }
+                    </div>
+                    <div>
+                        <h3>{{ character.name }}</h3>
+                        <p>{{ character.race }} {{ character.className }} · Level {{ character.level }}</p>
+                    </div>
                 </div>
                 <span class="status-pill" [attr.data-status]="character.status">{{ character.status }}</span>
             </div>

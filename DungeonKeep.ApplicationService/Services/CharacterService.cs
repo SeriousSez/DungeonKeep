@@ -87,6 +87,7 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
             Spells = request.Spells.Trim(),
             ExperiencePoints = Math.Max(0, request.ExperiencePoints),
             PortraitUrl = request.PortraitUrl.Trim(),
+            DetailBackgroundImageUrl = request.DetailBackgroundImageUrl.Trim(),
             Goals = request.Goals.Trim(),
             Secrets = request.Secrets.Trim(),
             SessionHistory = request.SessionHistory.Trim(),
@@ -151,6 +152,7 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
             ResolveOptionalText(request.Spells, existing.Spells),
             request.ExperiencePoints.HasValue ? Math.Max(0, request.ExperiencePoints.Value) : existing.ExperiencePoints,
             ResolveOptionalText(request.PortraitUrl, existing.PortraitUrl),
+            ResolveOptionalText(request.DetailBackgroundImageUrl, existing.DetailBackgroundImageUrl),
             ResolveOptionalText(request.Goals, existing.Goals),
             ResolveOptionalText(request.Secrets, existing.Secrets),
             ResolveOptionalText(request.SessionHistory, existing.SessionHistory),
@@ -342,6 +344,7 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
             character.Spells,
             character.ExperiencePoints,
             character.PortraitUrl,
+            character.DetailBackgroundImageUrl,
             character.Goals,
             character.Secrets,
             character.SessionHistory

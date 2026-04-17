@@ -34,6 +34,15 @@
     color: var(--text-main);
 }
 
+:host-context(body.character-detail-page-active[data-character-page-theme='custom']) .breadcrumb-link {
+    color: var(--accent-primary);
+}
+
+:host-context(body.character-detail-page-active[data-character-page-theme='custom']) .breadcrumb-separator,
+:host-context(body.character-detail-page-active[data-character-page-theme='custom']) .breadcrumb-current {
+    color: #e5ad8e;
+}
+
 @media (max-width: 720px) {
     :host {
         margin: 0 auto;

@@ -1,3 +1,10 @@
+@if (detailBackgroundTheme() === 'custom' && detailBackgroundImageUrl()) {
+<div class="custom-background-viewport" aria-hidden="true">
+    <img class="custom-background-image" [src]="detailBackgroundImageUrl()" alt="" />
+    <div class="custom-background-overlay"></div>
+</div>
+}
+
 <main class="page-shell">
     @if (!initialized()) {
     <div class="detail-header skeleton-panel">
@@ -90,20 +97,54 @@
                         </a>
                     </div>
                     @if (char.canEdit) {
-                    <div class="campaign-assignment-controls">
-                        <app-dropdown [value]="selectedCampaignAssignment()" [options]="assignableCampaignOptions()" [placeholder]="'Choose campaign...'" size="compact" (changed)="onCampaignAssignmentChanged($event)"></app-dropdown>
-                        <div class="campaign-assignment-buttons">
-                            <button type="button" class="assign-btn" [disabled]="isUpdatingCampaign() || !selectedCampaignAssignment()" (click)="assignCharacterToCampaign()">
-                                {{ isUpdatingCampaign() ? 'Updating...' : 'Assign' }}
-                            </button>
-                            <button type="button" class="remove-btn" [disabled]="isUpdatingCampaign() || campaignName() === 'Unassigned'" (click)="removeCharacterFromCampaign()" aria-label="Remove from Campaign">
-                                Remove
-                            </button>
-                        </div>
+                    <div class="header-manage-menu">
+                        <button type="button" class="manage-custom header-manage-trigger" [attr.aria-expanded]="headerManageOpen()" (click)="toggleHeaderManageMenu($event)">
+                            Manage
+                        </button>
+
+                        @if (headerManageOpen()) {
+                        <aside class="panel header-manage-popup" role="dialog" aria-label="Manage character options" (click)="$event.stopPropagation()">
+                            <div class="header-manage-popup-header">
+                                <h3>Manage</h3>
+                                <button type="button" class="ghost-button" (click)="closeHeaderManageMenu()">Close</button>
+                            </div>
+
+                            <div class="header-theme-controls">
+                                <span class="theme-control-label">Background</span>
+                                <app-dropdown [value]="detailBackgroundTheme()" [options]="detailBackgroundOptions" [minWidth]="148" [panelMinWidth]="180" size="compact" appearance="chip" (changed)="onDetailBackgroundThemeChanged($event)"></app-dropdown>
+                                <div class="theme-upload-actions">
+                                    <label class="assign-btn theme-upload-label">
+                                        <input class="theme-upload-input" type="file" accept="image/*" (change)="onDetailBackgroundImageSelected($event)" />
+                                        <span>Upload image</span>
+                                    </label>
+                                    @if (detailBackgroundImageUrl()) {
+                                    <button type="button" class="remove-btn" (click)="clearDetailBackgroundImage()">Remove image</button>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="header-theme-controls">
+                                <span class="theme-control-label">Campaign</span>
+                            </div>
+
+                            <div class="campaign-assignment-controls">
+                                <app-multi-select-dropdown [groups]="assignableCampaignGroups()" [value]="selectedCampaignAssignments()" [placeholder]="'Choose campaigns...'" (changed)="onCampaignAssignmentChanged($event)"></app-multi-select-dropdown>
+                                <div class="campaign-assignment-buttons">
+                                    <button type="button" class="assign-btn" [disabled]="isUpdatingCampaign() || selectedCampaignAssignments().length === 0" (click)="assignCharacterToCampaign()">
+                                        {{ isUpdatingCampaign() ? 'Updating...' : 'Assign' }}
+                                    </button>
+                                    <button type="button" class="remove-btn" [disabled]="isUpdatingCampaign() || campaignName() === 'Unassigned'" (click)="removeCharacterFromCampaign()" aria-label="Remove from Campaign">
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+
+                            @if (campaignUpdateError()) {
+                            <p class="campaign-error">{{ campaignUpdateError() }}</p>
+                            }
+                        </aside>
+                        }
                     </div>
-                    @if (campaignUpdateError()) {
-                    <p class="campaign-error">{{ campaignUpdateError() }}</p>
-                    }
                     }
                 </div>
             </div>

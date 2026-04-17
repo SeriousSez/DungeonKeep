@@ -17,9 +17,46 @@
 .panel-heading,
 .character-card-top,
 .character-meta,
-.character-actions {
+.character-actions,
+.character-card-identity {
     display: flex;
     gap: 12px;
+}
+
+.character-card-identity {
+    align-items: center;
+    min-width: 0;
+}
+
+.character-card-identity>div:last-child {
+    min-width: 0;
+}
+
+.character-card-portrait {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 72px;
+    flex: 0 0 72px;
+    overflow: hidden;
+    border-radius: 50%;
+    border: 1px solid var(--panel-border);
+    background: color-mix(in srgb, var(--surface-raised) 78%, var(--accent-primary) 22%);
+    color: var(--text-main);
+    font-family: var(--display-font);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.character-card-portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.character-card-portrait span {
+    letter-spacing: 0.08em;
 }
 
 .panel-heading,

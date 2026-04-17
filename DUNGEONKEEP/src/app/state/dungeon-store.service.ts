@@ -306,6 +306,7 @@ export class DungeonStoreService {
                 spells: Array.isArray(draft.spells) ? draft.spells.join(', ') : undefined,
                 experiencePoints: typeof draft.experiencePoints === 'number' ? Math.max(0, Math.trunc(draft.experiencePoints)) : undefined,
                 portraitUrl: draft.image,
+                detailBackgroundImageUrl: draft.detailBackgroundImageUrl,
                 goals: draft.goals,
                 secrets: draft.secrets,
                 sessionHistory: draft.sessionHistory
@@ -703,14 +704,20 @@ export class DungeonStoreService {
         );
     }
 
-    async setCharacterCampaign(characterId: string, campaignId: string | null): Promise<boolean> {
+    async setCharacterCampaign(characterId: string, campaignId: string | string[] | null): Promise<boolean> {
         const current = this.characters().find((character) => character.id === characterId);
         if (!current || !this.canManageCharacterInCampaign(current)) {
             return false;
         }
 
+        const nextCampaignIds = Array.isArray(campaignId)
+            ? Array.from(new Set(campaignId.filter((id) => !!id)))
+            : campaignId
+                ? [campaignId]
+                : [];
+
         try {
-            const updated = await this.api.updateCharacterCampaign(characterId, campaignId ? [campaignId] : []);
+            const updated = await this.api.updateCharacterCampaign(characterId, nextCampaignIds);
             this.applyCharacterCampaignUpdate(characterId, updated);
             return true;
         } catch {
@@ -846,6 +853,7 @@ export class DungeonStoreService {
                 spells: Array.isArray(draft.spells) ? draft.spells.join(', ') : (draft.spells || ''),
                 experiencePoints: draft.experiencePoints ?? 0,
                 portraitUrl: draft.image || '',
+                detailBackgroundImageUrl: draft.detailBackgroundImageUrl || '',
                 goals: draft.goals || '',
                 secrets: draft.secrets || '',
                 sessionHistory: draft.sessionHistory || ''
@@ -1538,7 +1546,8 @@ export class DungeonStoreService {
             experiencePoints: Number.isFinite(draft?.experiencePoints)
                 ? Math.max(0, Math.trunc(draft!.experiencePoints as number))
                 : Math.max(0, Math.trunc(Number(character.experiencePoints) || 0)),
-            image: draft?.image || character.portraitUrl || ''
+            image: draft?.image || character.portraitUrl || '',
+            detailBackgroundImageUrl: draft?.detailBackgroundImageUrl || character.detailBackgroundImageUrl || ''
         };
     }
 

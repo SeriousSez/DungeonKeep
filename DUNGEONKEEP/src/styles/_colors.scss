@@ -29,6 +29,8 @@
     --panel-bg-solid-alt: var(--color-surface-solid-alt);
     --surface-raised: var(--color-surface-alt);
     --surface-raised-solid: var(--color-surface-solid);
+    --surface-raised-alt: rgba(250, 244, 235, 0.98);
+    --surface-raised-solid-alt: rgb(250, 244, 235);
     --panel-border: var(--color-border);
     --panel-shadow: 0 26px 70px rgba(78, 50, 32, 0.14);
     --pill-bg: rgba(130, 91, 57, 0.08);
@@ -67,6 +69,8 @@
 
     --page-bg: #1f1611;
     --page-bg-deep: #2b1f17;
+    --surface-raised-alt: rgba(71, 52, 39, 0.98);
+    --surface-raised-solid-alt: rgb(71, 52, 39);
     --panel-shadow: 0 26px 70px rgba(0, 0, 0, 0.36);
     --pill-bg: rgba(214, 161, 103, 0.14);
     --pill-border: rgba(214, 161, 103, 0.3);

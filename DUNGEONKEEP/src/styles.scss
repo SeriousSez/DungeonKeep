@@ -58,6 +58,76 @@ body {
         radial-gradient(circle at top left, rgba(219, 181, 120, 0.22), transparent 25%),
         radial-gradient(circle at right 20%, rgba(133, 78, 45, 0.18), transparent 24%),
         linear-gradient(180deg, var(--page-bg), var(--page-bg-deep));
+    transition: background 0.24s ease;
+}
+
+body.character-detail-page-active[data-character-page-theme='parchment'] {
+    background:
+        radial-gradient(circle at top left, rgba(219, 181, 120, 0.22), transparent 25%),
+        radial-gradient(circle at right 20%, rgba(133, 78, 45, 0.18), transparent 24%),
+        linear-gradient(180deg, var(--page-bg), var(--page-bg-deep));
+}
+
+body.character-detail-page-active[data-character-page-theme='forest'] {
+    background:
+        linear-gradient(rgba(30, 54, 36, 0.48), rgba(30, 54, 36, 0.48)),
+        url('/assets/images/theme/forest.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+body.character-detail-page-active[data-character-page-theme='ember'] {
+    background:
+        linear-gradient(rgba(78, 38, 26, 0.44), rgba(78, 38, 26, 0.44)),
+        url('/assets/images/theme/ember.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+body.character-detail-page-active[data-character-page-theme='moonlit'] {
+    background:
+        linear-gradient(rgba(28, 40, 74, 0.44), rgba(28, 40, 74, 0.44)),
+        url('/assets/images/theme/moonlit.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+body.character-detail-page-active[data-character-page-theme='storm'] {
+    background: url('/assets/images/theme/storm.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+body.character-detail-page-active[data-character-page-theme='custom'] {
+    background:
+        linear-gradient(color-mix(in srgb, var(--page-bg-deep) 18%, transparent),
+            color-mix(in srgb, var(--page-bg-deep) 18%, transparent)),
+        var(--character-page-custom-bg, linear-gradient(180deg, var(--page-bg), var(--page-bg-deep)));
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+body.character-detail-page-active[data-character-page-theme='custom']::before {
+    opacity: 0.35;
+}
+
+body.character-detail-page-active[data-character-page-theme='custom'] app-breadcrumb {
+    position: relative;
+    z-index: 25;
+}
+
+body.character-detail-page-active[data-character-page-theme='custom'] app-breadcrumb .breadcrumb-nav {
+    width: fit-content;
+    max-width: calc(100% - 24px);
+}
+
+body.character-detail-page-active[data-character-page-theme='custom'] app-breadcrumb .breadcrumb-link {
+    color: var(--accent-primary);
 }
 
 body::before {

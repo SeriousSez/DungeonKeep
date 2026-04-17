@@ -37,6 +37,7 @@ public interface ICharacterRepository
         string spells,
         int experiencePoints,
         string portraitUrl,
+        string detailBackgroundImageUrl,
         string goals,
         string secrets,
         string sessionHistory,
