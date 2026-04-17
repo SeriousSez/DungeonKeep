@@ -1048,6 +1048,7 @@ export class CharacterDetailPageComponent {
     });
 
     readonly portraitInitials = computed(() => this.buildCharacterInitials(this.character()?.name ?? ''));
+    readonly displayPortraitImageUrl = computed(() => this.character()?.image?.trim() || this.portraitOriginalImageUrl().trim() || '');
 
     readonly partyCurrency = computed<PersistedCurrencyState>(() => {
         const campaign = this.currentCampaign();

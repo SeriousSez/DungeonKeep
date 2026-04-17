@@ -74,6 +74,8 @@ try
         EnsureCharactersCampaignIdIsNullable(dbContext);
         EnsureCurrentSqliteSchema(dbContext);
     }
+
+    EnsureCharacterPortraitStorage(dbContext, databaseProvider);
 }
 catch (Exception exception)
 {
@@ -184,6 +186,14 @@ static void EnsureCharactersCampaignIdIsNullable(DungeonKeepDbContext dbContext)
     finally
     {
         dbContext.Database.ExecuteSqlRaw("PRAGMA foreign_keys = ON;");
+    }
+}
+
+static void EnsureCharacterPortraitStorage(DungeonKeepDbContext dbContext, DatabaseProvider databaseProvider)
+{
+    if (databaseProvider == DatabaseProvider.MySql)
+    {
+        dbContext.Database.ExecuteSqlRaw("ALTER TABLE Characters MODIFY COLUMN PortraitUrl LONGTEXT NOT NULL;");
     }
 }
 

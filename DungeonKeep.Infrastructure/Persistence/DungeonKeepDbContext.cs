@@ -142,7 +142,7 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
             entity.Property(c => c.CombatStats).HasColumnType("text");
             entity.Property(c => c.Spells).HasColumnType("text");
             entity.Property(c => c.ExperiencePoints).IsRequired();
-            entity.Property(c => c.PortraitUrl).HasMaxLength(500);
+            entity.Property(c => c.PortraitUrl).HasColumnType("longtext");
             entity.Property(c => c.Goals).HasColumnType("text");
             entity.Property(c => c.Secrets).HasColumnType("text");
             entity.Property(c => c.SessionHistory).HasColumnType("longtext");

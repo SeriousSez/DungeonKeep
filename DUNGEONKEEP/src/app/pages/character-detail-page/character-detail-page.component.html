@@ -55,8 +55,8 @@
                 <div class="header-identity">
                     <div class="portrait-card">
                         <div class="portrait-frame">
-                            @if (char.image) {
-                            <img class="portrait-image" [src]="char.image" [alt]="char.name + ' portrait'" />
+                            @if (displayPortraitImageUrl()) {
+                            <img class="portrait-image" [src]="displayPortraitImageUrl()" [alt]="char.name + ' portrait'" />
                             } @else {
                             <div class="portrait-placeholder" aria-hidden="true">{{ portraitInitials() }}</div>
                             }
@@ -111,9 +111,9 @@
     </div>
 
     @if (char.canEdit) {
-    <app-character-portrait-modal [open]="portraitModalOpen()" [characterName]="char.name" [imageUrl]="char.image || ''" [portraitInitials]="portraitInitials()" [promptDetails]="portraitPromptDetails()" [isSaving]="isSavingPortrait()" [isGenerating]="isGeneratingPortrait()"
-        [errorMessage]="portraitGenerationError()" [saveMessage]="portraitSaveMessage()" [canRemove]="!!char.image" (closed)="closePortraitModal()" (promptDetailsChanged)="onPortraitPromptDetailsChanged($event)" (fileSelected)="onPortraitFileSelected($event)" (generateRequested)="generatePortrait()"
-        (recropRequested)="openPortraitRecrop()" (removeRequested)="clearPortrait()"></app-character-portrait-modal>
+    <app-character-portrait-modal [open]="portraitModalOpen()" [characterName]="char.name" [imageUrl]="displayPortraitImageUrl()" [portraitInitials]="portraitInitials()" [promptDetails]="portraitPromptDetails()" [isSaving]="isSavingPortrait()" [isGenerating]="isGeneratingPortrait()"
+        [errorMessage]="portraitGenerationError()" [saveMessage]="portraitSaveMessage()" [canRemove]="!!displayPortraitImageUrl()" (closed)="closePortraitModal()" (promptDetailsChanged)="onPortraitPromptDetailsChanged($event)" (fileSelected)="onPortraitFileSelected($event)"
+        (generateRequested)="generatePortrait()" (recropRequested)="openPortraitRecrop()" (removeRequested)="clearPortrait()"></app-character-portrait-modal>
     <app-character-portrait-crop-modal [open]="portraitCropModalOpen()" [imageUrl]="portraitCropSourceImageUrl()" [characterName]="char.name" (closed)="closePortraitCropModal()" (applied)="applyPortraitCrop($event)"></app-character-portrait-crop-modal>
     }
 
