@@ -131,7 +131,18 @@ static void EnsureBaseSqliteSchema(DungeonKeepDbContext dbContext)
     );
 
     dbContext.Database.ExecuteSqlRaw(
-        "CREATE TABLE IF NOT EXISTS CampaignMemberships (Id TEXT NOT NULL CONSTRAINT PK_CampaignMemberships PRIMARY KEY, CampaignId TEXT NOT NULL, UserId TEXT NULL, Email TEXT NOT NULL, Role TEXT NOT NULL DEFAULT 'Member', Status TEXT NOT NULL DEFAULT 'Pending', InvitedByUserId TEXT NULL, CreatedAtUtc TEXT NOT NULL);"
+        "CREATE TABLE IF NOT EXISTS Campaigns (Id TEXT NOT NULL CONSTRAINT PK_Campaigns PRIMARY KEY, Name TEXT NOT NULL, Setting TEXT NOT NULL DEFAULT '', Tone TEXT NOT NULL DEFAULT 'Heroic', LevelStart INTEGER NOT NULL DEFAULT 1, LevelEnd INTEGER NOT NULL DEFAULT 4, Hook TEXT NOT NULL DEFAULT '', NextSession TEXT NOT NULL DEFAULT '', Summary TEXT NOT NULL DEFAULT '', SessionsJson TEXT NOT NULL DEFAULT '[]', NpcsJson TEXT NOT NULL DEFAULT '[]', LootJson TEXT NOT NULL DEFAULT '[]', OpenThreadsJson TEXT NOT NULL DEFAULT '[]', WorldNotesJson TEXT NOT NULL DEFAULT '[]', CampaignMapJson TEXT NOT NULL DEFAULT '{}', CreatedAtUtc TEXT NOT NULL DEFAULT '');"
+    );
+
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE TABLE IF NOT EXISTS Characters (Id TEXT NOT NULL CONSTRAINT PK_Characters PRIMARY KEY, CampaignId TEXT NULL, OwnerUserId TEXT NULL, Name TEXT NOT NULL, PlayerName TEXT NOT NULL DEFAULT '', ClassName TEXT NOT NULL, Level INTEGER NOT NULL DEFAULT 1, Status TEXT NOT NULL DEFAULT 'Ready', Background TEXT NOT NULL DEFAULT '', Notes TEXT NOT NULL DEFAULT '', Backstory TEXT NOT NULL DEFAULT '', CreatedAtUtc TEXT NOT NULL, Species TEXT NOT NULL DEFAULT '', Alignment TEXT NOT NULL DEFAULT '', Lifestyle TEXT NOT NULL DEFAULT '', PersonalityTraits TEXT NOT NULL DEFAULT '', Ideals TEXT NOT NULL DEFAULT '', Bonds TEXT NOT NULL DEFAULT '', Flaws TEXT NOT NULL DEFAULT '', Equipment TEXT NOT NULL DEFAULT '', AbilityScores TEXT NOT NULL DEFAULT '', Skills TEXT NOT NULL DEFAULT '', SavingThrows TEXT NOT NULL DEFAULT '', HitPoints INTEGER NOT NULL DEFAULT 0, DeathSaveFailures INTEGER NOT NULL DEFAULT 0, DeathSaveSuccesses INTEGER NOT NULL DEFAULT 0, ArmorClass INTEGER NOT NULL DEFAULT 0, CombatStats TEXT NOT NULL DEFAULT '', Spells TEXT NOT NULL DEFAULT '', ExperiencePoints INTEGER NOT NULL DEFAULT 0, PortraitUrl TEXT NOT NULL DEFAULT '', DetailBackgroundImageUrl TEXT NOT NULL DEFAULT '', Goals TEXT NOT NULL DEFAULT '', Secrets TEXT NOT NULL DEFAULT '', SessionHistory TEXT NOT NULL DEFAULT '', CONSTRAINT FK_Characters_Campaigns_CampaignId FOREIGN KEY (CampaignId) REFERENCES Campaigns (Id) ON DELETE SET NULL, CONSTRAINT FK_Characters_AppUsers_OwnerUserId FOREIGN KEY (OwnerUserId) REFERENCES AppUsers (Id) ON DELETE SET NULL);"
+    );
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE INDEX IF NOT EXISTS IX_Characters_CampaignId ON Characters (CampaignId);"
+    );
+
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE TABLE IF NOT EXISTS CampaignMemberships (Id TEXT NOT NULL CONSTRAINT PK_CampaignMemberships PRIMARY KEY, CampaignId TEXT NOT NULL, UserId TEXT NULL, Email TEXT NOT NULL, Role TEXT NOT NULL DEFAULT 'Member', Status TEXT NOT NULL DEFAULT 'Pending', InvitedByUserId TEXT NULL, CreatedAtUtc TEXT NOT NULL, CONSTRAINT FK_CampaignMemberships_Campaigns_CampaignId FOREIGN KEY (CampaignId) REFERENCES Campaigns (Id) ON DELETE CASCADE, CONSTRAINT FK_CampaignMemberships_AppUsers_UserId FOREIGN KEY (UserId) REFERENCES AppUsers (Id) ON DELETE SET NULL, CONSTRAINT FK_CampaignMemberships_AppUsers_InvitedByUserId FOREIGN KEY (InvitedByUserId) REFERENCES AppUsers (Id) ON DELETE SET NULL);"
     );
     dbContext.Database.ExecuteSqlRaw(
         "CREATE UNIQUE INDEX IF NOT EXISTS IX_CampaignMemberships_CampaignId_Email ON CampaignMemberships (CampaignId, Email);"
