@@ -402,6 +402,8 @@ export class NewCharacterStandardPageComponent {
         this.physicalAge.set(appearance?.age ?? '');
         this.physicalGender.set(premade.gender ?? matchedPremade?.gender ?? '');
         this.generatedBackstory.set(this.extractVisibleBackstory(premade.notes || ''));
+        this.inventoryEntries.set((matchedPremade?.inventoryEntries ?? []).map((entry) => this.createEnrichedInventoryItem(entry)));
+        this.expandedInventoryContainers.set(new Set());
         this.cdr.detectChanges();
     }
 
@@ -1512,6 +1514,7 @@ export class NewCharacterStandardPageComponent {
     readonly selectedBackgroundStartingOption = signal<'A' | 'B' | ''>('A');
     readonly selectedInventoryDestination = signal('inventory');
     readonly inventoryEntries = signal<InventoryEntry[]>([]);
+    readonly expandedInventoryContainers = signal<Set<string>>(new Set());
     readonly currency = signal<CurrencyState>({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 });
 
     readonly equipmentCategories = computed(() => {
@@ -1534,7 +1537,7 @@ export class NewCharacterStandardPageComponent {
     });
 
     readonly inventoryDestinationOptions = computed<DropdownOption[]>(() => {
-        const options: DropdownOption[] = [{ value: 'inventory', label: 'Inventory' }];
+        const options: DropdownOption[] = [{ value: 'inventory', label: 'Equipment' }];
         const containers = this.inventoryEntries().filter((entry) => entry.isContainer);
 
         for (const container of containers) {
@@ -1544,6 +1547,7 @@ export class NewCharacterStandardPageComponent {
 
         return options;
     });
+    readonly hasAdditionalInventoryContainers = computed(() => this.inventoryDestinationOptions().length > 1);
 
     readonly filteredEquipmentItems = computed(() => {
         const term = this.equipmentSearchTerm().trim().toLowerCase();
@@ -1561,6 +1565,10 @@ export class NewCharacterStandardPageComponent {
     });
 
     readonly inventoryItemCount = computed(() => this.inventoryEntries().reduce((total, entry) => total + entry.quantity, 0));
+    readonly totalInventoryWeight = computed(() => {
+        const total = this.inventoryEntries().reduce((sum, entry) => sum + this.getInventoryEntryTotalWeight(entry), 0);
+        return Math.round(total * 100) / 100;
+    });
     readonly totalCurrencyInGp = computed(() => {
         const value = this.currency();
         const total = (value.pp * 10) + value.gp + (value.ep * 0.5) + (value.sp * 0.1) + (value.cp * 0.01);
@@ -5632,6 +5640,12 @@ export class NewCharacterStandardPageComponent {
         this.selectedInventoryDestination.set(String(value));
     }
 
+    onInventoryAddDestinationSelected(item: EquipmentItem, value: string | number): void {
+        const destination = String(value || 'inventory');
+        this.selectedInventoryDestination.set(destination);
+        this.addEquipmentItemToInventory(item, destination);
+    }
+
     onClassStartingOptionChanged(value: string): void {
         this.selectedClassStartingOption.set((value === 'A' || value === 'B') ? value : '');
     }
@@ -5716,8 +5730,8 @@ export class NewCharacterStandardPageComponent {
         this.selectedInventoryDestination.set('inventory');
     }
 
-    addEquipmentItemToInventory(item: EquipmentItem): void {
-        const destination = this.selectedInventoryDestination();
+    addEquipmentItemToInventory(item: EquipmentItem, destinationOverride?: string): void {
+        const destination = destinationOverride ?? this.selectedInventoryDestination();
         const inventoryEntry: InventoryEntry = {
             name: item.name,
             category: item.category,
@@ -5748,12 +5762,54 @@ export class NewCharacterStandardPageComponent {
         if (this.selectedInventoryDestination() === name) {
             this.selectedInventoryDestination.set('inventory');
         }
+
+        this.expandedInventoryContainers.update((expanded) => {
+            const next = new Set(expanded);
+            next.delete(name);
+            return next;
+        });
+    }
+
+    toggleInventoryContainerExpanded(name: string): void {
+        this.expandedInventoryContainers.update((expanded) => {
+            const next = new Set(expanded);
+            if (next.has(name)) {
+                next.delete(name);
+            } else {
+                next.add(name);
+            }
+            return next;
+        });
+    }
+
+    isInventoryContainerExpanded(name: string): boolean {
+        return this.expandedInventoryContainers().has(name);
+    }
+
+    removeContainedInventoryEntry(containerName: string, itemName: string): void {
+        this.inventoryEntries.update((entries) => entries.map((entry) => {
+            if (!entry.isContainer || entry.name !== containerName) {
+                return entry;
+            }
+
+            return {
+                ...entry,
+                containedItems: (entry.containedItems ?? []).filter((contained) => contained.name !== itemName)
+            };
+        }));
     }
 
     onCurrencyInputChanged(key: keyof CurrencyState, value: string): void {
         const parsed = Number.parseInt(value, 10);
         const safeValue = Number.isNaN(parsed) ? 0 : Math.max(0, parsed);
         this.currency.update((current) => ({ ...current, [key]: safeValue }));
+    }
+
+    private getInventoryEntryTotalWeight(entry: InventoryEntry): number {
+        const quantity = Math.max(1, entry.quantity || 1);
+        const ownWeight = (entry.weight ?? 0) * quantity;
+        const containedWeight = (entry.containedItems ?? []).reduce((sum, item) => sum + this.getInventoryEntryTotalWeight(item), 0);
+        return ownWeight + containedWeight;
     }
 
     private addInventoryItem(item: InventoryEntry, destination = 'inventory'): void {
@@ -6995,7 +7051,12 @@ export class NewCharacterStandardPageComponent {
             const backgroundStartingChoice = persisted.selectedBackgroundStartingOption;
             this.selectedBackgroundStartingOption.set(backgroundStartingChoice === 'A' || backgroundStartingChoice === 'B' ? backgroundStartingChoice : '');
 
-            this.inventoryEntries.set(Array.isArray(persisted.inventoryEntries) ? persisted.inventoryEntries : []);
+            this.inventoryEntries.set(
+                Array.isArray(persisted.inventoryEntries)
+                    ? persisted.inventoryEntries.map((entry) => this.createEnrichedInventoryItem(entry))
+                    : []
+            );
+            this.expandedInventoryContainers.set(new Set());
 
             const nextCurrency = persisted.currency;
             if (nextCurrency && typeof nextCurrency === 'object') {

@@ -2524,6 +2524,7 @@ input {
 
 .equipment-section-body.compact {
     gap: 8px;
+    overflow-x: auto;
 }
 
 .equipment-center-copy {
@@ -2670,6 +2671,11 @@ input {
     padding: 8px 10px;
 }
 
+.equipment-item-add-menu {
+    display: inline-flex;
+    justify-content: flex-end;
+}
+
 .equipment-item-row p {
     margin: 2px 0 0;
     color: var(--text-muted);
@@ -2712,6 +2718,7 @@ input {
 .inventory-grid-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
     font-size: 0.85rem;
 
     th,
@@ -2735,22 +2742,54 @@ input {
         color: var(--text-main);
     }
 
+    th:nth-child(1),
+    td:nth-child(1) {
+        width: 22%;
+    }
+
+    th:nth-child(2),
+    td:nth-child(2) {
+        width: 8%;
+    }
+
+    th:nth-child(3),
+    td:nth-child(3) {
+        width: 5%;
+    }
+
+    th:nth-child(4),
+    td:nth-child(4) {
+        width: 10%;
+    }
+
+    th:nth-child(5),
+    td:nth-child(5) {
+        width: auto;
+    }
+
     td:nth-child(2),
     td:nth-child(3),
     td:nth-child(4) {
         white-space: nowrap;
     }
 
+    td:nth-child(5) {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
     td:last-child,
     th:last-child {
         white-space: nowrap;
-        width: 1%;
+        width: 88px;
     }
 
     p {
         margin: 2px 0 0;
         color: var(--text-muted);
         font-size: 0.76rem;
+        overflow-wrap: anywhere;
     }
 }
 
@@ -2808,6 +2847,30 @@ input {
     transform: translateY(-1px);
 }
 
+.inventory-container-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    padding: 4px 8px;
+    border: 1px solid var(--panel-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--surface-raised) 88%, var(--panel-bg) 12%);
+    color: var(--text-main);
+    font: inherit;
+    font-size: 0.76rem;
+    cursor: pointer;
+}
+
+.inventory-container-row>td {
+    padding: 10px;
+    background: color-mix(in srgb, var(--surface-raised) 78%, var(--panel-bg) 22%);
+}
+
+.inventory-grid-table--nested {
+    margin-top: 2px;
+}
+
 .currency-list {
     display: grid;
     gap: 8px;
@@ -2842,6 +2905,20 @@ input {
 }
 
 @media (max-width: 640px) {
+    .inventory-grid-table {
+        font-size: 0.78rem;
+
+        th,
+        td {
+            padding: 6px;
+        }
+    }
+
+    .inventory-row-action {
+        padding: 0 8px;
+        font-size: 0.72rem;
+    }
+
     .completion-portrait-card {
         grid-template-columns: 1fr;
         justify-items: center;

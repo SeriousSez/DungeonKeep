@@ -2323,7 +2323,7 @@
     appearance: none;
     border: 0;
     background: transparent;
-    padding: 0;
+    padding: 4px;
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -2700,6 +2700,7 @@
     gap: 8px;
     max-height: 650px;
     overflow: auto;
+    padding: 4px;
 }
 
 .extras-popup-list {
@@ -2711,7 +2712,7 @@
     position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
+    align-items: center;
     border: 1px solid var(--panel-border);
     border-radius: 10px;
     background: var(--surface-raised);
@@ -3653,6 +3654,12 @@
 .inventory-manager-catalog {
     display: grid;
     gap: 8px;
+}
+
+.inventory-catalog-add-dropdown {
+    align-self: center;
+    justify-self: end;
+    margin: 0 6px 0 0;
 }
 
 .inventory-manager-catalog-toggle {

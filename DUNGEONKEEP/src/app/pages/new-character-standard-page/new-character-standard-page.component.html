@@ -1794,7 +1794,7 @@
         <details class="equipment-section" open>
             <summary>
                 <span>Current Inventory ({{ inventoryItemCount() }})</span>
-                <span class="equipment-summary-meta">Total Weight: 0 lb</span>
+                <span class="equipment-summary-meta">Total Weight: {{ totalInventoryWeight() }} lb</span>
             </summary>
             <div class="equipment-section-body compact">
                 @if (inventoryEntries().length > 0) {
@@ -1817,6 +1817,12 @@
                                     <strong>{{ entry.name }}</strong>
                                     <p>{{ entry.category }}</p>
                                 </button>
+                                @if (entry.isContainer) {
+                                <button type="button" class="inventory-container-toggle" (click)="toggleInventoryContainerExpanded(entry.name)" [attr.aria-expanded]="isInventoryContainerExpanded(entry.name)">
+                                    <i class="fa-duotone fa-thin" [class.fa-chevron-down]="isInventoryContainerExpanded(entry.name)" [class.fa-chevron-right]="!isInventoryContainerExpanded(entry.name)"></i>
+                                    <span>{{ (entry.containedItems?.length ?? 0) }} items</span>
+                                </button>
+                                }
                             </td>
                             <td>{{ entry.weight != null ? (entry.weight + ' lb') : '—' }}</td>
                             <td>{{ entry.quantity }}</td>
@@ -1826,6 +1832,45 @@
                                 <button type="button" class="inventory-row-action" (click)="removeInventoryEntry(entry.name)">Remove</button>
                             </td>
                         </tr>
+                        @if (entry.isContainer && isInventoryContainerExpanded(entry.name)) {
+                        <tr class="inventory-container-row">
+                            <td colspan="6">
+                                @if ((entry.containedItems?.length ?? 0) > 0) {
+                                <table class="inventory-grid-table inventory-grid-table--nested">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Weight</th>
+                                            <th>QTY</th>
+                                            <th>Cost (GP)</th>
+                                            <th>Notes</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (contained of entry.containedItems ?? []; track contained.name) {
+                                        <tr>
+                                            <td>
+                                                <button type="button" class="item-name-btn" (click)="openItemModal(contained)" [attr.aria-label]="'View details for ' + contained.name">
+                                                    <strong>{{ contained.name }}</strong>
+                                                    <p>{{ contained.category }}</p>
+                                                </button>
+                                            </td>
+                                            <td>{{ contained.weight != null ? (contained.weight + ' lb') : '—' }}</td>
+                                            <td>{{ contained.quantity }}</td>
+                                            <td>{{ contained.costGp != null ? contained.costGp : '—' }}</td>
+                                            <td>{{ contained.notes || '—' }}</td>
+                                            <td>
+                                                <button type="button" class="inventory-row-action" (click)="removeContainedInventoryEntry(entry.name, contained.name)">Remove</button>
+                                            </td>
+                                        </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                                }
+                            </td>
+                        </tr>
+                        }
                         }
                     </tbody>
                 </table>
@@ -1855,8 +1900,9 @@
                 <label class="equipment-filter-label">Filter</label>
                 <input class="wide-input" type="text" placeholder="Weapon, Longsword, Vorpal Longsword, etc." [value]="equipmentSearchTerm()" (input)="onEquipmentSearchChanged($any($event.target).value)" />
 
-                <label class="equipment-filter-label">Add To</label>
-                <app-dropdown [id]="'inventory-destination'" [value]="selectedInventoryDestination()" [options]="inventoryDestinationOptions()" [minWidth]="220" size="compact" (changed)="onInventoryDestinationChanged($event)"></app-dropdown>
+                @if (hasAdditionalInventoryContainers()) {
+                <p class="field-description">Use the Add button menu to place an item in Equipment or one of your containers.</p>
+                }
 
                 <div class="equipment-source-list">
                     @for (category of equipmentCategories(); track category) {
@@ -1885,7 +1931,14 @@
                             <strong>{{ item.name }}</strong>
                             <p>{{ item.category }}</p>
                         </button>
-                        <button type="button" class="equipment-pill-action" (click)="addEquipmentItemToInventory(item)">Add</button>
+                        @if (hasAdditionalInventoryContainers()) {
+                        <div class="equipment-item-add-menu">
+                            <app-dropdown [id]="'inventory-add-menu-' + item.name" [value]="''" [options]="inventoryDestinationOptions()" [placeholder]="'Add'" size="narrow" appearance="chip" [minWidth]="84" [panelMinWidth]="190"
+                                (changed)="onInventoryAddDestinationSelected(item, $event)"></app-dropdown>
+                        </div>
+                        } @else {
+                        <button type="button" class="equipment-pill-action" (click)="addEquipmentItemToInventory(item, 'inventory')">Add</button>
+                        }
                     </div>
                     }
                     @if (filteredEquipmentItems().length === 0) {
