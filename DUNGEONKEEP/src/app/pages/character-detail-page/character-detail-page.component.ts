@@ -645,6 +645,7 @@ export class CharacterDetailPageComponent {
     readonly hpDraftTemp = signal(0);
     readonly hpDraftDeathSaveFailures = signal(0);
     readonly hpDraftDeathSaveSuccesses = signal(0);
+    readonly hpRestoreChoice = signal<'full' | 'one' | null>(null);
     readonly appliedMaxHpOverride = signal<number | null>(null);
     readonly isSavingHp = signal(false);
     readonly heroicInspiration = signal(false);
@@ -1799,7 +1800,15 @@ export class CharacterDetailPageComponent {
 
     readonly deathSaveFailures = computed(() => {
         const char = this.character();
-        if (!char || !this.isZeroHp()) {
+        if (!char) {
+            return 0;
+        }
+
+        if (this.isExhaustionDeath()) {
+            return 3;
+        }
+
+        if (!this.isZeroHp()) {
             return 0;
         }
 
@@ -1818,7 +1827,15 @@ export class CharacterDetailPageComponent {
 
     readonly deathSaveSuccesses = computed(() => {
         const char = this.character();
-        if (!char || !this.isZeroHp()) {
+        if (!char) {
+            return 0;
+        }
+
+        if (this.isExhaustionDeath()) {
+            return 0;
+        }
+
+        if (!this.isZeroHp()) {
             return 0;
         }
 
@@ -1847,11 +1864,11 @@ export class CharacterDetailPageComponent {
 
         const hitDie = this.hitDieByClass[char.className] ?? 8;
         return [
-            { label: 'Current HP', value: `${char.hitPoints}` },
+            { label: 'Current HP', value: `${this.isExhaustionDeath() ? 0 : char.hitPoints}` },
             { label: 'Max HP', value: `${char.maxHitPoints}` },
-            { label: 'Temporary HP', value: `${this.tempHitPoints()}` },
+            { label: 'Temporary HP', value: `${this.isExhaustionDeath() ? 0 : this.tempHitPoints()}` },
             { label: 'Hit Dice', value: `${char.level}d${hitDie}` },
-            { label: 'Death Saves', value: char.status === 'Recovering' ? '1 failure' : '0 failures' }
+            { label: 'Death Saves', value: this.isExhaustionDeath() ? 'Dead from exhaustion' : char.status === 'Recovering' ? '1 failure' : '0 failures' }
         ];
     });
 
@@ -2310,6 +2327,8 @@ export class CharacterDetailPageComponent {
         return this.normalizeExhaustionLevel(this.persistedBuilderState()?.exhaustionLevel);
     });
 
+    readonly isExhaustionDeath = computed(() => this.exhaustionLevel() >= 6);
+
     readonly conditionEntries = computed(() =>
         this.conditionDefinitions.map((entry) => ({
             ...entry,
@@ -2336,6 +2355,10 @@ export class CharacterDetailPageComponent {
         const char = this.character();
         if (!char) {
             return 'No active conditions';
+        }
+
+        if (this.isExhaustionDeath()) {
+            return 'Dead from exhaustion';
         }
 
         const activeLabels = CONDITION_KEY_ORDER
@@ -3050,6 +3073,7 @@ export class CharacterDetailPageComponent {
         this.hpDraftTemp.set(this.tempHitPoints());
         this.hpDraftDeathSaveFailures.set(this.deathSaveFailures());
         this.hpDraftDeathSaveSuccesses.set(this.deathSaveSuccesses());
+        this.hpRestoreChoice.set(null);
         this.hpHealingInput.set('0');
         this.hpDamageInput.set('0');
         this.hpMaxModifierInput.set('0');
@@ -3136,6 +3160,34 @@ export class CharacterDetailPageComponent {
             await this.persistDeathSavesState(0, 0);
         }
         this.hpDamageInput.set('0');
+    }
+
+    selectHpRestoreChoice(choice: 'full' | 'one'): void {
+        this.hpRestoreChoice.set(choice);
+    }
+
+    resetHpRestoreChoice(): void {
+        this.hpRestoreChoice.set(null);
+    }
+
+    async confirmHpRestore(): Promise<void> {
+        const choice = this.hpRestoreChoice();
+        if (choice === 'full') {
+            await this.restoreLifeWithFullHp();
+            return;
+        }
+
+        if (choice === 'one') {
+            await this.restoreLifeWithOneHp();
+        }
+    }
+
+    async restoreLifeWithFullHp(): Promise<void> {
+        await this.restoreLife(this.hpResolvedMax());
+    }
+
+    async restoreLifeWithOneHp(): Promise<void> {
+        await this.restoreLife(1);
     }
 
     async applyMaxHpChanges(): Promise<void> {
@@ -3234,6 +3286,57 @@ export class CharacterDetailPageComponent {
         }
 
         await this.persistHitPoints(nextCurrent, char.maxHitPoints);
+    }
+
+    private async restoreLife(nextCurrent: number): Promise<void> {
+        const char = this.character();
+        if (!char || this.isSavingHp()) {
+            return;
+        }
+
+        const restoredHp = Math.max(1, Math.min(this.hpResolvedMax(), nextCurrent));
+        const nextExhaustionLevel = this.isExhaustionDeath() ? 5 : this.exhaustionLevel();
+        const currentState: PersistedBuilderState = this.persistedBuilderState() ?? {};
+        const updatedState: PersistedBuilderState = {
+            ...currentState,
+            exhaustionLevel: this.normalizeExhaustionLevel(nextExhaustionLevel)
+        };
+
+        const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
+
+        this.isSavingHp.set(true);
+        this.hpDraftCurrent.set(restoredHp);
+        this.hpDraftDeathSaveFailures.set(0);
+        this.hpDraftDeathSaveSuccesses.set(0);
+
+        try {
+            const updated = await this.store.updateCharacter(this.characterId, {
+                name: char.name,
+                playerName: char.playerName,
+                race: char.race,
+                className: char.className,
+                role: char.role,
+                level: char.level,
+                background: char.background,
+                notes: updatedNotes,
+                campaignId: char.campaignId,
+                hitPoints: restoredHp,
+                maxHitPoints: char.maxHitPoints,
+                deathSaveFailures: 0,
+                deathSaveSuccesses: 0
+            });
+
+            if (updated) {
+                this.hpDraftCurrent.set(updated.hitPoints);
+                this.hpDraftMax.set(updated.maxHitPoints);
+            }
+
+            this.hpRestoreChoice.set(null);
+            this.optimisticExhaustionLevel.set(null);
+        } finally {
+            this.isSavingHp.set(false);
+            this.cdr.detectChanges();
+        }
     }
 
     private async persistHpOverrideState(overrideValue: number | null): Promise<void> {
@@ -7665,11 +7768,19 @@ export class CharacterDetailPageComponent {
         }
 
         const orderedKeys = CONDITION_KEY_ORDER.filter((key) => uniqueKeys.has(key));
+        const normalizedExhaustionLevel = this.normalizeExhaustionLevel(exhaustionLevel);
         const updatedState: PersistedBuilderState = {
             ...(this.persistedBuilderState() ?? {}),
             activeConditions: orderedKeys,
-            exhaustionLevel: this.normalizeExhaustionLevel(exhaustionLevel)
+            exhaustionLevel: normalizedExhaustionLevel
         };
+
+        if (normalizedExhaustionLevel >= 6) {
+            delete updatedState.tempHitPoints;
+            updatedState.deathSaveFailures = 3;
+            updatedState.deathSaveSuccesses = 0;
+        }
+
         const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
 
         await this.store.updateCharacter(this.characterId, {
@@ -7682,9 +7793,19 @@ export class CharacterDetailPageComponent {
             background: char.background,
             notes: updatedNotes,
             campaignId: char.campaignId,
-            hitPoints: char.hitPoints,
-            maxHitPoints: char.maxHitPoints
+            hitPoints: normalizedExhaustionLevel >= 6 ? 0 : char.hitPoints,
+            maxHitPoints: char.maxHitPoints,
+            deathSaveFailures: normalizedExhaustionLevel >= 6 ? 3 : char.deathSaveFailures,
+            deathSaveSuccesses: normalizedExhaustionLevel >= 6 ? 0 : char.deathSaveSuccesses
         });
+
+        if (normalizedExhaustionLevel >= 6) {
+            this.hpDraftCurrent.set(0);
+            this.hpDraftTemp.set(0);
+            this.tempHitPoints.set(0);
+            this.hpDraftDeathSaveFailures.set(3);
+            this.hpDraftDeathSaveSuccesses.set(0);
+        }
 
         this.optimisticConditionKeys.set(null);
         this.optimisticExhaustionLevel.set(null);

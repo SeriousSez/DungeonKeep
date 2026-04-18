@@ -191,7 +191,18 @@
                     <span class="summary-label">Armor Class</span>
                     <strong class="summary-value">{{ char.armorClass }}</strong>
                 </div>
-                @if (!isZeroHp()) {
+                @if (isExhaustionDeath()) {
+                <section class="exhaustion-death-banner detail-trigger-card" aria-label="Exhaustion level 6 death state" role="button" tabindex="0" (click)="openHpManager()" (keydown.enter)="openHpManager()" (keydown.space)="openHpManager()">
+                    <div class="exhaustion-death-icon" aria-hidden="true">
+                        <i class="fa-duotone fa-thin fa-skull"></i>
+                    </div>
+                    <div class="exhaustion-death-copy">
+                        <span class="exhaustion-death-eyebrow">Exhaustion Level 6</span>
+                        <strong class="exhaustion-death-title">Death</strong>
+                        <span class="exhaustion-death-meta">Hit Points reduced to 0.</span>
+                    </div>
+                </section>
+                } @else if (!isZeroHp()) {
                 <div class="summary-item detail-trigger" role="button" tabindex="0" (click)="toggleInspiration()" (keydown.enter)="toggleInspiration()" (keydown.space)="toggleInspiration()">
                     <span class="summary-label summary-label-link" role="button" tabindex="0" (click)="$event.stopPropagation(); openHeroicInspirationDetail()" (keydown.enter)="$event.stopPropagation(); openHeroicInspirationDetail()"
                         (keydown.space)="$event.preventDefault(); $event.stopPropagation(); openHeroicInspirationDetail()" aria-label="Open Heroic Inspiration information">
@@ -960,7 +971,7 @@
             <button type="button" class="ghost-button" (click)="closeHpManager()">Close</button>
         </header>
 
-        @if (isZeroHp()) {
+        @if (hpDraftCurrent() === 0) {
         <section class="hp-death-save-track" aria-label="Death saves tracker">
             <header class="hp-death-save-header">
                 <h4>Death Saves</h4>
@@ -993,6 +1004,28 @@
                     <li>Any healing resets both counters to zero.</li>
                 </ul>
             </div>
+        </section>
+
+        <section class="hp-restore-life-panel" aria-label="Restore life options">
+            <header class="hp-restore-life-header">
+                <h4>Restore Life</h4>
+            </header>
+            <button type="button" class="hp-restore-life-option" [class.is-selected]="hpRestoreChoice() === 'full'" [attr.aria-pressed]="hpRestoreChoice() === 'full'" [disabled]="isSavingHp()" (click)="selectHpRestoreChoice('full')">
+                <span class="hp-restore-life-indicator" aria-hidden="true"></span>
+                <span>Restore life with full HP</span>
+            </button>
+            <div class="hp-restore-life-divider">OR</div>
+            <button type="button" class="hp-restore-life-option" [class.is-selected]="hpRestoreChoice() === 'one'" [attr.aria-pressed]="hpRestoreChoice() === 'one'" [disabled]="isSavingHp()" (click)="selectHpRestoreChoice('one')">
+                <span class="hp-restore-life-indicator" aria-hidden="true"></span>
+                <span>Restore life with 1 HP</span>
+            </button>
+            <div class="hp-restore-life-actions">
+                <button type="button" class="secondary-btn" [disabled]="isSavingHp() || !hpRestoreChoice()" (click)="confirmHpRestore()">Restore</button>
+                <button type="button" class="ghost-button" [disabled]="isSavingHp() || !hpRestoreChoice()" (click)="resetHpRestoreChoice()">Reset</button>
+            </div>
+            @if (isExhaustionDeath()) {
+            <p class="hp-restore-life-note">Restoring life from exhaustion lowers the level to 5 so the character can stand again.</p>
+            }
         </section>
         }
 
