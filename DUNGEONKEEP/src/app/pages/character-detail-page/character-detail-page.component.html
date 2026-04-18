@@ -2149,7 +2149,7 @@
 
             @if (expandedConditionKey() === 'exhaustion') {
             <div class="condition-card-details">
-                <p class="conditions-popup-copy">Exhaustion is cumulative. Each level worsens D20 Tests and reduces Speed. You die at level 6, and a Long Rest removes 1 level.</p>
+                <p class="conditions-popup-copy">Exhaustion is cumulative. Each level adds harsher penalties. You die at level 6, and a Long Rest removes 1 level.</p>
                 <div class="exhaustion-level-row">
                     @for (level of exhaustionLevels; track level) {
                     <button type="button" class="exhaustion-level-btn" [class.is-selected]="exhaustionLevel() === level" [disabled]="!character()?.canEdit" (click)="setExhaustionLevel(level)">

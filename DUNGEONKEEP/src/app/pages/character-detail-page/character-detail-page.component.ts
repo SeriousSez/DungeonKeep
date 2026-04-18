@@ -256,11 +256,11 @@ const CONDITION_LABEL_LOOKUP = CONDITION_DEFINITIONS.reduce((lookup, entry) => {
 }, {} as Record<PersistedConditionKey, string>);
 
 const EXHAUSTION_LEVEL_RULES: ReadonlyArray<{ level: number; effect: string }> = [
-    { level: 1, effect: 'Subtract 2 from all D20 Tests.' },
-    { level: 2, effect: 'Subtract 4 from all D20 Tests and reduce Speed by 10 feet.' },
-    { level: 3, effect: 'Subtract 6 from all D20 Tests and reduce Speed by 15 feet.' },
-    { level: 4, effect: 'Subtract 8 from all D20 Tests and reduce Speed by 20 feet.' },
-    { level: 5, effect: 'Subtract 10 from all D20 Tests and reduce Speed by 25 feet.' },
+    { level: 1, effect: 'Disadvantage on ability checks.' },
+    { level: 2, effect: 'Speed halved.' },
+    { level: 3, effect: 'Disadvantage on attack rolls and saving throws.' },
+    { level: 4, effect: 'Hit point maximum halved.' },
+    { level: 5, effect: 'Speed reduced to 0.' },
     { level: 6, effect: 'Death.' }
 ];
 
@@ -675,6 +675,8 @@ export class CharacterDetailPageComponent {
     readonly extrasManagerOpen = signal(false);
     readonly defenseManagerOpen = signal(false);
     readonly conditionsManagerOpen = signal(false);
+    readonly optimisticConditionKeys = signal<Set<PersistedConditionKey> | null>(null);
+    readonly optimisticExhaustionLevel = signal<number | null>(null);
     readonly defenseCustomizeOpen = signal(true);
     readonly expandedConditionKey = signal<ConditionPanelKey | ''>('exhaustion');
     readonly defenseDraftType = signal<PersistedDefenseType>('resistance');
@@ -2282,6 +2284,11 @@ export class CharacterDetailPageComponent {
     });
 
     readonly activeConditionKeys = computed(() => {
+        const optimisticKeys = this.optimisticConditionKeys();
+        if (optimisticKeys) {
+            return optimisticKeys;
+        }
+
         const keys = new Set<PersistedConditionKey>();
 
         for (const value of this.persistedBuilderState()?.activeConditions ?? []) {
@@ -2294,7 +2301,14 @@ export class CharacterDetailPageComponent {
         return keys;
     });
 
-    readonly exhaustionLevel = computed(() => this.normalizeExhaustionLevel(this.persistedBuilderState()?.exhaustionLevel));
+    readonly exhaustionLevel = computed(() => {
+        const optimisticLevel = this.optimisticExhaustionLevel();
+        if (optimisticLevel !== null) {
+            return optimisticLevel;
+        }
+
+        return this.normalizeExhaustionLevel(this.persistedBuilderState()?.exhaustionLevel);
+    });
 
     readonly conditionEntries = computed(() =>
         this.conditionDefinitions.map((entry) => ({
@@ -5244,6 +5258,7 @@ export class CharacterDetailPageComponent {
             nextKeys.add(key);
         }
 
+        this.optimisticConditionKeys.set(new Set(nextKeys));
         await this.persistConditionState([...nextKeys], this.exhaustionLevel());
     }
 
@@ -5253,6 +5268,7 @@ export class CharacterDetailPageComponent {
             return;
         }
 
+        this.optimisticExhaustionLevel.set(this.normalizeExhaustionLevel(level));
         await this.persistConditionState([...this.activeConditionKeys()], level);
     }
 
@@ -7670,6 +7686,8 @@ export class CharacterDetailPageComponent {
             maxHitPoints: char.maxHitPoints
         });
 
+        this.optimisticConditionKeys.set(null);
+        this.optimisticExhaustionLevel.set(null);
         this.cdr.detectChanges();
     }
 
