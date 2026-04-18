@@ -327,16 +327,13 @@
                 <div class="defense-condition-grid">
                     <div class="detail-trigger-card" role="button" tabindex="0" (click)="openDefensesPopup()" (keydown.enter)="openDefensesPopup()" (keydown.space)="openDefensesPopup(); $event.preventDefault()">
                         <div class="subsection-title-row">
-                            <h3 class="subsection-title">Defenses</h3>
-                            @if (char.canEdit) {
-                            <small>Click to manage</small>
-                            }
+                            <h3 class="subsection-title" style="margin-top: 0;">Defenses</h3>
                         </div>
                         <ul class="mini-list defense-mini-list">
                             @for (section of customDefenseSections(); track section.type) {
                             <li>
                                 <i class="fa-duotone fa-thin {{ defenseTypeIcon(section.type) }} defense-summary-icon" [class.is-resistance]="section.type === 'resistance'" [class.is-immunity]="section.type === 'immunity'" [class.is-vulnerability]="section.type === 'vulnerability'"
-                                    [class.is-condition]="section.type === 'condition-immunity'"></i>
+                                    [class.is-condition]="section.type === 'condition-immunity'" [attr.title]="defenseTypeLabel(section.type)" [attr.aria-label]="defenseTypeLabel(section.type)"></i>
                                 <span>{{ section.summaryText }}</span>
                             </li>
                             }
@@ -352,8 +349,7 @@
                     </div>
                     <div class="detail-trigger-card" role="button" tabindex="0" (click)="openConditionsPopup()" (keydown.enter)="openConditionsPopup()" (keydown.space)="openConditionsPopup(); $event.preventDefault()">
                         <div class="subsection-title-row">
-                            <h3 class="subsection-title">Conditions</h3>
-                            <small>{{ char.canEdit ? 'Click to manage' : 'Click to view' }}</small>
+                            <h3 class="subsection-title" style="margin-top: 0;">Conditions</h3>
                         </div>
                         <p class="notes-block condition-summary-note">{{ conditionSummary() }}</p>
                     </div>
@@ -2072,7 +2068,7 @@
                 <ul class="defense-summary-list">
                     <li>
                         <i class="fa-duotone fa-thin {{ defenseTypeIcon(section.type) }} defense-summary-icon" [class.is-resistance]="section.type === 'resistance'" [class.is-immunity]="section.type === 'immunity'" [class.is-vulnerability]="section.type === 'vulnerability'"
-                            [class.is-condition]="section.type === 'condition-immunity'"></i>
+                            [class.is-condition]="section.type === 'condition-immunity'" [attr.title]="defenseTypeLabel(section.type)" [attr.aria-label]="defenseTypeLabel(section.type)"></i>
                         <span class="defense-summary-value">{{ section.summaryText }}</span>
                         <span class="defense-summary-meta">(Custom)</span>
                     </li>
