@@ -1075,7 +1075,8 @@ export class CampaignMapPageComponent {
                 || !!this.selectedWallId();
 
             if (singleTokenId) {
-                if (!hasNonTokenSelection && selectedTokenId !== singleTokenId) {
+                const shouldAutoSelectAssignedToken = !this.isEditorMode() && !hasNonTokenSelection && !selectedTokenId;
+                if (shouldAutoSelectAssignedToken) {
                     this.selectedTokenId.set(singleTokenId);
                 }
 

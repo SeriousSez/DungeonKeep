@@ -25,7 +25,15 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
         {
             throw new UnauthorizedAccessException("Only the character owner can delete this character.");
         }
-        return await characterRepository.DeleteAsync(characterId, cancellationToken);
+
+        var campaignIds = ResolveCampaignIds(character);
+        var deleted = await characterRepository.DeleteAsync(characterId, cancellationToken);
+        if (deleted)
+        {
+            await campaignRepository.RemoveCharacterAssignmentsFromMapsAsync(characterId, campaignIds, cancellationToken);
+        }
+
+        return deleted;
     }
     public async Task<IReadOnlyList<CharacterDto>> GetByCampaignAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default)
     {
@@ -170,8 +178,9 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
             return null;
         }
 
+        var previousCampaignIds = ResolveCampaignIds(existing);
         var canManageCharacter = existing.OwnerUserId == userId
-            || await IsOwnerOfAnyCampaignAsync(ResolveCampaignIds(existing), userId, cancellationToken);
+            || await IsOwnerOfAnyCampaignAsync(previousCampaignIds, userId, cancellationToken);
 
         if (!canManageCharacter)
         {
@@ -181,7 +190,16 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
         var normalizedCampaignIds = NormalizeCampaignIds(request.CampaignIds, request.CampaignId);
         await ValidateCampaignIdsAsync(normalizedCampaignIds, userId, cancellationToken);
 
+        var removedCampaignIds = previousCampaignIds
+            .Except(normalizedCampaignIds)
+            .ToArray();
+
         var updated = await characterRepository.UpdateCampaignAsync(characterId, normalizedCampaignIds, cancellationToken);
+        if (updated is not null && removedCampaignIds.Length > 0)
+        {
+            await campaignRepository.RemoveCharacterAssignmentsFromMapsAsync(characterId, removedCampaignIds, cancellationToken);
+        }
+
         return updated is null ? null : MapCharacter(updated, userId);
     }
 

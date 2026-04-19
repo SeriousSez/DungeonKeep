@@ -15,6 +15,24 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
     private const string DefaultMapGridColor = "#745338";
     private const double DefaultMapGridOffsetX = 0d;
     private const double DefaultMapGridOffsetY = 0d;
+    private static readonly CampaignMapBoardDto DefaultCampaignMapBoard = new(
+        Guid.Parse("11111111-1111-1111-1111-111111111111"),
+        "Main Map",
+        "Parchment",
+        string.Empty,
+        DefaultMapGridColumns,
+        DefaultMapGridRows,
+        DefaultMapGridColor,
+        DefaultMapGridOffsetX,
+        DefaultMapGridOffsetY,
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        new CampaignMapLayersDto([], [], []),
+        []);
     private readonly bool campaignSchemaReady = dbContext.Database.IsSqlite() ? EnsureCampaignSchema(dbContext) : true;
 
     public async Task<IReadOnlyList<CampaignSummaryRecord>> GetAllSummariesForUserAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -483,6 +501,93 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         return await GetByIdAsync(campaignId, cancellationToken);
     }
 
+    public async Task RemoveCharacterAssignmentsFromMapsAsync(Guid characterId, IReadOnlyCollection<Guid>? campaignIds = null, CancellationToken cancellationToken = default)
+    {
+        if (characterId == Guid.Empty)
+        {
+            return;
+        }
+
+        var normalizedCampaignIds = (campaignIds ?? Array.Empty<Guid>())
+            .Where(campaignId => campaignId != Guid.Empty)
+            .Distinct()
+            .ToArray();
+
+        var query = dbContext.Campaigns.AsQueryable();
+        if (normalizedCampaignIds.Length > 0)
+        {
+            query = query.Where(campaign => normalizedCampaignIds.Contains(campaign.Id));
+        }
+
+        var campaigns = await query.ToListAsync(cancellationToken);
+        if (campaigns.Count == 0)
+        {
+            return;
+        }
+
+        var visionKey = $"character:{characterId}";
+        var hasChanges = false;
+
+        foreach (var campaign in campaigns)
+        {
+            var library = ParseCampaignMapLibrary(campaign.CampaignMapJson);
+            var mapChanged = false;
+
+            var updatedMaps = library.Maps
+                .Select(map =>
+                {
+                    var tokenChanged = false;
+                    var updatedTokens = map.Tokens
+                        .Select(token =>
+                        {
+                            if (token.AssignedCharacterId != characterId)
+                            {
+                                return token;
+                            }
+
+                            tokenChanged = true;
+                            return token with
+                            {
+                                AssignedCharacterId = null,
+                                AssignedUserId = null
+                            };
+                        })
+                        .ToList();
+
+                    var existingVisionMemory = map.VisionMemory ?? [];
+                    var updatedVisionMemory = existingVisionMemory
+                        .Where(entry => !string.Equals(entry.Key, visionKey, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+
+                    if (!tokenChanged && updatedVisionMemory.Count == existingVisionMemory.Count)
+                    {
+                        return map;
+                    }
+
+                    mapChanged = true;
+                    return map with
+                    {
+                        Tokens = updatedTokens,
+                        VisionMemory = updatedVisionMemory
+                    };
+                })
+                .ToList();
+
+            if (!mapChanged)
+            {
+                continue;
+            }
+
+            campaign.CampaignMapJson = JsonSerializer.Serialize(NormalizeCampaignMapLibrary(new CampaignMapLibraryDto(library.ActiveMapId, updatedMaps)));
+            hasChanges = true;
+        }
+
+        if (hasChanges)
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+    }
+
     public async Task<Campaign?> InviteMemberAsync(Guid campaignId, string email, AuthenticatedUser user, CancellationToken cancellationToken = default)
     {
         var normalizedEmail = email.Trim().ToLowerInvariant();
@@ -551,6 +656,57 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             dbContext.Campaigns.Remove(campaign);
             await dbContext.SaveChangesAsync(cancellationToken);
         }
+    }
+
+    private static CampaignMapLibraryDto ParseCampaignMapLibrary(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new CampaignMapLibraryDto(DefaultCampaignMapBoard.Id, [DefaultCampaignMapBoard]);
+        }
+
+        try
+        {
+            var library = JsonSerializer.Deserialize<CampaignMapLibraryDto>(json);
+            if (library is not null)
+            {
+                return NormalizeCampaignMapLibrary(library);
+            }
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            var legacyMap = JsonSerializer.Deserialize<CampaignMapDto>(json);
+            if (legacyMap is not null)
+            {
+                return NormalizeCampaignMapLibrary(new CampaignMapLibraryDto(DefaultCampaignMapBoard.Id, [new CampaignMapBoardDto(
+                    DefaultCampaignMapBoard.Id,
+                    DefaultCampaignMapBoard.Name,
+                    legacyMap.Background,
+                    legacyMap.BackgroundImageUrl,
+                    legacyMap.GridColumns,
+                    legacyMap.GridRows,
+                    legacyMap.GridColor,
+                    legacyMap.GridOffsetX,
+                    legacyMap.GridOffsetY,
+                    legacyMap.Strokes,
+                    legacyMap.Walls,
+                    legacyMap.Icons,
+                    legacyMap.Tokens,
+                    legacyMap.Decorations,
+                    legacyMap.Labels,
+                    legacyMap.Layers,
+                    legacyMap.VisionMemory)]));
+            }
+        }
+        catch
+        {
+        }
+
+        return new CampaignMapLibraryDto(DefaultCampaignMapBoard.Id, [DefaultCampaignMapBoard]);
     }
 
     private static List<PersistedCampaignThread> ParseThreads(string json)
