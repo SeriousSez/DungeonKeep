@@ -256,6 +256,11 @@
     }
 }
 
+.header-subclass {
+    font-weight: 700;
+    color: var(--accent-primary);
+}
+
 .header-content {
     display: flex;
     justify-content: space-between;

@@ -27,7 +27,7 @@
         } @else {
         <div class="step-rail" role="tablist" aria-label="Character Builder Steps">
             @for (step of standardSteps; track step.key) {
-            <a class="step-pill" [class.active]="activeStandardStep() === step.key" [attr.aria-selected]="activeStandardStep() === step.key" [routerLink]="getBuilderStepRoute(step.key)" queryParamsHandling="preserve" [attr.title]="step.label">
+            <a class="step-pill" [class.active]="activeStandardStep() === step.key" [attr.aria-selected]="activeStandardStep() === step.key" [routerLink]="getBuilderStepRoute(step.key)" [state]="getBuilderRouteState()" queryParamsHandling="preserve" [attr.title]="step.label">
                 <span class="step-pill-desktop">{{ step.label }}</span>
                 <span class="step-pill-mobile">{{ step.shortLabel || step.label }}</span>
             </a>
@@ -63,7 +63,7 @@
     <section class="panel step-panel">
         <h2>Standard Builder Home</h2>
         <p>Use the step bar above to move through Class, Species, Background, Abilities, Equipment, and What's Next.</p>
-        <a class="inline-action" [routerLink]="getBuilderStepRoute('class')" queryParamsHandling="preserve">Go to 1. Class</a>
+        <a class="inline-action" [routerLink]="getBuilderStepRoute('class')" [state]="getBuilderRouteState()" queryParamsHandling="preserve">Go to 1. Class</a>
     </section>
     }
 

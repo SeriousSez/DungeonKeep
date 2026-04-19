@@ -173,6 +173,9 @@ type StartingPackName =
     | "Scholar's Pack";
 
 interface PersistedBuilderState {
+    selectedClass?: string;
+    characterLevel?: number;
+    multiclassList?: Record<string, number>;
     selectedBackgroundName: string;
     selectedBackgroundUrl: string;
     selectedAlignment: string;
@@ -226,6 +229,16 @@ interface PersistedBuilderState {
     wizardSpellSubTabByClass: Record<string, WizardSpellSubTab>;
 }
 
+interface BuilderSessionSnapshot {
+    completionCharacterName: string;
+    selectedSpeciesName: string;
+    selectedCampaignIdsOnCreate: string[];
+    generatedBackstory: string;
+    completionPortraitImageUrl: string;
+    completionPortraitOriginalImageUrl: string;
+    notes: string;
+}
+
 @Component({
     selector: 'app-new-character-standard-page',
     imports: [CommonModule, RouterLink, NewCharacterInfoModalComponent, CharacteristicsModalComponent, DeityPickerModalComponent, ItemDetailModalComponent, ChoiceBadgeComponent, DropdownComponent, HitPointManagerModalComponent, MultiSelectDropdownComponent, OptionMenuFilterComponent, CharacterPortraitCropModalComponent],
@@ -244,6 +257,7 @@ export class NewCharacterStandardPageComponent {
     private faithInputElement: HTMLInputElement | null = null;
     private readonly builderStateStartTag = '[DK_BUILDER_STATE_START]';
     private readonly builderStateEndTag = '[DK_BUILDER_STATE_END]';
+    private readonly builderSessionStoragePrefix = 'dk-standard-builder-session:';
 
     private readonly routeStep = toSignal(
         this.route.paramMap.pipe(map((params) => params.get('step') as StandardStep | null)),
@@ -327,7 +341,8 @@ export class NewCharacterStandardPageComponent {
 
             void this.router.navigate(this.getBuilderStepRoute('class'), {
                 queryParamsHandling: 'preserve',
-                replaceUrl: true
+                replaceUrl: true,
+                state: this.getBuilderRouteState()
             });
         });
 
@@ -400,6 +415,15 @@ export class NewCharacterStandardPageComponent {
             this.hydrateBuilderFromCharacter(character, this.navigationEditLevel() ?? Number.NaN);
             this.hydratedCharacterId.set(characterId);
             this.cdr.detectChanges();
+        });
+
+        effect(() => {
+            this.store.initialized();
+            if (this.store.isHydrating()) {
+                return;
+            }
+
+            this.saveBuilderSessionSnapshot();
         });
 
         // If a premade character was selected, populate the builder with its data
@@ -511,6 +535,12 @@ export class NewCharacterStandardPageComponent {
         return ['/characters/new/standard', step];
     }
 
+    getBuilderRouteState(): { editLevel: number } {
+        return {
+            editLevel: this.getPrimaryClassLevel()
+        };
+    }
+
     readonly activeStepIndex = computed(() => {
         const activeStep = this.activeStandardStep();
         const index = this.standardSteps.findIndex((step) => step.key === activeStep);
@@ -529,7 +559,8 @@ export class NewCharacterStandardPageComponent {
 
         const target = this.standardSteps[targetIndex];
         await this.router.navigate(this.getBuilderStepRoute(target.key), {
-            queryParamsHandling: 'preserve'
+            queryParamsHandling: 'preserve',
+            state: this.getBuilderRouteState()
         });
     }
 
@@ -689,14 +720,11 @@ export class NewCharacterStandardPageComponent {
     });
     readonly backstoryTargetCharacter = computed(() => {
         const activeBuilderCharacterId = this.activeBuilderCharacterId();
-        if (activeBuilderCharacterId) {
-            const activeBuilderCharacter = this.store.characters().find((entry) => entry.id === activeBuilderCharacterId) ?? null;
-            if (activeBuilderCharacter) {
-                return activeBuilderCharacter;
-            }
+        if (!activeBuilderCharacterId) {
+            return null;
         }
 
-        return this.store.selectedParty()[0] ?? null;
+        return this.store.characters().find((entry) => entry.id === activeBuilderCharacterId) ?? null;
     });
 
     readonly standardSteps: ReadonlyArray<{ key: StandardStep; label: string; shortLabel?: string }> = [
@@ -3971,12 +3999,16 @@ export class NewCharacterStandardPageComponent {
 
     selectClass(className: string): void {
         const current = this.multiclassList();
+        const preservedLevel = Math.min(20, Math.max(1, Math.trunc(current[className] ?? this.characterLevel() ?? 1)));
+
         this.multiclassList.set({
             ...current,
-            [className]: 1
+            [className]: preservedLevel
         });
         this.setClassPanelTab(className, 'class-features');
-        this.syncPreparedSpellsForClass(className, 1);
+        this.syncPreparedSpellsForClass(className, preservedLevel);
+        this.characterLevel.set(preservedLevel);
+        this.navigationEditLevel.set(preservedLevel);
         this.selectedClass.set('');
         this.closeInfoModal();
     }
@@ -5340,15 +5372,17 @@ export class NewCharacterStandardPageComponent {
     }
 
     addClass(className: string, level: number): void {
+        const normalizedLevel = Math.min(20, Math.max(1, Math.trunc(level)));
         const current = this.multiclassList();
         this.multiclassList.set({
             ...current,
-            [className]: level
+            [className]: normalizedLevel
         });
         this.setClassPanelTab(className, 'class-features');
-        this.syncPreparedSpellsForClass(className, level);
+        this.syncPreparedSpellsForClass(className, normalizedLevel);
         this.selectedClass.set('');
-        this.characterLevel.set(1);
+        this.characterLevel.set(normalizedLevel);
+        this.navigationEditLevel.set(normalizedLevel);
     }
 
     removeClass(className: string): void {
@@ -5366,6 +5400,11 @@ export class NewCharacterStandardPageComponent {
             delete next[className];
             return next;
         });
+
+        const remainingClasses = Object.keys(updated);
+        const nextLevel = remainingClasses.length > 0 ? Math.max(1, updated[remainingClasses[0]] || 1) : 1;
+        this.characterLevel.set(nextLevel);
+        this.navigationEditLevel.set(nextLevel);
     }
 
     updateClassLevel(className: string, level: number): void {
@@ -5378,6 +5417,12 @@ export class NewCharacterStandardPageComponent {
             ...current,
             [className]: normalizedLevel
         }));
+
+        if (this.getPrimaryClassName() === className || Object.keys(this.multiclassList()).length === 1) {
+            this.characterLevel.set(normalizedLevel);
+            this.navigationEditLevel.set(normalizedLevel);
+        }
+
         this.syncPreparedSpellsForClass(className, normalizedLevel);
     }
 
@@ -7226,17 +7271,28 @@ export class NewCharacterStandardPageComponent {
         }
 
         const classes = Object.keys(this.multiclassList());
-        return classes[0]?.trim() ?? '';
+        if (classes.length > 0) {
+            return classes[0]?.trim() ?? '';
+        }
+
+        return this.backstoryTargetCharacter()?.className?.trim() ?? '';
     }
 
     private getPrimaryClassLevel(): number {
         const primaryClass = this.getPrimaryClassName();
-        if (!primaryClass) {
-            return 1;
+        if (primaryClass) {
+            const level = this.multiclassList()[primaryClass];
+            if (Number.isFinite(level) && (level ?? 0) > 0) {
+                return Math.min(20, Math.max(1, Math.trunc(level as number)));
+            }
         }
 
-        const level = this.multiclassList()[primaryClass];
-        return level && level > 0 ? level : 1;
+        const currentLevel = this.characterLevel();
+        if (Number.isFinite(currentLevel) && currentLevel > 0) {
+            return Math.min(20, Math.max(1, Math.trunc(currentLevel)));
+        }
+
+        return Math.min(20, Math.max(1, Math.trunc(this.backstoryTargetCharacter()?.level ?? 1)));
     }
 
     private buildCompletionDraft(): CharacterDraft | null {
@@ -7500,6 +7556,11 @@ export class NewCharacterStandardPageComponent {
                 return;
             }
 
+            this.clearBuilderSessionSnapshot(existingId || resultCharacter.id);
+            if (!existingId) {
+                this.clearBuilderSessionSnapshot();
+            }
+
             await this.router.navigate(['/character', resultCharacter.id]);
         } catch {
             this.completionError.set('Unable to complete character creation right now.');
@@ -7550,22 +7611,25 @@ export class NewCharacterStandardPageComponent {
     }
 
     private hydrateBuilderFromCharacter(character: Character, levelOverride: number = Number.NaN): void {
+        const sessionSnapshot = this.readBuilderSessionSnapshot();
         const resolvedLevel = Number.isFinite(levelOverride)
             ? Math.min(20, Math.max(1, Math.trunc(levelOverride)))
             : Math.max(character.level, 1);
 
-        this.completionCharacterName.set(character.name);
-        this.completionPortraitImageUrl.set(character.image || '');
+        this.completionCharacterName.set(sessionSnapshot?.completionCharacterName?.trim() || character.name);
+        this.completionPortraitImageUrl.set(sessionSnapshot?.completionPortraitImageUrl?.trim() || character.image || '');
+        this.completionPortraitOriginalImageUrl.set(sessionSnapshot?.completionPortraitOriginalImageUrl?.trim() || '');
         this.multiclassList.set({ [character.className]: resolvedLevel });
         this.setClassPanelTab(character.className, 'class-features');
         this.syncPreparedSpellsForClass(character.className, resolvedLevel);
         this.characterLevel.set(resolvedLevel);
+        this.navigationEditLevel.set(resolvedLevel);
         this.selectedClass.set('');
 
         const matchedPremade = this.findMatchingPremadeCharacter(character);
         const premadeAppearance = this.resolvePremadeAppearance(character, matchedPremade);
 
-        this.selectedSpeciesName.set(character.race);
+        this.selectedSpeciesName.set(sessionSnapshot?.selectedSpeciesName?.trim() || character.race);
         this.selectedAlignment.set(this.normalizeAlignmentSelection((character.alignment || matchedPremade?.alignment || '').trim()));
         this.selectedFaith.set((character.faith || matchedPremade?.faith || '').trim());
         this.selectedLifestyle.set(this.normalizeLifestyleSelection((character.lifestyle || matchedPremade?.lifestyle || '').trim()));
@@ -7582,21 +7646,51 @@ export class NewCharacterStandardPageComponent {
             [character.campaignId, ...(character.campaignIds ?? [])]
                 .filter((campaignId): campaignId is string => typeof campaignId === 'string' && campaignId.trim().length > 0)
         ));
-        if (linkedCampaignIds.length > 0) {
-            this.selectedCampaignIdsOnCreate.set(linkedCampaignIds);
+        const sessionCampaignIds = Array.isArray(sessionSnapshot?.selectedCampaignIdsOnCreate)
+            ? sessionSnapshot.selectedCampaignIdsOnCreate.filter((campaignId) => typeof campaignId === 'string' && campaignId.trim().length > 0)
+            : [];
+        const nextCampaignIds = sessionCampaignIds.length > 0 ? sessionCampaignIds : linkedCampaignIds;
+        if (nextCampaignIds.length > 0) {
+            this.selectedCampaignIdsOnCreate.set(nextCampaignIds);
         }
 
-        const parsedNotes = this.parsePersistedNotes(character.notes ?? '');
+        const parsedNotes = this.parsePersistedNotes(sessionSnapshot?.notes?.trim() || (character.notes ?? ''));
         const notes = parsedNotes.cleanedNotes.trim();
         const parsedOrganizations = this.extractNoteListFromText(notes, 'Organizations');
         const parsedAllies = this.extractNoteListFromText(notes, 'Allies');
         const parsedEnemies = this.extractNoteListFromText(notes, 'Enemies');
         const parsedOtherNotes = this.extractOtherNotes(notes);
         const parsedPhysical = this.extractPhysicalCharacteristicsFromText(notes);
-        this.generatedBackstory.set(this.extractVisibleBackstory(notes));
+        this.generatedBackstory.set(sessionSnapshot?.generatedBackstory?.trim() || this.extractVisibleBackstory(notes));
 
         const persisted = parsedNotes.state;
         if (persisted) {
+            const persistedClassLevels = persisted.multiclassList && typeof persisted.multiclassList === 'object'
+                ? Object.fromEntries(
+                    Object.entries(persisted.multiclassList)
+                        .filter(([className]) => typeof className === 'string' && className.trim().length > 0)
+                        .map(([className, level]) => [className.trim(), Math.min(20, Math.max(1, Math.trunc(Number(level) || 1)))])
+                )
+                : null;
+
+            if (persistedClassLevels && Object.keys(persistedClassLevels).length > 0) {
+                this.multiclassList.set(persistedClassLevels);
+                const restoredPrimaryClass = persisted.selectedClass?.trim() || Object.keys(persistedClassLevels)[0] || character.className;
+                const restoredPrimaryLevel = Math.max(1, persistedClassLevels[restoredPrimaryClass] || resolvedLevel);
+                this.setClassPanelTab(restoredPrimaryClass, 'class-features');
+                this.syncPreparedSpellsForClass(restoredPrimaryClass, restoredPrimaryLevel);
+                this.characterLevel.set(restoredPrimaryLevel);
+                this.navigationEditLevel.set(restoredPrimaryLevel);
+                this.selectedClass.set('');
+            } else if (typeof persisted.characterLevel === 'number' && Number.isFinite(persisted.characterLevel)) {
+                const persistedLevel = Math.min(20, Math.max(1, Math.trunc(persisted.characterLevel)));
+                this.multiclassList.set({ [character.className]: persistedLevel });
+                this.setClassPanelTab(character.className, 'class-features');
+                this.syncPreparedSpellsForClass(character.className, persistedLevel);
+                this.characterLevel.set(persistedLevel);
+                this.navigationEditLevel.set(persistedLevel);
+            }
+
             if (persisted.selectedBackgroundName?.trim()) {
                 this.selectedBackgroundName.set(persisted.selectedBackgroundName.trim());
             }
@@ -7728,8 +7822,8 @@ export class NewCharacterStandardPageComponent {
             this.wizardLevelUpLearnedSpellsByClass.set(persisted.wizardLevelUpLearnedSpellsByClass ?? {});
             this.wizardSpellSubTabByClass.set(persisted.wizardSpellSubTabByClass ?? {});
 
-            // Re-apply class limits after persisted spell state loads.
-            this.syncPreparedSpellsForClass(character.className, resolvedLevel);
+            // Re-apply class limits after persisted spell state loads using the current restored class level.
+            this.syncPreparedSpellsForClass(this.getPrimaryClassName() || character.className, this.getPrimaryClassLevel());
         } else {
             const inferredBackgroundState = this.inferBackgroundStateFromCharacter(character);
             this.selectedFaith.set((this.extractFaithFromNotes(notes) || this.selectedFaith()).trim());
@@ -7765,6 +7859,76 @@ export class NewCharacterStandardPageComponent {
         this.applyPremadeFallbackValues(character, matchedPremade, premadeAppearance);
     }
 
+    private getBuilderSessionStorageKey(): string {
+        const characterId = this.activeBuilderCharacterId().trim();
+        return `${this.builderSessionStoragePrefix}${characterId || 'new'}`;
+    }
+
+    private readBuilderSessionSnapshot(): BuilderSessionSnapshot | null {
+        const storage = this.document.defaultView?.sessionStorage;
+        if (!storage) {
+            return null;
+        }
+
+        const raw = storage.getItem(this.getBuilderSessionStorageKey());
+        if (!raw) {
+            return null;
+        }
+
+        try {
+            const parsed = JSON.parse(raw) as Partial<BuilderSessionSnapshot>;
+            return {
+                completionCharacterName: typeof parsed.completionCharacterName === 'string' ? parsed.completionCharacterName : '',
+                selectedSpeciesName: typeof parsed.selectedSpeciesName === 'string' ? parsed.selectedSpeciesName : '',
+                selectedCampaignIdsOnCreate: Array.isArray(parsed.selectedCampaignIdsOnCreate) ? parsed.selectedCampaignIdsOnCreate.filter((value): value is string => typeof value === 'string') : [],
+                generatedBackstory: typeof parsed.generatedBackstory === 'string' ? parsed.generatedBackstory : '',
+                completionPortraitImageUrl: typeof parsed.completionPortraitImageUrl === 'string' ? parsed.completionPortraitImageUrl : '',
+                completionPortraitOriginalImageUrl: typeof parsed.completionPortraitOriginalImageUrl === 'string' ? parsed.completionPortraitOriginalImageUrl : '',
+                notes: typeof parsed.notes === 'string' ? parsed.notes : ''
+            };
+        } catch {
+            return null;
+        }
+    }
+
+    private saveBuilderSessionSnapshot(): void {
+        const storage = this.document.defaultView?.sessionStorage;
+        if (!storage) {
+            return;
+        }
+
+        const hasMeaningfulState = this.completionCharacterName().trim().length > 0
+            || this.selectedSpeciesName().trim().length > 0
+            || this.selectedBackgroundName().trim().length > 0
+            || Object.keys(this.multiclassList()).length > 0;
+
+        if (!hasMeaningfulState) {
+            return;
+        }
+
+        const snapshot: BuilderSessionSnapshot = {
+            completionCharacterName: this.completionCharacterName(),
+            selectedSpeciesName: this.selectedSpeciesName(),
+            selectedCampaignIdsOnCreate: this.selectedCampaignIdsOnCreate(),
+            generatedBackstory: this.generatedBackstory(),
+            completionPortraitImageUrl: this.completionPortraitImageUrl(),
+            completionPortraitOriginalImageUrl: this.completionPortraitOriginalImageUrl(),
+            notes: this.buildPersistedNotes()
+        };
+
+        storage.setItem(this.getBuilderSessionStorageKey(), JSON.stringify(snapshot));
+    }
+
+    private clearBuilderSessionSnapshot(characterId?: string): void {
+        const storage = this.document.defaultView?.sessionStorage;
+        if (!storage) {
+            return;
+        }
+
+        const resolvedCharacterId = (characterId ?? this.activeBuilderCharacterId()).trim();
+        storage.removeItem(`${this.builderSessionStoragePrefix}${resolvedCharacterId || 'new'}`);
+    }
+
     private buildPersistedNotes(): string {
         const faith = this.selectedFaith().trim();
         const otherNotes = this.otherNotes().trim().replace(/\s*\n+\s*/g, ' ');
@@ -7783,6 +7947,9 @@ export class NewCharacterStandardPageComponent {
 
         const visibleNotes = notesParts.filter((part) => part.length > 0).join('\n\n') || 'No field notes yet.';
         const state: PersistedBuilderState = {
+            selectedClass: this.getPrimaryClassName(),
+            characterLevel: this.getPrimaryClassLevel(),
+            multiclassList: this.multiclassList(),
             selectedBackgroundName: this.selectedBackgroundName(),
             selectedBackgroundUrl: this.selectedBackgroundUrl(),
             selectedAlignment: this.selectedAlignment(),
@@ -8294,7 +8461,7 @@ export class NewCharacterStandardPageComponent {
     }
 
     private extractVisibleBackstory(notes: string): string {
-        const marker = notes.search(/(?:^|\n)\s*(Organizations:|Allies:|Enemies:|Other:|Faith:|Builder class focus:|Species focus:|Alignment direction:|Lifestyle direction:|Emphasize these personality traits:|Include these ideals:|Include these bonds:|Reflect these flaws:|Physical characteristics:)/i);
+        const marker = notes.search(/(?:^|\n)\s*(Organizations:|Allies:|Enemies:|Other:|Faith:|Experience:|Builder class focus:|Species focus:|Background focus:|Alignment direction:|Lifestyle direction:|Emphasize these personality traits:|Include these ideals:|Include these bonds:|Reflect these flaws:|Physical characteristics:|Known organizations:|Known allies:|Known enemies:|Other notes to include:)/i);
         if (marker > 0) {
             return notes.slice(0, marker).trim();
         }
@@ -8306,28 +8473,38 @@ export class NewCharacterStandardPageComponent {
         const target = this.backstoryTargetCharacter();
         const lines: string[] = [];
         const fallbackName = this.completionCharacterName().trim();
-        const characterName = target?.name?.trim() || fallbackName;
+        const currentClassName = this.getPrimaryClassName() || target?.className?.trim() || '';
+        const currentClassLevel = Math.max(1, this.getPrimaryClassLevel() || target?.level || 1);
+        const resolvedSpeciesFocus = this.selectedSpeciesName() || target?.race?.trim() || '';
+        const resolvedBackgroundFocus = this.selectedBackground()?.name || this.selectedBackgroundName().trim() || target?.background?.trim() || '';
+        const characterName = fallbackName || target?.name?.trim() || '';
+        const visibleTargetNotes = target?.notes?.trim() ? this.extractVisibleBackstory(target.notes) : '';
+        const faith = this.selectedFaith().trim() || target?.faith?.trim() || '';
 
         if (characterName) {
             lines.push(`Character name: ${characterName}`);
         }
 
-        if (target) {
-            lines.push(`Current class and level: ${target.className} ${target.level}`);
-            lines.push(`Known background: ${target.background || 'Unknown background'}`);
-            if (target.notes?.trim()) {
-                lines.push(`Existing notes to honor: ${target.notes.trim()}`);
-            }
+        if (currentClassName) {
+            lines.push(`Current class and level: ${currentClassName} ${currentClassLevel}`);
         }
 
-        lines.push(`Builder class focus: ${this.getCurrentClassSummary()}`);
-
-        if (this.selectedSpeciesName()) {
-            lines.push(`Species focus: ${this.selectedSpeciesName()}`);
+        if (resolvedBackgroundFocus) {
+            lines.push(`Known background: ${resolvedBackgroundFocus}`);
         }
 
-        if (this.selectedBackgroundName()) {
-            lines.push(`Background focus: ${this.selectedBackgroundName()}`);
+        if (visibleTargetNotes) {
+            lines.push(`Existing notes to honor: ${visibleTargetNotes}`);
+        }
+
+        lines.push(`Builder class focus: ${currentClassName || this.getCurrentClassSummary()}`);
+
+        if (resolvedSpeciesFocus) {
+            lines.push(`Species focus: ${resolvedSpeciesFocus}`);
+        }
+
+        if (resolvedBackgroundFocus) {
+            lines.push(`Background focus: ${resolvedBackgroundFocus}`);
         }
 
         if (this.selectedAlignment()) {
@@ -8336,6 +8513,10 @@ export class NewCharacterStandardPageComponent {
 
         if (this.selectedLifestyle()) {
             lines.push(`Lifestyle direction: ${this.selectedLifestyle()}`);
+        }
+
+        if (faith) {
+            lines.push(`Faith: ${faith}`);
         }
 
         const physicalDetails = [

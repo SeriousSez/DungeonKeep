@@ -79,7 +79,11 @@
                         <p class="eyebrow">Character Sheet</p>
                         <h1>{{ char.name }}</h1>
                         <p class="subheader">
-                            {{ char.race }} {{ char.className }} · Level {{ char.level }} ·
+                            {{ char.race }} {{ char.className }}
+                            @if (selectedSubclassName()) {
+                            <span class="header-subclass">· {{ selectedSubclassName() }}</span>
+                            }
+                            · Level {{ char.level }} ·
                             @if (currentCampaign(); as campaign) {
                             <a class="campaign-link dk-link" [routerLink]="['/campaigns', campaign.id]">{{ campaign.name }}</a>
                             } @else {

@@ -271,7 +271,10 @@ export class DungeonStoreService {
                 ? this.mergeVisibleNotesWithBuilderState(currentNotes, requestedNotes)
                 : (requestedNotes || 'No field notes yet.');
 
-        if (!draft.name || !draft.className) {
+        const resolvedClassName = this.resolveClassNameForSave(draft.className, notesForSave, currentCharacter?.className);
+        const resolvedLevel = this.resolveCharacterLevelForSave(draft.level, notesForSave, currentCharacter?.level);
+
+        if (!draft.name || !resolvedClassName) {
             return null;
         }
 
@@ -281,8 +284,8 @@ export class DungeonStoreService {
             const updated = await this.api.updateCharacter(characterId, {
                 name: draft.name,
                 playerName,
-                className: draft.className,
-                level: Math.max(1, draft.level),
+                className: resolvedClassName,
+                level: resolvedLevel,
                 background: draft.background || 'Freshly arrived adventurer',
                 notes: notesForSave,
                 campaignId: campaignIds?.[0],
@@ -2195,6 +2198,77 @@ export class DungeonStoreService {
     private hasBuilderStateBlock(text: string): boolean {
         return text.includes(DungeonStoreService.BUILDER_STATE_START_TAG)
             && text.includes(DungeonStoreService.BUILDER_STATE_END_TAG);
+    }
+
+    private parseBuilderStateFromNotes(notes: string): Record<string, unknown> | null {
+        if (!this.hasBuilderStateBlock(notes)) {
+            return null;
+        }
+
+        const start = notes.indexOf(DungeonStoreService.BUILDER_STATE_START_TAG);
+        const end = notes.indexOf(DungeonStoreService.BUILDER_STATE_END_TAG);
+        if (start === -1 || end === -1 || end < start) {
+            return null;
+        }
+
+        const jsonText = notes
+            .slice(start + DungeonStoreService.BUILDER_STATE_START_TAG.length, end)
+            .trim();
+
+        if (!jsonText) {
+            return null;
+        }
+
+        try {
+            const parsed = JSON.parse(jsonText);
+            return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : null;
+        } catch {
+            return null;
+        }
+    }
+
+    private resolveClassNameForSave(draftClassName: string, notes: string, fallbackClassName?: string): string {
+        const normalizedDraftClassName = draftClassName.trim();
+        if (normalizedDraftClassName) {
+            return normalizedDraftClassName;
+        }
+
+        const parsedState = this.parseBuilderStateFromNotes(notes);
+        const stateClassName = typeof parsedState?.['selectedClass'] === 'string'
+            ? parsedState['selectedClass'].trim()
+            : '';
+
+        return stateClassName || fallbackClassName?.trim() || '';
+    }
+
+    private resolveCharacterLevelForSave(draftLevel: number, notes: string, fallbackLevel?: number): number {
+        if (Number.isFinite(draftLevel) && draftLevel > 0) {
+            return Math.min(20, Math.max(1, Math.trunc(draftLevel)));
+        }
+
+        const parsedState = this.parseBuilderStateFromNotes(notes);
+
+        const directStateLevel = parsedState?.['characterLevel'];
+        if (typeof directStateLevel === 'number' && Number.isFinite(directStateLevel)) {
+            return Math.min(20, Math.max(1, Math.trunc(directStateLevel)));
+        }
+
+        const multiclassList = parsedState?.['multiclassList'];
+        if (multiclassList && typeof multiclassList === 'object') {
+            const levels = Object.values(multiclassList as Record<string, unknown>)
+                .map((value) => Number(value))
+                .filter((value) => Number.isFinite(value) && value > 0);
+
+            if (levels.length > 0) {
+                return Math.min(20, Math.max(1, Math.trunc(levels[0] as number)));
+            }
+        }
+
+        if (Number.isFinite(fallbackLevel) && (fallbackLevel ?? 0) > 0) {
+            return Math.min(20, Math.max(1, Math.trunc(fallbackLevel as number)));
+        }
+
+        return 1;
     }
 
     private mergeVisibleNotesWithBuilderState(previousNotes: string, visibleNotes: string): string {

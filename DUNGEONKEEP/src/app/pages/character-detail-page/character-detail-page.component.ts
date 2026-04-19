@@ -27,6 +27,7 @@ import {
     speciesInfoMap
 } from '../../data/new-character-standard-page.data';
 import { spellDetailsMap } from '../../data/spell-details.data';
+import { subclassConfigs, subclassFeatureProgressionByClass } from '../../data/subclass-features.data';
 import { normalizePreparedLeveledSpellNames } from '../../rules/spell-preparation.rules';
 import { getWizardPreparedSpellLimit, isWizardSpellbookCantripAlwaysPrepared } from '../../rules/wizard-class.rules';
 import { featCatalogEntries, type FeatEntry } from '../../data/feats-catalog.data';
@@ -314,6 +315,14 @@ interface CombatRow {
     notes: string;
     concentration: boolean;
     ritual: boolean;
+}
+
+interface FeatureListEntry {
+    name: string;
+    level: number;
+    description: string;
+    detailDescription: string;
+    summaryBadges: string[];
 }
 
 interface LimitedUseEntry {
@@ -2909,7 +2918,16 @@ export class CharacterDetailPageComponent {
         return Math.max(1, this.weaponCombatRows().length > 0 ? 1 : 0);
     });
 
-    readonly classFeatures = computed(() => {
+    readonly selectedSubclassName = computed(() => {
+        const char = this.character();
+        if (!char) {
+            return '';
+        }
+
+        return this.getSelectedSubclassNameForCharacter(char.className, char.level);
+    });
+
+    readonly classFeatures = computed<FeatureListEntry[]>(() => {
         const char = this.character();
         const state = this.persistedBuilderState();
         if (!char) {
@@ -2917,11 +2935,22 @@ export class CharacterDetailPageComponent {
         }
 
         const allLevels = classLevelOneFeatures[char.className] ?? [];
-        const features: Array<{ name: string; level: number; description: string; detailDescription: string; summaryBadges: string[] }> = [];
+        const selectedSubclassName = this.getSelectedSubclassNameForCharacter(char.className, char.level);
+        const subclassConfig = this.getSubclassConfig(char.className);
+        const features: FeatureListEntry[] = [];
 
         for (const levelGroup of allLevels) {
             if (levelGroup.level > char.level) continue;
+
+            const levelEntries: FeatureListEntry[] = [];
+            let hadSubclassPlaceholder = false;
+
             for (const feature of levelGroup.features) {
+                if (selectedSubclassName && this.isSubclassPlaceholderFeature(char.className, feature.name)) {
+                    hadSubclassPlaceholder = true;
+                    continue;
+                }
+
                 const selectedValues = this.getPersistedFeatureSelections(state, char.className, feature.level, feature.name);
                 const detailLines: string[] = [
                     ...this.getClassFeatureDynamicDetails(char.className, char.level, feature.name)
@@ -2932,6 +2961,11 @@ export class CharacterDetailPageComponent {
 
                 if (feature.choices && selectedValues.length > 0) {
                     detailLines.push(`Chosen: ${selectedValues.join(', ')}`);
+                }
+
+                if (selectedSubclassName && this.isSubclassSelectorFeature(char.className, feature.name)) {
+                    detailLines.unshift(`Chosen subclass: ${selectedSubclassName}.`);
+                    summaryBadges.unshift(selectedSubclassName);
                 }
 
                 if (feature.name === 'Ability Score Improvement' || feature.name === 'Epic Boon') {
@@ -2951,8 +2985,14 @@ export class CharacterDetailPageComponent {
                     detailDescription = [detailDescription, ...detailLines].filter((line) => !!line).join('\n');
                 }
 
-                features.push({ name: feature.name, level: feature.level, description, detailDescription, summaryBadges });
+                levelEntries.push({ name: feature.name, level: feature.level, description, detailDescription, summaryBadges });
             }
+
+            if (selectedSubclassName && subclassConfig && (subclassConfig.milestoneLevels.includes(levelGroup.level) || hadSubclassPlaceholder)) {
+                levelEntries.push(...this.getSubclassFeatureEntriesForLevel(char.className, selectedSubclassName, levelGroup.level));
+            }
+
+            features.push(...levelEntries);
         }
 
         for (const featureName of char.classFeatures ?? []) {
@@ -2981,6 +3021,38 @@ export class CharacterDetailPageComponent {
         const allLevels = classLevelOneFeatures[char.className] ?? [];
         const speciesSourceLabel = char.race?.trim() || 'Species';
         const backgroundSourceLabel = char.background?.trim() || 'Background';
+        const addFeatItem = (name: string, sourceLabel: string, followUpLines: string[] = []) => {
+            const trimmedName = name.trim();
+            if (!trimmedName || featItems.some((entry) => entry.name.toLowerCase() === trimmedName.toLowerCase())) {
+                return;
+            }
+
+            if (trimmedName === 'Ability Score Improvement') {
+                featItems.push({
+                    name: trimmedName,
+                    description: [`From ${sourceLabel}`, 'Increase one ability score by 2, or increase two ability scores by 1.'].concat(followUpLines).join('\n')
+                });
+                return;
+            }
+
+            const featEntry = this.featCatalogByName.get(trimmedName.toLowerCase());
+            if (!featEntry) {
+                return;
+            }
+
+            const descriptionLines = [
+                `From ${sourceLabel}`,
+                featEntry.abilityScoreIncrease ? `Feat benefit: Ability Score Increase. ${featEntry.abilityScoreIncrease}` : '',
+                ...(featEntry.features?.map((entry) => `${entry.title}. ${entry.text}`) ?? []),
+                (!featEntry.features?.length && featEntry.benefit ? featEntry.benefit : ''),
+                ...followUpLines
+            ].filter((line) => !!line);
+
+            featItems.push({
+                name: featEntry.name,
+                description: descriptionLines.join('\n')
+            });
+        };
 
         for (const levelGroup of allLevels) {
             if (levelGroup.level > char.level) {
@@ -2994,31 +3066,17 @@ export class CharacterDetailPageComponent {
 
                 const selectedValues = this.getPersistedFeatureSelections(state, char.className, feature.level, feature.name);
                 for (const selectedValue of selectedValues) {
+                    const followUpLines = this.getPersistedFeatFollowUpSummary(state, char.className, feature.level, feature.name);
+
                     if (selectedValue === 'Ability Score Improvement') {
                         const asiSummary = this.getPersistedAbilityScoreImprovementSummary(state, char.className, feature.level, feature.name)
                             || 'Increase one ability score by 2, or increase two ability scores by 1.';
 
-                        featItems.push({
-                            name: 'Ability Score Improvement',
-                            description: [`From ${char.className}`, asiSummary].join('\n')
-                        });
+                        addFeatItem('Ability Score Improvement', char.className, [asiSummary]);
                         continue;
                     }
 
-                    const featEntry = this.featCatalogByName.get(selectedValue.toLowerCase());
-                    const followUpLines = this.getPersistedFeatFollowUpSummary(state, char.className, feature.level, feature.name);
-                    const descriptionLines = [
-                        `From ${char.className}`,
-                        featEntry?.abilityScoreIncrease ? `Feat benefit: Ability Score Increase. ${featEntry.abilityScoreIncrease}` : '',
-                        ...(featEntry?.features?.map((entry) => `${entry.title}. ${entry.text}`) ?? []),
-                        (!featEntry?.features?.length && featEntry?.benefit ? featEntry.benefit : ''),
-                        ...followUpLines
-                    ].filter((line) => !!line);
-
-                    featItems.push({
-                        name: selectedValue,
-                        description: descriptionLines.join('\n')
-                    });
+                    addFeatItem(selectedValue, char.className, followUpLines);
                 }
             }
         }
@@ -3031,26 +3089,15 @@ export class CharacterDetailPageComponent {
         ];
 
         for (const choiceEntry of choiceEntries) {
-            const featEntry = this.featCatalogByName.get(choiceEntry.value.toLowerCase());
-            if (!featEntry) {
-                continue;
-            }
+            addFeatItem(choiceEntry.value, choiceEntry.sourceLabel);
+        }
 
-            if (featItems.some((entry) => entry.name === featEntry.name)) {
-                continue;
-            }
+        for (const classFeatureName of char.classFeatures ?? []) {
+            addFeatItem(classFeatureName, char.className);
+        }
 
-            const descriptionLines = [
-                `From ${choiceEntry.sourceLabel}`,
-                featEntry.abilityScoreIncrease ? `Feat benefit: Ability Score Increase. ${featEntry.abilityScoreIncrease}` : '',
-                ...(featEntry.features?.map((entry) => `${entry.title}. ${entry.text}`) ?? []),
-                (!featEntry.features?.length && featEntry.benefit ? featEntry.benefit : '')
-            ].filter((line) => !!line);
-
-            featItems.push({
-                name: featEntry.name,
-                description: descriptionLines.join('\n')
-            });
+        for (const traitName of [...(char.traits ?? []), ...(char.speciesTraits ?? [])]) {
+            addFeatItem(traitName, speciesSourceLabel);
         }
 
         return featItems;
@@ -3090,6 +3137,89 @@ export class CharacterDetailPageComponent {
 
     private getPersistedFeatureSelectionKey(className: string, level: number, featureName: string): string {
         return `${className}:${level}:${featureName}`;
+    }
+
+    private getSubclassConfig(className: string) {
+        return subclassConfigs[className] ?? null;
+    }
+
+    private isSubclassSelectorFeature(className: string, featureName: string): boolean {
+        const config = this.getSubclassConfig(className);
+        return !!config && config.selectorFeatureName === featureName;
+    }
+
+    private isSubclassPlaceholderFeature(className: string, featureName: string): boolean {
+        const config = this.getSubclassConfig(className);
+        return !!config && config.placeholderFeatureNames.includes(featureName);
+    }
+
+    private getSelectedSubclassNameForCharacter(className: string, characterLevel: number): string {
+        const state = this.persistedBuilderState();
+        const config = this.getSubclassConfig(className);
+
+        if (config) {
+            const selected = this.getPersistedFeatureSelections(state, className, config.selectorLevel, config.selectorFeatureName)[0]?.trim() ?? '';
+            if (selected) {
+                return selected;
+            }
+        }
+
+        const knownFeatureNames = new Set((this.character()?.classFeatures ?? [])
+            .map((feature) => feature.trim().toLowerCase())
+            .filter((feature) => feature.length > 0));
+
+        if (knownFeatureNames.size === 0) {
+            return '';
+        }
+
+        let bestMatch = '';
+        let bestScore = 0;
+        let hasTie = false;
+        const progressionBySubclass = subclassFeatureProgressionByClass[className] ?? {};
+
+        for (const [subclassName, progression] of Object.entries(progressionBySubclass)) {
+            let score = 0;
+
+            for (const [levelText, detailOrList] of Object.entries(progression)) {
+                const level = Number(levelText);
+                if (!Number.isFinite(level) || level > characterLevel) {
+                    continue;
+                }
+
+                const details = Array.isArray(detailOrList) ? detailOrList : [detailOrList];
+                for (const detail of details) {
+                    if (knownFeatureNames.has(detail.name.trim().toLowerCase())) {
+                        score += 1;
+                    }
+                }
+            }
+
+            if (score > bestScore) {
+                bestMatch = subclassName;
+                bestScore = score;
+                hasTie = false;
+            } else if (score > 0 && score === bestScore) {
+                hasTie = true;
+            }
+        }
+
+        return bestScore > 0 && !hasTie ? bestMatch : '';
+    }
+
+    private getSubclassFeatureEntriesForLevel(className: string, subclassName: string, level: number): FeatureListEntry[] {
+        const detailOrList = subclassFeatureProgressionByClass[className]?.[subclassName]?.[level];
+        if (!detailOrList) {
+            return [];
+        }
+
+        const details = Array.isArray(detailOrList) ? detailOrList : [detailOrList];
+        return details.map((detail) => ({
+            name: detail.name,
+            level,
+            description: detail.description,
+            detailDescription: detail.description,
+            summaryBadges: [subclassName]
+        }));
     }
 
     private getClassFeatureSheetDescription(className: string, level: number, featureName: string, fallback: string): string {
