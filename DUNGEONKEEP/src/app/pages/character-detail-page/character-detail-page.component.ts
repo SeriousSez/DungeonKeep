@@ -271,6 +271,154 @@ const EXHAUSTION_LEVEL_RULES: ReadonlyArray<{ level: number; effect: string }> =
     { level: 6, effect: 'Death.' }
 ];
 
+const COMBAT_ACTION_DETAILS: Readonly<Record<string, { description: string; bullets: string[]; rulesText?: string }>> = {
+    attack: {
+        description: 'Make one attack with a weapon or an unarmed strike on your turn.',
+        bullets: [
+            'You can draw or put away one weapon as part of the attack.',
+            'If you have Extra Attack, you can move between those attacks.',
+            'An unarmed strike can deal damage, start a grapple, or shove a target.'
+        ],
+        rulesText: 'Use Attack when you want to directly harm a target or make a physical combat maneuver.'
+    },
+    dash: {
+        description: 'You trade your action for more movement this turn.',
+        bullets: [
+            'Gain extra movement equal to your current Speed after modifiers.',
+            'You can choose a special speed such as Fly or Swim if you have one.'
+        ],
+        rulesText: 'Dash is ideal for closing distance, retreating, or repositioning across the battlefield.'
+    },
+    disengage: {
+        description: 'Move carefully so enemies cannot make opportunity attacks against you this turn.',
+        bullets: [
+            'Your movement stops provoking opportunity attacks for the rest of the current turn.',
+            'It is the safest way to slip out of melee without teleporting or forcing movement.'
+        ]
+    },
+    dodge: {
+        description: 'You focus entirely on defense and awareness until your next turn begins.',
+        bullets: [
+            'Attack rolls against you have disadvantage if you can see the attacker.',
+            'You make Dexterity saving throws with advantage.'
+        ],
+        rulesText: 'These benefits end early if you become Incapacitated or if your Speed drops to 0.'
+    },
+    grapple: {
+        description: 'Try to seize a nearby creature and hold it in place.',
+        bullets: [
+            'Usually done as an unarmed strike against a creature within 5 feet.',
+            'You need a free hand, and the target cannot be more than one size larger than you.',
+            'On a failed Strength or Dexterity save against your escape DC, the target becomes Grappled.'
+        ],
+        rulesText: 'A Grappled creature has Speed 0 and can use its action to try to escape.'
+    },
+    help: {
+        description: 'You assist an ally with a task or distract an enemy for them.',
+        bullets: [
+            'Aid a nearby ally on a skill or tool check, granting advantage on their next relevant check.',
+            'Or distract a foe within 5 feet so the next allied attack against it has advantage.'
+        ],
+        rulesText: 'The benefit expires if it is not used before the start of your next turn.'
+    },
+    hide: {
+        description: 'Conceal yourself so enemies lose track of you.',
+        bullets: [
+            'Make a Dexterity (Stealth) check, typically against DC 15.',
+            'You usually need heavy obscurity, strong cover, and to be out of enemy sight.',
+            'If you succeed, you count as hidden until something gives you away.'
+        ],
+        rulesText: 'You stop being hidden if you make more than a whisper of noise, get found, attack, or cast a spell with a verbal component.'
+    },
+    improvise: {
+        description: 'Attempt a creative stunt that does not fit one of the standard action options.',
+        bullets: [
+            'Describe what your character is trying to do in the scene.',
+            'The DM decides whether it needs a check, an attack roll, a saving throw, or another ruling.'
+        ],
+        rulesText: 'Improvised actions are intentionally flexible and depend on the situation at the table.'
+    },
+    influence: {
+        description: 'Use words, presence, or demeanor to sway a creature during the encounter.',
+        bullets: [
+            'Deception, Intimidation, Performance, Persuasion, or Animal Handling may apply.',
+            'If the creature is hesitant, the default DC is often 15 or its Intelligence score, whichever is higher.'
+        ],
+        rulesText: 'On a failed attempt, the same approach usually cannot be pressed again for a while unless the situation changes.'
+    },
+    magic: {
+        description: 'Cast a spell or activate a magical feature or item that uses the Magic action.',
+        bullets: [
+            'Most spells with a casting time of an action use this option.',
+            'Longer casts require you to keep taking the Magic action on later turns.',
+            'If concentration breaks during that process, the effect fizzles.'
+        ]
+    },
+    ready: {
+        description: 'Prepare a response now so you can react to a trigger before your next turn.',
+        bullets: [
+            'Choose a clear, perceivable trigger.',
+            'Choose the action you will take or move up to your Speed when that trigger happens.',
+            'You use your Reaction to follow through when the trigger occurs.'
+        ],
+        rulesText: 'Readied spells are cast in advance and then held with concentration until released.'
+    },
+    search: {
+        description: 'Scan the area or a creature for something that is not immediately obvious.',
+        bullets: [
+            'This is a Wisdom check guided by what you are trying to detect.',
+            'Perception may find hidden creatures or objects, Survival may reveal tracks, and Medicine or Insight can uncover other clues.'
+        ]
+    },
+    shove: {
+        description: 'Knock a nearby creature back or send it to the ground.',
+        bullets: [
+            'Usually performed as part of an unarmed strike.',
+            'The target makes a Strength or Dexterity save against your unarmed strike DC.',
+            'On a failure, you push it 5 feet away or knock it Prone.'
+        ]
+    },
+    study: {
+        description: 'Pause to analyze lore, clues, magic, religion, or a piece of information.',
+        bullets: [
+            'This is an Intelligence check based on the topic at hand.',
+            'Arcana, History, Investigation, Nature, or Religion commonly apply.'
+        ],
+        rulesText: 'Use Study when the answer depends on knowledge, memory, or careful analysis rather than quick observation.'
+    },
+    utilize: {
+        description: 'Use an item or object when that interaction specifically requires an action.',
+        bullets: [
+            'Examples include activating gear, pulling mechanisms, or using an object with a listed action cost.',
+            'Simple object interactions are often folded into movement or another action instead.'
+        ]
+    },
+    'two-weapon fighting': {
+        description: 'Follow up a Light-weapon attack with an off-hand strike as a bonus action.',
+        bullets: [
+            'You normally need a different Light weapon in the other hand.',
+            'The bonus attack is separate from your main attack sequence.'
+        ],
+        rulesText: 'This is a quick extra attack option for dual-wielding characters.'
+    },
+    'opportunity attack': {
+        description: 'Make a quick melee strike when a creature you can see leaves your reach.',
+        bullets: [
+            'This uses your Reaction.',
+            'The attack happens just before the creature gets away.',
+            'You make one melee weapon attack or one unarmed strike.'
+        ],
+        rulesText: 'Forced movement or teleportation usually does not trigger this response.'
+    },
+    'interact with an object': {
+        description: 'Handle a door, lever, pouch, torch, or similar object during the flow of your turn.',
+        bullets: [
+            'Many simple interactions are free once per turn when paired with movement or another action.',
+            'If the object explicitly needs an action, use Utilize instead.'
+        ]
+    }
+};
+
 interface PersistedBuilderState {
     selectedBackgroundName?: string;
     selectedLanguages?: string[];
@@ -5120,19 +5268,24 @@ export class CharacterDetailPageComponent {
             return;
         }
 
+        const actionReference = COMBAT_ACTION_DETAILS[action.name.trim().toLowerCase()];
+        const resolvedSubtitle = action.subtitle?.trim() || 'Action Detail';
         const bullets = [
-            action.subtitle ? `Type: ${action.subtitle}` : 'Type: Combat option',
+            ...(actionReference?.bullets ?? []),
             action.range ? `Range: ${action.range}` : '',
             action.hitDcLabel ? `Hit / DC: ${action.hitDcLabel}` : '',
             action.damage ? `Damage / Effect: ${action.damage}` : '',
-            action.notes ? `Notes: ${action.notes}` : ''
+            !actionReference && action.notes ? `Notes: ${action.notes}` : ''
         ].filter((entry) => entry.length > 0);
 
         this.openDetailDrawer({
             title: action.name,
-            subtitle: 'Action Detail',
-            description: 'Detailed context for this combat option.',
-            bullets
+            subtitle: resolvedSubtitle,
+            description: actionReference?.description || action.notes || 'Detailed context for this combat option.',
+            bullets,
+            metaLine: `Combat • ${resolvedSubtitle.toLowerCase()}`,
+            profileTags: [resolvedSubtitle],
+            rulesText: actionReference?.rulesText || (!actionReference ? action.notes ?? null : null)
         });
     }
 
