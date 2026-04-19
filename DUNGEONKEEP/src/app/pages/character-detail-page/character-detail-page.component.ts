@@ -1477,32 +1477,58 @@ export class CharacterDetailPageComponent {
         return this.character()?.background || 'Not set';
     });
 
-    readonly persistedSkillProficiencies = computed(() => {
+    readonly persistedSkillSelectionCounts = computed(() => {
         const state = this.persistedBuilderState();
+        const counts = new Map<string, number>();
+
         if (!state) {
-            return new Set<string>();
+            return counts;
         }
 
-        const collected = new Set<string>();
-        const classSelections = state.classFeatureSelections ?? {};
-
-        for (const pickedValues of Object.values(classSelections)) {
-            for (const value of pickedValues ?? []) {
-                const parsed = this.parseSkillTokens(value);
-                for (const skillKey of parsed) {
-                    collected.add(skillKey);
+        const addSelections = (values: readonly string[] | undefined | null) => {
+            for (const value of values ?? []) {
+                for (const skillKey of this.parseSkillTokens(value)) {
+                    counts.set(skillKey, (counts.get(skillKey) ?? 0) + 1);
                 }
             }
+        };
+
+        const selectedBackgroundName = state.selectedBackgroundName?.trim() || this.character()?.background?.trim() || '';
+        if (selectedBackgroundName) {
+            const backgroundSkills = backgroundDetailOverrides[selectedBackgroundName]?.skillProficiencies
+                ?? backgroundSkillProficienciesFallbacks[selectedBackgroundName]
+                ?? '';
+            addSelections([backgroundSkills]);
+        }
+
+        const classSelections = state.classFeatureSelections ?? {};
+        for (const pickedValues of Object.values(classSelections)) {
+            addSelections(pickedValues ?? []);
         }
 
         const backgroundSelections = state.backgroundChoiceSelections ?? {};
-        for (const pickedValue of Object.values(backgroundSelections)) {
-            for (const skillKey of this.parseSkillTokens(pickedValue)) {
-                collected.add(skillKey);
+        addSelections(Object.values(backgroundSelections));
+
+        const featFollowUpChoices = state.featFollowUpChoices ?? {};
+        for (const choice of Object.values(featFollowUpChoices)) {
+            addSelections(choice?.skilledSelections ?? []);
+        }
+
+        return counts;
+    });
+
+    readonly persistedSkillProficiencies = computed(() => new Set(this.persistedSkillSelectionCounts().keys()));
+
+    readonly persistedSkillExpertise = computed(() => {
+        const expertise = new Set<string>();
+
+        for (const [skillKey, count] of this.persistedSkillSelectionCounts()) {
+            if (count >= 2) {
+                expertise.add(skillKey);
             }
         }
 
-        return collected;
+        return expertise;
     });
 
     readonly effectiveAbilityScores = computed(() => {
@@ -2148,13 +2174,15 @@ export class CharacterDetailPageComponent {
             const abilityKey = this.skillAbilityMap[skill.key as keyof typeof this.skillAbilityMap];
             const abilityScore = this.effectiveAbilityScores()?.[abilityKey] ?? 10;
             const proficient = this.isSkillProficient(skill.key, char.skills);
-            const modifier = this.getAbilityModifier(abilityScore) + (proficient ? char.proficiencyBonus : 0);
+            const expertise = this.isSkillExpertise(skill.key);
+            const modifier = this.getAbilityModifier(abilityScore) + this.getSkillProficiencyBonus(skill.key, char.skills);
             const disadvantageReason = this.getArmorDisadvantageReasonForSkill(skill.key, this.abilityKeyMap[abilityKey]);
 
             return {
                 ...skill,
                 ability: this.abilityKeyMap[abilityKey],
                 proficient,
+                expertise,
                 modifierLabel: this.formatSigned(modifier),
                 hasDisadvantage: disadvantageReason != null,
                 disadvantageReason
@@ -4898,7 +4926,7 @@ export class CharacterDetailPageComponent {
         });
     }
 
-    openSkillDetail(skill: { name: string; ability: string; modifierLabel: string; proficient: boolean; hasDisadvantage?: boolean; disadvantageReason?: string | null }): void {
+    openSkillDetail(skill: { name: string; ability: string; modifierLabel: string; proficient: boolean; expertise?: boolean; hasDisadvantage?: boolean; disadvantageReason?: string | null }): void {
         const skillInfo: Record<string, { description: string; usedFor: string[] }> = {
             'Arcana': {
                 description: 'Knowledge of magic, spells, magical items, and supernatural phenomena.',
@@ -5018,8 +5046,10 @@ export class CharacterDetailPageComponent {
         ];
 
         const proficiencyNotes: string[] = [];
-        if (skill.proficient) {
-            proficiencyNotes.push('Expertise (if granted): double your proficiency bonus for this skill');
+        if (skill.expertise) {
+            proficiencyNotes.push('Expertise applies: this skill adds double your proficiency bonus.');
+        } else if (skill.proficient) {
+            proficiencyNotes.push('You add your normal proficiency bonus to checks with this skill.');
         }
 
         const referenceBullets = [
@@ -5037,7 +5067,7 @@ export class CharacterDetailPageComponent {
 
         this.openDetailDrawer({
             title: skill.name,
-            subtitle: `${skill.ability} Skill • ${skill.modifierLabel}${skill.proficient ? ' (Proficient)' : ''}${skill.hasDisadvantage ? ' • Disadvantage' : ''}`,
+            subtitle: `${skill.ability} Skill • ${skill.modifierLabel}${skill.expertise ? ' (Expertise)' : skill.proficient ? ' (Proficient)' : ''}${skill.hasDisadvantage ? ' • Disadvantage' : ''}`,
             description: info.description,
             bullets: [...statusBullets, ...info.usedFor, ...referenceBullets]
         });
@@ -7611,17 +7641,18 @@ export class CharacterDetailPageComponent {
     }
 
     private getPassiveSkillValue(skill: 'perception' | 'investigation' | 'insight'): number {
-        const char = this.character();
-        if (!char) {
-            return 10;
-        }
-
         const abilityKey = this.skillAbilityMap[skill];
         const abilityMod = this.getAbilityModifier(this.effectiveAbilityScores()?.[abilityKey] ?? 10);
-        const profBonus = this.isSkillProficient(skill, char.skills)
-            ? char.proficiencyBonus
-            : 0;
-        return 10 + abilityMod + profBonus;
+        return 10 + abilityMod + this.getSkillProficiencyBonus(skill, this.character()?.skills);
+    }
+
+    private getSkillProficiencyBonus(skillKey: string, fallbackSkills?: SkillProficiencies): number {
+        const char = this.character();
+        if (!char || !this.isSkillProficient(skillKey, fallbackSkills)) {
+            return 0;
+        }
+
+        return char.proficiencyBonus * (this.isSkillExpertise(skillKey) ? 2 : 1);
     }
 
     private isSkillProficient(skillKey: string, fallbackSkills?: SkillProficiencies): boolean {
@@ -7630,6 +7661,10 @@ export class CharacterDetailPageComponent {
         }
 
         return Boolean(fallbackSkills?.[skillKey as keyof SkillProficiencies]);
+    }
+
+    private isSkillExpertise(skillKey: string): boolean {
+        return this.persistedSkillExpertise().has(skillKey);
     }
 
     private parseSkillTokens(raw: string): string[] {
@@ -7643,11 +7678,9 @@ export class CharacterDetailPageComponent {
             .map((segment) => segment.trim())
             .filter((segment) => segment.length > 0);
 
-        const normalized = tokens
+        return tokens
             .map((token) => this.skillLabelToKey(token))
             .filter((token): token is string => Boolean(token));
-
-        return [...new Set(normalized)];
     }
 
     private skillLabelToKey(label: string): string | null {

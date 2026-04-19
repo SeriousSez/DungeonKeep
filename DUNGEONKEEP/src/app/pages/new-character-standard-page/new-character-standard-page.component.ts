@@ -4272,11 +4272,21 @@ export class NewCharacterStandardPageComponent {
             }
         }
 
-        return choices.options.map((option) => ({
-            value: option,
-            label: option,
-            disabled: selectedElsewhere.has(option) && option !== currentValue
-        }));
+        return choices.options.map((option) => {
+            const repeatCount = this.getSelectedRepeatableSkillChoiceCount(option, {
+                source: 'classFeature',
+                key,
+                index: choiceIndex
+            });
+
+            return {
+                value: option,
+                label: option,
+                disabled: this.isRepeatableSkillChoice(option)
+                    ? repeatCount >= 2 && option !== currentValue
+                    : selectedElsewhere.has(option) && option !== currentValue
+            };
+        });
     }
 
     onFeatureChoiceDropdownChanged(className: string, feature: ClassFeature, choiceIndex: number, value: string | number): void {
@@ -4307,6 +4317,18 @@ export class NewCharacterStandardPageComponent {
 
             if (!normalized) {
                 nextSelections.splice(choiceIndex, 1);
+            } else if (this.isRepeatableSkillChoice(normalized)) {
+                const repeatCount = this.getSelectedRepeatableSkillChoiceCount(normalized, {
+                    source: 'classFeature',
+                    key,
+                    index: choiceIndex
+                });
+
+                if (repeatCount >= 2) {
+                    return current;
+                }
+
+                nextSelections[choiceIndex] = normalized;
             } else {
                 const duplicateIndex = nextSelections.findIndex((entry, index) => entry === normalized && index !== choiceIndex);
                 if (duplicateIndex >= 0) {
@@ -4616,15 +4638,26 @@ export class NewCharacterStandardPageComponent {
     }
 
     getSkilledOptions(className: string, feature: ClassFeature, slotIndex: number): DropdownOption[] {
+        const key = this.getFeatureSelectionKey(className, feature);
         const selected = this.getFeatFollowUpChoice(className, feature).skilledSelections;
         const currentValue = selected[slotIndex] ?? '';
         const selectedElsewhere = new Set(selected.filter((entry, index) => index !== slotIndex && entry));
 
-        return this.buildSkilledSelectionOptions().map((option) => ({
-            value: option,
-            label: option,
-            disabled: selectedElsewhere.has(option) && option !== currentValue
-        }));
+        return this.buildSkilledSelectionOptions().map((option) => {
+            const repeatCount = this.getSelectedRepeatableSkillChoiceCount(option, {
+                source: 'featFollowUp',
+                key,
+                index: slotIndex
+            });
+
+            return {
+                value: option,
+                label: option,
+                disabled: this.isRepeatableSkillChoice(option)
+                    ? repeatCount >= 2 && option !== currentValue
+                    : selectedElsewhere.has(option) && option !== currentValue
+            };
+        });
     }
 
     getGrapplerAbilityValue(className: string, feature: ClassFeature): string {
@@ -4675,6 +4708,18 @@ export class NewCharacterStandardPageComponent {
 
             if (!nextValue) {
                 nextSelections.splice(slotIndex, 1);
+            } else if (this.isRepeatableSkillChoice(nextValue)) {
+                const repeatCount = this.getSelectedRepeatableSkillChoiceCount(nextValue, {
+                    source: 'featFollowUp',
+                    key,
+                    index: slotIndex
+                });
+
+                if (repeatCount >= 2) {
+                    return current;
+                }
+
+                nextSelections[slotIndex] = nextValue;
             } else {
                 const duplicateIndex = nextSelections.findIndex((entry, index) => entry === nextValue && index !== slotIndex);
                 if (duplicateIndex >= 0) {
@@ -5018,6 +5063,63 @@ export class NewCharacterStandardPageComponent {
             default:
                 return [];
         }
+    }
+
+    private readonly repeatableSkillChoiceLabels = new Set<string>([
+        'Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation', 'Investigation', 'Medicine', 'Nature', 'Perception',
+        'Performance', 'Persuasion', 'Religion', 'Sleight of Hand', 'Stealth', 'Survival'
+    ]);
+
+    private isRepeatableSkillChoice(option: string): boolean {
+        return this.repeatableSkillChoiceLabels.has(option.trim());
+    }
+
+    private getSelectedRepeatableSkillChoiceCount(
+        option: string,
+        exclude?: { source: 'classFeature' | 'featFollowUp' | 'backgroundChoice'; key: string; index?: number }
+    ): number {
+        const normalized = option.trim();
+        if (!this.isRepeatableSkillChoice(normalized)) {
+            return 0;
+        }
+
+        let count = 0;
+
+        for (const [key, values] of Object.entries(this.classFeatureSelections())) {
+            values.forEach((value, index) => {
+                if (exclude?.source === 'classFeature' && exclude.key === key && exclude.index === index) {
+                    return;
+                }
+
+                if (value?.trim() === normalized) {
+                    count++;
+                }
+            });
+        }
+
+        for (const [key, value] of Object.entries(this.backgroundChoiceSelections())) {
+            if (exclude?.source === 'backgroundChoice' && exclude.key === key) {
+                continue;
+            }
+
+            if (value?.trim() === normalized) {
+                count++;
+            }
+        }
+
+        for (const [key, choice] of Object.entries(this.featFollowUpChoices())) {
+            (choice?.skilledSelections ?? []).forEach((value, index) => {
+                if (exclude?.source === 'featFollowUp' && exclude.key === key && exclude.index === index) {
+                    return;
+                }
+
+                if (value?.trim() === normalized) {
+                    count++;
+                }
+            });
+        }
+
+        return count;
     }
 
     private buildSkilledSelectionOptions(): string[] {

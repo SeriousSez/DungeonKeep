@@ -326,8 +326,9 @@
             <h2 class="section-title">Skills</h2>
             <div class="skills-list">
                 @for (skill of skillRows(); track skill.key) {
-                <div class="skill-row detail-trigger-row" role="button" tabindex="0" [class.proficient]="skill.proficient" [class.disadvantaged]="skill.hasDisadvantage" (click)="openSkillDetail(skill)" (keydown.enter)="openSkillDetail(skill)" (keydown.space)="openSkillDetail(skill)">
-                    <span class="skill-prof">@if (skill.proficient) { ● } @else { ○ }</span>
+                <div class="skill-row detail-trigger-row" role="button" tabindex="0" [class.proficient]="skill.proficient" [class.expertise]="skill.expertise" [class.disadvantaged]="skill.hasDisadvantage" (click)="openSkillDetail(skill)" (keydown.enter)="openSkillDetail(skill)"
+                    (keydown.space)="openSkillDetail(skill)">
+                    <span class="skill-prof" [class.skill-prof--expertise]="skill.expertise" [attr.title]="skill.expertise ? 'Expertise' : (skill.proficient ? 'Proficient' : 'Not proficient')">@if (skill.expertise) { ◉ } @else if (skill.proficient) { ● } @else { ○ }</span>
                     <span class="skill-name">{{ skill.name }}</span>
                     @if (skill.hasDisadvantage) {
                     <span class="skill-flag">DIS</span>

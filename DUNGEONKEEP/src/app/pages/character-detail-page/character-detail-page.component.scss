@@ -1139,8 +1139,17 @@
     border-color: var(--accent-primary);
 }
 
+.skill-row.expertise {
+    border-color: color-mix(in srgb, var(--accent-primary) 78%, #111827);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-primary) 32%, transparent);
+}
+
 .skill-prof {
     color: var(--accent-primary);
+}
+
+.skill-prof--expertise {
+    font-weight: 700;
 }
 
 .skill-name {
