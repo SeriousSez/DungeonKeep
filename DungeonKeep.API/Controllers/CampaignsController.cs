@@ -1288,7 +1288,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
 
         if (request.SeparateLabels is true)
         {
-            labels = await GenerateStandardCampaignMapArtLabelsAsync(campaign, request, cancellationToken);
+            labels = await GenerateStandardCampaignMapArtLabelsAsync(campaign, request, backgroundImageUrl, cancellationToken);
         }
 
         return new GenerateCampaignMapArtResponse(backgroundImageUrl, labels);
@@ -2464,11 +2464,15 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         [
             "Generate overlay labels for a fantasy map in DungeonKeep.",
             "Return only valid JSON matching the provided schema.",
+            "A reference image of the generated map art is provided alongside this prompt. Use that image as the source of truth for label placement.",
             "Create 3 to 8 labels that would make sense as movable overlay labels on top of the generated map art.",
             "Use coordinates normalized between 0.08 and 0.92.",
+            "Set each x and y to the actual visual center of the named feature in the reference image, not a random open area.",
             "Spread labels across the composition and avoid stacking them directly on top of one another.",
             "Use tone Region for broad territories, districts, seas, or named zones.",
             "Use tone Feature for roads, gates, ruins, landmarks, bridges, passes, tunnels, or similar points of interest.",
+            "Place settlement names directly on or just beside visible settlement clusters. Place ruin names beside visible ruins, watchtowers, or broken keeps. Place cavern names beside cave mouths, chasms, tunnels, or underground-looking terrain. Place region names across large landmasses or distinct zones.",
+            "Do not place labels in empty water, on bare borders, or in unrelated terrain unless that named feature is visibly there.",
             "Each label must include a full style object that visually fits the art: text color, backgroundColor, borderColor, fontFamily, fontSize in rem, fontWeight, letterSpacing in em, fontStyle, textTransform, borderWidth, borderRadius, paddingX, paddingY, textShadow, boxShadow, and opacity.",
             "Use the style object to decide the complete label treatment, but keep generated labels background-free. Prefer bare ink, glow, or shadow treatment over plaques, cartouches, banners, or framed markers.",
             "Take the underlying map art into account when styling each label. Maintain strong local contrast against the terrain, watercolor wash, and linework beneath the label.",
@@ -3674,7 +3678,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             NormalizeGeneratedLabelStyle(payload.Style, tone));
     }
 
-    private async Task<List<CampaignMapLabelDto>> GenerateStandardCampaignMapArtLabelsAsync(CampaignDto campaign, GenerateCampaignMapArtRequest request, CancellationToken cancellationToken)
+    private async Task<List<CampaignMapLabelDto>> GenerateStandardCampaignMapArtLabelsAsync(CampaignDto campaign, GenerateCampaignMapArtRequest request, string? referenceImageUrl, CancellationToken cancellationToken)
     {
         if (!TryGetOpenAiConfiguration(out var apiKey, out var responsesUrl, out var model))
         {
@@ -3688,11 +3692,11 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                 responsesUrl,
                 model,
                 BuildCampaignMapArtLabelsPrompt(campaign, request),
-                referenceImageUrl: null,
+                referenceImageUrl,
                 temperature: 0.35,
                 maxOutputTokens: 900,
                 textFormat: BuildCampaignMapLabelsJsonSchemaFormat(),
-                fallbackToPlainTextOnBadRequest: false,
+                fallbackToPlainTextOnBadRequest: true,
                 cancellationToken: cancellationToken);
 
             var parsed = TryParseGeneratedCampaignMapLabelsPayload(text);
