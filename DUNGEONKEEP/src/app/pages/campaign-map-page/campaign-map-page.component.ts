@@ -5035,7 +5035,17 @@ export class CampaignMapPageComponent {
     }
 
     private shouldPersistVisionMemory(token: CampaignMapToken): boolean {
-        return !!this.campaignId() && !!this.currentMapId() && (this.canEdit() || this.canControlToken(token));
+        return !!this.campaignId()
+            && this.isPersistableMapId(this.currentMapId())
+            && (this.canEdit() || this.canControlToken(token));
+    }
+
+    private isPersistableMapId(mapId: string): boolean {
+        if (!mapId) {
+            return false;
+        }
+
+        return this.selectedCampaign()?.maps?.some((map) => map.id === mapId) === true;
     }
 
     private hydrateVisionExplorationFromMaps(maps: CampaignMapBoard[]): void {
@@ -5086,6 +5096,16 @@ export class CampaignMapPageComponent {
         }
 
         for (const key of pendingKeys) {
+            const separatorIndex = key.indexOf('::');
+            if (separatorIndex <= 0) {
+                continue;
+            }
+
+            const mapId = key.slice(0, separatorIndex);
+            if (!currentMapIds.has(mapId)) {
+                continue;
+            }
+
             const localEntry = existingMemory[key] ?? persistedPendingMemory[key];
             if (!localEntry) {
                 continue;
@@ -5105,6 +5125,16 @@ export class CampaignMapPageComponent {
         this.pendingVisionMemoryPersistenceKeys.clear();
         this.inFlightVisionMemoryPersistenceKeys.clear();
         for (const key of pendingKeys) {
+            const separatorIndex = key.indexOf('::');
+            if (separatorIndex <= 0) {
+                continue;
+            }
+
+            const mapId = key.slice(0, separatorIndex);
+            if (!currentMapIds.has(mapId)) {
+                continue;
+            }
+
             const localEntry = existingMemory[key] ?? persistedPendingMemory[key];
             if (!this.matchesVisionMemoryEntry(backendMemory[key], localEntry)) {
                 this.pendingVisionMemoryPersistenceKeys.add(key);
@@ -5388,13 +5418,24 @@ export class CampaignMapPageComponent {
                 }
 
                 const mapId = compoundKey.slice(0, separatorIndex);
+                if (!this.isPersistableMapId(mapId)) {
+                    this.inFlightVisionMemoryPersistenceKeys.delete(compoundKey);
+                    this.visionExploration.update((entries) => {
+                        const next = { ...entries };
+                        delete next[compoundKey];
+                        return next;
+                    });
+                    this.syncPendingVisionMemorySnapshot();
+                    continue;
+                }
+
                 const entry = memory[compoundKey];
                 if (!entry) {
                     this.inFlightVisionMemoryPersistenceKeys.delete(compoundKey);
                     continue;
                 }
 
-                const ok = await this.store.updateCampaignMapVision(campaignId, mapId, {
+                const result = await this.store.updateCampaignMapVision(campaignId, mapId, {
                     key: entry.key,
                     polygons: entry.polygons.map((polygon) => ({
                         points: polygon.map((point) => ({ ...point }))
@@ -5405,7 +5446,13 @@ export class CampaignMapPageComponent {
                 });
 
                 this.inFlightVisionMemoryPersistenceKeys.delete(compoundKey);
-                if (!ok) {
+                if (result === 'not-found') {
+                    this.visionExploration.update((entries) => {
+                        const next = { ...entries };
+                        delete next[compoundKey];
+                        return next;
+                    });
+                } else if (result !== 'ok') {
                     this.pendingVisionMemoryPersistenceKeys.add(compoundKey);
                 }
 

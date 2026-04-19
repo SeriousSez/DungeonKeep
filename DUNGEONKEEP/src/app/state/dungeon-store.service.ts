@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 
 import { raceMap } from '../data/races';
@@ -646,7 +647,7 @@ export class DungeonStoreService {
         }
     }
 
-    async updateCampaignMapVision(campaignId: string, mapId: string, memory: CampaignMap['visionMemory'][number]): Promise<boolean> {
+    async updateCampaignMapVision(campaignId: string, mapId: string, memory: CampaignMap['visionMemory'][number]): Promise<'ok' | 'not-found' | 'error'> {
         try {
             await this.api.updateCampaignMapVision(campaignId, {
                 mapId,
@@ -668,9 +669,13 @@ export class DungeonStoreService {
                     revision: this.normalizeMapVisionRevision(memory.revision)
                 }
             });
-            return true;
-        } catch {
-            return false;
+            return 'ok';
+        } catch (error) {
+            if (error instanceof HttpErrorResponse && error.status === 404) {
+                return 'not-found';
+            }
+
+            return 'error';
         }
     }
 
