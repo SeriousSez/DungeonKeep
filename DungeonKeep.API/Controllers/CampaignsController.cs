@@ -2169,10 +2169,8 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         var parchmentLayout = NormalizeRequestedParchmentLayout(request.ParchmentLayout);
         var cavernLayout = NormalizeRequestedCavernLayout(request.CavernLayout);
         var preferredPlaceNames = request.PreferredPlaceNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToArray() ?? [];
-        var settlementNames = request.SettlementNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToArray() ?? [];
-        var regionNames = request.RegionNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToArray() ?? [];
-        var ruinNames = request.RuinNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToArray() ?? [];
-        var cavernNames = request.CavernNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToArray() ?? [];
+        var resolvedMapName = mapName ?? campaign.Name.Trim();
+        var (settlementNames, regionNames, ruinNames, cavernNames) = ResolveRequestedCampaignMapNames(request, resolvedMapName, campaign.Name);
 
         var promptLines = new List<string>
         {
@@ -2250,11 +2248,12 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                 $"Hook: {campaign.Hook}.",
                 $"Next session: {campaign.NextSession}.",
                 $"World notes: {(campaign.WorldNotes.Count == 0 ? "None provided." : string.Join(" | ", campaign.WorldNotes.Take(8).Select(note => $"{note.Category}: {note.Title} - {note.Content}")))}",
-                $"Preferred settlement names: {(settlementNames.Length == 0 ? "None provided." : string.Join(", ", settlementNames))}",
-                $"Preferred region names: {(regionNames.Length == 0 ? "None provided." : string.Join(", ", regionNames))}",
-                $"Preferred ruin names: {(ruinNames.Length == 0 ? "None provided." : string.Join(", ", ruinNames))}",
-                $"Preferred cavern names: {(cavernNames.Length == 0 ? "None provided." : string.Join(", ", cavernNames))}",
-                $"Uncategorized preferred place names: {(preferredPlaceNames.Length == 0 ? "None provided." : string.Join(", ", preferredPlaceNames))}"
+                $"Preferred settlement names: {string.Join(", ", settlementNames)}",
+                $"Preferred region names: {string.Join(", ", regionNames)}",
+                $"Preferred ruin names: {string.Join(", ", ruinNames)}",
+                $"Preferred cavern names: {string.Join(", ", cavernNames)}",
+                $"Uncategorized preferred place names: {(preferredPlaceNames.Length == 0 ? "None provided." : string.Join(", ", preferredPlaceNames))}",
+                "If the user left any naming category blank, invent fitting fantasy names for that category instead of omitting it."
             ]);
         }
 
@@ -2459,10 +2458,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         }
 
         var mapName = string.IsNullOrWhiteSpace(request.MapName) ? campaign.Name.Trim() : request.MapName.Trim();
-        var settlementNames = request.SettlementNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(12).ToArray() ?? [];
-        var regionNames = request.RegionNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(12).ToArray() ?? [];
-        var ruinNames = request.RuinNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(12).ToArray() ?? [];
-        var cavernNames = request.CavernNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(12).ToArray() ?? [];
+        var (settlementNames, regionNames, ruinNames, cavernNames) = ResolveRequestedCampaignMapNames(request, mapName, campaign.Name);
 
         return string.Join('\n',
         [
@@ -2482,7 +2478,8 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             "If there is any doubt about readability, prefer stronger text contrast and clearer text shadow over adding a label background.",
             "Visibility matters more than subtlety. Labels should still feel integrated with the art, but they must remain clearly readable.",
             "Let large region labels feel grand and integrated with the art. Let feature labels feel smaller, subtler, and more embedded in the composition.",
-            "Prefer the provided names whenever they fit; invent concise fantasy names only when needed to fill gaps.",
+            "Prefer the provided names whenever they fit, but when a category is blank you must invent concise fantasy names for settlements, regions, ruins, and caverns or routes so the final label set still feels complete.",
+            "Aim for a balanced spread of label types instead of only one road name or one title.",
             string.Empty,
             $"Map type: {background}",
             $"Map title or focal name: {mapName}",
@@ -2503,10 +2500,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
     {
         var mapName = string.IsNullOrWhiteSpace(request.MapName) ? campaign.Name.Trim() : request.MapName.Trim();
         var battlemapLocale = NormalizeRequestedBattlemapLocale(request.BattlemapLocale);
-        var settlementNames = request.SettlementNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(12).ToArray() ?? [];
-        var regionNames = request.RegionNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(12).ToArray() ?? [];
-        var ruinNames = request.RuinNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(12).ToArray() ?? [];
-        var cavernNames = request.CavernNames?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(12).ToArray() ?? [];
+        var (settlementNames, regionNames, ruinNames, cavernNames) = ResolveRequestedCampaignMapNames(request, mapName, campaign.Name);
 
         return string.Join('\n',
         [
@@ -2519,6 +2513,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             "Use tone Feature for doors, stairs, bar counters, choke points, bridges, wagons, hearths, altars, pillars, or escape routes.",
             "Each label must include a full style object that visually fits the art: text color, backgroundColor, borderColor, fontFamily, fontSize in rem, fontWeight, letterSpacing in em, fontStyle, textTransform, borderWidth, borderRadius, paddingX, paddingY, textShadow, boxShadow, and opacity.",
             "Keep generated labels background-free. Prefer readable text color plus shadow or glow over plaques, banners, or cartouches.",
+            "If the user left any naming category blank, invent fitting tactical zone and feature names instead of leaving the battlemat unlabeled.",
             "These labels sit on a battlemat, not an atlas. Do not generate region names, road names, kingdom names, or world-map style labeling.",
             string.Empty,
             $"Encounter locale: {battlemapLocale}",
@@ -3683,7 +3678,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
     {
         if (!TryGetOpenAiConfiguration(out var apiKey, out var responsesUrl, out var model))
         {
-            return BuildFallbackCampaignMapArtLabels(request);
+            return BuildFallbackCampaignMapArtLabels(campaign, request);
         }
 
         try
@@ -3720,11 +3715,11 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                 .Take(8)
                 .ToList();
 
-            return normalized.Count > 0 ? normalized : BuildFallbackCampaignMapArtLabels(request);
+            return normalized.Count > 0 ? normalized : BuildFallbackCampaignMapArtLabels(campaign, request);
         }
         catch
         {
-            return BuildFallbackCampaignMapArtLabels(request);
+            return BuildFallbackCampaignMapArtLabels(campaign, request);
         }
     }
 
@@ -3732,7 +3727,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
     {
         if (!TryGetOpenAiConfiguration(out var apiKey, out var responsesUrl, out var model))
         {
-            return BuildFallbackCampaignMapArtLabels(request);
+            return BuildFallbackCampaignMapArtLabels(campaign, request);
         }
 
         try
@@ -3769,15 +3764,15 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                 .Take(8)
                 .ToList();
 
-            return normalized.Count > 0 ? normalized : BuildFallbackCampaignMapArtLabels(request);
+            return normalized.Count > 0 ? normalized : BuildFallbackCampaignMapArtLabels(campaign, request);
         }
         catch
         {
-            return BuildFallbackCampaignMapArtLabels(request);
+            return BuildFallbackCampaignMapArtLabels(campaign, request);
         }
     }
 
-    private static List<CampaignMapLabelDto> BuildFallbackCampaignMapArtLabels(GenerateCampaignMapArtRequest request)
+    private static List<CampaignMapLabelDto> BuildFallbackCampaignMapArtLabels(CampaignDto campaign, GenerateCampaignMapArtRequest request)
     {
         var background = NormalizeRequestedMapBackground(request.Background);
         var regionSlots = new (double X, double Y, double Rotation)[]
@@ -3795,29 +3790,107 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             (0.82, 0.74, 6)
         };
 
+        var mapName = string.IsNullOrWhiteSpace(request.MapName) ? campaign.Name.Trim() : request.MapName.Trim();
+        var (settlementNames, regionNames, ruinNames, cavernNames) = ResolveRequestedCampaignMapNames(request, mapName, campaign.Name);
         var labels = new List<CampaignMapLabelDto>();
-        void addLabels(IEnumerable<string>? values, string tone, (double X, double Y, double Rotation)[] slots)
+
+        void addLabels(IEnumerable<string> values, string tone, (double X, double Y, double Rotation)[] slots)
         {
-            foreach (var (name, index) in (values ?? []).Where(value => !string.IsNullOrWhiteSpace(value)).Select(value => value.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(slots.Length).Select((value, index) => (value, index)))
+            foreach (var (name, index) in values.Take(slots.Length).Select((value, index) => (value, index)))
             {
                 var slot = slots[index];
                 labels.Add(new CampaignMapLabelDto(Guid.NewGuid(), name, tone, slot.X, slot.Y, slot.Rotation, DefaultGeneratedLabelStyle(tone)));
             }
         }
 
-        addLabels(request.RegionNames, "Region", regionSlots);
-        addLabels(request.SettlementNames, background == "City" ? "Region" : "Feature", background == "City" ? regionSlots.Skip(labels.Count).Concat(regionSlots).Take(regionSlots.Length).ToArray() : featureSlots);
-        addLabels(request.RuinNames, "Feature", featureSlots);
-        addLabels(request.CavernNames, "Feature", featureSlots.Skip(labels.Count % featureSlots.Length).Concat(featureSlots).Take(featureSlots.Length).ToArray());
+        addLabels(regionNames, "Region", regionSlots);
+        addLabels(
+            settlementNames,
+            background == "City" ? "Region" : "Feature",
+            background == "City"
+                ? regionSlots.Skip(labels.Count).Concat(regionSlots).Take(regionSlots.Length).ToArray()
+                : featureSlots);
+        addLabels(ruinNames, "Feature", featureSlots.Skip(1).Concat(featureSlots).Take(featureSlots.Length).ToArray());
+        addLabels(cavernNames, "Feature", featureSlots.Skip(2).Concat(featureSlots).Take(featureSlots.Length).ToArray());
 
-        if (labels.Count == 0)
+        return labels
+            .GroupBy(label => label.Text, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .Take(8)
+            .ToList();
+    }
+
+    private static (string[] SettlementNames, string[] RegionNames, string[] RuinNames, string[] CavernNames) ResolveRequestedCampaignMapNames(
+        GenerateCampaignMapArtRequest request,
+        string mapName,
+        string campaignName)
+    {
+        var background = NormalizeRequestedMapBackground(request.Background);
+        var settlementNames = NormalizeRequestedMapNames(request.SettlementNames, 12);
+        var regionNames = NormalizeRequestedMapNames(request.RegionNames, 12);
+        var ruinNames = NormalizeRequestedMapNames(request.RuinNames, 12);
+        var cavernNames = NormalizeRequestedMapNames(request.CavernNames, 12);
+        var primaryName = string.IsNullOrWhiteSpace(mapName) ? campaignName.Trim() : mapName.Trim();
+
+        if (settlementNames.Length == 0)
         {
-            var primaryName = string.IsNullOrWhiteSpace(request.MapName) ? (background == "City" ? "Central Ward" : background == "Cavern" ? "Echo Span" : "Unnamed Reach") : request.MapName.Trim();
-            labels.Add(new CampaignMapLabelDto(Guid.NewGuid(), primaryName, "Region", 0.5, 0.18, 0, DefaultGeneratedLabelStyle("Region")));
-            labels.Add(new CampaignMapLabelDto(Guid.NewGuid(), background == "City" ? "Market Gate" : background == "Cavern" ? "Crystal Run" : background == "Coast" ? "Beacon Route" : "Pilgrim Road", "Feature", 0.68, 0.56, -8, DefaultGeneratedLabelStyle("Feature")));
+            settlementNames = background switch
+            {
+                "City" => [primaryName],
+                "Coast" => ["Harborwatch", "Tidecross"],
+                "Cavern" => ["Glowmarket", "Lantern Burrow"],
+                "Battlemap" => ["Watch Post", "Campfire Ring"],
+                _ => ["Wayfarer's Rest", "Foxglove Crossing"]
+            };
         }
 
-        return labels.Take(8).ToList();
+        if (regionNames.Length == 0)
+        {
+            regionNames = background switch
+            {
+                "City" => ["Market Ward", "Old Quarter"],
+                "Coast" => [primaryName, "Saltwind Reach"],
+                "Cavern" => [primaryName, "The Shimmerdeep"],
+                "Battlemap" => ["Main Approach", "Outer Edge"],
+                _ => [primaryName, "The Marches"]
+            };
+        }
+
+        if (ruinNames.Length == 0)
+        {
+            ruinNames = background switch
+            {
+                "City" => ["Broken Gate", "Old Bell Tower"],
+                "Coast" => ["Sunken Shrine", "Wreckwatch"],
+                "Cavern" => ["Crystal Vault", "Forgotten Shrine"],
+                "Battlemap" => ["Collapsed Wall", "Old Altar"],
+                _ => ["Ruined Watchtower", "Saint Ember Keep"]
+            };
+        }
+
+        if (cavernNames.Length == 0)
+        {
+            cavernNames = background switch
+            {
+                "City" => ["King's Way", "South Gate"],
+                "Coast" => ["Smuggler's Cove", "Beacon Path"],
+                "Cavern" => ["Whispering Hollow", "Echo Run"],
+                "Battlemap" => ["Escape Route", "North Stairs"],
+                _ => ["Pilgrim Road", "Whisper Pass"]
+            };
+        }
+
+        return (settlementNames, regionNames, ruinNames, cavernNames);
+    }
+
+    private static string[] NormalizeRequestedMapNames(IEnumerable<string>? values, int maxCount)
+    {
+        return (values ?? [])
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(maxCount)
+            .ToArray();
     }
 
     private static string NormalizeRequestedMapBackground(string? background)
