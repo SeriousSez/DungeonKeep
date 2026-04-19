@@ -413,6 +413,11 @@
                     }
                 </div>
 
+                <input class="search-input" type="search" placeholder="Search spells..." [attr.aria-label]="'Search ' + className + ' spells'" [value]="getSpellSearchTerm(className)" (input)="onSpellSearchChanged(className, $any($event.target).value)" />
+                @if (getSpellSearchTerm(className).trim() && !hasVisibleSpellResultsForPanel(className, multiclassList()[className])) {
+                <p class="spell-empty">No spells match your search in this view.</p>
+                }
+
                 <div class="spell-columns" [class.spell-columns--wizard]="isWizardClass(className)">
                     @if (isWizardClass(className)) {
                     <div class="spell-book-subtabs">
@@ -437,14 +442,14 @@
                         <p class="spell-empty">No known spells yet. Learn spells from the list.</p>
                         } @else {
                         <div class="spell-list">
-                            @for (level of getSpellLevels(knownSpells); track level) {
+                            @for (level of getSpellLevels(getFilteredSpells(className, knownSpells)); track level) {
                             <section class="spell-level-group">
                                 <div class="spell-level-heading">
                                     <span>{{ getSpellLevelLabel(level) }}</span>
-                                    <span class="spell-level-count">{{ getSpellsForLevel(knownSpells, level).length }}</span>
+                                    <span class="spell-level-count">{{ getSpellsForLevel(getFilteredSpells(className, knownSpells), level).length }}</span>
                                 </div>
                                 <ul class="spell-level-list">
-                                    @for (spell of getSpellsForLevel(knownSpells, level); track spell.name) {
+                                    @for (spell of getSpellsForLevel(getFilteredSpells(className, knownSpells), level); track spell.name) {
                                     <li class="spell-item" [attr.id]="getSpellItemId(className, spell.name, 'known')" [class.spell-item--expanded]="getSelectedSpellForClass(className) === spell.name">
                                         <div class="spell-item-row">
                                             <button type="button" class="spell-name-btn" (click)="toggleSpellDetail(className, spell.name, 'known')">
@@ -525,14 +530,14 @@
                         <p class="spell-empty">{{ isWizardClass(className) ? 'No prepared spells yet. Add spells to your spellbook and prepare them.' : 'No prepared spells yet. Learn a spell from the Known list.' }}</p>
                         } @else {
                         <div class="spell-list">
-                            @for (level of getSpellLevels(preparedSpells); track level) {
+                            @for (level of getSpellLevels(getFilteredSpells(className, preparedSpells)); track level) {
                             <section class="spell-level-group">
                                 <div class="spell-level-heading">
                                     <span>{{ getSpellLevelLabel(level) }}</span>
-                                    <span class="spell-level-count">{{ getSpellsForLevel(preparedSpells, level).length }}</span>
+                                    <span class="spell-level-count">{{ getSpellsForLevel(getFilteredSpells(className, preparedSpells), level).length }}</span>
                                 </div>
                                 <ul class="spell-level-list">
-                                    @for (spell of getSpellsForLevel(preparedSpells, level); track spell.name) {
+                                    @for (spell of getSpellsForLevel(getFilteredSpells(className, preparedSpells), level); track spell.name) {
                                     <li class="spell-item" [attr.id]="getSpellItemId(className, spell.name, 'prepared')" [class.spell-item--expanded]="getSelectedSpellForClass(className) === spell.name">
                                         <div class="spell-item-row">
                                             <button type="button" class="spell-name-btn" (click)="toggleSpellDetail(className, spell.name, 'prepared')">
@@ -625,14 +630,14 @@
                         <p class="spell-empty">Your spellbook is empty. Switch to All Spells to add spells.</p>
                         } @else {
                         <div class="spell-list">
-                            @for (level of getSpellLevels(spellbookSpells); track level) {
+                            @for (level of getSpellLevels(getFilteredSpells(className, spellbookSpells)); track level) {
                             <section class="spell-level-group">
                                 <div class="spell-level-heading">
                                     <span>{{ getSpellLevelLabel(level) }}</span>
-                                    <span class="spell-level-count">{{ getSpellsForLevel(spellbookSpells, level).length }}</span>
+                                    <span class="spell-level-count">{{ getSpellsForLevel(getFilteredSpells(className, spellbookSpells), level).length }}</span>
                                 </div>
                                 <ul class="spell-level-list">
-                                    @for (spell of getSpellsForLevel(spellbookSpells, level); track spell.name) {
+                                    @for (spell of getSpellsForLevel(getFilteredSpells(className, spellbookSpells), level); track spell.name) {
                                     <li class="spell-item" [attr.id]="getSpellItemId(className, spell.name, 'spellbook')" [class.spell-item--expanded]="getSelectedSpellForClass(className) === spell.name">
                                         <div class="spell-item-row">
                                             <button type="button" class="spell-name-btn" (click)="toggleSpellDetail(className, spell.name, 'spellbook')">
@@ -723,14 +728,14 @@
                         <p class="spell-empty">All available spells are in your spellbook!</p>
                         } @else {
                         <div class="spell-list">
-                            @for (level of getSpellLevels(catalogSpells); track level) {
+                            @for (level of getSpellLevels(getFilteredSpells(className, catalogSpells)); track level) {
                             <section class="spell-level-group">
                                 <div class="spell-level-heading">
                                     <span>{{ getSpellLevelLabel(level) }}</span>
-                                    <span class="spell-level-count">{{ getSpellsForLevel(catalogSpells, level).length }}</span>
+                                    <span class="spell-level-count">{{ getSpellsForLevel(getFilteredSpells(className, catalogSpells), level).length }}</span>
                                 </div>
                                 <ul class="spell-level-list">
-                                    @for (spell of getSpellsForLevel(catalogSpells, level); track spell.name) {
+                                    @for (spell of getSpellsForLevel(getFilteredSpells(className, catalogSpells), level); track spell.name) {
                                     <li class="spell-item" [attr.id]="getSpellItemId(className, spell.name, 'catalog')" [class.spell-item--expanded]="getSelectedSpellForClass(className) === spell.name">
                                         <div class="spell-item-row">
                                             <button type="button" class="spell-name-btn" (click)="toggleSpellDetail(className, spell.name, 'catalog')">
@@ -819,14 +824,14 @@
                         }
                         @if (getKnownUnlearnedClassSpells(className, multiclassList()[className]); as spellOptions) {
                         <div class="spell-list">
-                            @for (level of getSpellLevels(spellOptions); track level) {
+                            @for (level of getSpellLevels(getFilteredSpells(className, spellOptions)); track level) {
                             <section class="spell-level-group">
                                 <div class="spell-level-heading">
                                     <span>{{ getSpellLevelLabel(level) }}</span>
-                                    <span class="spell-level-count">{{ getSpellsForLevel(spellOptions, level).length }}</span>
+                                    <span class="spell-level-count">{{ getSpellsForLevel(getFilteredSpells(className, spellOptions), level).length }}</span>
                                 </div>
                                 <ul class="spell-level-list">
-                                    @for (spell of getSpellsForLevel(spellOptions, level); track spell.name) {
+                                    @for (spell of getSpellsForLevel(getFilteredSpells(className, spellOptions), level); track spell.name) {
                                     <li class="spell-item" [attr.id]="getSpellItemId(className, spell.name, 'known')" [class.spell-item--expanded]="getSelectedSpellForClass(className) === spell.name">
                                         <div class="spell-item-row">
                                             <button type="button" class="spell-name-btn" (click)="toggleSpellDetail(className, spell.name, 'known')">
@@ -907,14 +912,14 @@
                         }
                         @if (getKnownUnpreparedClassSpells(className, multiclassList()[className]); as knownSpells) {
                         <div class="spell-list">
-                            @for (level of getSpellLevels(knownSpells); track level) {
+                            @for (level of getSpellLevels(getFilteredSpells(className, knownSpells)); track level) {
                             <section class="spell-level-group">
                                 <div class="spell-level-heading">
                                     <span>{{ getSpellLevelLabel(level) }}</span>
-                                    <span class="spell-level-count">{{ getSpellsForLevel(knownSpells, level).length }}</span>
+                                    <span class="spell-level-count">{{ getSpellsForLevel(getFilteredSpells(className, knownSpells), level).length }}</span>
                                 </div>
                                 <ul class="spell-level-list">
-                                    @for (spell of getSpellsForLevel(knownSpells, level); track spell.name) {
+                                    @for (spell of getSpellsForLevel(getFilteredSpells(className, knownSpells), level); track spell.name) {
                                     <li class="spell-item" [attr.id]="getSpellItemId(className, spell.name, 'known')" [class.spell-item--expanded]="getSelectedSpellForClass(className) === spell.name">
                                         <div class="spell-item-row">
                                             <button type="button" class="spell-name-btn" (click)="toggleSpellDetail(className, spell.name, 'known')">

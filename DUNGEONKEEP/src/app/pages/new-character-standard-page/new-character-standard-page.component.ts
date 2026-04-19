@@ -568,6 +568,7 @@ export class NewCharacterStandardPageComponent {
     readonly activeItemDetailModal = signal<InventoryEntry | null>(null);
     readonly selectedClass = signal<string>('');
     readonly classSearchTerm = signal('');
+    readonly spellSearchTermByClass = signal<Record<string, string>>({});
     readonly characterLevel = signal<number>(1);
     readonly multiclassList = signal<Record<string, number>>({});
     readonly selectedBackgroundName = signal<string>('');
@@ -5761,6 +5762,72 @@ export class NewCharacterStandardPageComponent {
 
     setWizardSpellSubTab(className: string, tab: WizardSpellSubTab): void {
         this.wizardSpellSubTabByClass.update((current) => ({ ...current, [className]: tab }));
+    }
+
+    getSpellSearchTerm(className: string): string {
+        return this.spellSearchTermByClass()[className] ?? '';
+    }
+
+    onSpellSearchChanged(className: string, value: string): void {
+        this.spellSearchTermByClass.update((current) => ({
+            ...current,
+            [className]: value ?? ''
+        }));
+    }
+
+    getFilteredSpells(className: string, spells: readonly ClassSpellOption[]): ClassSpellOption[] {
+        const query = this.getSpellSearchTerm(className).trim().toLowerCase();
+        if (!query) {
+            return [...spells];
+        }
+
+        return spells.filter((spell) => this.spellMatchesSearchQuery(spell, query));
+    }
+
+    hasVisibleSpellResultsForPanel(className: string, classLevel: number): boolean {
+        const query = this.getSpellSearchTerm(className).trim();
+        if (!query) {
+            return true;
+        }
+
+        if (this.isWizardClass(className)) {
+            switch (this.getWizardSpellSubTab(className)) {
+                case 'spellbook':
+                    return this.getFilteredSpells(className, this.getSpellbookSpells(className, classLevel)).length > 0;
+                case 'catalog':
+                    return this.getFilteredSpells(className, this.getCatalogSpellsNotInSpellbook(className, classLevel)).length > 0;
+                case 'prepared':
+                default:
+                    return this.getFilteredSpells(className, this.getPreparedClassSpells(className, classLevel)).length > 0;
+            }
+        }
+
+        if (this.isKnownOnlyCaster(className)) {
+            return this.getFilteredSpells(className, this.getKnownClassSpells(className, classLevel)).length > 0
+                || this.getFilteredSpells(className, this.getKnownUnlearnedClassSpells(className, classLevel)).length > 0;
+        }
+
+        return this.getFilteredSpells(className, this.getPreparedClassSpells(className, classLevel)).length > 0
+            || this.getFilteredSpells(className, this.getKnownUnpreparedClassSpells(className, classLevel)).length > 0;
+    }
+
+    private spellMatchesSearchQuery(spell: ClassSpellOption, query: string): boolean {
+        const detail = this.getSpellDetail(spell.name);
+        const haystack = [
+            spell.name,
+            spell.source,
+            this.getSpellLevelLabel(spell.level),
+            detail?.school ?? '',
+            detail?.description ?? '',
+            detail?.higherLevels ?? '',
+            detail?.attackSave ?? '',
+            detail?.damageEffect ?? '',
+            detail?.tags?.join(' ') ?? '',
+            detail?.ritual ? 'ritual' : '',
+            detail?.concentration ? 'concentration' : ''
+        ].join(' ').toLowerCase();
+
+        return haystack.includes(query);
     }
 
     getSpellbookSpells(className: string, classLevel: number): ClassSpellOption[] {
