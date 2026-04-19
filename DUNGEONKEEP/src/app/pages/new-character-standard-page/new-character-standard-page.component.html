@@ -144,17 +144,17 @@
                             <div class="feature-header-content">
                                 <span class="feature-name">{{ feature.name }}</span>
                                 @if (feature.choices) {
-                                <app-choice-badge [count]="feature.choices.count"></app-choice-badge>
+                                <app-choice-badge [count]="getFeatureChoiceBadgeCount(feature)"></app-choice-badge>
                                 }
                             </div>
                             <span class="feature-level">Level {{ feature.level }}</span>
                         </summary>
                         @if (feature.description) {
-                        <p class="feature-description">{{ feature.description }}</p>
+                        <div class="feature-description" [innerHTML]="formatFeatureRichText(feature.description)"></div>
                         }
                         @if (feature.choices) {
                         <div class="feature-choices">
-                            <label class="choice-label">{{ feature.choices.title }}</label>
+                            <label class="choice-label">{{ getFeatureChoiceTitle(feature) }}</label>
                             <p class="choice-meta">{{ getFeatureChoiceStatusText(className, feature) }}</p>
                             @if (getFeatureChoiceInfoText(feature); as choiceInfoText) {
                             <p class="choice-meta">{{ choiceInfoText }}</p>
@@ -163,11 +163,16 @@
                             <a class="inline-action choice-source-link" [href]="choiceSourceUrl" target="_blank" rel="noopener noreferrer">View source reference</a>
                             }
                             <div class="choice-select-group">
-                                @for (choiceIndex of getFeatureChoiceIndexes(feature.choices.count); track choiceIndex) {
+                                @for (choiceIndex of getFeatureChoiceIndexesForFeature(feature); track choiceIndex) {
                                 <app-dropdown [id]="getFeatureChoiceDropdownId(className, feature, choiceIndex)" [value]="getFeatureChoiceValue(className, feature, choiceIndex)" [options]="getFeatureChoiceDropdownOptions(className, feature, choiceIndex)"
                                     [placeholder]="getFeatureChoicePlaceholder(feature)" [searchable]="feature.choices.options.length > 10" size="wide" (changed)="onFeatureChoiceDropdownChanged(className, feature, choiceIndex, $event)">
                                 </app-dropdown>
                                 @if (getFeatureChoiceValue(className, feature, choiceIndex); as selectedChoice) {
+                                @if (getWeaponMasterySelectionText(selectedChoice); as selectedWeaponMasteryText) {
+                                <div class="choice-selected-detail choice-selected-detail--inline">
+                                    <p class="choice-meta" [innerHTML]="formatFeatureRichText(selectedWeaponMasteryText)"></p>
+                                </div>
+                                }
                                 @if (getSpellDetail(selectedChoice); as selectedSpellDetail) {
                                 <details class="choice-selected-detail choice-selected-detail--inline">
                                     <summary class="choice-selected-detail-summary">Spell details</summary>
@@ -232,6 +237,22 @@
                             </div>
                             }
 
+                            @if (getSelectedEpicBoonClassification(className, feature); as epicBoonClassification) {
+                            <p class="choice-meta choice-meta--feat-classification">{{ epicBoonClassification }}</p>
+                            }
+
+                            @if (getSelectedEpicBoonIntro(className, feature); as epicBoonIntro) {
+                            <p class="choice-meta">{{ epicBoonIntro }}</p>
+                            }
+
+                            @if (getSelectedEpicBoonBenefits(className, feature).length > 0) {
+                            <div class="choice-benefits">
+                                @for (benefit of getSelectedEpicBoonBenefits(className, feature); track benefit.title) {
+                                <p class="choice-meta"><strong>{{ benefit.title }}.</strong> {{ benefit.description }}</p>
+                                }
+                            </div>
+                            }
+
                             @if (getSelectedAbilityScoreImprovementFeatClassification(className, feature); as featClassification) {
                             <p class="choice-meta choice-meta--feat-classification">{{ featClassification }}</p>
                             }
@@ -284,6 +305,13 @@
                                     (changed)="onWeaponMasterChanged(className, feature, $event)">
                                 </app-dropdown>
                             </div>
+                            @if (getWeaponMasterValue(className, feature); as selectedWeaponMaster) {
+                            @if (getWeaponMasterySelectionText(selectedWeaponMaster); as selectedWeaponMasteryText) {
+                            <div class="choice-selected-detail choice-selected-detail--inline">
+                                <p class="choice-meta" [innerHTML]="formatFeatureRichText(selectedWeaponMasteryText)"></p>
+                            </div>
+                            }
+                            }
                             }
 
                             @if (shouldShowMagicInitiatePicker(className, feature)) {

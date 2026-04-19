@@ -25,6 +25,7 @@ import { DungeonStoreService } from '../../state/dungeon-store.service';
 import { SessionService } from '../../state/session.service';
 import { classSpellCatalog, type ClassSpellOption, spellcastingProgressionByClass, type SpellcastingProgression } from '../../data/class-spells.data';
 import { spellDetailsMap, type SpellDetail } from '../../data/spell-details.data';
+import { featCatalogEntries, type FeatEntry } from '../../data/feats-catalog.data';
 import { normalizePreparedLeveledSpellNames } from '../../rules/spell-preparation.rules';
 import { getWizardCantripLimit, getWizardFreeLeveledSpellLimit, getWizardPreparedSpellLimit, isWizardClassName, isWizardSpellbookCantripAlwaysPrepared } from '../../rules/wizard-class.rules';
 import { deitiesList } from '../../data/deities.data';
@@ -46,6 +47,59 @@ type CharacterNoteListKey = 'organizations' | 'allies' | 'enemies';
 type NoteSectionKey = CharacterNoteListKey | 'other';
 
 const equipmentRarityOrder = ['Common', 'Uncommon', 'Rare', 'Very Rare', 'Legendary', 'Artifact', 'Unique', '???'] as const;
+
+const weaponMasteryDescriptions: Readonly<Record<string, string>> = {
+    Cleave: 'If you hit a creature with a melee attack roll using this weapon, you can make a melee attack roll with it against a second creature within 5 feet of the first and within your reach. On a hit, the second creature takes the weapon’s normal damage, but you don’t add your ability modifier unless that modifier is negative.',
+    Graze: 'If your attack misses a creature, you can still deal damage to that creature equal to the ability modifier used to make the attack roll.',
+    Nick: 'When you make the extra attack of the Light property, you can make it as part of the Attack action instead of as a Bonus Action. You can make this extra attack only once per turn.',
+    Push: 'If you hit a creature with this weapon, you can push that creature up to 10 feet straight away from yourself if it is Large or smaller.',
+    Sap: 'If you hit a creature with this weapon, that creature has Disadvantage on its next attack roll before the start of your next turn.',
+    Slow: 'If you hit a creature with this weapon and deal damage to it, you can reduce its Speed by 10 feet until the start of your next turn. You can use this property only once per turn.',
+    Topple: 'If you hit a Large or smaller creature with this weapon, you can force it to make a Constitution saving throw or have the Prone condition.',
+    Vex: 'If you hit a creature with this weapon and deal damage to the creature, you have Advantage on your next attack roll against that creature before the end of your next turn.'
+};
+
+const weaponMasteryByWeapon: Readonly<Record<string, string>> = {
+    'Club': 'Slow',
+    'Dagger': 'Nick',
+    'Greatclub': 'Push',
+    'Handaxe': 'Vex',
+    'Javelin': 'Slow',
+    'Light Hammer': 'Nick',
+    'Mace': 'Sap',
+    'Quarterstaff': 'Topple',
+    'Sickle': 'Nick',
+    'Spear': 'Sap',
+    'Crossbow, Light': 'Slow',
+    'Dart': 'Vex',
+    'Shortbow': 'Vex',
+    'Sling': 'Slow',
+    'Battleaxe': 'Topple',
+    'Flail': 'Sap',
+    'Glaive': 'Graze',
+    'Greataxe': 'Cleave',
+    'Greatsword': 'Graze',
+    'Halberd': 'Cleave',
+    'Lance': 'Topple',
+    'Longsword': 'Sap',
+    'Maul': 'Topple',
+    'Morningstar': 'Sap',
+    'Pike': 'Push',
+    'Rapier': 'Vex',
+    'Scimitar': 'Nick',
+    'Shortsword': 'Vex',
+    'Trident': 'Topple',
+    'War Pick': 'Sap',
+    'Warhammer': 'Push',
+    'Whip': 'Slow',
+    'Blowgun': 'Vex',
+    'Crossbow, Hand': 'Vex',
+    'Crossbow, Heavy': 'Slow',
+    'Longbow': 'Slow',
+    'Net': 'Slow',
+    'Musket': 'Slow',
+    'Pistol': 'Vex'
+};
 
 function getSpeciesImageObjectPosition(slug: string): string {
     if (slug === 'centaur') {
@@ -3915,6 +3969,14 @@ export class NewCharacterStandardPageComponent {
         return Array.from({ length: Math.max(1, count) }, (_, index) => index);
     }
 
+    getFeatureChoiceIndexesForFeature(feature: ClassFeature): number[] {
+        if (this.isEpicBoonFeature(feature)) {
+            return [0];
+        }
+
+        return this.getFeatureChoiceIndexes(feature.choices?.count ?? 1);
+    }
+
     getFeatureChoiceStatusText(className: string, feature: ClassFeature): string {
         const choices = feature.choices;
         if (!choices) {
@@ -3924,7 +3986,7 @@ export class NewCharacterStandardPageComponent {
         const key = this.getFeatureSelectionKey(className, feature);
         const selected = this.classFeatureSelections()[key] ?? [];
         const selectedCount = selected.length;
-        const targetCount = choices.count;
+        const targetCount = this.isEpicBoonFeature(feature) ? 1 : choices.count;
 
         if (selectedCount === 0) {
             return `Selected 0/${targetCount}`;
@@ -3958,6 +4020,8 @@ export class NewCharacterStandardPageComponent {
                 return 'Pick the style that best matches your primary weapon setup.';
             case 'Barbarian Subclass':
                 return 'Your path defines subclass features at levels 3, 6, 10, and 14.';
+            case 'Blood Hunter Order':
+                return 'Your order grants subclass features at levels 3, 7, 11, and 15.';
             case 'Artificer Specialist':
                 return 'Your specialist grants subclass features at levels 3, 5, 9, and 15.';
             case 'Bard Subclass':
@@ -3968,8 +4032,12 @@ export class NewCharacterStandardPageComponent {
                 return 'Your druid circle grants subclass features at levels 3, 6, 10, and 14.';
             case 'Fighter Subclass':
                 return 'Your martial archetype grants subclass features at levels 3, 7, 10, 15, and 18.';
+            case 'Gunslinger Style':
+                return 'Your style grants subclass features at levels 3, 6, 14, and 17.';
             case 'Monk Subclass':
                 return 'Your monastic tradition grants subclass features at levels 3, 6, 11, and 17.';
+            case 'Hunter Order':
+                return 'Your order grants subclass features at levels 3, 7, 10, 13, and 18.';
             case 'Primal Knowledge':
                 return 'Choose one additional Barbarian skill proficiency.';
             case 'Paladin Subclass':
@@ -4046,9 +4114,42 @@ export class NewCharacterStandardPageComponent {
         return `feature-choice-${normalizedClass}-${feature.level}-${normalizedName}-${choiceIndex}`;
     }
 
+    getFeatureChoiceTitle(feature: ClassFeature): string {
+        if (!feature.choices) {
+            return '';
+        }
+
+        if (feature.name === 'Epic Boon') {
+            return 'Choose 1 Epic Boon';
+        }
+
+        return feature.choices.title;
+    }
+
+    getFeatureChoiceBadgeCount(feature: ClassFeature): number {
+        const count = feature.choices?.count ?? 0;
+        if (feature.name === 'Epic Boon') {
+            return 1;
+        }
+
+        return Math.max(1, count);
+    }
+
     getFeatureChoicePlaceholder(feature: ClassFeature): string {
         if (this.isWizardSavantFeature(feature.name)) {
             return '- Choose a Spell -';
+        }
+
+        if (feature.name === 'Epic Boon') {
+            return '- Choose an Epic Boon -';
+        }
+
+        if (this.isWeaponMasteryFeature(feature)) {
+            return '- Choose a Weapon Mastery -';
+        }
+
+        if (feature.name.includes('Subclass')) {
+            return '- Choose a Subclass -';
         }
 
         return '- Choose an Option -';
@@ -4067,6 +4168,18 @@ export class NewCharacterStandardPageComponent {
             selectedValues.filter((value, index) => index !== choiceIndex && value)
         );
 
+        if (this.isWeaponMasteryFeature(feature)) {
+            for (const selectedMastery of this.getSelectedWeaponMasteries(className, feature, choiceIndex)) {
+                selectedElsewhere.add(selectedMastery);
+            }
+        }
+
+        if (this.isEpicBoonFeature(feature)) {
+            for (const selectedBoon of this.getSelectedEpicBoons(className, feature, choiceIndex)) {
+                selectedElsewhere.add(selectedBoon);
+            }
+        }
+
         return choices.options.map((option) => ({
             value: option,
             label: option,
@@ -4082,6 +4195,20 @@ export class NewCharacterStandardPageComponent {
 
         const key = this.getFeatureSelectionKey(className, feature);
         const normalized = String(value ?? '').trim();
+
+        if (normalized && this.isWeaponMasteryFeature(feature)) {
+            const selectedWeaponMasteries = this.getSelectedWeaponMasteries(className, feature, choiceIndex);
+            if (selectedWeaponMasteries.has(normalized)) {
+                return;
+            }
+        }
+
+        if (normalized && this.isEpicBoonFeature(feature)) {
+            const selectedEpicBoons = this.getSelectedEpicBoons(className, feature, choiceIndex);
+            if (selectedEpicBoons.has(normalized)) {
+                return;
+            }
+        }
 
         this.classFeatureSelections.update((current) => {
             const nextSelections = [...(current[key] ?? [])];
@@ -4111,9 +4238,10 @@ export class NewCharacterStandardPageComponent {
                 [key]: compactSelections
             };
         });
-        if (this.isAbilityScoreImprovementFeature(feature) && choiceIndex === 0) {
+        if ((this.isAbilityScoreImprovementFeature(feature) || this.isEpicBoonFeature(feature)) && choiceIndex === 0) {
             const selectedValue = String(value ?? '').trim();
-            if (selectedValue !== 'Ability Score Improvement') {
+
+            if (this.isAbilityScoreImprovementFeature(feature) && selectedValue !== 'Ability Score Improvement') {
                 this.abilityScoreImprovementChoices.update((current) => {
                     const { [key]: _, ...rest } = current;
                     return rest;
@@ -4247,12 +4375,54 @@ export class NewCharacterStandardPageComponent {
         return this.barbarianSubclassDetails[selected] ?? null;
     }
 
+    getSelectedEpicBoonClassification(className: string, feature: ClassFeature): string {
+        const selectedBoon = this.getSelectedEpicBoon(className, feature);
+        if (!selectedBoon) {
+            return '';
+        }
+
+        return `Epic Boon Feat (Prerequisite: ${selectedBoon.prerequisite ?? 'Level 19+'})`;
+    }
+
+    getSelectedEpicBoonIntro(className: string, feature: ClassFeature): string {
+        return this.getSelectedEpicBoon(className, feature) ? 'You gain the following benefits.' : '';
+    }
+
+    getSelectedEpicBoonBenefits(className: string, feature: ClassFeature): ReadonlyArray<AbilityScoreImprovementFeatBenefit> {
+        const selectedBoon = this.getSelectedEpicBoon(className, feature);
+        if (!selectedBoon) {
+            return [];
+        }
+
+        const benefits: AbilityScoreImprovementFeatBenefit[] = [];
+
+        if (selectedBoon.abilityScoreIncrease?.trim()) {
+            benefits.push({
+                title: 'Ability Score Increase',
+                description: this.describeEpicBoonAbilityIncrease(selectedBoon.abilityScoreIncrease)
+            });
+        }
+
+        if (selectedBoon.features?.length) {
+            benefits.push(
+                ...selectedBoon.features.map((entry) => ({
+                    title: entry.title,
+                    description: entry.text
+                }))
+            );
+        } else if (selectedBoon.benefit.trim()) {
+            benefits.push({ title: 'Benefit', description: selectedBoon.benefit.trim() });
+        }
+
+        return benefits;
+    }
+
     shouldShowGrapplerPicker(className: string, feature: ClassFeature): boolean {
         return this.getSelectedAbilityScoreImprovementFeat(className, feature) === 'Grappler';
     }
 
     shouldShowFeatAbilityIncreasePicker(className: string, feature: ClassFeature): boolean {
-        const selected = this.getSelectedAbilityScoreImprovementFeat(className, feature);
+        const selected = this.getSelectedAbilityIncreaseSourceName(className, feature);
         if (!selected || selected === 'Ability Score Improvement') {
             return false;
         }
@@ -4265,7 +4435,7 @@ export class NewCharacterStandardPageComponent {
     }
 
     getFeatAbilityIncreasePlaceholder(className: string, feature: ClassFeature): string {
-        const selected = this.getSelectedAbilityScoreImprovementFeat(className, feature);
+        const selected = this.getSelectedAbilityIncreaseSourceName(className, feature);
         if (selected === 'Grappler') {
             return '- Choose Strength or Dexterity -';
         }
@@ -4274,7 +4444,7 @@ export class NewCharacterStandardPageComponent {
     }
 
     getFeatAbilityIncreaseOptions(className: string, feature: ClassFeature): DropdownOption[] {
-        const selected = this.getSelectedAbilityScoreImprovementFeat(className, feature);
+        const selected = this.getSelectedAbilityIncreaseSourceName(className, feature);
         return this.getFeatAbilityIncreaseChoicesByFeat(selected).map((ability) => ({
             value: ability,
             label: `${ability} Score`
@@ -4513,6 +4683,56 @@ export class NewCharacterStandardPageComponent {
         return feature.name === 'Ability Score Improvement';
     }
 
+    private getSelectedAbilityIncreaseSourceName(className: string, feature: ClassFeature): string {
+        if (this.isAbilityScoreImprovementFeature(feature) || this.isEpicBoonFeature(feature)) {
+            return this.getFeatureChoiceValue(className, feature, 0);
+        }
+
+        return '';
+    }
+
+    private getSelectedEpicBoon(className: string, feature: ClassFeature): FeatEntry | null {
+        if (!this.isEpicBoonFeature(feature)) {
+            return null;
+        }
+
+        const selected = this.getFeatureChoiceValue(className, feature, 0);
+        if (!selected) {
+            return null;
+        }
+
+        return featCatalogEntries.find((entry) => entry.category === 'epic-boon' && entry.name === selected) ?? null;
+    }
+
+    private describeEpicBoonAbilityIncrease(abilityScoreIncrease: string): string {
+        const normalized = abilityScoreIncrease.trim();
+        if (!normalized) {
+            return '';
+        }
+
+        if (/to any ability score/i.test(normalized)) {
+            return 'Increase one ability score of your choice by 1, to a maximum of 30.';
+        }
+
+        if (/strength, dexterity, or constitution/i.test(normalized)) {
+            return 'Increase your Strength, Dexterity, or Constitution score by 1, to a maximum of 30.';
+        }
+
+        if (/strength or dexterity/i.test(normalized)) {
+            return 'Increase your Strength or Dexterity score by 1, to a maximum of 30.';
+        }
+
+        if (/constitution/i.test(normalized) && !/or/i.test(normalized) && !/,/i.test(normalized)) {
+            return 'Increase your Constitution score by 1, to a maximum of 30.';
+        }
+
+        if (/dexterity/i.test(normalized) && !/or/i.test(normalized) && !/,/i.test(normalized)) {
+            return 'Increase your Dexterity score by 1, to a maximum of 30.';
+        }
+
+        return normalized;
+    }
+
     private getAbilityScoreImprovementChoice(className: string, feature: ClassFeature): AbilityScoreImprovementChoice {
         const key = this.getFeatureSelectionKey(className, feature);
         return this.abilityScoreImprovementChoices()[key] ?? {
@@ -4561,9 +4781,11 @@ export class NewCharacterStandardPageComponent {
             case 'Sentinel':
             case 'Slasher':
             case 'Weapon Master':
+            case 'Boon of Irresistible Offense':
                 return ['Strength', 'Dexterity'];
             case 'Defensive Duelist':
             case 'Skulker':
+            case 'Boon of Peerless Aim':
                 return ['Dexterity'];
             case 'Elemental Adept':
             case 'Spell Sniper':
@@ -4572,6 +4794,10 @@ export class NewCharacterStandardPageComponent {
             case 'Great Weapon Master':
             case 'Shield Master':
                 return ['Strength'];
+            case 'Boon of Recovery':
+                return ['Constitution'];
+            case 'Boon of Combat Prowess':
+                return ['Strength', 'Dexterity', 'Constitution'];
             case 'Heavy Armor Master':
                 return ['Strength', 'Constitution'];
             case 'Speedy':
@@ -4584,6 +4810,14 @@ export class NewCharacterStandardPageComponent {
                 return ['Dexterity', 'Strength'];
             case 'Resilient':
             case 'Skill Expert':
+            case 'Boon of Dimensional Travel':
+            case 'Boon of Energy Resistance':
+            case 'Boon of Fate':
+            case 'Boon of Fortitude':
+            case 'Boon of Night Spirit':
+            case 'Boon of Skill':
+            case 'Boon of Spell Recall':
+            case 'Boon of Truesight':
                 return ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'];
             default:
                 return [];
@@ -4603,6 +4837,88 @@ export class NewCharacterStandardPageComponent {
 
     private getFeatureSelectionKey(className: string, feature: ClassFeature): string {
         return `${className}:${feature.level}:${feature.name}`;
+    }
+
+    private isWeaponMasteryFeature(feature: Pick<ClassFeature, 'name'>): boolean {
+        return feature.name === 'Weapon Mastery' || feature.name === '4: Weapon Mastery';
+    }
+
+    private isEpicBoonFeature(feature: Pick<ClassFeature, 'name'>): boolean {
+        return feature.name === 'Epic Boon';
+    }
+
+    getWeaponMasterySelectionText(selectedChoice: string): string {
+        const normalizedChoice = selectedChoice.trim();
+        if (!normalizedChoice) {
+            return '';
+        }
+
+        const matchedChoice = normalizedChoice.match(/^(.*?)\s*\(([^)]+)\)$/);
+        const weaponName = matchedChoice?.[1]?.trim() || normalizedChoice;
+        const masteryName = matchedChoice?.[2]?.trim() || weaponMasteryByWeapon[weaponName];
+
+        if (!masteryName) {
+            return '';
+        }
+
+        const masteryDescription = weaponMasteryDescriptions[masteryName];
+        if (!masteryDescription) {
+            return '';
+        }
+
+        return `Your training with weapons allows you to use the mastery property of ${weaponName}:\n\n**${masteryName}.** ${masteryDescription}`;
+    }
+
+    private getSelectedWeaponMasteries(className: string, feature: ClassFeature, choiceIndex: number): Set<string> {
+        const currentKey = this.getFeatureSelectionKey(className, feature);
+        const selectedMasteries = new Set<string>();
+
+        for (const [key, values] of Object.entries(this.classFeatureSelections())) {
+            if (!key.startsWith(`${className}:`) || !key.toLowerCase().includes('weapon mastery')) {
+                continue;
+            }
+
+            values.forEach((value, index) => {
+                const normalizedValue = value.trim();
+                if (!normalizedValue) {
+                    return;
+                }
+
+                if (key === currentKey && index === choiceIndex) {
+                    return;
+                }
+
+                selectedMasteries.add(normalizedValue);
+            });
+        }
+
+        return selectedMasteries;
+    }
+
+    private getSelectedEpicBoons(className: string, feature: ClassFeature, choiceIndex: number): Set<string> {
+        const currentKey = this.getFeatureSelectionKey(className, feature);
+        const selectedBoons = new Set<string>();
+
+        for (const [key, values] of Object.entries(this.classFeatureSelections())) {
+            if (!key.startsWith(`${className}:`) || !key.toLowerCase().includes('epic boon')) {
+                continue;
+            }
+
+            values.forEach((value, index) => {
+                const normalizedValue = value.trim();
+                if (!normalizedValue) {
+                    return;
+                }
+
+                if (key === currentKey && index === choiceIndex) {
+                    return;
+                }
+
+                selectedBoons.add(normalizedValue);
+            });
+        }
+
+        return selectedBoons;
     }
 
     private getSubclassConfig(className: string): SubclassConfig | null {
@@ -4752,6 +5068,17 @@ export class NewCharacterStandardPageComponent {
             };
         }
 
+        if (feature.name === 'Epic Boon') {
+            return {
+                ...feature,
+                choices: {
+                    title: 'Choose 1 Epic Boon',
+                    count: 1,
+                    options: this.buildEpicBoonOptions()
+                }
+            };
+        }
+
         return feature;
     }
 
@@ -4802,6 +5129,24 @@ export class NewCharacterStandardPageComponent {
             'Tough',
             'War Caster',
             'Weapon Master'
+        ];
+    }
+
+    private buildEpicBoonOptions(): string[] {
+        return [
+            'Boon of Combat Prowess',
+            'Boon of Dimensional Travel',
+            'Boon of Energy Resistance',
+            'Boon of Fate',
+            'Boon of Fortitude',
+            'Boon of Irresistible Offense',
+            'Boon of Night Spirit',
+            'Boon of Peerless Aim',
+            'Boon of Recovery',
+            'Boon of Skill',
+            'Boon of Speed',
+            'Boon of Spell Recall',
+            'Boon of Truesight'
         ];
     }
 
@@ -6207,13 +6552,14 @@ export class NewCharacterStandardPageComponent {
     }
 
     getTotalScore(ability: string): number {
+        const maxScore = this.getAbilityScoreMaximum(ability);
         const overrideScore = this.abilityOverrideScores()[ability];
         if (overrideScore != null) {
-            return overrideScore;
+            return Math.min(maxScore, overrideScore);
         }
 
         const total = this.getAbilityBaseScore(ability) + this.getCalculatedAbilityScoreBonus(ability);
-        return Math.min(20, total);
+        return Math.min(maxScore, total);
     }
 
     getTotalModifier(ability: string): string {
@@ -6246,6 +6592,46 @@ export class NewCharacterStandardPageComponent {
 
     private getStackingModifier(ability: string): number {
         return this.abilityOtherModifiers()[ability] ?? 0;
+    }
+
+    private getAbilityScoreMaximum(ability: string): number {
+        let maxScore = 20;
+
+        const barbarianLevel = Number(this.multiclassList()['Barbarian'] ?? 0);
+        if (barbarianLevel >= 20 && (ability === 'Strength' || ability === 'Constitution')) {
+            maxScore = 25;
+        }
+
+        if (this.isAbilityRaisedByEpicBoon(ability)) {
+            maxScore = Math.max(maxScore, 30);
+        }
+
+        return maxScore;
+    }
+
+    private isAbilityRaisedByEpicBoon(ability: string): boolean {
+        const selections = this.classFeatureSelections();
+        const featChoices = this.featFollowUpChoices();
+
+        return Object.entries(selections).some(([selectionKey, selectedValues]) => {
+            if (!selectionKey.toLowerCase().includes('epic boon')) {
+                return false;
+            }
+
+            return selectedValues.some((selectedValue) => {
+                if (!selectedValue) {
+                    return false;
+                }
+
+                const validChoices = this.getFeatAbilityIncreaseChoicesByFeat(selectedValue);
+                if (!validChoices.includes(ability)) {
+                    return false;
+                }
+
+                const selectedAbility = featChoices[selectionKey]?.abilityIncreaseAbility ?? '';
+                return selectedAbility === ability;
+            });
+        });
     }
 
     private getBackgroundAbilityBonuses(): Record<string, number> {
@@ -6281,6 +6667,11 @@ export class NewCharacterStandardPageComponent {
         const selections = this.classFeatureSelections();
         const asiChoices = this.abilityScoreImprovementChoices();
         const featChoices = this.featFollowUpChoices();
+
+        if (Number(this.multiclassList()['Barbarian'] ?? 0) >= 20) {
+            this.addAbilityBonus(bonuses, 'Strength', 4);
+            this.addAbilityBonus(bonuses, 'Constitution', 4);
+        }
 
         Object.entries(selections).forEach(([selectionKey, selectedValues]) => {
             selectedValues.forEach((selectedValue) => {
@@ -6541,8 +6932,12 @@ export class NewCharacterStandardPageComponent {
         this.backstoryPromptDetails.set(value);
     };
 
+    formatFeatureRichText(text: string): string {
+        return String(marked.parse(text || '', { gfm: true, breaks: true }));
+    }
+
     formatBackstoryRichText(text: string): string {
-        return marked.parse(text, { gfm: true, breaks: true }) as string;
+        return String(marked.parse(text || '', { gfm: true, breaks: true }));
     }
 
     readonly clearGeneratedBackstory = () => {

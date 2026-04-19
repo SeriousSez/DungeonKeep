@@ -1521,6 +1521,30 @@ input {
     color: var(--text-muted);
     font-size: 0.95rem;
     line-height: 1.5;
+    white-space: normal;
+}
+
+.feature-description :deep(p) {
+    margin: 0;
+}
+
+.feature-description :deep(p + p) {
+    margin-top: 0.7rem;
+}
+
+.feature-description :deep(strong) {
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.feature-description :deep(ul),
+.feature-description :deep(ol) {
+    margin: 0.6rem 0 0 1.1rem;
+    padding: 0;
+}
+
+.feature-description :deep(li + li) {
+    margin-top: 0.25rem;
 }
 
 .feature-choices {

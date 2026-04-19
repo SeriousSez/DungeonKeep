@@ -6,36 +6,36 @@
 export const subclassFeatureProgressionByClass: Record<string, Record<string, Record<number, SubclassFeatureDetail | ReadonlyArray<SubclassFeatureDetail>>>> = {
     Artificer: {
         Alchemist: {
-            3: { name: 'Experimental Elixirs', description: 'Craft magical elixirs to support allies with healing, mobility, and combat boosts.' },
-            5: { name: 'Alchemical Savant', description: 'Your alchemical formulas amplify restorative and elemental spell effects.' },
-            9: { name: 'Restorative Reagents', description: 'Improve emergency healing tempo and reinforce your party between exchanges.' },
-            15: { name: 'Chemical Mastery', description: 'Gain advanced resilience and high-end alchemical control in difficult encounters.' }
+            3: { name: 'Experimental Elixirs', description: 'At the end of a Long Rest you brew magical elixirs, and by spending spell slots you can make more that heal, raise AC, boost speed, add a d4 to attacks and saves, grant brief flight, or mimic Alter Self.' },
+            5: { name: 'Alchemical Savant', description: 'When you cast through alchemist\'s supplies, add your Intelligence modifier to one healing roll or one acid, fire, necrotic, or poison damage roll.' },
+            9: { name: 'Restorative Reagents', description: 'Creatures that drink your elixirs also gain Temporary Hit Points, and you can cast Lesser Restoration for free several times per Long Rest.' },
+            15: { name: 'Chemical Mastery', description: 'You gain Resistance to acid and poison, Immunity to the Poisoned condition, and can cast Greater Restoration and Heal without a spell slot once per Long Rest.' }
         },
         Armorer: {
-            3: { name: 'Arcane Armor', description: 'Integrate armor as your core invention and choose a combat configuration.' },
-            5: { name: 'Extra Attack', description: 'Your armored combat rhythm scales with improved weapon or gauntlet output.' },
-            9: { name: 'Armor Modifications', description: 'Expand your armor infusions to tailor defense, utility, and tactical pressure.' },
-            15: { name: 'Perfected Armor', description: 'Your armor reaches its peak form with stronger control, defense, or burst options.' }
+            3: { name: 'Arcane Armor', description: 'You turn a suit of armor into magical Arcane Armor, use it as a focus, ignore its Strength requirement, and choose Guardian or Infiltrator for taunting thunder gauntlets or a lightning launcher with stealth and speed bonuses.' },
+            5: { name: 'Extra Attack', description: 'You can attack twice whenever you take the Attack action, letting your armor weapons keep pace in melee or at range.' },
+            9: { name: 'Armor Modifications', description: 'Your Arcane Armor splits into multiple infusion slots for the chest, boots, helmet, and special weapon, and your total active infusions increase.' },
+            15: { name: 'Perfected Armor', description: 'Guardian armor can yank nearby foes toward you and strike them, while Infiltrator armor lights enemies up, hinders their attacks against you, and sets up your allies\' next hit.' }
         },
         Artillerist: {
-            3: { name: 'Eldritch Cannon', description: 'Deploy arcane artillery for force damage, area pressure, or protective support.' },
-            5: { name: 'Arcane Firearm', description: 'Channel spell damage through an enhanced focus to improve offensive casting.' },
-            9: { name: 'Explosive Cannon', description: 'Your cannons hit harder and create stronger battlefield swing moments.' },
-            15: { name: 'Fortified Position', description: 'Anchor fights with resilient artillery placements and team-oriented cover pressure.' }
+            3: { name: 'Eldritch Cannon', description: 'You create a magical cannon that, as a Bonus Action, can fire a force bolt, breathe a 15-foot cone of flame, or grant nearby allies Temporary Hit Points.' },
+            5: { name: 'Arcane Firearm', description: 'A carved wand, staff, or rod becomes an Arcane Firearm that adds 1d8 to one damage roll of an artificer spell you cast through it.' },
+            9: { name: 'Explosive Cannon', description: 'Your cannon attacks deal an extra 1d8 damage, and you can detonate a cannon to force creatures within 20 feet to take 3d8 Force damage on a failed save.' },
+            15: { name: 'Fortified Position', description: 'You can maintain two cannons at once, activate both with one Bonus Action, and creatures near them gain Half Cover from their protective field.' }
         },
         'Battle Smith': {
-            3: { name: 'Steel Defender', description: 'Command a durable construct companion that protects allies and pressures enemies.' },
-            5: { name: 'Extra Attack', description: 'Blend martial pacing with invention-driven utility each round.' },
-            9: { name: 'Arcane Jolt', description: 'Infuse weapon strikes or defender actions with restorative or damaging bursts.' },
-            15: { name: 'Improved Defender', description: 'Your construct gains stronger survivability and sharper combat utility.' }
+            3: { name: 'Steel Defender', description: 'You gain martial weapon training, use Intelligence with magic weapons, and command a Steel Defender that can attack on your Bonus Action and impose Disadvantage on attacks against nearby allies.' },
+            5: { name: 'Extra Attack', description: 'You can attack twice whenever you take the Attack action, supporting a more martial artificer playstyle.' },
+            9: { name: 'Arcane Jolt', description: 'When you or your Steel Defender hit, you can channel magic through the blow to deal an extra 2d6 Force damage or heal a creature or object within 30 feet for 2d6.' },
+            15: { name: 'Improved Defender', description: 'Your Steel Defender gains +2 AC, Deflect Attack deals retaliatory force damage, and Arcane Jolt improves to 4d6 damage or healing.' }
         }
     },
     Barbarian: {
         'Path of the Berserker': {
-            3: { name: 'Frenzy', description: 'While your Rage is active, Reckless Attack adds extra damage on your first Strength-based hit each turn.' },
-            6: { name: 'Mindless Rage', description: 'Your raging focus hardens your mind, helping you ignore fear and other control effects that would break your momentum.' },
-            10: { name: 'Intimidating Presence', description: 'Your battle fury can unsettle foes, letting you project threat and force enemies to hesitate or retreat.' },
-            14: { name: 'Retaliation', description: 'When enemies hurt you in melee, you can answer immediately with a punishing counterattack.' }
+            3: { name: 'Frenzy', description: 'While raging, if you use Reckless Attack, the first Strength-based attack that hits on your turn deals extra damage equal to a number of d6s equal to your Rage Damage bonus.' },
+            6: { name: 'Mindless Rage', description: 'While your Rage is active, you have Immunity to the Charmed and Frightened conditions, and those conditions end on you when you enter your Rage.' },
+            10: { name: 'Retaliation', description: 'When a creature within 5 feet damages you, you can use your Reaction to make one melee attack against it with a weapon or Unarmed Strike.' },
+            14: { name: 'Intimidating Presence', description: 'As a Bonus Action, you can strike terror into others with your menacing presence and primal power. When you do so, each creature of your choice in a 30-foot Emanation originating from you must make a Wisdom saving throw (DC 8 plus your Strength modifier and Proficiency Bonus). On a failed save, a creature has the Frightened condition for 1 minute. At the end of each of the Frightened creature’s turns, the creature repeats the save, ending the effect on itself on a success. \n\nOnce you use this feature, you can’t use it again until you finish a Long Rest unless you expend a use of your Rage (no action required) to restore your use of it.' }
         },
         'Path of the Wild Heart': {
             3: { name: 'Wild Heart Attunement', description: 'Choose a bestial focus to shape how your Rage performs in exploration and combat.' },
@@ -50,10 +50,48 @@ export const subclassFeatureProgressionByClass: Record<string, Record<string, Re
             14: { name: 'Travel Along the Tree', description: 'You tap deeper world-root pathways, gaining powerful mobility and team-support tempo in difficult fights.' }
         },
         'Path of the Zealot': {
-            3: { name: 'Divine Fury', description: 'Your Rage carries sacred wrath, adding divine damage to your attacks on each turn.' },
-            6: { name: 'Fanatical Focus', description: 'Unshakable conviction helps you stay active through effects that would normally stop you.' },
-            10: { name: 'Zealous Presence', description: 'Your fervor surges outward, empowering nearby allies with offensive momentum.' },
-            14: { name: 'Rage Beyond Death', description: 'Your devotion sustains you even at the edge of defeat, letting your rage carry on through lethal pressure.' }
+            3: { name: 'Divine Fury', description: 'While raging, the first creature you hit with a weapon attack on each of your turns takes extra Radiant or Necrotic damage equal to 1d6 plus half your Barbarian level.' },
+            6: { name: 'Fanatical Focus', description: 'Once per Rage, if you fail a saving throw while raging, you can reroll it and must use the new roll.' },
+            10: { name: 'Zealous Presence', description: 'As a Bonus Action once per Long Rest, up to 10 other creatures of your choice within 60 feet that can hear you gain Advantage on attack rolls and saving throws until the start of your next turn.' },
+            14: { name: 'Rage Beyond Death', description: 'While you are raging, having 0 hit points does not knock you unconscious. You still make death saving throws and still suffer the normal effects of taking damage at 0 hit points, but you do not die from failed death saves until your Rage ends unless you regain hit points first.' }
+        }
+    },
+    'Blood Hunter': {
+        'Order of the Ghostslayer': {
+            3: [
+                { name: 'Curse Specialist', description: 'You learn an additional Blood Curse, and your amplified curses bite especially hard against undead prey.' },
+                { name: 'Rite of the Dawn', description: 'Your rite can blaze with Radiant power, helping you burn through sinister creatures and unholy resilience.' }
+            ],
+            7: { name: 'Ethereal Step', description: 'Step briefly through the Ethereal Plane to slip past threats, hazards, and bad positioning.' },
+            11: { name: 'Brand of Sundering', description: 'Your Brand tears harder at extraplanar and spectral foes, making escape and concealment much harder for them.' },
+            15: { name: 'Rite Revival', description: 'When you fall in battle, your rite can flare and drag you back up for a desperate final stand.' }
+        },
+        'Order of the Lycan': {
+            3: [
+                { name: 'Heightened Senses', description: 'Your predatory instincts sharpen, improving the way you track, read, and corner dangerous prey.' },
+                { name: 'Hybrid Transformation', description: 'You assume a bestial hybrid form that boosts speed, resilience, and close-quarters damage at the cost of tighter self-control.' }
+            ],
+            7: { name: 'Stalker\'s Prowess', description: 'Your hybrid form grows faster and more relentless, making pursuit and melee pressure far more dangerous.' },
+            11: { name: 'Advanced Transformation', description: 'Your beast form becomes tougher to stop and hits significantly harder once the hunt is underway.' },
+            15: { name: 'Brand of the Voracious', description: 'Branded enemies struggle to flee while your bloodlust turns pursuit into brutal finishing pressure.' }
+        },
+        'Order of the Mutant': {
+            3: [
+                { name: 'Mutagencraft', description: 'Brew mutagens that temporarily heighten specific abilities while forcing you to manage meaningful drawbacks.' },
+                { name: 'Formulas', description: 'Build a growing library of mutagen recipes so you can adapt yourself to different hunts and environments.' }
+            ],
+            7: { name: 'Strange Metabolism', description: 'Your altered body shrugs off poison and lets you force through debilitating effects that would stop other hunters.' },
+            11: { name: 'Brand of Axiom', description: 'Your Brand pins down shapechangers and strips deceptive transformations from unnatural prey.' },
+            15: { name: 'Exalted Mutation', description: 'Push your mutagens beyond ordinary safety limits for powerful late-game adaptations.' }
+        },
+        'Order of the Profane Soul': {
+            3: [
+                { name: 'Otherworldly Patron', description: 'Choose the patron influence that shapes your occult abilities and the tone of your blood magic.' },
+                { name: 'Pact Magic', description: 'You bind hemocraft to forbidden patron spellcasting, gaining a compact but potent pool of eldritch magic.' }
+            ],
+            7: { name: 'Mystic Frenzy', description: 'After casting a cantrip, you can immediately follow through with a weapon attack to keep offensive tempo high.' },
+            11: { name: 'Brand of the Sapping Scar', description: 'Your Brand drains a foe’s momentum and punishes them for turning their attention toward you or your allies.' },
+            15: { name: 'Unsealed Arcana', description: 'Your patron bond deepens into a dramatic once-per-rest surge of occult power.' }
         }
     },
     Bard: {
@@ -68,9 +106,12 @@ export const subclassFeatureProgressionByClass: Record<string, Record<string, Re
             14: { name: 'Unbreakable Majesty', description: 'Your supernatural allure makes it difficult for enemies to target you effectively.' }
         },
         'College of Lore': {
-            3: { name: 'Cutting Words', description: 'Use precision wit to reduce enemy effectiveness at key moments.' },
-            6: { name: 'Additional Magical Secrets', description: 'Broaden your spell toolkit beyond the bard list for strategic versatility.' },
-            14: { name: 'Peerless Skill', description: 'Spend inspiration to dominate crucial checks and narrative turning points.' }
+            3: [
+                { name: 'Bonus Proficiencies', description: 'Gain proficiency with three skills of your choice.' },
+                { name: 'Cutting Words', description: 'When a creature you can see within 60 feet succeeds on an attack roll or ability check or rolls damage, you can use your Reaction and expend Bardic Inspiration to subtract the die from the roll.' }
+            ],
+            6: { name: 'Magical Discoveries', description: 'Learn two additional always-prepared spells from the Cleric, Druid, or Wizard lists; each can be a cantrip or a spell for which you have spell slots.' },
+            14: { name: 'Peerless Skill', description: 'When you fail an ability check or attack roll, you can expend Bardic Inspiration and add the die to the d20; on a failure, the inspiration isn’t spent.' }
         },
         'College of Valor': {
             3: { name: 'Combat Inspiration', description: 'Turn inspiration into defensive or offensive swing power for frontline allies.' },
@@ -80,32 +121,35 @@ export const subclassFeatureProgressionByClass: Record<string, Record<string, Re
     },
     Cleric: {
         'Life Domain': {
-            3: { name: 'Disciple of Life', description: 'Your healing magic gains stronger baseline restoration for every encounter.' },
-            6: { name: 'Blessed Healer', description: 'When you heal others, you also sustain yourself and stabilize the frontline.' },
-            17: { name: 'Supreme Healing', description: 'Your restorative spells reach peak reliability in high-stakes battles.' }
+            3: { name: 'Disciple of Life', description: 'Your Life Domain gives you bonus healing power: spells cast with a spell slot restore extra Hit Points equal to 2 plus the slot’s level, and you also gain Life Domain spells and Preserve Life through Channel Divinity.' },
+            6: { name: 'Blessed Healer', description: 'After you cast a spell with a spell slot that restores Hit Points to another creature, you regain Hit Points equal to 2 plus the spell slot’s level.' },
+            17: { name: 'Supreme Healing', description: 'When your spells or Channel Divinity would roll dice to restore Hit Points, you use the highest number possible on each die instead.' }
         },
         'Light Domain': {
-            3: { name: 'Warding Flare', description: 'Flash radiant light to impose pressure on incoming attacks.' },
-            6: { name: 'Improved Flare', description: 'Extend your protective radiance to shield allies under threat.' },
-            17: { name: 'Corona of Light', description: 'Create a radiant zone that magnifies your team\'s offensive spell output.' }
+            3: { name: 'Warding Flare', description: 'When a creature you can see attacks, you can use your Reaction to flash divine light and impose Disadvantage on the attack, while your domain also grants extra radiant and fire spell support.' },
+            6: { name: 'Improved Flare', description: 'Your Warding Flare can now protect nearby allies as well as yourself.' },
+            17: { name: 'Corona of Light', description: 'You radiate bright sunlight, and enemies in the glow have Disadvantage on saving throws against your fire and radiant spells.' }
         },
         'Trickery Domain': {
-            3: { name: 'Blessing of the Trickster', description: 'Grant stealth leverage and misdirection for infiltration and skirmish setups.' },
-            6: { name: 'Cloak of Shadows', description: 'Slip into invisibility to reset positioning and outmaneuver enemies.' },
-            17: { name: 'Improved Duplicity', description: 'Your illusions become decisive control tools in complex encounters.' }
+            3: { name: 'Blessing of the Trickster', description: 'You can grant a willing creature Advantage on Stealth checks, reinforcing infiltration and deception.' },
+            6: { name: 'Cloak of Shadows', description: 'As an action, you become Invisible until the end of your next turn or until you attack or cast a spell.' },
+            17: { name: 'Improved Duplicity', description: 'Your illusory duplicate magic becomes much stronger, letting you maintain multiple deceptive images at once.' }
         },
         'War Domain': {
-            3: { name: 'War Priest', description: 'Channel divine zeal into direct martial pressure and decisive strikes.' },
-            6: { name: 'War God\'s Blessing', description: 'Boost ally attack success at critical moments of combat tempo.' },
-            17: { name: 'Avatar of Battle', description: 'Become a resilient battlefield anchor with enhanced holy warcraft.' }
+            3: { name: 'War Priest', description: 'You gain limited Bonus Action weapon attacks after taking the Attack action, and your war magic helps turn hits into decisive strikes.' },
+            6: { name: 'War God\'s Blessing', description: 'As a Reaction, you can grant a large bonus to an ally\'s attack roll after seeing the roll but before the result is known.' },
+            17: { name: 'Avatar of Battle', description: 'You gain Resistance to bludgeoning, piercing, and slashing damage from nonmagical weapons.' }
         }
     },
     Druid: {
         'Circle of the Land': {
-            3: { name: 'Land\'s Aid', description: 'Invoke terrain-aligned magic to support healing, control, and sustained casting.' },
-            6: { name: 'Natural Recovery', description: 'Regain spell resources to maintain strategic pressure over longer adventuring days.' },
-            10: { name: 'Nature\'s Ward', description: 'Gain stronger resilience against environmental and magical disruption.' },
-            14: { name: 'Nature\'s Sanctuary', description: 'Your presence enforces calm over beasts and battlefield chaos alike.' }
+            3: [
+                { name: 'Circle of the Land Spells', description: 'Whenever you finish a Long Rest, choose arid, polar, temperate, or tropical land and gain the matching Circle spells prepared for your Druid level.' },
+                { name: 'Land\'s Aid', description: 'Expend a use of Wild Shape to create a 10-foot sphere within 60 feet that deals Necrotic damage to chosen creatures and restores Hit Points to one creature in the area.' }
+            ],
+            6: { name: 'Natural Recovery', description: 'Once per Long Rest, you can cast one prepared Circle spell for free, and after a Short Rest you can recover expended spell slots with a combined level up to half your Druid level.' },
+            10: { name: 'Nature\'s Ward', description: 'You are immune to the Poisoned condition and gain Resistance based on your current land choice: Fire, Cold, Lightning, or Poison.' },
+            14: { name: 'Nature\'s Sanctuary', description: 'Expend a use of Wild Shape to create a movable spectral grove that grants you and allies Half Cover, and allies inside also gain your current Nature\'s Ward resistance.' }
         },
         'Circle of the Moon': {
             3: { name: 'Combat Wild Shape', description: 'Transform into durable beast forms that thrive in frontline engagement.' },
@@ -135,11 +179,11 @@ export const subclassFeatureProgressionByClass: Record<string, Record<string, Re
             18: { name: 'Master of War', description: 'Reach peak command of maneuver-driven combat and battlefield control.' }
         },
         Champion: {
-            3: { name: 'Improved Critical', description: 'Land critical hits more often through pure martial precision.' },
-            7: { name: 'Remarkable Athlete', description: 'Gain enhanced physical prowess across checks, movement, and initiative play.' },
-            10: { name: 'Additional Fighting Style', description: 'Add another style layer to sharpen your core combat identity.' },
-            15: { name: 'Superior Critical', description: 'Further increase critical pressure in sustained weapon combat.' },
-            18: { name: 'Survivor', description: 'Regenerate through attrition and outlast enemies in extended fights.' }
+            3: { name: 'Improved Critical', description: 'Your weapon and Unarmed Strike attacks score a Critical Hit on a roll of 19 or 20, and Remarkable Athlete also boosts your Initiative and Athletics.' },
+            7: { name: 'Additional Fighting Style', description: 'You gain another Fighting Style feat of your choice.' },
+            10: { name: 'Heroic Warrior', description: 'During combat, whenever you start your turn without Heroic Inspiration, you can give it to yourself.' },
+            15: { name: 'Superior Critical', description: 'Your weapon and Unarmed Strike attacks now score a Critical Hit on a roll of 18–20.' },
+            18: { name: 'Survivor', description: 'You have Advantage on Death Saving Throws, and while Bloodied and above 0 Hit Points you regain Hit Points at the start of each turn equal to 5 plus your Constitution modifier.' }
         },
         'Eldritch Knight': {
             3: { name: 'War Magic Initiate', description: 'Blend weapons and arcane technique to broaden tactical options.' },
@@ -154,6 +198,38 @@ export const subclassFeatureProgressionByClass: Record<string, Record<string, Re
             10: { name: 'Guarded Mind', description: 'Harden your thoughts against hostile mental pressure and debilitation.' },
             15: { name: 'Bulwark of Force', description: 'Project psionic barriers to protect allies during intense encounters.' },
             18: { name: 'Telekinetic Master', description: 'Reach peak battlefield control through sustained psionic dominance.' }
+        }
+    },
+    Gunslinger: {
+        Deadshot: {
+            3: { name: 'Deadshot Precision', description: 'You specialize in patient, high-accuracy shooting that rewards distance, calm positioning, and perfect sight lines.' },
+            6: { name: 'Long-Range Control', description: 'Your shots become better at pinning threats in place and keeping dangerous enemies away from your firing lane.' },
+            14: { name: 'Perfect Shot', description: 'You can line up devastating firearm hits against exposed targets and capitalize brutally on clean openings.' },
+            17: { name: 'Master Deadshot', description: 'Your precision peaks, turning firearm attacks into reliable finishers even at extreme range.' }
+        },
+        Desperado: {
+            3: { name: 'Desperado Flourish', description: 'You thrive in risky close-quarters gunplay, chaining movement, swagger, and off-hand firearm pressure.' },
+            6: { name: 'Close-Quarters Barrage', description: 'You keep firing while surrounded, using daring repositioning and relentless aggression to stay on offense.' },
+            14: { name: 'Noon Duelist', description: 'Fast draw speed and nerves of steel let you explode into punishing one-on-one burst turns.' },
+            17: { name: 'Legend of the Frontier', description: 'Your reckless gunfighting reaches a capstone rhythm of mobility, intimidation, and nonstop fire.' }
+        },
+        Maverick: {
+            3: { name: 'Maverick Ingenuity', description: 'You solve problems with clever tricks, flexible firearm play, and unexpected battlefield answers.' },
+            6: { name: 'Borrowed Technique', description: 'You adapt styles and stunts on the fly, making you harder to predict and easier to fit into any fight.' },
+            14: { name: 'Improvised Mastery', description: 'Your creative gunplay turns awkward terrain and strange situations into tactical advantages.' },
+            17: { name: 'Ace in the Hole', description: 'At the highest tier, you always seem to have one decisive shot, trick, or escape left in reserve.' }
+        },
+        Spiritslinger: {
+            3: { name: 'Haunted Rounds', description: 'Your shots carry spectral force, layering supernatural pressure onto your firearm attacks.' },
+            6: { name: 'Ghost Step', description: 'Spiritual gunplay lets you slip through danger and reposition with eerie speed.' },
+            14: { name: 'Grave Mark', description: 'Your bullets haunt struck enemies, weakening them and setting them up for follow-up punishment.' },
+            17: { name: 'Death Knell', description: 'Your capstone shots feel like omens of the grave, overwhelming weakened enemies with supernatural finishers.' }
+        },
+        Undertaker: {
+            3: { name: 'Undertaker\'s Mark', description: 'You pick apart the dying and the doomed, thriving when fights turn grim and targets start to fold.' },
+            6: { name: 'Final Rites', description: 'You convert fear, collapse, and battlefield momentum into brutal firearm pressure.' },
+            14: { name: 'Funeral Pace', description: 'Your cold, methodical tempo keeps wounded enemies from ever regaining control of the fight.' },
+            17: { name: 'Last Toll', description: 'By late game, you become a terrifying closer who turns failing enemies into certain kills.' }
         }
     },
     Monk: {
@@ -176,18 +252,44 @@ export const subclassFeatureProgressionByClass: Record<string, Record<string, Re
             17: { name: 'Avatar of Elements', description: 'Become a high-impact elemental combatant in late-game encounters.' }
         },
         'Warrior of the Open Hand': {
-            3: { name: 'Open Hand Technique', description: 'Convert flurry strikes into knockdown, push, and control pressure.' },
-            6: { name: 'Wholeness of Body', description: 'Recover through disciplined self-restoration during prolonged fights.' },
-            11: { name: 'Tranquility', description: 'Create defensive poise that disrupts enemy aggression patterns.' },
-            17: { name: 'Quivering Palm', description: 'Apply devastating precision pressure to single high-priority targets.' }
+            3: { name: 'Open Hand Technique', description: 'When you hit with a Flurry of Blows attack, you can stop the target from making Opportunity Attacks, push it up to 15 feet, or knock it Prone if it fails a save.' },
+            6: { name: 'Wholeness of Body', description: 'As a Bonus Action, heal yourself by rolling your Martial Arts die and adding your Wisdom modifier; you can do this a number of times per Long Rest equal to your Wisdom modifier.' },
+            11: { name: 'Fleet Step', description: 'Whenever you take a Bonus Action other than Step of the Wind, you can also use Step of the Wind immediately after it.' },
+            17: { name: 'Quivering Palm', description: 'After you hit with an Unarmed Strike, you can spend 4 Focus Points to plant lethal vibrations that you can later trigger for 10d12 Force damage on a failed Constitution save, or half on a success.' }
+        }
+    },
+    'Monster Hunter': {
+        'Order of the Inquisitor': {
+            3: { name: 'Inquisitor\'s Eye', description: 'You become exceptionally good at reading lies, cult behavior, and supernatural disguises before the fight even begins.' },
+            7: { name: 'Pressure the Guilty', description: 'Once you identify prey, your pursuit and questioning style make it much harder for them to hide or recover control.' },
+            10: { name: 'Expose Weakness', description: 'Your studied read on a foe lets you crack open defenses and create better attack windows for the whole party.' },
+            13: { name: 'Truth-Seeker\'s Pursuit', description: 'You keep relentless track of evasive targets and punish tricks, misdirection, or escape attempts.' },
+            18: { name: 'Unerring Verdict', description: 'Your late-game judgment is almost impossible to escape once you have identified a target as prey.' }
+        },
+        'Order of the Slayer': {
+            3: { name: 'Slayer\'s Focus', description: 'You channel raw offensive pressure into your studied target, turning monster knowledge directly into kill speed.' },
+            7: { name: 'Executioner Momentum', description: 'Once the hunt is underway, every hit helps you maintain relentless offensive tempo.' },
+            10: { name: 'Killer\'s Instinct', description: 'You read finishing angles quickly, hitting harder when wounded or exposed prey starts to slip.' },
+            13: { name: 'Merciless Assault', description: 'Your order escalates into a brutal anti-monster style built around constant pressure and collapse.' },
+            18: { name: 'Legendary Slayer', description: 'You become a terrifying apex hunter whose focused offense can overwhelm even elite monsters.' }
+        },
+        'Order of the Unorthodox': {
+            3: { name: 'Unorthodox Tools', description: 'You approach the hunt with gadgets, traps, and strange countermeasures instead of clean textbook tactics.' },
+            7: { name: 'Adaptive Contraptions', description: 'Your preparations become more flexible, letting you answer odd creatures and battlefields creatively.' },
+            10: { name: 'Trap Mastery', description: 'You control space better, turning monster movement and bad positioning into your advantage.' },
+            13: { name: 'Improvised Countermeasures', description: 'You quickly produce the right answer to unexpected resistances, hazards, and special monster traits.' },
+            18: { name: 'Master of the Unorthodox Hunt', description: 'At the highest tier, your unconventional methods let you out-think and out-position monsters that should be overwhelming.' }
         }
     },
     Paladin: {
         'Oath of Devotion': {
-            3: { name: 'Sacred Weapon', description: 'Empower your weapon with radiant conviction for reliable frontline accuracy.' },
-            7: { name: 'Aura of Devotion', description: 'Project steadfast will that protects allies from manipulative effects.' },
-            15: { name: 'Purity of Spirit', description: 'Gain heightened resistance to corruption and hostile influence.' },
-            20: { name: 'Holy Nimbus', description: 'Unleash radiant presence as a capstone of unwavering devotion.' }
+            3: [
+                { name: 'Oath of Devotion Spells', description: 'You always have devotion oath spells such as Protection from Evil and Good, Shield of Faith, Aid, and Zone of Truth prepared as you level.' },
+                { name: 'Sacred Weapon', description: 'When you take the Attack action, you can expend Channel Divinity to empower a melee weapon for 10 minutes, adding your Charisma modifier to attack rolls and letting its hits deal normal or Radiant damage.' }
+            ],
+            7: { name: 'Aura of Devotion', description: 'You and allies in your Aura of Protection have Immunity to the Charmed condition.' },
+            15: { name: 'Smite of Protection', description: 'Whenever you cast Divine Smite, you and your allies in your Aura of Protection gain Half Cover until the start of your next turn.' },
+            20: { name: 'Holy Nimbus', description: 'As a Bonus Action, empower your aura for 10 minutes so fiends and undead are worse at forcing your saves, enemies starting in the aura take Radiant damage, and the area shines with sunlight.' }
         },
         'Oath of Glory': {
             3: { name: 'Peerless Athlete', description: 'Channel legendary heroism into movement and athletic dominance.' },
@@ -246,144 +348,153 @@ export const subclassFeatureProgressionByClass: Record<string, Record<string, Re
     },
     Ranger: {
         'Beast Master': {
-            3: { name: 'Primal Companion', description: 'Fight alongside a bonded beast that scales with your ranger tactics.' },
-            7: { name: 'Exceptional Training', description: 'Your companion gains better coordination and combat reliability.' },
-            11: { name: 'Bestial Fury', description: 'Increase companion offense to maintain pace in mid-tier fights.' },
-            15: { name: 'Share Spells', description: 'Extend your spell strategy through your companion for flexible synergy.' }
+            3: { name: 'Primal Companion', description: 'You summon a Beast of the Land, Sea, or Sky that scales with your Proficiency Bonus and acts on your commands in combat.' },
+            7: { name: 'Exceptional Training', description: 'Your companion\'s attacks count as magical, and when you command it, it can also Dash, Disengage, or Help more effectively.' },
+            11: { name: 'Bestial Fury', description: 'When you command your companion to attack, it can make two attacks instead of one.' },
+            15: { name: 'Share Spells', description: 'When you cast a spell targeting yourself, the same spell can also affect your companion if it is nearby.' }
         },
         'Fey Wanderer': {
-            3: { name: 'Dreadful Strikes', description: 'Infuse attacks with fey pressure that chips enemies each round.' },
-            7: { name: 'Beguiling Twist', description: 'Turn charm and fear effects into reactive battlefield control.' },
-            11: { name: 'Fey Reinforcements', description: 'Call fey aid for utility, pressure, and encounter shaping.' },
-            15: { name: 'Misty Wanderer', description: 'Teleport allies and yourself for elite positional control.' }
+            3: { name: 'Dreadful Strikes', description: 'Once on each of your turns, your weapon hits deal extra Psychic damage as fey magic unsettles the target.' },
+            7: { name: 'Beguiling Twist', description: 'When a creature resists or ends a charm or fear effect, you can redirect that fey energy to potentially charm or frighten another creature.' },
+            11: { name: 'Fey Reinforcements', description: 'You can cast Summon Fey without needing Concentration for that special use, bringing stronger battlefield support.' },
+            15: { name: 'Misty Wanderer', description: 'You gain more uses of Misty Step and can bring another willing creature with you when you teleport.' }
         },
         'Gloom Stalker': {
-            3: { name: 'Dread Ambusher', description: 'Dominate opening rounds through burst damage and initiative leverage.' },
-            7: { name: 'Iron Mind', description: 'Harden mental defenses to stay effective under magical pressure.' },
-            11: { name: 'Stalker\'s Flurry', description: 'Sustain offense by converting misses into renewed attack pressure.' },
-            15: { name: 'Shadowy Dodge', description: 'Force enemy misses through reactive darkness-honed evasiveness.' }
+            3: { name: 'Dread Ambusher', description: 'You gain an Initiative boost, improved darkvision and shadow stealth, and on your first turn you make an extra attack that deals bonus damage.' },
+            7: { name: 'Iron Mind', description: 'You gain proficiency in Wisdom saving throws, making you much harder to control mentally.' },
+            11: { name: 'Stalker\'s Flurry', description: 'Once per turn when you miss with a weapon attack, you can make another weapon attack immediately.' },
+            15: { name: 'Shadowy Dodge', description: 'When a creature attacks you, you can use your Reaction to impose Disadvantage on that attack.' }
         },
         Hunter: {
-            3: { name: 'Hunter\'s Prey', description: 'Choose a prey style that defines your tactical approach to targets.' },
-            7: { name: 'Defensive Tactics', description: 'Adopt survival techniques tailored to your preferred engagement range.' },
-            11: { name: 'Multiattack', description: 'Gain superior multi-target pressure in crowded encounters.' },
-            15: { name: 'Superior Hunter\'s Defense', description: 'Reach advanced defensive options to outlast elite threats.' }
+            3: { name: 'Hunter\'s Prey', description: 'Hunter\'s Lore reveals a marked foe’s Immunities, Resistances, and Vulnerabilities, while Hunter\'s Prey lets you choose either an extra 1d8 damage with Colossus Slayer or an extra attack with Horde Breaker.' },
+            7: { name: 'Defensive Tactics', description: 'Choose Escape the Horde to impose Disadvantage on Opportunity Attacks against you, or Multiattack Defense to give a creature Disadvantage on its other attacks against you after it hits.' },
+            11: { name: 'Superior Hunter\'s Prey', description: 'Once per turn when you deal Hunter\'s Mark damage to a creature, you can also deal that extra damage to a different creature you can see within 30 feet.' },
+            15: { name: 'Superior Hunter\'s Defense', description: 'When you take damage, you can use your Reaction to give yourself Resistance to that damage and any other damage of the same type until the end of the turn.' }
         }
     },
     Rogue: {
         'Arcane Trickster': {
-            3: { name: 'Mage Hand Legerdemain', description: 'Manipulate objects and traps with subtle arcane finesse.' },
-            9: { name: 'Magical Ambush', description: 'Your spells become harder to resist when launched from stealth.' },
-            13: { name: 'Versatile Trickster', description: 'Convert mage hand utility into stronger offensive setup opportunities.' },
-            17: { name: 'Spell Thief', description: 'Steal magical momentum and turn enemy spellcraft to your advantage.' }
+            3: { name: 'Mage Hand Legerdemain', description: 'Your Mage Hand becomes invisible and far more precise, letting you pick pockets, open locks, and disarm traps at range.' },
+            9: { name: 'Magical Ambush', description: 'When you cast a spell while hidden from a creature, that target has Disadvantage on its saving throw against the spell.' },
+            13: { name: 'Versatile Trickster', description: 'As a Bonus Action, your Mage Hand can distract a creature, giving you Advantage on attacks against it.' },
+            17: { name: 'Spell Thief', description: 'When a creature casts a spell at you, you can use your Reaction to steal the magic, canceling the spell and temporarily learning it yourself.' }
         },
         Assassin: {
-            3: { name: 'Assassinate', description: 'Exploit surprise and initiative to deliver devastating opener pressure.' },
-            9: { name: 'Infiltration Expertise', description: 'Build layered identities and access routes for precision operations.' },
-            13: { name: 'Impostor', description: 'Mimic personas and social patterns to bypass high-security obstacles.' },
-            17: { name: 'Death Strike', description: 'Punish surprised targets with lethal capstone burst potential.' }
+            3: { name: 'Assassinate', description: 'You gain deadly opening-round pressure with Advantage against creatures that haven\'t acted yet, and surprised foes suffer Critical Hits from your attacks.' },
+            9: { name: 'Infiltration Expertise', description: 'With downtime and gold, you can create a convincing false identity complete with clothing, papers, and cover story.' },
+            13: { name: 'Impostor', description: 'After studying someone, you can mimic their speech, handwriting, and mannerisms to pass yourself off as them.' },
+            17: { name: 'Death Strike', description: 'When you hit a surprised creature, it must save or take double the damage from your attack.' }
         },
         Soulknife: {
-            3: { name: 'Psionic Power', description: 'Manifest psychic blades and subtle psionic utility in and out of combat.' },
-            9: { name: 'Soul Blades', description: 'Expand psionic blade techniques for mobility and accuracy pressure.' },
-            13: { name: 'Psychic Veil', description: 'Become unseen through focused psionic concealment.' },
-            17: { name: 'Rend Mind', description: 'Overload enemies with concentrated psychic disruption.' }
+            3: { name: 'Psionic Power', description: 'You manifest Psychic Blades, gain psionic dice for skill boosts, and can speak telepathically with nearby creatures.' },
+            9: { name: 'Soul Blades', description: 'Your psionic dice can turn missed attacks into hits and let you teleport by throwing a Psychic Blade.' },
+            13: { name: 'Psychic Veil', description: 'You can become Invisible for an extended time, vanishing until you attack, force a save, or end the effect.' },
+            17: { name: 'Rend Mind', description: 'After striking with your Psychic Blades, you can force a target to save or become Stunned by a brutal psychic assault.' }
         },
         Thief: {
-            3: { name: 'Fast Hands', description: 'Accelerate item interactions, utility actions, and opportunistic play.' },
-            9: { name: 'Supreme Sneak', description: 'Improve stealth consistency in active infiltration and pursuit scenes.' },
-            13: { name: 'Use Magic Device', description: 'Unlock broader item utility through adaptive rogue ingenuity.' },
-            17: { name: 'Thief\'s Reflexes', description: 'Gain explosive opening tempo with capstone initiative advantages.' }
-        }
+            3: [
+                { name: 'Fast Hands', description: 'As a Bonus Action, you can pick a lock, disarm a trap, pick a pocket, take the Utilize action, or use a magic item that requires the Magic action.' },
+                { name: 'Second-Story Work', description: 'Gain a Climb Speed equal to your Speed, and use Dexterity instead of Strength to determine your jump distance.' }
+            ],
+            9: { name: 'Supreme Sneak', description: 'Gain the Stealth Attack Cunning Strike option, letting you attack without ending the Hide action’s Invisible condition if you finish the turn behind cover.' },
+            13: { name: 'Use Magic Device', description: 'You can attune to up to four magic items, sometimes avoid expending charges on a 6, and use any Spell Scroll with Intelligence as the spellcasting ability.' },
+            17: { name: 'Thief\'s Reflexes', description: 'In the first round of combat, you take two turns: one at your normal Initiative and another at Initiative minus 10.' }
+        },
     },
     Sorcerer: {
         'Clockwork Sorcery': {
-            3: { name: 'Clockwork Magic', description: 'Anchor your spellcasting in cosmic order and disciplined utility.' },
-            6: { name: 'Bastion of Law', description: 'Convert sorcery points into protective wards that blunt incoming damage.' },
-            14: { name: 'Trance of Order', description: 'Stabilize outcomes and cast with superior consistency under pressure.' },
-            18: { name: 'Clockwork Cavalcade', description: 'Summon capstone order magic to restore structure across chaotic battlefields.' }
+            3: { name: 'Clockwork Magic', description: 'You learn additional order-themed spells and gain Restore Balance, letting you use your Reaction to cancel Advantage or Disadvantage on a creature\'s d20 roll.' },
+            6: { name: 'Bastion of Law', description: 'You can spend Sorcery Points to create a ward of d8s that reduces incoming damage against the protected creature.' },
+            14: { name: 'Trance of Order', description: 'For 1 minute, your attack rolls, ability checks, and saving throws can\'t roll lower than 10, making your magic unusually reliable.' },
+            18: { name: 'Clockwork Cavalcade', description: 'You summon spirits of order to heal creatures, repair objects, and end certain spells in the area as chaos is forcibly set right.' }
         },
         'Draconic Sorcery': {
-            3: { name: 'Draconic Resilience', description: 'Gain hardened scales and draconic durability from your bloodline.' },
-            6: { name: 'Elemental Affinity', description: 'Amplify spells tied to your draconic element and improve resistance play.' },
-            14: { name: 'Dragon Wings', description: 'Take flight to claim superior lines of sight and safer casting positions.' },
-            18: { name: 'Dragon Companion', description: 'Call a draconic ally and sustain pressure through apex draconic magic.' }
+            3: [
+                { name: 'Draconic Resilience', description: 'Your Hit Point maximum increases by 3 and rises by 1 each Sorcerer level, and while unarmored your base Armor Class equals 10 plus your Dexterity and Charisma modifiers.' },
+                { name: 'Draconic Spells', description: 'You always have thematic dragon spells such as Alter Self, Chromatic Orb, Command, and Dragon\'s Breath prepared, with more added at higher levels.' }
+            ],
+            6: { name: 'Elemental Affinity', description: 'Choose Acid, Cold, Fire, Lightning, or Poison; you gain Resistance to that damage type, and spells of that type add your Charisma modifier to one damage roll.' },
+            14: { name: 'Dragon Wings', description: 'As a Bonus Action, manifest draconic wings for 1 hour and gain a Fly Speed of 60 feet; you can recharge the feature by spending 3 Sorcery Points.' },
+            18: { name: 'Dragon Companion', description: 'You can cast Summon Dragon without its Material component, cast it once per Long Rest for free, and optionally remove its Concentration requirement for that casting.' }
         },
         'Divine Soul Sorcery': {
-            3: { name: 'Divine Magic', description: 'Blend arcane and sacred spell access for hybrid support and offense.' },
-            6: { name: 'Empowered Healing', description: 'Improve party sustain by refining healing outcomes through sorcery.' },
-            14: { name: 'Otherworldly Wings', description: 'Manifest celestial mobility to reposition and cast from safety.' },
-            18: { name: 'Unearthly Recovery', description: 'Activate a capstone self-restoration surge during critical encounters.' }
+            3: { name: 'Divine Magic', description: 'Your magic taps divine power, adding Cleric spell options to your spell list and letting Favored by the Gods add 2d4 to a missed attack or failed saving throw once per rest.' },
+            6: { name: 'Empowered Healing', description: 'When an ally near you rolls healing dice, you can spend 1 Sorcery Point to reroll any number of those dice once.' },
+            14: { name: 'Otherworldly Wings', description: 'As a Bonus Action, you sprout spectral wings and gain a Fly Speed, making aerial spellcasting much easier.' },
+            18: { name: 'Unearthly Recovery', description: 'Once per Long Rest, you can use a Bonus Action to regain Hit Points equal to half your maximum.' }
         },
         'Wild Magic Sorcery': {
-            3: { name: 'Wild Magic Surge', description: 'Tap chaotic spell surges for unpredictable but powerful outcomes.' },
-            6: { name: 'Bend Luck', description: 'Nudge crucial rolls up or down by channeling volatile magical flux.' },
-            14: { name: 'Controlled Chaos', description: 'Improve surge reliability while retaining wild-magic volatility.' },
-            18: { name: 'Spell Bombardment', description: 'Spike damage ceilings with capstone surges in explosive turns.' }
+            3: { name: 'Wild Magic Surge', description: 'After casting leveled spells, chaos can trigger a Wild Magic Surge, and Tides of Chaos lets you gain Advantage on a roll before the DM can force a surge later.' },
+            6: { name: 'Bend Luck', description: 'Spend 2 Sorcery Points as a Reaction to add or subtract 1d4 from another creature\'s attack roll, ability check, or saving throw.' },
+            14: { name: 'Controlled Chaos', description: 'Whenever you would roll on the Wild Magic table, you can roll twice and choose the result you prefer.' },
+            18: { name: 'Spell Bombardment', description: 'When a damage die for one of your spells rolls its highest value, you can roll an extra die of that type and add it to the total.' }
         }
     },
     Warlock: {
         'Archfey Patron': {
-            3: { name: 'Fey Presence', description: 'Disrupt enemy formations with charm and fear effects.' },
-            6: { name: 'Misty Escape', description: 'Vanish and reposition when threatened to preserve your casting line.' },
-            10: { name: 'Beguiling Defenses', description: 'Turn charm pressure back against opponents and resist mental control.' },
-            14: { name: 'Dark Delirium', description: 'Trap a target in fey nightmare logic for high-impact control.' }
+            3: { name: 'Fey Presence', description: 'As an action, creatures in a 10-foot cube from you must save or become Charmed or Frightened by you until the end of your next turn.' },
+            6: { name: 'Misty Escape', description: 'When you take damage, you can use your Reaction to turn Invisible and teleport up to 60 feet to a space you can see.' },
+            10: { name: 'Beguiling Defenses', description: 'You are immune to the Charmed condition, and when a creature tries to charm you, you can reflect that charm back on it.' },
+            14: { name: 'Dark Delirium', description: 'You can trap a creature in an illusory realm where it sees only you and the vision, leaving it Charmed or Frightened for up to 1 minute.' }
         },
         'Celestial Patron': {
-            3: { name: 'Healing Light', description: 'Deliver emergency ranged healing while maintaining warlock pressure.' },
-            6: { name: 'Radiant Soul', description: 'Boost radiant and fire spell effectiveness with divine patronage.' },
-            10: { name: 'Celestial Resilience', description: 'Raise party durability through temporary hit point reinforcement.' },
-            14: { name: 'Searing Vengeance', description: 'Return from collapse in radiant force to swing back hard.' }
+            3: { name: 'Healing Light', description: 'You gain a pool of d6s equal to 1 plus your Warlock level and can spend them as a Bonus Action to heal a creature you can see within 60 feet.' },
+            6: { name: 'Radiant Soul', description: 'You gain Resistance to Radiant damage, and your fire or radiant spells add your Charisma modifier to one damage roll.' },
+            10: { name: 'Celestial Resilience', description: 'After a Short or Long Rest, you gain Temporary Hit Points, and you can also grant Temporary Hit Points to up to five nearby creatures.' },
+            14: { name: 'Searing Vengeance', description: 'When you are about to make a death save, you can instead rise with half your Hit Points restored and blast nearby foes with radiant light, blinding them until the end of the turn.' }
         },
         'Fiend Patron': {
-            3: { name: 'Dark One\'s Blessing', description: 'Harvest temporary vitality from defeated foes to sustain momentum.' },
-            6: { name: 'Dark One\'s Own Luck', description: 'Boost key checks and saves with infernal fortune.' },
-            10: { name: 'Fiendish Resilience', description: 'Adapt resistances for stronger survivability in dangerous encounters.' },
-            14: { name: 'Hurl Through Hell', description: 'Banish enemies through terrifying infernal punishment.' }
+            3: [
+                { name: 'Dark One\'s Blessing', description: 'When you or someone within 10 feet of you reduces an enemy to 0 Hit Points, you gain Temporary Hit Points equal to your Charisma modifier plus your Warlock level.' },
+                { name: 'Fiend Spells', description: 'You always have fiendish patron spells such as Burning Hands, Command, Scorching Ray, and Suggestion prepared, with more added as you level.' }
+            ],
+            6: { name: 'Dark One\'s Own Luck', description: 'When you make an ability check or saving throw, you can add 1d10 after seeing the roll but before its effects occur; you regain uses on a Long Rest.' },
+            10: { name: 'Fiendish Resilience', description: 'Whenever you finish a Short or Long Rest, choose a damage type other than Force and gain Resistance to it until you choose again.' },
+            14: { name: 'Hurl Through Hell', description: 'Once per turn when you hit with an attack roll, you can force the target to make a Charisma save or vanish through the Lower Planes, taking 8d10 Psychic damage if it isn’t a Fiend and returning Incapacitated at the end of your next turn.' }
         },
         'Great Old One Patron': {
-            3: { name: 'Awakened Mind', description: 'Project telepathic influence to coordinate and unsettle from range.' },
-            6: { name: 'Entropic Ward', description: 'Warp probability to foil attacks and create retaliatory openings.' },
-            10: { name: 'Thought Shield', description: 'Deflect psychic pressure and punish mental intrusion.' },
-            14: { name: 'Create Thrall', description: 'Impose long-term domination over vulnerable minds.' }
+            3: { name: 'Awakened Mind', description: 'You can speak telepathically to a creature you can see within 30 feet, even without sharing a language, as long as it understands one.' },
+            6: { name: 'Entropic Ward', description: 'When a creature attacks you, you can use your Reaction to impose Disadvantage, and if it misses, your next attack against it has Advantage.' },
+            10: { name: 'Thought Shield', description: 'Your mind can\'t be read unless you allow it, you gain Resistance to Psychic damage, and creatures that deal Psychic damage to you take the same amount back.' },
+            14: { name: 'Create Thrall', description: 'By touching an Incapacitated humanoid, you can charm it until Remove Curse or similar magic breaks the bond, and you can communicate with it telepathically across the same plane.' }
         }
     },
     Wizard: {
         'School of Abjuration': {
             3: [
-                { name: 'Abjuration Savant', description: 'Add Abjuration spells to your spellbook more efficiently as your studies deepen.' },
-                { name: 'Arcane Ward', description: 'Create a protective ward that absorbs incoming damage.' }
+                { name: 'Abjuration Savant', description: 'You copy Abjuration spells into your spellbook for reduced gold and time cost.' },
+                { name: 'Arcane Ward', description: 'When you cast an Abjuration spell, you create a magical ward that absorbs incoming damage before your Hit Points do.' }
             ],
-            6: { name: 'Projected Ward', description: 'Extend your ward to shield allies at critical moments.' },
-            10: { name: 'Improved Abjuration', description: 'Counter and suppress hostile magic with greater reliability.' },
-            14: { name: 'Spell Resistance', description: 'Gain capstone resilience against enemy spell pressure.' }
+            6: { name: 'Projected Ward', description: 'When a creature you can see takes damage, you can use your Reaction to have your Arcane Ward absorb that damage instead.' },
+            10: { name: 'Improved Abjuration', description: 'Add your Proficiency Bonus to the ability checks you make as part of Counterspell and Dispel Magic.' },
+            14: { name: 'Spell Resistance', description: 'You have Advantage on saving throws against spells and Resistance to damage from spells.' }
         },
         'School of Divination': {
             3: [
-                { name: 'Divination Savant', description: 'Add Divination spells to your spellbook with improved efficiency as your practice advances.' },
-                { name: 'Portent', description: 'Bank future dice outcomes and deploy them at decisive moments.' }
+                { name: 'Divination Savant', description: 'You copy Divination spells into your spellbook for reduced gold and time cost.' },
+                { name: 'Portent', description: 'After a Long Rest, you roll foretelling d20s and can replace attack rolls, saves, or checks with those numbers later.' }
             ],
-            6: { name: 'Expert Divination', description: 'Recover resources while casting divination magic.' },
-            10: { name: 'Third Eye', description: 'Gain elevated perception tools for scouting and magical awareness.' },
-            14: { name: 'Greater Portent', description: 'Expand your fate-manipulation control for late-game encounters.' }
+            6: { name: 'Expert Divination', description: 'When you cast a Divination spell of level 2 or higher, you recover a lower-level spell slot.' },
+            10: { name: 'Third Eye', description: 'After a rest, you can choose a special sense such as Darkvision, See Invisibility, Ethereal Sight, or enhanced language understanding.' },
+            14: { name: 'Greater Portent', description: 'You gain an additional Portent die, giving you even more control over future rolls.' }
         },
         'School of Evocation': {
             3: [
-                { name: 'Evocation Savant', description: 'Choose two Evocation spells and add them to your spellbook, then add one Evocation spell whenever you gain access to a new spell-slot level.' },
-                { name: 'Potent Cantrip', description: 'Your damaging cantrips still deal half damage when a target avoids the full effect.' }
+                { name: 'Evocation Savant', description: 'Add two Evocation spells of level 2 or lower to your spellbook for free, and add another Evocation spell whenever you gain access to a new spell-slot level.' },
+                { name: 'Potent Cantrip', description: 'When a creature avoids the full effect of one of your damaging cantrips, it still takes half the cantrip’s damage, though no additional effect applies.' }
             ],
-            6: { name: 'Sculpt Spells', description: 'Shape area spells to spare allies while preserving offensive pressure.' },
-            10: { name: 'Empowered Evocation', description: 'Increase damage output on your core evocation spells.' },
-            14: { name: 'Overchannel', description: 'Push selected spells to capstone power when maximum burst is required.' }
+            6: { name: 'Sculpt Spells', description: 'When you cast an Evocation spell that affects other creatures you can see, a number of them equal to 1 plus the spell’s level automatically succeed on the save and take no damage on a successful save.' },
+            10: { name: 'Empowered Evocation', description: 'Whenever you cast a Wizard spell from the Evocation school, add your Intelligence modifier to one damage roll of that spell.' },
+            14: { name: 'Overchannel', description: 'When you cast a level 1–5 damaging Wizard spell, you can make it deal maximum damage; repeated uses before a Long Rest deal escalating Necrotic damage to you.' }
         },
         'School of Illusion': {
             3: [
-                { name: 'Illusion Savant', description: 'Add Illusion spells to your spellbook more efficiently as your illusion studies mature.' },
-                { name: 'Improved Minor Illusion', description: 'Expand deceptive utility through richer illusion construction.' }
+                { name: 'Illusion Savant', description: 'You copy Illusion spells into your spellbook for reduced gold and time cost.' },
+                { name: 'Improved Minor Illusion', description: 'Your Minor Illusion becomes more flexible, letting you create richer deceptive sound-and-image effects.' }
             ],
-            6: { name: 'Malleable Illusions', description: 'Retune active illusions dynamically as the encounter evolves.' },
-            10: { name: 'Illusory Self', description: 'Negate key attacks through expertly timed illusion doubles.' },
-            14: { name: 'Illusory Reality', description: 'Temporarily make illusions tangible for elite control plays.' }
+            6: { name: 'Malleable Illusions', description: 'You can reshape an active illusion spell with a duration of 1 minute or longer while it remains in effect.' },
+            10: { name: 'Illusory Self', description: 'As a Reaction when a creature attacks you, you can make it miss by interposing an illusory duplicate.' },
+            14: { name: 'Illusory Reality', description: 'Once when you cast an illusion spell of level 1 or higher, you can make one non-damaging part of the illusion physically real for a minute.' }
         }
     }
 };
@@ -409,6 +520,12 @@ export const subclassConfigs: Readonly<Record<string, SubclassConfig>> = {
         placeholderFeatureNames: ['Subclass Feature'],
         milestoneLevels: [3, 6, 10, 14]
     },
+    'Blood Hunter': {
+        selectorFeatureName: 'Blood Hunter Order',
+        selectorLevel: 3,
+        placeholderFeatureNames: ['Subclass Feature'],
+        milestoneLevels: [3, 7, 11, 15]
+    },
     Bard: {
         selectorFeatureName: 'Bard Subclass',
         selectorLevel: 3,
@@ -433,11 +550,23 @@ export const subclassConfigs: Readonly<Record<string, SubclassConfig>> = {
         placeholderFeatureNames: ['Subclass Feature'],
         milestoneLevels: [3, 7, 10, 15, 18]
     },
+    Gunslinger: {
+        selectorFeatureName: 'Gunslinger Style',
+        selectorLevel: 3,
+        placeholderFeatureNames: ['Subclass Feature'],
+        milestoneLevels: [3, 6, 14, 17]
+    },
     Monk: {
         selectorFeatureName: 'Monk Subclass',
         selectorLevel: 3,
         placeholderFeatureNames: ['Subclass Feature'],
         milestoneLevels: [3, 6, 11, 17]
+    },
+    'Monster Hunter': {
+        selectorFeatureName: 'Hunter Order',
+        selectorLevel: 3,
+        placeholderFeatureNames: ['Subclass Feature'],
+        milestoneLevels: [3, 7, 10, 13, 18]
     },
     Paladin: {
         selectorFeatureName: 'Paladin Subclass',
@@ -480,11 +609,14 @@ export const subclassConfigs: Readonly<Record<string, SubclassConfig>> = {
 export const subclassChoiceTitles: Readonly<Record<string, string>> = {
     Artificer: 'Choose 1 Artificer Specialist',
     Barbarian: 'Choose 1 Subclass',
+    'Blood Hunter': 'Choose 1 Blood Hunter Order',
     Bard: 'Choose 1 Bard College',
     Cleric: 'Choose 1 Divine Domain',
     Druid: 'Choose 1 Druid Circle',
     Fighter: 'Choose 1 Martial Archetype',
+    Gunslinger: 'Choose 1 Gunslinger Style',
     Monk: 'Choose 1 Monastic Tradition',
+    'Monster Hunter': 'Choose 1 Hunter Order',
     Paladin: 'Choose 1 Sacred Oath',
     Ranger: 'Choose 1 Ranger Conclave',
     Rogue: 'Choose 1 Roguish Archetype',
@@ -496,6 +628,7 @@ export const subclassChoiceTitles: Readonly<Record<string, string>> = {
 export const subclassOptionsByClass: Readonly<Record<string, ReadonlyArray<string>>> = {
     Artificer: ['Alchemist', 'Armorer', 'Artillerist', 'Battle Smith'],
     Barbarian: ['Path of the Berserker', 'Path of the Wild Heart', 'Path of the World Tree', 'Path of the Zealot'],
+    'Blood Hunter': ['Order of the Ghostslayer', 'Order of the Lycan', 'Order of the Mutant', 'Order of the Profane Soul'],
     Bard: ['College of Dance', 'College of Glamour', 'College of Lore', 'College of Valor'],
     Cleric: ['Life Domain', 'Light Domain', 'Trickery Domain', 'War Domain'],
     Druid: ['Circle of the Land', 'Circle of the Moon', 'Circle of the Sea', 'Circle of Stars'],

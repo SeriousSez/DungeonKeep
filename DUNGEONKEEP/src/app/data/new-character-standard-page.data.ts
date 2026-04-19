@@ -1448,7 +1448,7 @@ export const classInfoMap: Record<string, BuilderInfo> = {
                 { label: 'Starting Equipment', value: 'A: Greataxe, 4 Handaxes, Explorer’s Pack, 15 GP; or B: 75 GP' }
             ],
             levelMilestones: [
-                { title: 'Level 1', summary: 'Rage (2/day), Unarmored Defense', details: 'You enter Rage as a bonus action and become much tougher in melee; Unarmored Defense uses Dexterity and Constitution to set AC when unarmored.' },
+                { title: 'Level 1', summary: 'Rage, Unarmored Defense', details: 'You enter Rage as a Bonus Action if you aren’t wearing Heavy armor, gaining strong weapon-damage resistance, better Strength-based offense, and improved physical staying power; Unarmored Defense uses Dexterity and Constitution to set AC when unarmored.' },
                 { title: 'Level 2', summary: 'Reckless Attack, Danger Sense', details: 'You can choose high-risk advantage on Strength melee attacks, and gain better Dex-save survivability against visible threats.' },
                 { title: 'Level 3', summary: 'Primal Path (subclass), Rage 3/day', details: 'Subclass identity begins here; many path features continue at 6, 10, and 14.' },
                 { title: 'Level 5', summary: 'Extra Attack, Fast Movement', details: 'Two attacks per Attack action plus movement bonus create a strong frontline power spike.' },
@@ -1459,12 +1459,12 @@ export const classInfoMap: Record<string, BuilderInfo> = {
                 { title: 'Level 15', summary: 'Persistent Rage', details: 'Rage becomes harder to lose early, improving consistency in drawn-out encounters.' },
                 { title: 'Level 17', summary: 'Improved Brutal Strike (tier 2)', details: 'Brutal Strike effects increase to +3d10 damage, and you choose from the expanded strike effects list, further deepening tactical variety.' },
                 { title: 'Level 18', summary: 'Indomitable Might', details: 'Very low Strength-check outcomes are smoothed out, making physical checks highly reliable.' },
-                { title: 'Level 20', summary: 'Primal Champion, unlimited Rage', details: 'Strength and Constitution increase by 4 each (up to 24), and Rage uses are no longer limited.' }
+                { title: 'Level 20', summary: 'Primal Champion', details: 'Strength and Constitution increase by 4 each, and their maximum becomes 25.' }
             ],
             featureNotes: [
-                { title: 'Rage Core Rules', summary: 'Bonus action start, 1-minute duration, limited uses by level.', details: 'Rage ends early if combat pressure stops unless later class features prevent that; early levels track uses per long rest.' },
-                { title: 'Rage Benefits', summary: 'Damage resistance, Strength-check edge, and bonus melee damage.', details: 'While raging (and not in heavy armor), you resist common weapon damage and gain stronger Strength-based offense and utility.' },
-                { title: 'Rage Limitations', summary: 'No casting or concentration during Rage.', details: 'Rage commits your turn economy to martial play and positioning decisions.' },
+                { title: 'Rage Core Rules', summary: 'Bonus Action start, uses by level, up to 10-minute duration.', details: 'Rage starts only if you aren’t wearing Heavy armor. It lasts until the end of your next turn, and you can extend it by attacking, forcing a saving throw, or taking a Bonus Action. You regain one expended use on a Short Rest and all uses on a Long Rest.' },
+                { title: 'Rage Benefits', summary: 'Weapon-damage resistance, Strength edge, and bonus Strength damage.', details: 'While raging, you have Resistance to Bludgeoning, Piercing, and Slashing damage, Advantage on Strength checks and saving throws, and bonus damage on Strength-based weapon attacks and Unarmed Strikes.' },
+                { title: 'Rage Limitations', summary: 'No spellcasting or Concentration during Rage.', details: 'You can’t cast spells or maintain Concentration while raging, so your choices stay focused on martial pressure, movement, and battlefield control.' },
                 { title: 'Unarmored Defense', summary: 'AC uses Dexterity + Constitution while unarmored.', details: 'You can still use a shield and keep the Unarmored Defense formula active.' },
                 { title: 'Reckless Attack Tradeoff', summary: 'Gain advantage now, give enemies advantage until next turn.', details: 'This is a core risk/reward lever for pushing damage in key rounds.' },
                 { title: 'Danger Sense Condition', summary: 'Dex-save edge requires awareness and mobility.', details: 'The benefit applies against visible effects and is lost when severely impaired.' },
