@@ -2501,7 +2501,7 @@ export class CharacterDetailPageComponent {
                 const label = entry.quantity > 1 ? `${entry.name} x${entry.quantity}` : entry.name;
                 const normalizedCategory = entry.category.toLowerCase();
 
-                if (normalizedCategory.includes('weapon')) {
+                if (normalizedCategory.includes('weapon') || normalizedCategory.includes('firearm')) {
                     weapons.push(label);
                     continue;
                 }
@@ -2720,9 +2720,20 @@ export class CharacterDetailPageComponent {
             : firstSentence;
     }
 
+    private getCatalogItemByName(name: string) {
+        const normalizedName = name.trim().toLowerCase();
+        const normalizedCrossbowName = normalizedName.replace(/^(light|hand|heavy) crossbow$/i, 'crossbow, $1');
+        return this.catalogLookup.get(normalizedName) ?? this.catalogLookup.get(normalizedCrossbowName);
+    }
+
+    private isWeaponCategory(category: string | undefined): boolean {
+        const normalizedCategory = (category ?? '').toLowerCase();
+        return normalizedCategory.includes('weapon') || normalizedCategory.includes('firearm');
+    }
+
     private getInventoryWeaponNotes(category: string | undefined, existingNotes?: string, summary?: string, catalogNotes?: string): string | undefined {
         const trimmedNotes = existingNotes?.trim();
-        if (!(category ?? '').toLowerCase().includes('weapon')) {
+        if (!this.isWeaponCategory(category)) {
             return trimmedNotes || catalogNotes?.trim() || undefined;
         }
 
@@ -2912,14 +2923,14 @@ export class CharacterDetailPageComponent {
             const weaponName = weaponLabel.replace(/\s+x\d+$/i, '').trim();
             const weaponKey = weaponName.toLowerCase();
             const normalizedWeaponKey = weaponKey.replace(/^(light|hand|heavy) crossbow$/i, 'crossbow, $1');
-            const weaponCatalogItem = this.catalogLookup.get(weaponKey) ?? this.catalogLookup.get(normalizedWeaponKey);
+            const weaponCatalogItem = this.getCatalogItemByName(weaponName);
             const isRanged = /bow|crossbow|sling|blowgun|pistol|musket|rifle|gun/i.test(weaponName);
             const useDexterity = /bow|crossbow|sling|dagger|rapier|shortsword/i.test(weaponName);
             const abilityKey: AbilityKey = useDexterity ? 'dexterity' : 'strength';
             const abilityMod = this.getAbilityModifier(this.effectiveAbilityScores()?.[abilityKey] ?? 10);
             const bonus = abilityMod + char.proficiencyBonus;
             const damage = this.weaponDamageMap[weaponKey] ?? this.weaponDamageMap[normalizedWeaponKey] ?? '—';
-            const catalogNotes = this.getCompactWeaponNotes(weaponCatalogItem?.summary, weaponCatalogItem?.notes);
+            const catalogNotes = this.getInventoryWeaponNotes(weaponCatalogItem?.category ?? 'Weapon', undefined, weaponCatalogItem?.summary, weaponCatalogItem?.notes) ?? '—';
             const rangeLabel = this.getWeaponRangeLabel(weaponKey, weaponCatalogItem);
             return {
                 name: weaponName,
@@ -5044,7 +5055,71 @@ export class CharacterDetailPageComponent {
         return reasons.length > 0 ? reasons.join('; ') : null;
     }
 
+    private getDerivedWeaponCombatContext(name: string): { subtitle?: string; range?: string; hitDcLabel?: string; damage?: string } | null {
+        const normalizedName = name.trim().toLowerCase();
+        return this.weaponCombatRows().find((row) => row.name.trim().toLowerCase() === normalizedName) ?? null;
+    }
+
+    private openWeaponDetail(
+        item: { name: string; category: string; quantity: number; weight?: number; costGp?: number; notes?: string },
+        combatContext?: { subtitle?: string; range?: string; hitDcLabel?: string; damage?: string }
+    ): void {
+        const catalogItem = this.getCatalogItemByName(item.name);
+        const resolvedCombatContext = {
+            ...(this.getDerivedWeaponCombatContext(item.name) ?? {}),
+            ...(combatContext ?? {})
+        };
+        const summaryText = catalogItem?.summary?.trim() || item.notes?.trim() || catalogItem?.notes?.trim() || 'Tracked weapon details.';
+        const rulesText = this.inventoryItemRulesText(item, summaryText, catalogItem?.notes?.trim());
+        const highlights = this.inventoryItemHighlights(catalogItem?.detailLines, summaryText, catalogItem?.sourceLabel, catalogItem?.rarity, catalogItem?.attunement);
+        const profileTags = [catalogItem?.rarity?.trim(), catalogItem?.attunement?.trim(), catalogItem?.sourceLabel?.trim()]
+            .filter((value): value is string => Boolean(value));
+
+        const facts: Array<{ label: string; value?: string; linkLabel?: string; linkUrl?: string }> = [
+            { label: 'Range', value: resolvedCombatContext.range || this.getWeaponRangeLabel(item.name, catalogItem) },
+            ...(resolvedCombatContext.hitDcLabel ? [{ label: 'Hit / DC', value: resolvedCombatContext.hitDcLabel }] : []),
+            ...(resolvedCombatContext.damage ? [{ label: 'Damage', value: resolvedCombatContext.damage }] : []),
+            { label: 'Quantity', value: `${item.quantity}` },
+            { label: 'Weight', value: item.weight != null ? `${item.weight} lb.` : (catalogItem?.weight != null ? `${catalogItem.weight} lb.` : '—') },
+            { label: 'Cost', value: item.costGp != null ? `${item.costGp} gp` : (catalogItem?.costGp != null ? `${catalogItem.costGp} gp` : '—') },
+            catalogItem?.sourceUrl?.trim()
+                ? {
+                    label: 'Source',
+                    linkLabel: catalogItem.sourceLabel?.trim() || 'Reference link',
+                    linkUrl: catalogItem.sourceUrl.trim()
+                }
+                : { label: 'Source', value: '—' }
+        ];
+
+        this.openDetailDrawer({
+            title: item.name,
+            subtitle: resolvedCombatContext.subtitle || item.category,
+            description: summaryText,
+            bullets: highlights,
+            variant: 'inventory-item',
+            metaLine: `Reference • ${item.category.toLowerCase()}`,
+            profileTags: profileTags.length > 0 ? profileTags : [item.category],
+            facts,
+            rulesText
+        });
+    }
+
     openActionDetail(action: { name: string; subtitle?: string; range?: string; hitDcLabel?: string; damage?: string; notes?: string }): void {
+        const catalogItem = this.getCatalogItemByName(action.name);
+        const isWeaponAction = (action.subtitle ?? '').toLowerCase().includes('weapon') || this.isWeaponCategory(catalogItem?.category);
+
+        if (isWeaponAction) {
+            this.openWeaponDetail({
+                name: action.name,
+                category: catalogItem?.category?.trim() || 'Weapon',
+                quantity: 1,
+                weight: catalogItem?.weight,
+                costGp: catalogItem?.costGp,
+                notes: action.notes
+            }, action);
+            return;
+        }
+
         const bullets = [
             action.subtitle ? `Type: ${action.subtitle}` : 'Type: Combat option',
             action.range ? `Range: ${action.range}` : '',
@@ -5083,7 +5158,12 @@ export class CharacterDetailPageComponent {
     }
 
     openInventoryItemDetail(item: { name: string; category: string; quantity: number; weight?: number; costGp?: number; notes?: string }): void {
-        const catalogItem = this.catalogLookup.get(item.name.trim().toLowerCase());
+        if (this.isWeaponCategory(item.category)) {
+            this.openWeaponDetail(item);
+            return;
+        }
+
+        const catalogItem = this.getCatalogItemByName(item.name);
         const summaryText = catalogItem?.summary?.trim() || item.notes?.trim() || catalogItem?.notes?.trim() || 'Tracked inventory item details.';
         const rulesText = this.inventoryItemRulesText(item, summaryText, catalogItem?.notes?.trim());
         const highlights = this.inventoryItemHighlights(catalogItem?.detailLines, summaryText, catalogItem?.sourceLabel, catalogItem?.rarity, catalogItem?.attunement);
@@ -5121,12 +5201,14 @@ export class CharacterDetailPageComponent {
         summaryText: string,
         catalogNotes?: string
     ): string | null {
-        const notes = item.notes?.trim() || catalogNotes;
+        const notes = this.isWeaponCategory(item.category)
+            ? (catalogNotes?.trim() || item.notes?.trim())
+            : (item.notes?.trim() || catalogNotes);
         if (!notes) {
             return null;
         }
 
-        if ((item.category ?? '').toLowerCase().includes('weapon')) {
+        if (this.isWeaponCategory(item.category)) {
             return this.getWeaponPopupFooterText(summaryText, notes);
         }
 
