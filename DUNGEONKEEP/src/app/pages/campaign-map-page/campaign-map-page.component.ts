@@ -959,6 +959,16 @@ export class CampaignMapPageComponent {
             });
 
         effect(() => {
+            const campaignId = this.campaignId();
+            const routeMode = this.routeMode();
+            if (!campaignId || routeMode !== 'edit') {
+                return;
+            }
+
+            void this.refreshCampaignCharactersForEditor(campaignId);
+        });
+
+        effect(() => {
             const campaign = this.selectedCampaign();
             const routeMapId = this.routeMapId();
             if (!campaign || !campaign.detailsLoaded) {
@@ -1117,6 +1127,12 @@ export class CampaignMapPageComponent {
 
     private async ensureCampaignDetails(campaignId: string): Promise<void> {
         await this.store.ensureCampaignLoaded(campaignId);
+        this.cdr.detectChanges();
+    }
+
+    private async refreshCampaignCharactersForEditor(campaignId: string): Promise<void> {
+        await this.store.refreshCampaignCharacters(campaignId);
+        await this.store.refreshCampaignLoaded(campaignId);
         this.cdr.detectChanges();
     }
 

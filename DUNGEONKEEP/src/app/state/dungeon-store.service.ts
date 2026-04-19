@@ -121,6 +121,49 @@ export class DungeonStoreService {
         await this.loadCampaignDetails(campaignId);
     }
 
+    async refreshCampaignCharacters(campaignId?: string): Promise<void> {
+        try {
+            const accessibleCharacterDtos = await this.api.getAccessibleCharacters();
+            const characterMap = new Map<string, Character>();
+
+            for (const characterDto of accessibleCharacterDtos) {
+                const mappedCharacter = this.mapCharacterFromApi(characterDto);
+                const existing = characterMap.get(mappedCharacter.id);
+
+                if (!existing) {
+                    characterMap.set(mappedCharacter.id, mappedCharacter);
+                    continue;
+                }
+
+                const mergedCampaignIds = Array.from(new Set([...(existing.campaignIds ?? []), ...(mappedCharacter.campaignIds ?? [])]));
+                characterMap.set(mappedCharacter.id, {
+                    ...existing,
+                    ...mappedCharacter,
+                    campaignId: mergedCampaignIds[0] ?? DungeonStoreService.UNASSIGNED_CAMPAIGN_ID,
+                    campaignIds: mergedCampaignIds
+                });
+            }
+
+            const nextCharacters = Array.from(characterMap.values());
+            this.characters.set(nextCharacters);
+            this.campaigns.update((campaigns) => campaigns.map((campaign) => {
+                if (campaignId && campaign.id !== campaignId) {
+                    return campaign;
+                }
+
+                const partyCharacterIds = nextCharacters
+                    .filter((character) => character.campaignIds?.includes(campaign.id) || character.campaignId === campaign.id)
+                    .map((character) => character.id);
+
+                return {
+                    ...campaign,
+                    partyCharacterIds
+                };
+            }));
+        } catch {
+        }
+    }
+
     private async loadCampaignDetails(campaignId: string): Promise<void> {
         if (!campaignId || this.isCampaignDetailsLoading(campaignId)) {
             return;
