@@ -223,6 +223,7 @@ static void EnsureCharacterRichTextStorage(DungeonKeepDbContext dbContext, Datab
 
     EnsureMySqlLongTextColumnExists(dbContext, "Characters", "PortraitUrl");
     EnsureMySqlLongTextColumnExists(dbContext, "Characters", "DetailBackgroundImageUrl");
+    EnsureMySqlLongTextColumnExists(dbContext, "Campaigns", "CampaignMapJson");
 }
 
 static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)

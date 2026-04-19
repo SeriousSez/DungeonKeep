@@ -107,6 +107,8 @@ const MAP_VISION_MEMORY_ORIGIN_THRESHOLD = 0.02;
 const MAP_VISION_MEMORY_PERSIST_DELAY_MS = 1200;
 const MAP_VISION_MEMORY_PENDING_STORAGE_KEY = 'dungeonkeep.campaign-map.pending-vision-memory';
 const MAP_VISION_MEMORY_PENDING_STORAGE_MAX_AGE_MS = 1000 * 60 * 30;
+const MAP_ART_STORAGE_MAX_DIMENSION = 1600;
+const MAP_ART_STORAGE_TARGET_DATA_URL_LENGTH = 450_000;
 
 const MAP_BACKGROUND_OPTIONS: DropdownOption[] = [
     { value: 'Parchment', label: 'Parchment', description: 'Warm paper tones for hand-drawn lines, sketches, and lore maps.' },
@@ -2431,10 +2433,12 @@ export class CampaignMapPageComponent {
                 return;
             }
 
+            const optimizedBackgroundImageUrl = await this.optimizeMapArtForStorage(backgroundImageUrl);
+
             this.captureHistorySnapshot();
             this.mutateMap((map) => {
                 map.background = background;
-                map.backgroundImageUrl = backgroundImageUrl;
+                map.backgroundImageUrl = optimizedBackgroundImageUrl;
                 map.strokes = [];
                 map.walls = [];
                 map.decorations = [];
@@ -3811,6 +3815,74 @@ export class CampaignMapPageComponent {
         }, 5000);
     }
 
+    private async optimizeMapArtForStorage(imageUrl: string): Promise<string> {
+        const trimmedImageUrl = imageUrl?.trim() ?? '';
+        if (!trimmedImageUrl.startsWith('data:image/') || trimmedImageUrl.length <= MAP_ART_STORAGE_TARGET_DATA_URL_LENGTH) {
+            return trimmedImageUrl;
+        }
+
+        if (typeof globalThis.document === 'undefined') {
+            return trimmedImageUrl;
+        }
+
+        try {
+            const image = await this.loadMapArtImage(trimmedImageUrl);
+            const longestEdge = Math.max(image.naturalWidth, image.naturalHeight);
+            const scale = longestEdge > MAP_ART_STORAGE_MAX_DIMENSION
+                ? MAP_ART_STORAGE_MAX_DIMENSION / longestEdge
+                : 1;
+            const width = Math.max(1, Math.round(image.naturalWidth * scale));
+            const height = Math.max(1, Math.round(image.naturalHeight * scale));
+            const canvas = globalThis.document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+
+            const context = canvas.getContext('2d');
+            if (!context) {
+                return trimmedImageUrl;
+            }
+
+            context.imageSmoothingEnabled = true;
+            context.imageSmoothingQuality = 'high';
+            context.drawImage(image, 0, 0, width, height);
+
+            let bestImageUrl = trimmedImageUrl;
+            const attempts: Array<{ type: 'image/webp' | 'image/jpeg'; quality: number }> = [
+                { type: 'image/webp', quality: 0.9 },
+                { type: 'image/jpeg', quality: 0.9 },
+                { type: 'image/webp', quality: 0.82 },
+                { type: 'image/jpeg', quality: 0.82 },
+                { type: 'image/webp', quality: 0.74 },
+                { type: 'image/jpeg', quality: 0.74 }
+            ];
+
+            for (const attempt of attempts) {
+                const candidate = canvas.toDataURL(attempt.type, attempt.quality);
+                if (candidate.length < bestImageUrl.length) {
+                    bestImageUrl = candidate;
+                }
+
+                if (bestImageUrl.length <= MAP_ART_STORAGE_TARGET_DATA_URL_LENGTH) {
+                    break;
+                }
+            }
+
+            return bestImageUrl;
+        } catch {
+            return trimmedImageUrl;
+        }
+    }
+
+    private loadMapArtImage(source: string): Promise<HTMLImageElement> {
+        return new Promise((resolve, reject) => {
+            const image = new Image();
+            image.decoding = 'async';
+            image.onload = () => resolve(image);
+            image.onerror = () => reject(new Error('Map art image failed to load for optimization.'));
+            image.src = source;
+        });
+    }
+
     private buildMapArtAdditionalDirection(options: MapArtGenerationOptions): string | undefined {
         const trimmedDirection = options.additionalDirection.trim();
         const lightingDirection = options.lighting === 'Night'
@@ -3909,6 +3981,15 @@ export class CampaignMapPageComponent {
         this.persistInFlight = true;
         const saveRevision = this.localChangeRevision;
         const snapshot = this.cloneMap(this.workingMap());
+        const optimizedBackgroundImageUrl = await this.optimizeMapArtForStorage(snapshot.backgroundImageUrl);
+        if (optimizedBackgroundImageUrl !== snapshot.backgroundImageUrl) {
+            snapshot.backgroundImageUrl = optimizedBackgroundImageUrl;
+            this.workingMap.update((map) => ({
+                ...map,
+                backgroundImageUrl: optimizedBackgroundImageUrl
+            }));
+        }
+
         const maps = this.mapBoards().map((map) => map.id === currentMap.id ? { ...map, name: this.mapNameDraft().trim() || map.name, ...snapshot } : this.cloneMapBoard(map));
         // Editing/saving a map must not implicitly change which map is active.
         // Only the explicit "Set Active" action should switch activeMapId.
