@@ -8498,6 +8498,7 @@ export class NewCharacterStandardPageComponent {
             ['perception', 'Perception'],
             ['performance', 'Performance'],
             ['persuasion', 'Persuasion'],
+            ['religion', 'Religion'],
             ['sleightOfHand', 'Sleight of Hand'],
             ['stealth', 'Stealth'],
             ['survival', 'Survival']

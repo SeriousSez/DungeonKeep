@@ -471,6 +471,7 @@ export class NewCharacterPageComponent {
             perception: false,
             performance: false,
             persuasion: false,
+            religion: false,
             sleightOfHand: false,
             stealth: false,
             survival: false

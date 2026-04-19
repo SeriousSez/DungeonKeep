@@ -241,6 +241,7 @@ export interface SkillProficiencies {
     perception: boolean;
     performance: boolean;
     persuasion: boolean;
+    religion?: boolean;
     sleightOfHand: boolean;
     stealth: boolean;
     survival: boolean;

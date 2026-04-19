@@ -141,6 +141,42 @@
     --detail-theme-border: color-mix(in srgb, #7d6a58 28%, var(--panel-border));
 }
 
+:host([data-detail-background='dunes']) {
+    --detail-page-bg:
+        linear-gradient(180deg, color-mix(in srgb, rgba(79, 54, 29, 0.42) 100%, transparent), color-mix(in srgb, rgba(158, 118, 66, 0.26) 100%, transparent)),
+        url('/assets/images/theme/dunes.png') center/cover fixed no-repeat;
+    --detail-panel-surface: color-mix(in srgb, var(--panel-bg-solid) 88%, #f1dfc5 12%);
+    --detail-card-surface: color-mix(in srgb, var(--surface-raised-solid-alt) 82%, #e8d1b0 18%);
+    --detail-theme-border: color-mix(in srgb, #b9915f 28%, var(--panel-border));
+}
+
+:host([data-detail-background='tundra']) {
+    --detail-page-bg:
+        linear-gradient(180deg, color-mix(in srgb, rgba(68, 88, 110, 0.42) 100%, transparent), color-mix(in srgb, rgba(149, 174, 194, 0.22) 100%, transparent)),
+        url('/assets/images/theme/tundra.png') center/cover fixed no-repeat;
+    --detail-panel-surface: color-mix(in srgb, var(--panel-bg-solid) 88%, #e1ebf2 12%);
+    --detail-card-surface: color-mix(in srgb, var(--surface-raised-solid-alt) 82%, #d6e2eb 18%);
+    --detail-theme-border: color-mix(in srgb, #7b97ad 28%, var(--panel-border));
+}
+
+:host([data-detail-background='coastal']) {
+    --detail-page-bg:
+        linear-gradient(180deg, color-mix(in srgb, rgba(37, 82, 109, 0.42) 100%, transparent), color-mix(in srgb, rgba(73, 137, 151, 0.24) 100%, transparent)),
+        url('/assets/images/theme/coastal.png') center/cover fixed no-repeat;
+    --detail-panel-surface: color-mix(in srgb, var(--panel-bg-solid) 88%, #dceff0 12%);
+    --detail-card-surface: color-mix(in srgb, var(--surface-raised-solid-alt) 82%, #cfe5e7 18%);
+    --detail-theme-border: color-mix(in srgb, #5e98a1 28%, var(--panel-border));
+}
+
+:host([data-detail-background='underground']) {
+    --detail-page-bg:
+        linear-gradient(180deg, color-mix(in srgb, rgba(27, 27, 40, 0.66) 100%, transparent), color-mix(in srgb, rgba(55, 47, 72, 0.5) 100%, transparent)),
+        url('/assets/images/theme/underground.png') center/cover fixed no-repeat;
+    --detail-panel-surface: color-mix(in srgb, var(--panel-bg-solid) 88%, #ddd9e7 12%);
+    --detail-card-surface: color-mix(in srgb, var(--surface-raised-solid-alt) 82%, #d2ccdf 18%);
+    --detail-theme-border: color-mix(in srgb, #75688f 28%, var(--panel-border));
+}
+
 :host([data-detail-background='custom']) {
     --detail-page-bg: transparent;
     background: transparent;
@@ -167,7 +203,11 @@
 :host([data-detail-background='ember']) :is(.header-content, .panel),
 :host([data-detail-background='moonlit']) :is(.header-content, .panel),
 :host([data-detail-background='storm']) :is(.header-content, .panel),
-:host([data-detail-background='urban']) :is(.header-content, .panel) {
+:host([data-detail-background='urban']) :is(.header-content, .panel),
+:host([data-detail-background='dunes']) :is(.header-content, .panel),
+:host([data-detail-background='tundra']) :is(.header-content, .panel),
+:host([data-detail-background='coastal']) :is(.header-content, .panel),
+:host([data-detail-background='underground']) :is(.header-content, .panel) {
     background: var(--detail-panel-surface);
     border-color: var(--detail-theme-border);
 }
@@ -176,7 +216,11 @@
 :host([data-detail-background='ember']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
 :host([data-detail-background='moonlit']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
 :host([data-detail-background='storm']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
-:host([data-detail-background='urban']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row) {
+:host([data-detail-background='urban']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
+:host([data-detail-background='dunes']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
+:host([data-detail-background='tundra']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
+:host([data-detail-background='coastal']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
+:host([data-detail-background='underground']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row) {
     background: var(--detail-card-surface);
     border-color: var(--detail-theme-border);
 }
@@ -272,7 +316,11 @@
 :host([data-detail-background='ember']) .back-link,
 :host([data-detail-background='moonlit']) .back-link,
 :host([data-detail-background='storm']) .back-link,
-:host([data-detail-background='urban']) .back-link {
+:host([data-detail-background='urban']) .back-link,
+:host([data-detail-background='dunes']) .back-link,
+:host([data-detail-background='tundra']) .back-link,
+:host([data-detail-background='coastal']) .back-link,
+:host([data-detail-background='underground']) .back-link {
     color: #efd8bc;
     font-weight: 700;
     text-shadow: 0 1px 2px rgba(16, 9, 4, 0.45);
@@ -902,7 +950,7 @@
     font-family: var(--display-font);
     font-weight: 700;
     font-size: 1.05rem;
-    margin-bottom: 12px;
+    margin-bottom: 9px;
 }
 
 .section-title-link {
@@ -952,6 +1000,9 @@
     overflow-x: clip;
     overflow: auto;
     display: grid;
+}
+
+.right-column {
     gap: 10px;
 }
 

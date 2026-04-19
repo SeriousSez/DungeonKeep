@@ -40,6 +40,7 @@ const defaultSkills: SkillProficiencies = {
     perception: false,
     performance: false,
     persuasion: false,
+    religion: false,
     sleightOfHand: false,
     stealth: false,
     survival: false

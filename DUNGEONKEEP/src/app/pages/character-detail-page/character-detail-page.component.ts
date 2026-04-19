@@ -56,7 +56,7 @@ type FeaturesFilter = 'all' | 'class-features' | 'species-traits' | 'feats';
 type NotesFilter = 'all' | 'orgs' | 'allies' | 'enemies' | 'backstory' | 'other';
 type MeasurementSystem = 'imperial' | 'metric';
 type InventoryDraftField = 'name' | 'category' | 'quantity' | 'weight' | 'costGp' | 'notes';
-type DetailBackgroundTheme = 'parchment' | 'forest' | 'ember' | 'moonlit' | 'storm' | 'urban' | 'custom';
+type DetailBackgroundTheme = 'parchment' | 'forest' | 'ember' | 'moonlit' | 'storm' | 'urban' | 'dunes' | 'tundra' | 'coastal' | 'underground' | 'custom';
 
 interface PersistedInventoryEntry {
     name: string;
@@ -405,10 +405,14 @@ export class CharacterDetailPageComponent {
     );
     readonly detailBackgroundOptions: ReadonlyArray<DropdownOption> = [
         { value: 'parchment', label: 'Parchment' },
-        { value: 'forest', label: 'Forest' },
+        { value: 'coastal', label: 'Coastal' },
+        { value: 'dunes', label: 'Dunes' },
         { value: 'ember', label: 'Ember' },
+        { value: 'forest', label: 'Forest' },
         { value: 'moonlit', label: 'Moonlit' },
         { value: 'storm', label: 'Storm' },
+        { value: 'tundra', label: 'Tundra' },
+        { value: 'underground', label: 'Underground' },
         { value: 'urban', label: 'Urban' },
         { value: 'custom', label: 'Custom Image' }
     ];
@@ -587,6 +591,7 @@ export class CharacterDetailPageComponent {
         perception: 'wisdom',
         performance: 'charisma',
         persuasion: 'charisma',
+        religion: 'intelligence',
         sleightOfHand: 'dexterity',
         stealth: 'dexterity',
         survival: 'wisdom'
@@ -1987,6 +1992,7 @@ export class CharacterDetailPageComponent {
             { name: 'Perception', key: 'perception' },
             { name: 'Performance', key: 'performance' },
             { name: 'Persuasion', key: 'persuasion' },
+            { name: 'Religion', key: 'religion' },
             { name: 'Sleight of Hand', key: 'sleightOfHand' },
             { name: 'Stealth', key: 'stealth' },
             { name: 'Survival', key: 'survival' }
@@ -2728,6 +2734,21 @@ export class CharacterDetailPageComponent {
         return compactNote !== '—' ? compactNote : trimmedNotes || catalogNotes?.trim() || undefined;
     }
 
+    private getWeaponRangeLabel(weaponName: string, catalogItem?: { notes?: string; summary?: string }): string {
+        const sourceText = [catalogItem?.notes ?? '', catalogItem?.summary ?? '']
+            .filter((value) => value.trim().length > 0)
+            .join(' ');
+        const explicitRange = sourceText.match(/Range\s*\(([^)]+)\)/i)?.[1]?.trim();
+
+        if (explicitRange) {
+            return `${explicitRange} ft.`;
+        }
+
+        return /bow|crossbow|blowgun|sling|pistol|musket|rifle|shotgun|revolver|dart|laser/i.test(weaponName)
+            ? 'Ranged'
+            : '5 ft.';
+    }
+
     private isShortWeaponNote(value?: string): boolean {
         const trimmed = value?.trim();
         return !!trimmed && trimmed.length <= 90 && !/[.!?]\s/.test(trimmed);
@@ -2899,10 +2920,11 @@ export class CharacterDetailPageComponent {
             const bonus = abilityMod + char.proficiencyBonus;
             const damage = this.weaponDamageMap[weaponKey] ?? this.weaponDamageMap[normalizedWeaponKey] ?? '—';
             const catalogNotes = this.getCompactWeaponNotes(weaponCatalogItem?.summary, weaponCatalogItem?.notes);
+            const rangeLabel = this.getWeaponRangeLabel(weaponKey, weaponCatalogItem);
             return {
                 name: weaponName,
                 subtitle: isRanged ? 'Ranged Weapon' : 'Melee Weapon',
-                range: isRanged ? 'Ranged' : '5 ft.',
+                range: rangeLabel,
                 hitDcLabel: this.formatSigned(bonus),
                 damage,
                 notes: catalogNotes,
@@ -7410,6 +7432,7 @@ export class CharacterDetailPageComponent {
             'perception': 'perception',
             'performance': 'performance',
             'persuasion': 'persuasion',
+            'religion': 'religion',
             'sleight of hand': 'sleightOfHand',
             'stealth': 'stealth',
             'survival': 'survival'
@@ -8049,6 +8072,10 @@ export class CharacterDetailPageComponent {
             case 'moonlit':
             case 'storm':
             case 'urban':
+            case 'dunes':
+            case 'tundra':
+            case 'coastal':
+            case 'underground':
             case 'custom':
                 return value;
             default:

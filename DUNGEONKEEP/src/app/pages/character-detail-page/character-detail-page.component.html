@@ -115,7 +115,8 @@
 
                             <div class="header-theme-controls">
                                 <span class="theme-control-label">Background</span>
-                                <app-dropdown [value]="detailBackgroundTheme()" [options]="detailBackgroundOptions" [minWidth]="148" [panelMinWidth]="180" [maxPanelHeight]="400" size="compact" appearance="chip" (changed)="onDetailBackgroundThemeChanged($event)"></app-dropdown>
+                                <app-dropdown [value]="detailBackgroundTheme()" [options]="detailBackgroundOptions" [minWidth]="148" [panelMinWidth]="180" [maxPanelHeight]="600" size="compact" appearance="chip" (changed)="onDetailBackgroundThemeChanged($event)"></app-dropdown>
+                                @if (detailBackgroundTheme() === 'custom') {
                                 <div class="theme-upload-actions">
                                     <label class="assign-btn theme-upload-label">
                                         <input class="theme-upload-input" type="file" accept="image/*" (change)="onDetailBackgroundImageSelected($event)" />
@@ -125,6 +126,7 @@
                                     <button type="button" class="remove-btn" (click)="clearDetailBackgroundImage()">Remove image</button>
                                     }
                                 </div>
+                                }
                             </div>
 
                             <div class="header-theme-controls">

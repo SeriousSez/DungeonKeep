@@ -1609,6 +1609,7 @@ export class DungeonStoreService {
                 perception: Boolean(parsed.perception),
                 performance: Boolean(parsed.performance),
                 persuasion: Boolean(parsed.persuasion),
+                religion: Boolean(parsed.religion),
                 sleightOfHand: Boolean(parsed.sleightOfHand),
                 stealth: Boolean(parsed.stealth),
                 survival: Boolean(parsed.survival)
@@ -2324,6 +2325,7 @@ export class DungeonStoreService {
             perception: false,
             performance: false,
             persuasion: false,
+            religion: false,
             sleightOfHand: false,
             stealth: false,
             survival: false

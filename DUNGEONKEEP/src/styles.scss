@@ -109,6 +109,34 @@ body.character-detail-page-active[data-character-page-theme='urban'] {
     background-attachment: fixed;
 }
 
+body.character-detail-page-active[data-character-page-theme='dunes'] {
+    background: url('/assets/images/theme/dunes.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+body.character-detail-page-active[data-character-page-theme='tundra'] {
+    background: url('/assets/images/theme/tundra.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+body.character-detail-page-active[data-character-page-theme='coastal'] {
+    background: url('/assets/images/theme/coastal.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+body.character-detail-page-active[data-character-page-theme='underground'] {
+    background: url('/assets/images/theme/underground.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
 body.character-detail-page-active[data-character-page-theme='custom'] {
     background:
         linear-gradient(color-mix(in srgb, var(--page-bg-deep) 18%, transparent),
