@@ -56,7 +56,7 @@ type FeaturesFilter = 'all' | 'class-features' | 'species-traits' | 'feats';
 type NotesFilter = 'all' | 'orgs' | 'allies' | 'enemies' | 'backstory' | 'other';
 type MeasurementSystem = 'imperial' | 'metric';
 type InventoryDraftField = 'name' | 'category' | 'quantity' | 'weight' | 'costGp' | 'notes';
-type DetailBackgroundTheme = 'parchment' | 'forest' | 'ember' | 'moonlit' | 'storm' | 'custom';
+type DetailBackgroundTheme = 'parchment' | 'forest' | 'ember' | 'moonlit' | 'storm' | 'urban' | 'custom';
 
 interface PersistedInventoryEntry {
     name: string;
@@ -325,6 +325,12 @@ interface FeatureListEntry {
     summaryBadges: string[];
 }
 
+interface SpeciesTraitEntry {
+    name: string;
+    description: string;
+    detailDescription: string;
+}
+
 interface LimitedUseEntry {
     id: string;
     name: string;
@@ -403,6 +409,7 @@ export class CharacterDetailPageComponent {
         { value: 'ember', label: 'Ember' },
         { value: 'moonlit', label: 'Moonlit' },
         { value: 'storm', label: 'Storm' },
+        { value: 'urban', label: 'Urban' },
         { value: 'custom', label: 'Custom Image' }
     ];
 
@@ -1185,7 +1192,7 @@ export class CharacterDetailPageComponent {
             quantity,
             weight: typeof entry.weight === 'number' ? entry.weight : catalogItem?.weight,
             costGp: typeof entry.costGp === 'number' ? entry.costGp : catalogItem?.costGp,
-            notes: entry.notes?.trim() || catalogItem?.notes || undefined,
+            notes: this.getInventoryWeaponNotes(category, entry.notes, catalogItem?.summary, catalogItem?.notes),
             isContainer,
             containedItems: mergedContainedItems,
             maxCapacity: entry.maxCapacity ?? (isContainer ? this.getContainerCapacity(name) : undefined)
@@ -2675,6 +2682,81 @@ export class CharacterDetailPageComponent {
         return { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 };
     }
 
+    private getCompactWeaponNotes(summary?: string, notes?: string): string {
+        const compactSummary = summary?.replace(/\s+/g, ' ').trim() ?? '';
+        const structuredSummary = compactSummary.match(/^Weapon\s*\(([^)]+)\)\s*,\s*([^.()]+?)(?:\s*\(requires attunement by ([^)]+)\))?\.?$/i);
+        if (structuredSummary) {
+            const [, weaponType, rarity, attunedBy] = structuredSummary;
+            const compactParts = [
+                this.toCompactNoteLabel(weaponType),
+                this.toCompactNoteLabel(rarity)
+            ];
+
+            if (attunedBy) {
+                compactParts.push(`Attuned (${this.toCompactNoteLabel(attunedBy.replace(/^(a|an|the)\s+/i, ''))})`);
+            }
+
+            return compactParts.filter((value) => value.length > 0).join(', ');
+        }
+
+        if (compactSummary) {
+            return compactSummary;
+        }
+
+        const rawNotes = notes?.replace(/\s+/g, ' ').trim();
+        if (!rawNotes) {
+            return '—';
+        }
+
+        const firstSentence = rawNotes.match(/^.+?[.!?](?=\s|$)/)?.[0]?.trim() ?? rawNotes;
+        return firstSentence.length > 140
+            ? `${firstSentence.slice(0, 137).trimEnd()}...`
+            : firstSentence;
+    }
+
+    private getInventoryWeaponNotes(category: string | undefined, existingNotes?: string, summary?: string, catalogNotes?: string): string | undefined {
+        const trimmedNotes = existingNotes?.trim();
+        if (!(category ?? '').toLowerCase().includes('weapon')) {
+            return trimmedNotes || catalogNotes?.trim() || undefined;
+        }
+
+        if (this.isShortWeaponNote(trimmedNotes)) {
+            return trimmedNotes;
+        }
+
+        const compactNote = this.getCompactWeaponNotes(summary, catalogNotes ?? trimmedNotes);
+        return compactNote !== '—' ? compactNote : trimmedNotes || catalogNotes?.trim() || undefined;
+    }
+
+    private isShortWeaponNote(value?: string): boolean {
+        const trimmed = value?.trim();
+        return !!trimmed && trimmed.length <= 90 && !/[.!?]\s/.test(trimmed);
+    }
+
+    private getWeaponPopupFooterText(summaryText: string, notes?: string): string | null {
+        const cleanNotes = notes?.trim();
+        if (!cleanNotes) {
+            return null;
+        }
+
+        const looksCompact = cleanNotes.length <= 90 && !/[.!?]\s/.test(cleanNotes);
+        const footerText = looksCompact ? cleanNotes : this.getCompactWeaponNotes(summaryText, cleanNotes);
+
+        return this.normalizeInventoryDetailText(footerText) === this.normalizeInventoryDetailText(summaryText)
+            ? null
+            : footerText;
+    }
+
+    private toCompactNoteLabel(value: string): string {
+        return value
+            .trim()
+            .split(/\s+/)
+            .map((word) => (/^(and|or|of|the|by|to)$/i.test(word)
+                ? word.toLowerCase()
+                : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()))
+            .join(' ');
+    }
+
     private parseNonNegativeInteger(value: string): number {
         return Math.max(0, this.parseInteger(value));
     }
@@ -2816,7 +2898,7 @@ export class CharacterDetailPageComponent {
             const abilityMod = this.getAbilityModifier(this.effectiveAbilityScores()?.[abilityKey] ?? 10);
             const bonus = abilityMod + char.proficiencyBonus;
             const damage = this.weaponDamageMap[weaponKey] ?? this.weaponDamageMap[normalizedWeaponKey] ?? '—';
-            const catalogNotes = weaponCatalogItem?.notes?.trim() || weaponCatalogItem?.summary?.trim() || '—';
+            const catalogNotes = this.getCompactWeaponNotes(weaponCatalogItem?.summary, weaponCatalogItem?.notes);
             return {
                 name: weaponName,
                 subtitle: isRanged ? 'Ranged Weapon' : 'Melee Weapon',
@@ -2995,8 +3077,13 @@ export class CharacterDetailPageComponent {
             features.push(...levelEntries);
         }
 
-        for (const featureName of char.classFeatures ?? []) {
-            if (!features.some((feature) => feature.name.toLowerCase() === featureName.toLowerCase())) {
+        for (const rawFeatureName of char.classFeatures ?? []) {
+            const featureName = this.normalizeFeatureDisplayName(rawFeatureName);
+            if (!featureName) {
+                continue;
+            }
+
+            if (!features.some((feature) => this.normalizeFeatureLookupKey(feature.name) === this.normalizeFeatureLookupKey(featureName))) {
                 features.push({
                     name: featureName,
                     level: char.level,
@@ -3022,20 +3109,17 @@ export class CharacterDetailPageComponent {
         const speciesSourceLabel = char.race?.trim() || 'Species';
         const backgroundSourceLabel = char.background?.trim() || 'Background';
         const addFeatItem = (name: string, sourceLabel: string, followUpLines: string[] = []) => {
-            const trimmedName = name.trim();
-            if (!trimmedName || featItems.some((entry) => entry.name.toLowerCase() === trimmedName.toLowerCase())) {
+            const trimmedName = this.normalizeFeatureDisplayName(name);
+            const lookupKey = this.normalizeFeatureLookupKey(trimmedName);
+            if (!trimmedName || featItems.some((entry) => this.normalizeFeatureLookupKey(entry.name) === lookupKey)) {
                 return;
             }
 
             if (trimmedName === 'Ability Score Improvement') {
-                featItems.push({
-                    name: trimmedName,
-                    description: [`From ${sourceLabel}`, 'Increase one ability score by 2, or increase two ability scores by 1.'].concat(followUpLines).join('\n')
-                });
                 return;
             }
 
-            const featEntry = this.featCatalogByName.get(trimmedName.toLowerCase());
+            const featEntry = this.featCatalogByName.get(lookupKey);
             if (!featEntry) {
                 return;
             }
@@ -3103,36 +3187,77 @@ export class CharacterDetailPageComponent {
         return featItems;
     });
 
-    readonly speciesTraits = computed(() => {
+    readonly speciesTraits = computed<SpeciesTraitEntry[]>(() => {
         const char = this.character();
         if (!char) {
-            return [] as string[];
+            return [];
         }
 
+        const speciesInfo = this.getSpeciesInfo(char.race);
+        const speciesDetails = speciesInfo?.speciesDetails;
         const baseTraits = [...(char.traits ?? [])];
         const persistedChoiceMap = this.persistedBuilderState()?.selectedSpeciesTraitChoices ?? {};
         const premadeChoiceMap = this.getPremadeCharacter(char)?.speciesTraitChoices ?? {};
         const choiceMap = Object.keys(persistedChoiceMap).length > 0 ? persistedChoiceMap : premadeChoiceMap;
+        const entries: SpeciesTraitEntry[] = [];
+        const seen = new Set<string>();
 
-        if (Object.keys(choiceMap).length === 0) {
-            return baseTraits;
-        }
-
-        return baseTraits.map((trait) => {
-            const separator = trait.indexOf(':');
-            const traitTitle = separator >= 0 ? trait.slice(0, separator).trim() : trait.trim();
+        const appendChoiceDetails = (traitTitle: string, lines: string[]): string[] => {
             const selected = (choiceMap[traitTitle] ?? []).filter((value) => value && value.trim().length > 0);
-
-            if (selected.length === 0) {
-                return trait;
+            if (selected.length > 0) {
+                lines.push(`Chosen: ${selected.join(', ')}`);
             }
 
-            return `${trait} | Chosen: ${selected.join(', ')}`;
-        });
+            return lines;
+        };
+
+        const addEntry = (name: string, description: string, detailDescription: string): void => {
+            const normalizedName = this.normalizeFeatureLookupKey(name);
+            if (!normalizedName || seen.has(normalizedName)) {
+                return;
+            }
+
+            seen.add(normalizedName);
+            entries.push({
+                name: this.normalizeFeatureDisplayName(name),
+                description: description.trim(),
+                detailDescription: detailDescription.trim() || description.trim()
+            });
+        };
+
+        for (const trait of speciesDetails?.coreTraits ?? []) {
+            const detailLines = appendChoiceDetails(trait.label, [trait.value]);
+            addEntry(trait.label, trait.value, detailLines.join('\n'));
+        }
+
+        for (const note of speciesDetails?.traitNotes ?? []) {
+            const detailLines = appendChoiceDetails(note.title, [note.summary, note.details].filter((line) => !!line));
+            addEntry(note.title, note.summary || note.details || '', detailLines.join('\n'));
+        }
+
+        for (const trait of baseTraits) {
+            const separator = trait.indexOf(':');
+            const traitTitle = separator >= 0 ? trait.slice(0, separator).trim() : trait.trim();
+            const traitText = separator >= 0 ? trait.slice(separator + 1).trim() : '';
+            const detailLines = appendChoiceDetails(traitTitle, [traitText].filter((line) => !!line));
+            addEntry(traitTitle, traitText, detailLines.join('\n'));
+        }
+
+        return entries;
     });
 
     getLimitedUseEntryForFeature(featureName: string): LimitedUseEntry | null {
         return this.limitedUseEntries().find((entry) => entry.name === featureName) ?? null;
+    }
+
+    private normalizeFeatureDisplayName(featureName: string | null | undefined): string {
+        return (featureName ?? '')
+            .replace(/^(?:level\s*)?\d+\s*:\s*/i, '')
+            .trim();
+    }
+
+    private normalizeFeatureLookupKey(featureName: string | null | undefined): string {
+        return this.normalizeFeatureDisplayName(featureName).toLowerCase();
     }
 
     private getPersistedFeatureSelectionKey(className: string, level: number, featureName: string): string {
@@ -3236,6 +3361,10 @@ export class CharacterDetailPageComponent {
             return level >= 17
                 ? 'Your Brutal Strike now deals extra 2d10 damage and you can apply two Brutal Strike effects to the same hit.'
                 : 'You learn two additional Brutal Strike effects: Staggering Blow and Sundering Blow.';
+        }
+
+        if (className === 'Rogue' && featureName === 'Stroke of Luck') {
+            return 'If you fail a D20 Test, you can turn the roll into a 20. Once you use this feature, you can’t use it again until you finish a Short or Long Rest.';
         }
 
         return fallback;
@@ -4966,13 +5095,17 @@ export class CharacterDetailPageComponent {
     }
 
     private inventoryItemRulesText(
-        item: { notes?: string },
+        item: { name?: string; category?: string; notes?: string },
         summaryText: string,
         catalogNotes?: string
     ): string | null {
         const notes = item.notes?.trim() || catalogNotes;
         if (!notes) {
             return null;
+        }
+
+        if ((item.category ?? '').toLowerCase().includes('weapon')) {
+            return this.getWeaponPopupFooterText(summaryText, notes);
         }
 
         return this.normalizeInventoryDetailText(notes) === this.normalizeInventoryDetailText(summaryText) ? null : notes;
@@ -6529,7 +6662,11 @@ export class CharacterDetailPageComponent {
 
     inventoryContainedSummaryText(item: PersistedInventoryEntry): string {
         const catalogItem = this.catalogLookup.get(item.name.trim().toLowerCase());
-        return catalogItem?.summary?.trim() || item.notes?.trim() || catalogItem?.notes?.trim() || 'No additional notes are available for this item yet.';
+        return this.getInventoryWeaponNotes(item.category, item.notes, catalogItem?.summary, catalogItem?.notes)
+            || catalogItem?.summary?.trim()
+            || item.notes?.trim()
+            || catalogItem?.notes?.trim()
+            || 'No additional notes are available for this item yet.';
     }
 
     inventoryContainedRulesText(item: PersistedInventoryEntry): string | null {
@@ -6588,7 +6725,10 @@ export class CharacterDetailPageComponent {
     }
 
     inventoryCatalogSummaryText(item: (typeof equipmentCatalog)[number]): string {
-        return item.summary?.trim() || item.notes?.trim() || 'No additional notes are available for this item yet.';
+        return this.getInventoryWeaponNotes(item.category, item.notes, item.summary, item.notes)
+            || item.summary?.trim()
+            || item.notes?.trim()
+            || 'No additional notes are available for this item yet.';
     }
 
     inventoryCatalogRulesText(item: (typeof equipmentCatalog)[number]): string | null {
@@ -6600,6 +6740,10 @@ export class CharacterDetailPageComponent {
         const summary = item.summary?.trim();
         if (!summary) {
             return null;
+        }
+
+        if ((item.category ?? '').toLowerCase().includes('weapon')) {
+            return this.getWeaponPopupFooterText(summary, notes);
         }
 
         return this.normalizeInventoryDetailText(notes) === this.normalizeInventoryDetailText(summary) ? null : notes;
@@ -7904,6 +8048,7 @@ export class CharacterDetailPageComponent {
             case 'ember':
             case 'moonlit':
             case 'storm':
+            case 'urban':
             case 'custom':
                 return value;
             default:
@@ -8114,13 +8259,32 @@ export class CharacterDetailPageComponent {
             };
         }
 
-        if (category !== 'Class Feature' || className !== 'Barbarian') {
+        if (category !== 'Class Feature') {
             return null;
         }
 
         const parsed = this.parseFeatureDetailText(description);
         const title = level ? `${level}: ${name}` : name;
         const usedCounts = this.limitedUseCounts();
+
+        if (className === 'Rogue' && name === 'Stroke of Luck') {
+            return {
+                title,
+                subtitle: 'PHB-2024, pg. 131',
+                description: parsed.baseDescription || 'If you fail a D20 Test, you can turn the roll into a 20. Once you use this feature, you can’t use it again until you finish a Short or Long Rest.',
+                actionLines: ['Stroke of Luck: Special'],
+                tracker: {
+                    entryId: 'rogue-stroke-of-luck',
+                    maxUses: 1,
+                    usedCount: Math.max(0, Math.min(1, usedCounts['rogue-stroke-of-luck'] ?? 0)),
+                    resetLabel: 'Short Rest'
+                }
+            };
+        }
+
+        if (className !== 'Barbarian') {
+            return null;
+        }
 
         switch (name) {
             case 'Relentless Rage':
@@ -8340,11 +8504,34 @@ export class CharacterDetailPageComponent {
 
     getFeatureInlineActionLines(featureName: string, description: string, level?: number): string[] {
         const char = this.character();
-        if (!char || char.className !== 'Barbarian') {
+        if (!char) {
             return [];
         }
 
         const parsed = this.parseFeatureDetailText(description);
+
+        if (char.className === 'Rogue') {
+            switch (featureName) {
+                case 'Cunning Action':
+                    return ['Cunning Action: 1 Bonus Action'];
+                case 'Steady Aim':
+                    return ['Steady Aim: 1 Bonus Action'];
+                case 'Uncanny Dodge':
+                    return ['Uncanny Dodge: 1 Reaction'];
+                case 'Stroke of Luck':
+                    return ['Stroke of Luck: Special'];
+                case 'Ability Score Improvement':
+                    return parsed.chosenValues.length ? parsed.chosenValues : parsed.extraLines;
+                case 'Epic Boon':
+                    return parsed.chosenValues.length ? ['Feat', ...parsed.chosenValues] : [];
+                default:
+                    return [];
+            }
+        }
+
+        if (char.className !== 'Barbarian') {
+            return [];
+        }
 
         switch (featureName) {
             case 'Brutal Strike':
@@ -8378,7 +8565,17 @@ export class CharacterDetailPageComponent {
     }
 
     getFeatureInlineTracker(featureName: string): DetailDrawerContent['tracker'] | null {
+        const char = this.character();
         const usedCounts = this.limitedUseCounts();
+
+        if (char?.className === 'Rogue' && featureName === 'Stroke of Luck') {
+            return {
+                entryId: 'rogue-stroke-of-luck',
+                maxUses: 1,
+                usedCount: Math.max(0, Math.min(1, usedCounts['rogue-stroke-of-luck'] ?? 0)),
+                resetLabel: 'Short Rest'
+            };
+        }
 
         if (featureName === 'Persistent Rage') {
             return {

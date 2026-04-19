@@ -6,6 +6,14 @@ import { Router } from '@angular/router';
 import { DungeonStoreService } from '../state/dungeon-store.service';
 import { SessionService } from '../state/session.service';
 import { DropdownComponent, type DropdownOption } from '../components/dropdown/dropdown.component';
+import { classLevelOneFeatures, type ClassFeature } from '../data/class-features.data';
+import { subclassFeatureProgressionByClass, subclassOptionsByClass } from '../data/subclass-features.data';
+
+interface PremadeAbilityScoreImprovementChoice {
+    mode: 'plus-two' | 'plus-one-plus-one';
+    primaryAbility: string;
+    secondaryAbility: string;
+}
 
 @Component({
     selector: 'app-premade-characters-page',
@@ -26,6 +34,7 @@ export class PremadeCharactersPageComponent {
     readonly selectedComplexityFilter = signal('all');
     readonly selectedPrimaryAbilityFilter = signal('all');
     readonly selectedSearchScope = signal('full');
+    readonly selectedPremadeLevel = signal(1);
 
     readonly searchScopeOptions: ReadonlyArray<DropdownOption> = [
         { value: 'full', label: 'Full Search' },
@@ -36,6 +45,14 @@ export class PremadeCharactersPageComponent {
         { value: 'all', label: 'All Types' },
         { value: 'spellcaster', label: 'Spellcasters Only' },
         { value: 'martial', label: 'Martials Only' }
+    ];
+
+    readonly premadeLevelOptions: ReadonlyArray<DropdownOption> = [
+        { value: 1, label: 'Level 1 → Learning' },
+        { value: 3, label: 'Level 3 → Subclass identity' },
+        { value: 5, label: 'Level 5 → Power spike' },
+        { value: 10, label: 'Level 10 → Full build' },
+        { value: 20, label: 'Level 20 → Fantasy endgame' }
     ];
 
     readonly complexityFilterOptions: ReadonlyArray<DropdownOption> = [
@@ -194,6 +211,11 @@ export class PremadeCharactersPageComponent {
         this.selectedSearchScope.set(String(value));
     }
 
+    onPremadeLevelChanged(value: string | number): void {
+        const parsed = Number(value);
+        this.selectedPremadeLevel.set(Number.isFinite(parsed) ? Math.min(20, Math.max(1, Math.trunc(parsed))) : 1);
+    }
+
     clearFilters(): void {
         this.classSearchTerm.set('');
         this.selectedClassFilter.set('all');
@@ -238,41 +260,94 @@ export class PremadeCharactersPageComponent {
         return topAbility;
     }
 
+    private createLeveledPremade(character: PremadeCharacter, selectedLevel: number): PremadeCharacter {
+        const normalizedLevel = Math.min(20, Math.max(1, Math.trunc(selectedLevel)));
+        const conScore = Number(character.abilityScores?.constitution ?? 10);
+        const conModifier = Math.floor((conScore - 10) / 2);
+        const hitDie = this.getClassHitDie(character.className);
+        const averagePerLevel = Math.max(1, Math.floor(hitDie / 2) + 1 + conModifier);
+        const estimatedHitPoints = Math.max(
+            normalizedLevel,
+            hitDie + conModifier + Math.max(0, normalizedLevel - 1) * averagePerLevel
+        );
+        const defaultFeatureState = this.buildDefaultFeatureState(character, normalizedLevel);
+        const leveledClassFeatures = this.buildLeveledClassFeatures(character, normalizedLevel, defaultFeatureState.selections, defaultFeatureState.abilityChoices);
+        const combinedTraits = Array.from(new Set([
+            ...(character.traits ?? []),
+            ...(character.speciesTraits ?? []),
+            ...leveledClassFeatures
+        ]));
+
+        return {
+            ...character,
+            level: normalizedLevel,
+            hitPoints: estimatedHitPoints,
+            maxHitPoints: estimatedHitPoints,
+            classFeatures: leveledClassFeatures,
+            traits: combinedTraits
+        };
+    }
+
+    private getClassHitDie(className: string): number {
+        const hitDiceByClass: Record<string, number> = {
+            Artificer: 8,
+            Barbarian: 12,
+            Bard: 8,
+            'Blood Hunter': 10,
+            Cleric: 8,
+            Druid: 8,
+            Fighter: 10,
+            Gunslinger: 10,
+            Monk: 8,
+            'Monster Hunter': 10,
+            Paladin: 10,
+            Ranger: 10,
+            Rogue: 8,
+            Sorcerer: 6,
+            Warlock: 8,
+            Wizard: 6
+        };
+
+        return hitDiceByClass[className] ?? 8;
+    }
+
     async selectPremade(character: PremadeCharacter) {
+        const premade = this.createLeveledPremade(character, this.selectedPremadeLevel());
+
         // Use the current user's displayName as playerName
         const user = this.session.currentUser();
         const playerName = user?.displayName || 'Player';
         const draft = {
-            name: character.name,
+            name: premade.name,
             playerName,
-            race: character.race,
-            className: character.className,
-            level: character.level,
-            role: character.role,
-            background: character.background,
-            notes: this.createPersistedNotes(character),
-            abilityScores: character.abilityScores,
-            skills: character.skills,
-            armorClass: character.armorClass,
-            hitPoints: character.hitPoints,
-            maxHitPoints: character.maxHitPoints,
-            gender: character.gender || '',
-            alignment: character.alignment || '',
-            faith: character.faith || '',
-            lifestyle: character.lifestyle || '',
-            classFeatures: character.classFeatures || [],
-            speciesTraits: character.speciesTraits || [],
-            languages: character.languages || [],
-            personalityTraits: character.personalityTraits || [],
-            ideals: character.ideals || [],
-            bonds: character.bonds || [],
-            flaws: character.flaws || [],
-            equipment: character.equipment || [],
+            race: premade.race,
+            className: premade.className,
+            level: premade.level,
+            role: premade.role,
+            background: premade.background,
+            notes: this.createPersistedNotes(premade),
+            abilityScores: premade.abilityScores,
+            skills: premade.skills,
+            armorClass: premade.armorClass,
+            hitPoints: premade.hitPoints,
+            maxHitPoints: premade.maxHitPoints,
+            gender: premade.gender || '',
+            alignment: premade.alignment || '',
+            faith: premade.faith || '',
+            lifestyle: premade.lifestyle || '',
+            classFeatures: premade.classFeatures || [],
+            speciesTraits: premade.speciesTraits || [],
+            languages: premade.languages || [],
+            personalityTraits: premade.personalityTraits || [],
+            ideals: premade.ideals || [],
+            bonds: premade.bonds || [],
+            flaws: premade.flaws || [],
+            equipment: premade.equipment || [],
             savingThrows: {},
             combatStats: {},
-            spells: character.spells || [],
+            spells: premade.spells || [],
             experiencePoints: 0,
-            image: character.image || '',
+            image: premade.image || '',
             goals: '',
             secrets: '',
             sessionHistory: ''
@@ -322,10 +397,33 @@ export class PremadeCharactersPageComponent {
         }
 
         const composedVisibleNotes = `${visibleNotes}\n\n${roleplayLines.join('\n')}`;
+        const defaultFeatureState = this.buildDefaultFeatureState(character, character.level || 1);
         const state: Record<string, unknown> = {
+            selectedClass: character.className,
+            characterLevel: character.level || 1,
+            selectedBackgroundName: character.background || '',
+            selectedAlignment: character.alignment || '',
+            selectedFaith: character.faith || '',
+            selectedLifestyle: character.lifestyle || '',
+            selectedLanguages: character.languages ?? [],
+            selectedSpeciesLanguages: character.languages ?? [],
+            selectedSpeciesTraitChoices: character.speciesTraitChoices ?? {},
+            classFeatureSelections: defaultFeatureState.selections,
+            abilityScoreImprovementChoices: defaultFeatureState.abilityChoices,
+            featFollowUpChoices: {},
             inventoryEntries: character.inventoryEntries,
             currency: this.getStartingCurrencyForPremade(character),
-            selectedSpeciesTraitChoices: character.speciesTraitChoices ?? {}
+            personalityTraits: character.personalityTraits ?? [],
+            ideals: character.ideals ?? [],
+            bonds: character.bonds ?? [],
+            flaws: character.flaws ?? [],
+            physicalHair: character.appearance?.hair ?? '',
+            physicalSkin: character.appearance?.skin ?? '',
+            physicalEyes: character.appearance?.eyes ?? '',
+            physicalHeight: character.appearance?.height ?? '',
+            physicalWeight: character.appearance?.weight ?? '',
+            physicalAge: character.appearance?.age ?? '',
+            physicalGender: character.gender ?? ''
         };
         if (character.classPreparedSpells) {
             state['classPreparedSpells'] = character.classPreparedSpells;
@@ -335,5 +433,211 @@ export class PremadeCharactersPageComponent {
         }
         const serializedState = JSON.stringify(state);
         return `${composedVisibleNotes}\n\n${this.builderStateStartTag}\n${serializedState}\n${this.builderStateEndTag}`;
+    }
+
+    private buildDefaultFeatureState(character: PremadeCharacter, level: number): {
+        selections: Record<string, string[]>;
+        abilityChoices: Record<string, PremadeAbilityScoreImprovementChoice>;
+    } {
+        const className = character.className;
+        const selections: Record<string, string[]> = {};
+        const abilityChoices: Record<string, PremadeAbilityScoreImprovementChoice> = {};
+        const sortedAbilities = this.getSortedAbilityPriority(character);
+        const selectedSkills = this.getCharacterSkillLabels(character);
+        const equipmentNames = [...(character.equipment ?? []), ...(character.inventoryEntries ?? []).map((entry) => entry.name ?? '')]
+            .map((value) => value.trim())
+            .filter((value) => value.length > 0);
+
+        for (const levelEntry of classLevelOneFeatures[className] ?? []) {
+            if (levelEntry.level > level) {
+                continue;
+            }
+
+            for (const feature of levelEntry.features) {
+                const key = `${className}:${feature.level}:${feature.name}`;
+
+                if (feature.name === 'Ability Score Improvement') {
+                    selections[key] = ['Ability Score Improvement'];
+                    abilityChoices[key] = {
+                        mode: 'plus-two',
+                        primaryAbility: sortedAbilities[0] ?? 'Dexterity',
+                        secondaryAbility: sortedAbilities[1] ?? sortedAbilities[0] ?? 'Constitution'
+                    };
+                    continue;
+                }
+
+                if (feature.name === 'Epic Boon') {
+                    selections[key] = [this.getDefaultEpicBoon(className)];
+                    continue;
+                }
+
+                if (this.isSubclassSelectionFeature(feature.name)) {
+                    const subclassName = this.getDefaultSubclassForClass(className);
+                    if (subclassName) {
+                        selections[key] = [subclassName];
+                    }
+                    continue;
+                }
+
+                if (!feature.choices) {
+                    continue;
+                }
+
+                const options = this.getDefaultFeatureOptions(feature, selectedSkills, equipmentNames);
+                if (options.length > 0) {
+                    selections[key] = options.slice(0, feature.choices.count);
+                }
+            }
+        }
+
+        return { selections, abilityChoices };
+    }
+
+    private buildLeveledClassFeatures(
+        character: PremadeCharacter,
+        level: number,
+        selections: Record<string, string[]>,
+        abilityChoices: Record<string, PremadeAbilityScoreImprovementChoice>
+    ): string[] {
+        const className = character.className;
+        const featureNames = new Set<string>([...(character.classFeatures ?? [])]);
+
+        for (const levelEntry of classLevelOneFeatures[className] ?? []) {
+            if (levelEntry.level > level) {
+                continue;
+            }
+
+            for (const feature of levelEntry.features) {
+                const key = `${className}:${feature.level}:${feature.name}`;
+
+                if (this.isSubclassSelectionFeature(feature.name)) {
+                    const selectedSubclass = selections[key]?.[0] ?? this.getDefaultSubclassForClass(className);
+                    if (selectedSubclass) {
+                        featureNames.add(`${feature.name}: ${selectedSubclass}`);
+                        const subclassDetails = subclassFeatureProgressionByClass[className]?.[selectedSubclass]?.[feature.level];
+                        const subclassDetailList = Array.isArray(subclassDetails)
+                            ? subclassDetails
+                            : subclassDetails
+                                ? [subclassDetails]
+                                : [];
+                        subclassDetailList.forEach((detail) => featureNames.add(detail.name));
+                    }
+                    continue;
+                }
+
+                if (feature.name === 'Subclass Feature') {
+                    const selectedSubclass = this.getDefaultSubclassForClass(className);
+                    const subclassDetails = selectedSubclass ? subclassFeatureProgressionByClass[className]?.[selectedSubclass]?.[feature.level] : null;
+                    const subclassDetailList = Array.isArray(subclassDetails)
+                        ? subclassDetails
+                        : subclassDetails
+                            ? [subclassDetails]
+                            : [];
+                    if (subclassDetailList.length > 0) {
+                        subclassDetailList.forEach((detail) => featureNames.add(detail.name));
+                    } else {
+                        featureNames.add(feature.name);
+                    }
+                    continue;
+                }
+
+                if (feature.name === 'Ability Score Improvement') {
+                    const selectedAbility = abilityChoices[key]?.primaryAbility ?? 'Dexterity';
+                    featureNames.add(`Ability Score Improvement (+2 ${selectedAbility})`);
+                    continue;
+                }
+
+                if (feature.name === 'Epic Boon') {
+                    featureNames.add(selections[key]?.[0] ?? this.getDefaultEpicBoon(className));
+                    continue;
+                }
+
+                featureNames.add(feature.name);
+            }
+        }
+
+        return Array.from(featureNames);
+    }
+
+    private getDefaultFeatureOptions(feature: ClassFeature, selectedSkills: string[], equipmentNames: string[]): string[] {
+        const optionCount = Math.max(1, feature.choices?.count ?? 1);
+        const options = feature.choices?.options ?? [];
+        if (!options.length) {
+            return [];
+        }
+
+        if (feature.name.toLowerCase().includes('skill') || feature.name === 'Expertise') {
+            const matches = options.filter((option) => selectedSkills.includes(option));
+            if (matches.length >= optionCount) {
+                return matches.slice(0, optionCount);
+            }
+            return Array.from(new Set([...matches, ...options])).slice(0, optionCount);
+        }
+
+        if (feature.name.toLowerCase().includes('weapon mastery')) {
+            const matches = options.filter((option) => equipmentNames.some((item) => option.toLowerCase().includes(item.toLowerCase())));
+            if (matches.length >= optionCount) {
+                return matches.slice(0, optionCount);
+            }
+            return Array.from(new Set([...matches, ...options])).slice(0, optionCount);
+        }
+
+        if (feature.name.toLowerCase().includes('fighting style') || feature.name.toLowerCase().includes('combat style')) {
+            const prefersArchery = equipmentNames.some((item) => /bow|crossbow|rifle|pistol|musket|shotgun/i.test(item));
+            const prefersTwoWeapon = equipmentNames.filter((item) => /dagger|shortsword|scimitar|handaxe/i.test(item)).length >= 2;
+            const preferred = prefersArchery
+                ? options.find((option) => option.toLowerCase().includes('archery'))
+                : prefersTwoWeapon
+                    ? options.find((option) => option.toLowerCase().includes('two-weapon'))
+                    : options[0];
+            return preferred ? [preferred] : options.slice(0, optionCount);
+        }
+
+        return options.slice(0, optionCount);
+    }
+
+    private getCharacterSkillLabels(character: PremadeCharacter): string[] {
+        return Object.entries(character.skills ?? {})
+            .filter(([, isSelected]) => !!isSelected)
+            .map(([skill]) => this.toSkillLabel(skill));
+    }
+
+    private toSkillLabel(skill: string): string {
+        return skill
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/^./, (value) => value.toUpperCase())
+            .trim();
+    }
+
+    private getSortedAbilityPriority(character: PremadeCharacter): string[] {
+        const labelMap: Record<string, string> = {
+            strength: 'Strength',
+            dexterity: 'Dexterity',
+            constitution: 'Constitution',
+            intelligence: 'Intelligence',
+            wisdom: 'Wisdom',
+            charisma: 'Charisma'
+        };
+
+        return Object.entries(character.abilityScores ?? {})
+            .sort((left, right) => Number(right[1] ?? 0) - Number(left[1] ?? 0))
+            .map(([key]) => labelMap[key] ?? key);
+    }
+
+    private isSubclassSelectionFeature(featureName: string): boolean {
+        return featureName.includes('Subclass')
+            || featureName === 'Blood Hunter Order'
+            || featureName === 'Sorcerous Origin'
+            || featureName === 'Hunter Order'
+            || featureName === 'Gunslinger Style';
+    }
+
+    private getDefaultSubclassForClass(className: string): string {
+        const options = subclassOptionsByClass[className] ?? [];
+        return options[0] ?? '';
+    }
+
+    private getDefaultEpicBoon(className: string): string {
+        return className === 'Rogue' ? 'Boon of Skill' : 'Boon of Fortitude';
     }
 }

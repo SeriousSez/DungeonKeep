@@ -426,27 +426,7 @@ export class NewCharacterStandardPageComponent {
             this.saveBuilderSessionSnapshot();
         });
 
-        // If a premade character was selected, populate the builder with its data
-        effect(() => {
-            const queryParams = this.route.snapshot.queryParams;
-            const premadeId = queryParams['premade'];
-            if (premadeId) {
-                const premade = premadeCharacters.find(c => c.id === premadeId);
-                if (premade) {
-                    this.populateFromPremade(premade);
-                    localStorage.removeItem('selectedPremadeCharacter');
-                }
-            } else {
-                const premadeRaw = localStorage.getItem('selectedPremadeCharacter');
-                if (premadeRaw) {
-                    try {
-                        const premade: Character = JSON.parse(premadeRaw);
-                        this.populateFromPremade(premade);
-                        localStorage.removeItem('selectedPremadeCharacter');
-                    } catch { }
-                }
-            }
-        });
+        this.restorePremadeSelectionFromNavigation();
 
         effect((onCleanup) => {
             if (!this.faithDropdownOpen()) {
@@ -475,6 +455,39 @@ export class NewCharacterStandardPageComponent {
     @HostListener('document:dungeonkeep-close-popups')
     onClosePopups(): void {
         this.faithDropdownOpen.set(false);
+    }
+
+    private restorePremadeSelectionFromNavigation(): void {
+        const queryParams = this.route.snapshot.queryParams;
+        const premadeId = typeof queryParams['premade'] === 'string' ? queryParams['premade'] : '';
+
+        if (premadeId) {
+            const premade = premadeCharacters.find((entry) => entry.id === premadeId);
+            if (premade) {
+                const requestedLevel = Number(queryParams['level']);
+                const premadeLevel = Number.isFinite(requestedLevel)
+                    ? Math.min(20, Math.max(1, Math.trunc(requestedLevel)))
+                    : Math.max(1, premade.level || 1);
+
+                this.populateFromPremade({ ...premade, level: premadeLevel });
+                localStorage.removeItem('selectedPremadeCharacter');
+                return;
+            }
+        }
+
+        const premadeRaw = localStorage.getItem('selectedPremadeCharacter');
+        if (!premadeRaw) {
+            return;
+        }
+
+        try {
+            const premade: Character = JSON.parse(premadeRaw);
+            this.populateFromPremade(premade);
+        } catch {
+            // Ignore invalid local storage payloads.
+        } finally {
+            localStorage.removeItem('selectedPremadeCharacter');
+        }
     }
 
     private requestCloseChat(): void {
@@ -7721,7 +7734,12 @@ export class NewCharacterStandardPageComponent {
             this.selectedCampaignIdsOnCreate.set(nextCampaignIds);
         }
 
-        const parsedNotes = this.parsePersistedNotes(sessionSnapshot?.notes?.trim() || (character.notes ?? ''));
+        const parsedCharacterNotes = this.parsePersistedNotes(character.notes ?? '');
+        const parsedSessionNotes = this.parsePersistedNotes(sessionSnapshot?.notes?.trim() || '');
+        const parsedNotes = {
+            cleanedNotes: (parsedSessionNotes.cleanedNotes.trim() || parsedCharacterNotes.cleanedNotes.trim()),
+            state: this.mergePersistedBuilderStates(parsedCharacterNotes.state, parsedSessionNotes.state)
+        };
         const notes = parsedNotes.cleanedNotes.trim();
         const parsedOrganizations = this.extractNoteListFromText(notes, 'Organizations');
         const parsedAllies = this.extractNoteListFromText(notes, 'Allies');
@@ -7790,7 +7808,7 @@ export class NewCharacterStandardPageComponent {
             );
 
             const inferredFeatureSelections = this.inferClassFeatureSelectionsFromCharacter(character);
-            const persistedFeatureSelections = persisted.classFeatureSelections ?? {};
+            const persistedFeatureSelections = this.normalizePersistedFeatureSelections(character.className, persisted.classFeatureSelections ?? {});
             this.classFeatureSelections.set({
                 ...inferredFeatureSelections,
                 ...persistedFeatureSelections
@@ -7964,6 +7982,11 @@ export class NewCharacterStandardPageComponent {
             return;
         }
 
+        const activeCharacterId = this.activeBuilderCharacterId().trim();
+        if (activeCharacterId && this.hydratedCharacterId() !== activeCharacterId) {
+            return;
+        }
+
         const hasMeaningfulState = this.completionCharacterName().trim().length > 0
             || this.selectedSpeciesName().trim().length > 0
             || this.selectedBackgroundName().trim().length > 0
@@ -8099,6 +8122,71 @@ export class NewCharacterStandardPageComponent {
         } catch {
             return { cleanedNotes: raw, state: null };
         }
+    }
+
+    private mergePersistedBuilderStates(base: PersistedBuilderState | null, override: PersistedBuilderState | null): PersistedBuilderState | null {
+        if (!base && !override) {
+            return null;
+        }
+
+        const baseState = base ?? {} as PersistedBuilderState;
+        const overrideState = override ?? {} as PersistedBuilderState;
+
+        return {
+            ...baseState,
+            ...overrideState,
+            multiclassList: { ...(baseState.multiclassList ?? {}), ...(overrideState.multiclassList ?? {}) },
+            selectedSpeciesTraitChoices: { ...(baseState.selectedSpeciesTraitChoices ?? {}), ...(overrideState.selectedSpeciesTraitChoices ?? {}) },
+            classFeatureSelections: { ...(baseState.classFeatureSelections ?? {}), ...(overrideState.classFeatureSelections ?? {}) },
+            abilityScoreImprovementChoices: { ...(baseState.abilityScoreImprovementChoices ?? {}), ...(overrideState.abilityScoreImprovementChoices ?? {}) },
+            featFollowUpChoices: { ...(baseState.featFollowUpChoices ?? {}), ...(overrideState.featFollowUpChoices ?? {}) },
+            backgroundChoiceSelections: { ...(baseState.backgroundChoiceSelections ?? {}), ...(overrideState.backgroundChoiceSelections ?? {}) },
+            classPreparedSpells: { ...(baseState.classPreparedSpells ?? {}), ...(overrideState.classPreparedSpells ?? {}) },
+            classKnownSpellsByClass: { ...(baseState.classKnownSpellsByClass ?? {}), ...(overrideState.classKnownSpellsByClass ?? {}) },
+            wizardSpellbookByClass: { ...(baseState.wizardSpellbookByClass ?? {}), ...(overrideState.wizardSpellbookByClass ?? {}) },
+            wizardLevelUpLearnedSpellsByClass: { ...(baseState.wizardLevelUpLearnedSpellsByClass ?? {}), ...(overrideState.wizardLevelUpLearnedSpellsByClass ?? {}) },
+            wizardSpellSubTabByClass: { ...(baseState.wizardSpellSubTabByClass ?? {}), ...(overrideState.wizardSpellSubTabByClass ?? {}) }
+        };
+    }
+
+    private normalizePersistedFeatureSelections(className: string, selections: Record<string, string[]>): Record<string, string[]> {
+        const normalizedSelections: Record<string, string[]> = { ...selections };
+        const classProgression = classLevelOneFeatures[className] ?? [];
+        const featureCounts = classProgression
+            .flatMap((levelEntry) => levelEntry.features)
+            .reduce<Record<string, number>>((counts, feature) => {
+                counts[feature.name] = (counts[feature.name] ?? 0) + 1;
+                return counts;
+            }, {});
+
+        for (const levelEntry of classProgression) {
+            for (const feature of levelEntry.features) {
+                if (!feature.choices) {
+                    continue;
+                }
+
+                const key = this.getFeatureSelectionKey(className, feature);
+                if (normalizedSelections[key]?.length) {
+                    continue;
+                }
+
+                if ((featureCounts[feature.name] ?? 0) !== 1) {
+                    continue;
+                }
+
+                const legacySelections = normalizedSelections[feature.name] ?? [];
+                const cleanedSelections = legacySelections
+                    .map((value) => value?.trim())
+                    .filter((value): value is string => !!value)
+                    .slice(0, feature.choices.count);
+
+                if (cleanedSelections.length > 0) {
+                    normalizedSelections[key] = cleanedSelections;
+                }
+            }
+        }
+
+        return normalizedSelections;
     }
 
     private resolveNavigationEditLevel(): number | null {

@@ -115,7 +115,7 @@
 
                             <div class="header-theme-controls">
                                 <span class="theme-control-label">Background</span>
-                                <app-dropdown [value]="detailBackgroundTheme()" [options]="detailBackgroundOptions" [minWidth]="148" [panelMinWidth]="180" size="compact" appearance="chip" (changed)="onDetailBackgroundThemeChanged($event)"></app-dropdown>
+                                <app-dropdown [value]="detailBackgroundTheme()" [options]="detailBackgroundOptions" [minWidth]="148" [panelMinWidth]="180" [maxPanelHeight]="400" size="compact" appearance="chip" (changed)="onDetailBackgroundThemeChanged($event)"></app-dropdown>
                                 <div class="theme-upload-actions">
                                     <label class="assign-btn theme-upload-label">
                                         <input class="theme-upload-input" type="file" accept="image/*" (change)="onDetailBackgroundImageSelected($event)" />
@@ -866,9 +866,14 @@
                 }
                 @if (activeFeaturesFilter() === 'all' || activeFeaturesFilter() === 'species-traits') {
                 <h3 class="subsection-title">Species Traits</h3>
-                <ul class="traits-list">
-                    @for (trait of speciesTraits(); track $index) {
-                    <li class="detail-trigger-row" (click)="openFeatureDetail(trait, trait, 'Species Trait')">{{ trait }}</li>
+                <ul class="mini-list feature-list">
+                    @for (trait of speciesTraits(); track trait.name + trait.description) {
+                    <li class="detail-trigger-row" (click)="openFeatureDetail(trait.name, trait.detailDescription, 'Species Trait')">
+                        <strong>{{ trait.name }}</strong>
+                        @if (trait.description) {
+                        <div class="feature-description-richtext" [innerHTML]="renderDetailRichText(trait.description)"></div>
+                        }
+                    </li>
                     }
                     @if (!speciesTraits().length) {
                     <li>No species traits recorded</li>

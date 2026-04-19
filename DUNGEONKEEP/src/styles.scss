@@ -102,6 +102,13 @@ body.character-detail-page-active[data-character-page-theme='storm'] {
     background-attachment: fixed;
 }
 
+body.character-detail-page-active[data-character-page-theme='urban'] {
+    background: url('/assets/images/theme/urban.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
 body.character-detail-page-active[data-character-page-theme='custom'] {
     background:
         linear-gradient(color-mix(in srgb, var(--page-bg-deep) 18%, transparent),
