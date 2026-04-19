@@ -2941,6 +2941,10 @@
     box-sizing: border-box;
 }
 
+.inventory-popup:has(.app-dropdown-host--open) {
+    overflow: visible;
+}
+
 .extras-popup {
     position: fixed;
     top: 16px;
@@ -3262,7 +3266,7 @@
 .extras-detail-pane.extras-detail-pane--open {
     border-top-width: 1px;
     padding: 10px 12px 12px;
-    max-height: 500px;
+    max-height: 1000px;
     opacity: 1;
     transform: translateY(0) scaleY(1);
     position: relative;
@@ -3540,6 +3544,10 @@
     padding: 4px;
 }
 
+.inventory-popup-list:has(.app-dropdown-host--open) {
+    overflow: visible;
+}
+
 .extras-popup-list {
     max-height: 950px;
 }
@@ -3738,6 +3746,12 @@
 .inventory-catalog-add-dropdown {
     min-width: 0;
     width: auto;
+    position: relative;
+    z-index: 2;
+}
+
+.inventory-catalog-add-dropdown:has(.app-dropdown-host--open) {
+    z-index: 20;
 }
 
 @media (max-width: 720px) {
