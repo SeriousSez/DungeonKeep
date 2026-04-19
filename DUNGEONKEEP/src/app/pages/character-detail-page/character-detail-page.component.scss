@@ -254,6 +254,7 @@
     align-items: center;
     gap: 8px;
     align-self: start;
+    justify-self: start;
     color: var(--accent-primary);
     text-decoration: none;
     font-size: 0.92rem;
@@ -265,6 +266,16 @@
         opacity: 0.82;
         transform: translateY(-1px);
     }
+}
+
+:host([data-detail-background='forest']) .back-link,
+:host([data-detail-background='ember']) .back-link,
+:host([data-detail-background='moonlit']) .back-link,
+:host([data-detail-background='storm']) .back-link,
+:host([data-detail-background='urban']) .back-link {
+    color: #efd8bc;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(16, 9, 4, 0.45);
 }
 
 .header-subclass {
