@@ -3,5 +3,7 @@ export interface CampaignCustomTable {
     title: string;
     description: string;
     entries: string[];
+    rowLabels?: string[];
+    columnLabels?: string[];
     updatedAt: string;
 }

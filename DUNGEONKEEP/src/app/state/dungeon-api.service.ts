@@ -767,6 +767,8 @@ export interface ApiGenerateTableDraftRequest {
     descriptionHint: string;
     themeHint: string;
     entryCount?: number;
+    shapeHint?: 'list' | 'grid';
+    columnCount?: number;
     existingTableTitles: string[];
 }
 

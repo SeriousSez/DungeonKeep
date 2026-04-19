@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, comp
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
-import { createCustomTableId, nextImportedCustomTableTitle, normalizeCustomTableTitle, sanitizeCustomTable } from '../../data/campaign-custom-table.helpers';
+import { createCustomTableId, formatCustomTableEntry, getCustomTableRows, nextImportedCustomTableTitle, normalizeCustomTableLabels, normalizeCustomTableTitle, sanitizeCustomTable } from '../../data/campaign-custom-table.helpers';
 import { loadCampaignCustomTables, loadCustomTableLibrary, saveCampaignCustomTables, saveCustomTableLibrary } from '../../data/campaign-custom-table.storage';
 import { CampaignCustomTable } from '../../models/campaign-custom-table.models';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
@@ -30,6 +30,10 @@ export class TableDetailPageComponent {
     readonly rollResult = signal('');
 
     readonly currentCampaign = computed(() => this.store.campaigns().find((campaign) => campaign.id === this.campaignId()) ?? null);
+    readonly tableRows = computed(() => getCustomTableRows(this.table()?.entries ?? []));
+    readonly tableColumnLabels = computed(() => normalizeCustomTableLabels(this.table()?.columnLabels, Math.max(1, ...this.tableRows().map((row) => row.length)), 'Column'));
+    readonly tableRowLabels = computed(() => normalizeCustomTableLabels(this.table()?.rowLabels, Math.max(1, this.tableRows().length), 'Row'));
+    readonly isGridTable = computed(() => this.tableRows().length > 0 && (this.tableColumnLabels().length > 1 || this.hasCustomLabels(this.table()?.rowLabels, 'Row') || this.hasCustomLabels(this.table()?.columnLabels, 'Column')));
     readonly importCampaign = computed(() => this.store.campaigns().find((campaign) => campaign.id === this.importCampaignId()) ?? null);
     readonly libraryMode = computed(() => !this.campaignId());
     readonly canEdit = computed(() => this.libraryMode() || this.currentCampaign()?.currentUserRole === 'Owner');
@@ -103,8 +107,15 @@ export class TableDetailPageComponent {
         }
 
         const result = entries[Math.floor(Math.random() * entries.length)];
-        this.rollResult.set(result);
+        this.rollResult.set(formatCustomTableEntry(result) || result);
         this.feedback.set(`Rolled on ${activeTable.title}.`);
+    }
+
+    private hasCustomLabels(values: readonly string[] | undefined, prefix: string): boolean {
+        return (values ?? []).some((label, index) => {
+            const trimmed = label.trim();
+            return trimmed.length > 0 && trimmed !== `${prefix} ${index + 1}`;
+        });
     }
 
     private async loadTable(): Promise<void> {

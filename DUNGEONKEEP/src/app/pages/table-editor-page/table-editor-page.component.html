@@ -4,7 +4,7 @@
             <div>
                 <p class="eyebrow">{{ libraryMode() ? 'Reusable Tables' : 'Campaign Tables' }}</p>
                 <h1>{{ isNewTable() ? 'Create Table' : 'Edit Table' }}</h1>
-                <p>Set a title, add a short description, and enter one result per line.</p>
+                <p>Set a title, add a short description, and build your table with rows, columns, or one result per line.</p>
             </div>
             @if (libraryMode()) {
             <a class="ghost-button" [routerLink]="['/tables']">Back to Library</a>
@@ -43,15 +43,48 @@
                 <div>
                     <p class="eyebrow">Generation Prompt</p>
                     <h3>Guide the table draft</h3>
-                    <p>Add a short theme or purpose and AI will draft the results.</p>
+                    <p>Add a theme and choose whether AI should draft a list or a structured grid.</p>
                 </div>
             </div>
 
             <label class="editor-field">
                 <span>Generate with AI</span>
-                <textarea class="generation-textarea" rows="3" [value]="generationPrompt()" (input)="updateGenerationPrompt($any($event.target).value)" placeholder="Ex: eerie tavern rumors for a storm-battered coastal city"></textarea>
+                <textarea class="generation-textarea" rows="3" [value]="generationPrompt()" (input)="updateGenerationPrompt($any($event.target).value)" placeholder="Ex: suspicious market stalls with vendor | specialty | complication"></textarea>
                 <small>Describe the table theme or purpose and AI will draft the title, description, and results.</small>
             </label>
+
+            <section class="ai-structure-shell">
+                <div class="ai-structure-header">
+                    <div>
+                        <p class="eyebrow">AI Output</p>
+                        <h4>Choose the table shape</h4>
+                    </div>
+                    <div class="structure-mode-options">
+                        <button type="button" class="structure-pill" [class.structure-pill-active]="aiDraftShape() === 'list'" (click)="selectAiDraftShape('list')">List</button>
+                        <button type="button" class="structure-pill" [class.structure-pill-active]="aiDraftShape() === 'grid'" (click)="selectAiDraftShape('grid')">Grid</button>
+                    </div>
+                </div>
+
+                <div class="structure-count-row">
+                    <label class="editor-field editor-field--compact">
+                        <span>{{ aiDraftShape() === 'grid' ? 'Rows' : 'Results' }}</span>
+                        <input type="number" min="4" max="20" [value]="aiDraftResultCount()" (input)="updateAiDraftResultCount($any($event.target).value)" />
+                    </label>
+
+                    @if (aiDraftShape() === 'grid') {
+                    <label class="editor-field editor-field--compact">
+                        <span>Columns</span>
+                        <input type="number" min="2" max="6" [value]="aiDraftColumnCount()" (input)="updateAiDraftColumnCount($any($event.target).value)" />
+                    </label>
+                    }
+                </div>
+
+                <small>
+                    {{ aiDraftShape() === 'grid'
+                    ? 'AI will return pipe-separated rows that drop into the table grid automatically.'
+                    : 'AI will return a classic one-result-per-line random table.' }}
+                </small>
+            </section>
 
             @if (generationError()) {
             <p class="generation-error">{{ generationError() }}</p>
@@ -78,10 +111,55 @@
                 <textarea rows="3" [value]="description()" [disabled]="!canEdit()" (input)="updateDescription($any($event.target).value)" placeholder="What is this table used for?"></textarea>
             </label>
 
+            <section class="table-builder-shell">
+                <div class="table-builder-heading">
+                    <div>
+                        <p class="eyebrow">Quick Builder</p>
+                        <h3>Rows and columns</h3>
+                        <p>Add structured rows and columns, then fine-tune the raw entries below if needed.</p>
+                    </div>
+                    <div class="table-builder-actions">
+                        <button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="addEntryRow()">Add Row</button>
+                        <button type="button" class="ghost-button" [disabled]="!canEdit()" (click)="addEntryColumn()">Add Column</button>
+                    </div>
+                </div>
+
+                <div class="table-builder-grid">
+                    <table class="entry-grid-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Row</th>
+                                @for (columnLabel of entryGridColumnLabels(); track $index; let columnIndex = $index) {
+                                <th scope="col">
+                                    <input class="entry-grid-label-input" type="text" [value]="columnLabel" [disabled]="!canEdit()" (input)="updateColumnLabel(columnIndex, $any($event.target).value)" [attr.placeholder]="'Column ' + (columnIndex + 1)" />
+                                </th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (row of entryGridRows(); track $index; let rowIndex = $index) {
+                            <tr>
+                                <th scope="row">
+                                    <input class="entry-grid-label-input entry-grid-label-input--row" type="text" [value]="entryGridRowLabels()[rowIndex]" [disabled]="!canEdit()" (input)="updateRowLabel(rowIndex, $any($event.target).value)" [attr.placeholder]="'Row ' + (rowIndex + 1)" />
+                                </th>
+                                @for (cell of row; track $index; let columnIndex = $index) {
+                                <td>
+                                    <input type="text" [value]="cell" [disabled]="!canEdit()" (input)="updateEntryCell(rowIndex, columnIndex, $any($event.target).value)" [attr.placeholder]="'Row ' + (rowIndex + 1) + ', Column ' + (columnIndex + 1)" />
+                                </td>
+                                }
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <p class="table-builder-note">Rename columns in the top row and rows in the left column. The raw entry list stays available below.</p>
+            </section>
+
             <label class="editor-field">
                 <span>Entries</span>
-                <textarea rows="12" [value]="entriesText()" [disabled]="!canEdit()" (input)="updateEntries($any($event.target).value)" placeholder="One result per line"></textarea>
-                <small>Each line becomes a possible rolled outcome.</small>
+                <textarea rows="12" [value]="entriesText()" [disabled]="!canEdit()" (input)="updateEntries($any($event.target).value)" placeholder="One result per line or separate columns with |"></textarea>
+                <small>Each line becomes a possible rolled outcome. Use | to separate columns when editing manually.</small>
             </label>
         </div>
 

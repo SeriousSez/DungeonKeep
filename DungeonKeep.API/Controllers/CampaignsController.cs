@@ -2729,6 +2729,8 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         var descriptionHint = string.IsNullOrWhiteSpace(request.DescriptionHint) ? "No description hint provided" : request.DescriptionHint.Trim();
         var themeHint = string.IsNullOrWhiteSpace(request.ThemeHint) ? "No theme hint provided" : request.ThemeHint.Trim();
         var entryCount = Math.Clamp(request.EntryCount ?? 8, 4, 20);
+        var shapeHint = string.Equals(request.ShapeHint, "grid", StringComparison.OrdinalIgnoreCase) ? "grid" : "list";
+        var columnCount = Math.Clamp(request.ColumnCount ?? 3, 2, 6);
 
         var lines = new List<string>
         {
@@ -2761,7 +2763,17 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         lines.Add($"Title hint: {titleHint}");
         lines.Add($"Description hint: {descriptionHint}");
         lines.Add($"Theme hint: {themeHint}");
-        lines.Add("Prefer compact results that read well as one-line roll outcomes.");
+
+        if (shapeHint == "grid")
+        {
+            lines.Add($"Format the table as a structured grid with {columnCount} columns.");
+            lines.Add("Each entry string must contain one full row using \" | \" separators between cells.");
+            lines.Add("Do not include a markdown header row, separator row, numbering, bullets, or code fences.");
+        }
+        else
+        {
+            lines.Add("Prefer compact results that read well as one-line roll outcomes.");
+        }
 
         return string.Join('\n', lines);
     }
@@ -3015,6 +3027,24 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
     private static string[] BuildFallbackTableEntries(GenerateTableDraftRequest request, int count)
     {
         var theme = FirstNonEmpty(request.ThemeHint, request.TitleHint, request.DescriptionHint, null, "adventure twist");
+        var isGrid = string.Equals(request.ShapeHint, "grid", StringComparison.OrdinalIgnoreCase);
+        var columnCount = Math.Clamp(request.ColumnCount ?? 3, 2, 6);
+
+        if (isGrid)
+        {
+            return Enumerable.Range(1, count)
+                .Select(index => string.Join(" | ", Enumerable.Range(1, columnCount).Select(columnIndex => columnIndex switch
+                {
+                    1 => $"{theme.Trim().TrimEnd('.')}: result {index}",
+                    2 => $"Detail {index}",
+                    3 => $"Twist {index}",
+                    4 => $"Reward {index}",
+                    5 => $"Risk {index}",
+                    _ => $"Note {index}-{columnIndex}"
+                })))
+                .ToArray();
+        }
+
         return Enumerable.Range(1, count)
             .Select(index => $"{theme.Trim().TrimEnd('.')}: result {index}")
             .ToArray();
@@ -4814,6 +4844,8 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         string? DescriptionHint,
         string? ThemeHint,
         int? EntryCount,
+        string? ShapeHint,
+        int? ColumnCount,
         IReadOnlyList<string>? ExistingTableTitles);
 
     public sealed record GenerateTableDraftResponse(

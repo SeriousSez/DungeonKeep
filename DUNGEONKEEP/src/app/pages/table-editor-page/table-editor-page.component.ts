@@ -38,6 +38,16 @@ export class TableEditorPageComponent {
     readonly generationError = signal('');
     readonly feedback = signal('');
     readonly editorMode = signal<TableEditorMode>('standard');
+    readonly aiDraftShape = signal<'list' | 'grid'>('list');
+    readonly aiDraftResultCount = signal(8);
+    readonly aiDraftColumnCount = signal(3);
+    readonly rowLabels = signal<string[]>([]);
+    readonly columnLabels = signal<string[]>([]);
+    readonly entryGridRows = computed(() => this.buildEntryGrid(this.entriesText()));
+    readonly entryGridRowLabels = computed(() => this.buildGridLabels(this.rowLabels(), this.entryGridRows().length || 1, 'Row'));
+    readonly entryGridColumnLabels = computed(() =>
+        this.buildGridLabels(this.columnLabels(), Math.max(1, ...this.entryGridRows().map((row) => row.length)), 'Column')
+    );
 
     readonly currentCampaign = computed(() => this.store.campaigns().find((campaign) => campaign.id === this.campaignId()) ?? null);
     readonly libraryMode = computed(() => !this.campaignId());
@@ -66,8 +76,74 @@ export class TableEditorPageComponent {
         this.entriesText.set(value);
     }
 
+    addEntryRow(): void {
+        const nextRows = this.entryGridRows().map((row) => [...row]);
+        const columnCount = Math.max(1, this.entryGridColumnLabels().length);
+        nextRows.push(Array.from({ length: columnCount }, () => ''));
+        this.applyEntryGrid(nextRows);
+    }
+
+    addEntryColumn(): void {
+        const nextRows = this.entryGridRows().length
+            ? this.entryGridRows().map((row) => [...row, ''])
+            : [['', '']];
+
+        this.applyEntryGrid(nextRows);
+    }
+
+    updateEntryCell(rowIndex: number, columnIndex: number, value: string): void {
+        const nextRows = this.entryGridRows().map((row) => [...row]);
+
+        while (nextRows.length <= rowIndex) {
+            nextRows.push(Array.from({ length: Math.max(1, this.entryGridColumnLabels().length) }, () => ''));
+        }
+
+        while (nextRows[rowIndex].length <= columnIndex) {
+            nextRows[rowIndex].push('');
+        }
+
+        nextRows[rowIndex][columnIndex] = value;
+        this.applyEntryGrid(nextRows);
+    }
+
+    updateRowLabel(rowIndex: number, value: string): void {
+        const nextLabels = [...this.rowLabels()];
+
+        while (nextLabels.length <= rowIndex) {
+            nextLabels.push(`Row ${nextLabels.length + 1}`);
+        }
+
+        nextLabels[rowIndex] = value;
+        this.rowLabels.set(nextLabels);
+    }
+
+    updateColumnLabel(columnIndex: number, value: string): void {
+        const nextLabels = [...this.columnLabels()];
+
+        while (nextLabels.length <= columnIndex) {
+            nextLabels.push(`Column ${nextLabels.length + 1}`);
+        }
+
+        nextLabels[columnIndex] = value;
+        this.columnLabels.set(nextLabels);
+    }
+
     updateGenerationPrompt(value: string): void {
         this.generationPrompt.set(value);
+    }
+
+    selectAiDraftShape(shape: 'list' | 'grid'): void {
+        this.aiDraftShape.set(shape);
+    }
+
+    updateAiDraftResultCount(value: string): void {
+        const parsed = Number.parseInt(value, 10);
+        this.aiDraftResultCount.set(Number.isFinite(parsed) ? Math.max(4, Math.min(20, parsed)) : 8);
+    }
+
+    updateAiDraftColumnCount(value: string): void {
+        const parsed = Number.parseInt(value, 10);
+        this.aiDraftColumnCount.set(Number.isFinite(parsed) ? Math.max(2, Math.min(6, parsed)) : 3);
     }
 
     selectEditorMode(mode: TableEditorMode): void {
@@ -83,6 +159,9 @@ export class TableEditorPageComponent {
         const themeHint = this.generationPrompt().trim();
         const titleHint = this.title().trim();
         const descriptionHint = this.description().trim();
+        const shapeHint = this.aiDraftShape();
+        const entryCount = Math.max(4, Math.min(20, this.aiDraftResultCount()));
+        const columnCount = Math.max(2, Math.min(6, this.aiDraftColumnCount()));
 
         if (!themeHint && !titleHint && !descriptionHint) {
             this.generationError.set('Add a theme or short prompt first.');
@@ -102,15 +181,19 @@ export class TableEditorPageComponent {
                 campaignId: this.campaignId() || undefined,
                 titleHint,
                 descriptionHint,
-                themeHint,
-                entryCount: 8,
+                themeHint: this.buildAiThemeHint(themeHint, shapeHint, entryCount, columnCount),
+                entryCount,
+                shapeHint,
+                columnCount: shapeHint === 'grid' ? columnCount : undefined,
                 existingTableTitles: currentTables.map((table) => table.title)
             });
 
             this.title.set(generated.title?.trim() || this.title() || 'Generated Table');
             this.description.set(generated.description?.trim() || this.description());
-            this.entriesText.set((generated.entries ?? []).join('\n'));
-            this.feedback.set('AI draft generated. Review it and save when ready.');
+            this.entriesText.set(this.normalizeGeneratedEntries(generated.entries ?? [], shapeHint, columnCount).join('\n'));
+            this.feedback.set(shapeHint === 'grid'
+                ? 'AI grid draft generated. Review it and save when ready.'
+                : 'AI draft generated. Review it and save when ready.');
             this.editorMode.set('standard');
         } catch (error) {
             this.generationError.set(this.readApiError(error, 'Could not generate a table draft right now.'));
@@ -132,6 +215,8 @@ export class TableEditorPageComponent {
             title: this.title(),
             description: this.description(),
             entries: this.entriesText().split(/\r?\n/).map((entry) => entry.trim()).filter(Boolean),
+            rowLabels: this.entryGridRowLabels(),
+            columnLabels: this.entryGridColumnLabels(),
             updatedAt: new Date().toISOString()
         });
 
@@ -146,6 +231,69 @@ export class TableEditorPageComponent {
             saveCustomTableLibrary(nextList);
             await this.router.navigate(['/tables', activeId]);
         }
+    }
+
+    private buildGridLabels(values: readonly string[], count: number, prefix: string): string[] {
+        return Array.from({ length: Math.max(1, count) }, (_, index) => values[index]?.trim() || `${prefix} ${index + 1}`);
+    }
+
+    private buildAiThemeHint(themeHint: string, shapeHint: 'list' | 'grid', entryCount: number, columnCount: number): string {
+        const baseHint = themeHint || 'Create a useful fantasy random table for tabletop play.';
+
+        if (shapeHint !== 'grid') {
+            return `${baseHint}\nReturn exactly ${entryCount} one-line results.`;
+        }
+
+        return `${baseHint}\nReturn exactly ${entryCount} rows with ${columnCount} columns. Each entry must be a single row string using " | " between cells. Do not include a markdown header row, separator row, numbering, bullets, or code fences.`;
+    }
+
+    private normalizeGeneratedEntries(entries: readonly string[], shapeHint: 'list' | 'grid', columnCount: number): string[] {
+        const normalized = entries
+            .map((entry) => entry.trim())
+            .map((entry) => entry.replace(/^[-*]\s+/, '').replace(/^\d+\.\s+/, ''))
+            .map((entry) => entry.replace(/^\|\s*/, '').replace(/\s*\|$/, ''))
+            .filter((entry) => entry.length > 0)
+            .filter((entry) => !/^:?-{2,}:?(?:\s*\|\s*:?-{2,}:?)*$/.test(entry));
+
+        if (shapeHint !== 'grid') {
+            return normalized;
+        }
+
+        return normalized.map((entry) => {
+            const cells = entry.split('|').map((cell) => cell.trim());
+            return Array.from({ length: columnCount }, (_, index) => cells[index] ?? '').join(' | ');
+        });
+    }
+
+    private buildEntryGrid(value: string): string[][] {
+        const rawLines = value.split(/\r?\n/);
+
+        if (rawLines.length === 1 && rawLines[0].trim() === '') {
+            return [['']];
+        }
+
+        const parsedRows = rawLines.map((line) => {
+            const cells = line.includes('|')
+                ? line.split('|').map((cell) => cell.trim())
+                : [line.trim()];
+
+            return cells.length > 0 ? cells : [''];
+        });
+
+        const columnCount = Math.max(1, ...parsedRows.map((row) => row.length));
+
+        return parsedRows.map((row) => Array.from({ length: columnCount }, (_, index) => row[index] ?? ''));
+    }
+
+    private applyEntryGrid(rows: string[][]): void {
+        const nextText = rows
+            .map((row) => {
+                const cleanedCells = row.map((cell) => cell.replace(/\r?\n/g, ' ').trim());
+                return cleanedCells.length > 1 ? cleanedCells.join(' | ') : (cleanedCells[0] ?? '');
+            })
+            .join('\n');
+
+        this.entriesText.set(nextText);
     }
 
     private readApiError(error: unknown, fallback: string): string {
@@ -181,6 +329,8 @@ export class TableEditorPageComponent {
             this.title.set(draft.title);
             this.description.set(draft.description);
             this.entriesText.set(draft.entries.join('\n'));
+            this.rowLabels.set(draft.rowLabels ?? []);
+            this.columnLabels.set(draft.columnLabels ?? []);
             this.feedback.set('');
             this.cdr.detectChanges();
             return;
@@ -190,6 +340,8 @@ export class TableEditorPageComponent {
         this.title.set(existing?.title ?? '');
         this.description.set(existing?.description ?? '');
         this.entriesText.set(existing?.entries.join('\n') ?? '');
+        this.rowLabels.set(existing?.rowLabels ?? []);
+        this.columnLabels.set(existing?.columnLabels ?? []);
         this.feedback.set(existing ? '' : 'Table not found.');
         this.cdr.detectChanges();
     }

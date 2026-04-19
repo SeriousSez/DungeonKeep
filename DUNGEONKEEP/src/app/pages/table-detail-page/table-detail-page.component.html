@@ -72,6 +72,30 @@
             <span class="count-badge">{{ activeTable.entries.length }}</span>
         </div>
 
+        @if (isGridTable()) {
+        <div class="table-grid-wrapper">
+            <table class="table-grid-view">
+                <thead>
+                    <tr>
+                        <th scope="col">Row</th>
+                        @for (columnLabel of tableColumnLabels(); track $index) {
+                        <th scope="col">{{ columnLabel }}</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of tableRows(); track $index; let index = $index) {
+                    <tr>
+                        <th scope="row">{{ tableRowLabels()[index] }}</th>
+                        @for (cell of row; track $index) {
+                        <td>{{ cell || '—' }}</td>
+                        }
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        } @else {
         <ol class="table-entry-list">
             @for (entry of activeTable.entries; track entry; let index = $index) {
             <li>
@@ -80,6 +104,7 @@
             </li>
             }
         </ol>
+        }
     </section>
     } @else {
     <section class="panel empty-panel">
