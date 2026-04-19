@@ -29,6 +29,7 @@ import { featCatalogEntries, type FeatEntry } from '../../data/feats-catalog.dat
 import { normalizePreparedLeveledSpellNames } from '../../rules/spell-preparation.rules';
 import { getWizardCantripLimit, getWizardFreeLeveledSpellLimit, getWizardPreparedSpellLimit, isWizardClassName, isWizardSpellbookCantripAlwaysPrepared } from '../../rules/wizard-class.rules';
 import { deitiesList } from '../../data/deities.data';
+import { classProgressionColumns } from '../../data/class-progression.data';
 import { subclassFeatureProgressionByClass as sharedSubclassFeatureProgressionByClass, subclassConfigs as sharedSubclassConfigs, subclassChoiceTitles as sharedSubclassChoiceTitles, subclassOptionsByClass as sharedSubclassOptionsByClass, type SubclassConfig } from '../../data/subclass-features.data';
 import { premadeCharacters, type PremadeCharacter } from '../../data/premade-characters.data';
 import { getSpeciesImagePath, speciesNameToSlug } from '../../data/species-catalog.data';
@@ -338,6 +339,26 @@ export class NewCharacterStandardPageComponent {
 
             if (filteredSelection.length !== currentSelection.length || filteredSelection.some((campaignId, index) => campaignId !== currentSelection[index])) {
                 this.selectedCampaignIdsOnCreate.set(filteredSelection);
+            }
+        });
+
+        effect(() => {
+            if (this.bgAbilityMode() !== 'Increase two scores (+2 / +1)') {
+                return;
+            }
+
+            const primary = this.normalizeAbilityName(this.bgAbilityScoreFor2());
+            const secondary = this.normalizeAbilityName(this.bgAbilityScoreFor1());
+            const safePrimary = this.isBackgroundAbilityOptionValid(primary, 2) ? primary : '';
+
+            if (safePrimary !== this.bgAbilityScoreFor2()) {
+                this.bgAbilityScoreFor2.set(safePrimary);
+                return;
+            }
+
+            const safeSecondary = this.isBackgroundAbilityOptionValid(secondary, 1, safePrimary) ? secondary : '';
+            if (safeSecondary !== this.bgAbilityScoreFor1()) {
+                this.bgAbilityScoreFor1.set(safeSecondary);
             }
         });
 
@@ -768,14 +789,24 @@ export class NewCharacterStandardPageComponent {
         const abilitiesList = front ? `${front} and ${last}` : last;
         return `The ${bgName} Background allows you to choose between ${abilitiesList}. Increase one of these scores by 2 and another one by 1, or increase all three by 1. None of these increases can raise a score above 20.`;
     });
-    readonly bgAbility2Options = computed<DropdownOption[]>(() =>
-        this.currentBgAbilityScores().map((s) => ({ value: s, label: s }))
-    );
+    readonly bgAbility2Options = computed<DropdownOption[]>(() => {
+        const currentValue = this.normalizeAbilityName(this.bgAbilityScoreFor2());
+        return this.currentBgAbilityScores().map((s) => ({
+            value: s,
+            label: s,
+            disabled: !this.canApplyBackgroundAbilityIncrease(s, 2) && s !== currentValue
+        }));
+    });
     readonly bgAbility1Options = computed<DropdownOption[]>(() => {
-        const picked2 = this.bgAbilityScoreFor2();
+        const picked2 = this.normalizeAbilityName(this.bgAbilityScoreFor2());
+        const currentValue = this.normalizeAbilityName(this.bgAbilityScoreFor1());
         return this.currentBgAbilityScores()
             .filter((s) => s !== picked2)
-            .map((s) => ({ value: s, label: s }));
+            .map((s) => ({
+                value: s,
+                label: s,
+                disabled: !this.canApplyBackgroundAbilityIncrease(s, 1) && s !== currentValue
+            }));
     });
     readonly magicInitiateCantrips = computed<DropdownOption[]>(() => {
         const ability = this.magicInitiateAbility();
@@ -846,6 +877,12 @@ export class NewCharacterStandardPageComponent {
         value: i + 1,
         label: `Level ${i + 1}`
     }));
+    readonly rageFeatureOptions: ReadonlyArray<DropdownOption> = [
+        { value: 'activate-rage', label: 'Activate Rage' }
+    ];
+    readonly selectedRageFeatureOption = signal('activate-rage');
+    readonly rageFeatureDetailsExpanded = signal(false);
+    readonly rageFeatureUsedCount = signal(0);
     readonly hitPointModeOptions: ReadonlyArray<DropdownOption> = [
         { value: 'fixed', label: 'Use Fixed HP (Average)' },
         { value: 'rolled', label: 'Use Rolled HP Total' }
@@ -3796,6 +3833,15 @@ export class NewCharacterStandardPageComponent {
     readonly backgroundLanguageChoiceInChoices = computed(() =>
         this.selectedBackgroundDetail()?.choices.some((c) => this.isLanguageChoiceKey(c.key)) ?? false
     );
+    readonly backgroundLanguagePlaceholder = computed(() => {
+        const rule = this.selectedBackgroundDetail()?.languages ?? '';
+        return /standard language/i.test(rule)
+            ? 'Choose a standard language...'
+            : this.backgroundLanguageChoiceCount() === 1
+                ? 'Choose an additional language...'
+                : 'Choose additional languages...';
+    });
+    readonly backgroundLanguageGroups = computed(() => this.getLanguageGroupsForRule(this.selectedBackgroundDetail()?.languages ?? ''));
     readonly speciesLanguageDisabledOptions = computed(() => this.getLanguageDisabledOptions(this.selectedSpeciesLanguages()));
     readonly backgroundLanguageDisabledOptions = computed(() => this.getLanguageDisabledOptions(this.selectedLanguages()));
     readonly suggestedPlayerName = computed(() => this.session.currentUser()?.displayName ?? 'Player');
@@ -4054,7 +4100,7 @@ export class NewCharacterStandardPageComponent {
             case 'Wizard Subclass':
                 return 'Your arcane tradition grants subclass features at levels 3, 6, 10, and 14.';
             case 'Ability Score Improvement':
-                return 'You can pick a feat or take a standard Ability Score Improvement.';
+                return 'You can pick a feat or take a standard Ability Score Improvement. These increases can’t raise an ability score above 20.';
             case 'Epic Boon':
                 return 'Epic Boons are high-level feats with strong late-game bonuses.';
             default:
@@ -4445,9 +4491,12 @@ export class NewCharacterStandardPageComponent {
 
     getFeatAbilityIncreaseOptions(className: string, feature: ClassFeature): DropdownOption[] {
         const selected = this.getSelectedAbilityIncreaseSourceName(className, feature);
+        const currentValue = this.getFeatAbilityIncreaseValue(className, feature);
+
         return this.getFeatAbilityIncreaseChoicesByFeat(selected).map((ability) => ({
             value: ability,
-            label: `${ability} Score`
+            label: `${ability} Score`,
+            disabled: !this.canApplyAbilityIncrease(className, feature, ability, 1) && ability !== currentValue
         }));
     }
 
@@ -4481,7 +4530,11 @@ export class NewCharacterStandardPageComponent {
 
     onFeatAbilityIncreaseChanged(className: string, feature: ClassFeature, value: string | number): void {
         const key = this.getFeatureSelectionKey(className, feature);
-        const nextValue = String(value ?? '').trim();
+        const nextValue = this.normalizeAbilityName(String(value ?? '').trim());
+
+        if (nextValue && !this.canApplyAbilityIncrease(className, feature, nextValue, 1)) {
+            return;
+        }
 
         this.featFollowUpChoices.update((current) => ({
             ...current,
@@ -4629,10 +4682,16 @@ export class NewCharacterStandardPageComponent {
 
     onAbilityScoreImprovementPrimaryChanged(className: string, feature: ClassFeature, value: string | number): void {
         const key = this.getFeatureSelectionKey(className, feature);
-        const nextPrimary = String(value ?? '').trim();
+        const nextPrimary = this.normalizeAbilityName(String(value ?? '').trim());
 
         this.abilityScoreImprovementChoices.update((current) => {
             const existing = current[key] ?? { mode: '', primaryAbility: '', secondaryAbility: '' };
+            const increaseAmount = existing.mode === 'plus-two' ? 2 : 1;
+
+            if (nextPrimary && !this.canApplyAbilityIncrease(className, feature, nextPrimary, increaseAmount)) {
+                return current;
+            }
+
             const secondary = existing.secondaryAbility === nextPrimary ? '' : existing.secondaryAbility;
             return {
                 ...current,
@@ -4647,10 +4706,15 @@ export class NewCharacterStandardPageComponent {
 
     onAbilityScoreImprovementSecondaryChanged(className: string, feature: ClassFeature, value: string | number): void {
         const key = this.getFeatureSelectionKey(className, feature);
-        const nextSecondary = String(value ?? '').trim();
+        const nextSecondary = this.normalizeAbilityName(String(value ?? '').trim());
 
         this.abilityScoreImprovementChoices.update((current) => {
             const existing = current[key] ?? { mode: '', primaryAbility: '', secondaryAbility: '' };
+
+            if (nextSecondary && !this.canApplyAbilityIncrease(className, feature, nextSecondary, 1)) {
+                return current;
+            }
+
             return {
                 ...current,
                 [key]: {
@@ -4663,10 +4727,14 @@ export class NewCharacterStandardPageComponent {
 
     getAbilityScoreImprovementAbilityOptions(className: string, feature: ClassFeature, slot: 'primary' | 'secondary'): DropdownOption[] {
         const choice = this.getAbilityScoreImprovementChoice(className, feature);
+        const currentValue = slot === 'primary' ? choice.primaryAbility : choice.secondaryAbility;
+        const increaseAmount = choice.mode === 'plus-two' ? 2 : 1;
+
         return this.abilityTiles.map((ability) => ({
             value: ability,
             label: `${ability} Score`,
-            disabled: slot === 'secondary' ? ability === choice.primaryAbility : false
+            disabled: ((slot === 'secondary' ? ability === choice.primaryAbility : false)
+                || (!this.canApplyAbilityIncrease(className, feature, ability, increaseAmount) && ability !== currentValue))
         }));
     }
 
@@ -4677,6 +4745,68 @@ export class NewCharacterStandardPageComponent {
 
     shouldShowAbilityScoreImprovementSecondary(className: string, feature: ClassFeature): boolean {
         return this.getAbilityScoreImprovementMode(className, feature) === 'plus-one-plus-one';
+    }
+
+    private normalizeAbilityName(ability: string): string {
+        const normalized = ability.trim().replace(/\s+score$/i, '');
+        return this.abilityTiles.find((entry) => entry.toLowerCase() === normalized.toLowerCase()) ?? normalized;
+    }
+
+    private canApplyBackgroundAbilityIncrease(ability: string, amount: number): boolean {
+        const normalizedAbility = this.normalizeAbilityName(ability);
+        if (!normalizedAbility || !this.currentBgAbilityScores().includes(normalizedAbility)) {
+            return false;
+        }
+
+        const currentScore = this.getAbilityScoreBeforeBackgroundIncrease(normalizedAbility);
+        return currentScore + amount <= 20;
+    }
+
+    private isBackgroundAbilityOptionValid(ability: string, amount: number, disallowedAbility = ''): boolean {
+        const normalizedAbility = this.normalizeAbilityName(ability);
+        if (!normalizedAbility || (disallowedAbility && normalizedAbility === disallowedAbility)) {
+            return false;
+        }
+
+        return this.canApplyBackgroundAbilityIncrease(normalizedAbility, amount);
+    }
+
+    private getAbilityScoreBeforeBackgroundIncrease(ability: string): number {
+        const normalizedAbility = this.normalizeAbilityName(ability);
+        const overrideScore = this.abilityOverrideScores()[normalizedAbility];
+        if (overrideScore != null) {
+            return overrideScore;
+        }
+
+        const baseScore = this.getAbilityBaseScore(normalizedAbility);
+        const classFeatureBonus = this.getClassFeatureAbilityBonuses()[normalizedAbility] ?? 0;
+        return Math.min(20, baseScore + classFeatureBonus);
+    }
+
+    private canApplyAbilityIncrease(className: string, feature: ClassFeature, ability: string, amount: number): boolean {
+        const normalizedAbility = this.normalizeAbilityName(ability);
+        if (!normalizedAbility) {
+            return false;
+        }
+
+        const currentScore = this.getAbilityScoreBeforePendingIncrease(className, feature, normalizedAbility);
+        const scoreCap = feature.name === 'Epic Boon' ? 30 : 20;
+        return currentScore + amount <= scoreCap;
+    }
+
+    private getAbilityScoreBeforePendingIncrease(className: string, feature: ClassFeature, ability: string): number {
+        const normalizedAbility = this.normalizeAbilityName(ability);
+        const selectionKey = this.getFeatureSelectionKey(className, feature);
+        const overrideScore = this.abilityOverrideScores()[normalizedAbility];
+        if (overrideScore != null) {
+            return overrideScore;
+        }
+
+        const baseScore = this.getAbilityBaseScore(normalizedAbility);
+        const backgroundBonus = this.getBackgroundAbilityBonuses()[normalizedAbility] ?? 0;
+        const classFeatureBonus = this.getClassFeatureAbilityBonuses(selectionKey)[normalizedAbility] ?? 0;
+        const maxScore = this.getAbilityScoreMaximum(normalizedAbility);
+        return Math.min(maxScore, baseScore + backgroundBonus + classFeatureBonus);
     }
 
     private isAbilityScoreImprovementFeature(feature: ClassFeature): boolean {
@@ -4735,18 +4865,38 @@ export class NewCharacterStandardPageComponent {
 
     private getAbilityScoreImprovementChoice(className: string, feature: ClassFeature): AbilityScoreImprovementChoice {
         const key = this.getFeatureSelectionKey(className, feature);
-        return this.abilityScoreImprovementChoices()[key] ?? {
+        const existing = this.abilityScoreImprovementChoices()[key] ?? {
             mode: '',
             primaryAbility: '',
             secondaryAbility: ''
+        };
+
+        const primaryAbility = this.normalizeAbilityName(existing.primaryAbility ?? '');
+        const secondaryAbility = this.normalizeAbilityName(existing.secondaryAbility ?? '');
+        const primaryIncreaseAmount = existing.mode === 'plus-two' ? 2 : 1;
+
+        return {
+            mode: existing.mode,
+            primaryAbility: primaryAbility && this.canApplyAbilityIncrease(className, feature, primaryAbility, primaryIncreaseAmount)
+                ? primaryAbility
+                : '',
+            secondaryAbility: secondaryAbility
+                && secondaryAbility !== primaryAbility
+                && this.canApplyAbilityIncrease(className, feature, secondaryAbility, 1)
+                ? secondaryAbility
+                : ''
         };
     }
 
     private getFeatFollowUpChoice(className: string, feature: ClassFeature): FeatFollowUpChoice {
         const key = this.getFeatureSelectionKey(className, feature);
         const existing = this.featFollowUpChoices()[key];
+        const normalizedAbilityIncrease = this.normalizeAbilityName(existing?.abilityIncreaseAbility ?? '');
+
         return {
-            abilityIncreaseAbility: existing?.abilityIncreaseAbility ?? '',
+            abilityIncreaseAbility: normalizedAbilityIncrease && this.canApplyAbilityIncrease(className, feature, normalizedAbilityIncrease, 1)
+                ? normalizedAbilityIncrease
+                : '',
             weaponMasterWeapon: existing?.weaponMasterWeapon ?? '',
             grapplerAbility: existing?.grapplerAbility ?? '',
             magicInitiateAbility: existing?.magicInitiateAbility ?? '',
@@ -6662,7 +6812,7 @@ export class NewCharacterStandardPageComponent {
         return bonuses;
     }
 
-    private getClassFeatureAbilityBonuses(): Record<string, number> {
+    private getClassFeatureAbilityBonuses(excludedSelectionKey: string | null = null): Record<string, number> {
         const bonuses = this.createEmptyAbilityBonusMap();
         const selections = this.classFeatureSelections();
         const asiChoices = this.abilityScoreImprovementChoices();
@@ -6674,6 +6824,10 @@ export class NewCharacterStandardPageComponent {
         }
 
         Object.entries(selections).forEach(([selectionKey, selectedValues]) => {
+            if (excludedSelectionKey && selectionKey === excludedSelectionKey) {
+                return;
+            }
+
             selectedValues.forEach((selectedValue) => {
                 if (!selectedValue) {
                     return;
@@ -6934,6 +7088,50 @@ export class NewCharacterStandardPageComponent {
 
     formatFeatureRichText(text: string): string {
         return String(marked.parse(text || '', { gfm: true, breaks: true }));
+    }
+
+    isBarbarianRageFeature(className: string, feature: ClassFeature): boolean {
+        return className === 'Barbarian' && feature.name === 'Rage';
+    }
+
+    getBarbarianRageActiveText(description: string): string {
+        const marker = 'While active, your Rage follows the rules below.';
+        const startIndex = description.indexOf(marker);
+        return startIndex >= 0 ? description.slice(startIndex) : description;
+    }
+
+    toggleRageFeatureDetails(): void {
+        this.rageFeatureDetailsExpanded.update((value) => !value);
+    }
+
+    onRageFeatureOptionChanged(value: string | number): void {
+        this.selectedRageFeatureOption.set(String(value));
+    }
+
+    getRageFeatureUses(className: string): number {
+        const currentLevel = Number(this.multiclassList()[className] ?? 1);
+        const usesText = this.getClassProgressionCell(className, 'Rages', currentLevel);
+        const parsedUses = Number.parseInt(usesText, 10);
+        return Number.isFinite(parsedUses) && parsedUses > 0 ? parsedUses : 0;
+    }
+
+    getRageFeatureCheckboxIndexes(className: string): number[] {
+        return Array.from({ length: this.getRageFeatureUses(className) }, (_, index) => index);
+    }
+
+    onRageFeatureCheckboxChanged(boxIndex: number, checked: boolean): void {
+        this.rageFeatureUsedCount.set(checked ? boxIndex + 1 : boxIndex);
+    }
+
+    private getClassProgressionCell(className: string, label: string, level: number): string {
+        const columns = classProgressionColumns[className] ?? [];
+        const column = columns.find((entry) => entry.label === label);
+        if (!column) {
+            return '';
+        }
+
+        const index = Math.max(0, Math.min(column.values.length - 1, level - 1));
+        return column.values[index] ?? '';
     }
 
     formatBackstoryRichText(text: string): string {
@@ -8499,7 +8697,11 @@ export class NewCharacterStandardPageComponent {
     }
 
     onBgAbilityScore2Changed(value: string | number): void {
-        const next = String(value);
+        const next = this.normalizeAbilityName(String(value));
+        if (next && !this.canApplyBackgroundAbilityIncrease(next, 2)) {
+            return;
+        }
+
         this.bgAbilityScoreFor2.set(next);
         if (this.bgAbilityScoreFor1() === next) {
             this.bgAbilityScoreFor1.set('');
@@ -8511,7 +8713,12 @@ export class NewCharacterStandardPageComponent {
     }
 
     onBgAbilityScore1Changed(value: string | number): void {
-        this.bgAbilityScoreFor1.set(String(value));
+        const next = this.normalizeAbilityName(String(value));
+        if (next && (!this.canApplyBackgroundAbilityIncrease(next, 1) || next === this.bgAbilityScoreFor2())) {
+            return;
+        }
+
+        this.bgAbilityScoreFor1.set(next);
     }
 
     onBgAbilityScore1SelectionChanged(value: string[]): void {
@@ -8886,6 +9093,20 @@ export class NewCharacterStandardPageComponent {
         });
     }
 
+    private getLanguageGroupsForRule(languageRule: string): ReadonlyArray<MultiSelectOptionGroup> {
+        const normalized = languageRule.toLowerCase().trim();
+
+        if (normalized.includes('standard language')) {
+            return [{ label: 'Standard', options: [...this.commonLanguages] }];
+        }
+
+        if (normalized.includes('exotic language')) {
+            return [{ label: 'Exotic', options: [...this.exoticLanguages] }];
+        }
+
+        return this.languageGroups;
+    }
+
     private getLanguageChoiceCount(languageRule: string): number {
         const normalized = languageRule.toLowerCase().trim();
         if (!normalized || normalized === 'none' || normalized.includes('common +') || normalized.includes('common and')) {
@@ -8900,7 +9121,11 @@ export class NewCharacterStandardPageComponent {
             return 2;
         }
 
-        if (normalized.includes('one') || normalized.includes('a language of your choice') || normalized.includes('any language of your choice')) {
+        if (/(?:^|\b)(?:a|an|any|one)?\s*(?:standard|exotic)?\s*language(?:s)? of your choice\b/.test(normalized)) {
+            return 1;
+        }
+
+        if (normalized.includes('one')) {
             return 1;
         }
 

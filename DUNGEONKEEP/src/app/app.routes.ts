@@ -226,17 +226,38 @@ export const routes: Routes = [
     {
         path: 'characters/:id/builder',
         component: NewCharacterStandardPageComponent,
-        data: { title: 'Character Builder', breadcrumb: 'Character Builder', parentCrumbs: [{ label: 'Characters', url: '/characters' }] }
+        data: {
+            title: 'Character Builder',
+            breadcrumb: 'Character Builder',
+            parentCrumbs: [
+                { label: 'Characters', url: '/characters' },
+                { label: 'Character', url: '/character/:id' }
+            ]
+        }
     },
     {
         path: 'characters/:id/builder/:step',
         component: NewCharacterStandardPageComponent,
-        data: { title: 'Character Builder', breadcrumb: 'Character Builder', parentCrumbs: [{ label: 'Characters', url: '/characters' }] }
+        data: {
+            title: 'Character Builder',
+            breadcrumb: 'Character Builder',
+            parentCrumbs: [
+                { label: 'Characters', url: '/characters' },
+                { label: 'Character', url: '/character/:id' }
+            ]
+        }
     },
     {
         path: 'characters/:id/builder/:step/:mode',
         component: NewCharacterStandardPageComponent,
-        data: { title: 'Character Builder', breadcrumb: 'Character Builder', parentCrumbs: [{ label: 'Characters', url: '/characters' }] }
+        data: {
+            title: 'Character Builder',
+            breadcrumb: 'Character Builder',
+            parentCrumbs: [
+                { label: 'Characters', url: '/characters' },
+                { label: 'Character', url: '/character/:id' }
+            ]
+        }
     },
     {
         path: 'npcs',

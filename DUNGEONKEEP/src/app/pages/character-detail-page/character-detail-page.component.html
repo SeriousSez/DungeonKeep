@@ -506,7 +506,41 @@
                 </section>
                 }
 
-                @if (activeActionFilter() === 'all' || activeActionFilter() === 'other' || activeActionFilter() === 'limited-use') {
+                @if (activeActionFilter() === 'all' || activeActionFilter() === 'limited-use') {
+                <section class="action-section">
+                    <div class="action-section-header">
+                        <span>Limited Use</span>
+                    </div>
+                    @if (limitedUseEntries().length) {
+                    <div class="limited-use-list">
+                        @for (entry of limitedUseEntries(); track entry.id) {
+                        <div class="limited-use-card detail-trigger-card limited-use-card--clean" role="button" tabindex="0" (click)="openFeatureDetail(entry.name, entry.description, 'Limited Use')" (keydown.enter)="openFeatureDetail(entry.name, entry.description, 'Limited Use')"
+                            (keydown.space)="openFeatureDetail(entry.name, entry.description, 'Limited Use')">
+                            <div class="limited-use-card-header">
+                                <strong>{{ entry.choiceLabel }}</strong>
+                            </div>
+                            <p class="limited-use-description">{{ entry.description }}</p>
+                            <div class="limited-use-track" (click)="$event.stopPropagation()">
+                                <div class="limited-use-checkboxes">
+                                    @for (boxIndex of getLimitedUseCheckboxIndexes(entry.maxUses); track boxIndex) {
+                                    <label class="limited-use-check">
+                                        <input type="checkbox" [checked]="boxIndex < entry.usedCount" [disabled]="!char.canEdit" (click)="$event.stopPropagation()" (change)="onLimitedUseCheckboxChanged(entry.id, boxIndex, $any($event.target).checked)" />
+                                        <span></span>
+                                    </label>
+                                    }
+                                </div>
+                                <span class="limited-use-reset">/ {{ entry.resetLabel }}</span>
+                            </div>
+                        </div>
+                        }
+                    </div>
+                    } @else {
+                    <p class="notes-block">No limited-use features tracked yet.</p>
+                    }
+                </section>
+                }
+
+                @if (activeActionFilter() === 'all' || activeActionFilter() === 'other') {
                 <section class="action-section">
                     <div class="action-section-header">
                         <span>Other</span>
@@ -760,11 +794,65 @@
                     }
                 </div>
                 @if (activeFeaturesFilter() === 'all' || activeFeaturesFilter() === 'class-features') {
+                <h3 class="subsection-title">Class Features</h3>
                 <ul class="mini-list feature-list">
-                    @for (feature of classFeatures(); track feature.name) {
-                    <li class="detail-trigger-row" (click)="openFeatureDetail(feature.name, feature.description, 'Class Feature')">
+                    @for (feature of classFeatures(); track feature.name + feature.level + feature.description + feature.summaryBadges.join('|')) {
+                    <li class="detail-trigger-row" (click)="openFeatureDetail(feature.name, feature.detailDescription, 'Class Feature', feature.level)">
                         <strong>{{ feature.name }}</strong>
-                        <p>{{ feature.description }}</p>
+
+                        @if (feature.summaryBadges.length > 0) {
+                        <div class="feature-summary-badges">
+                            @for (badge of feature.summaryBadges; track badge) {
+                            <span class="feature-summary-badge">{{ badge }}</span>
+                            }
+                        </div>
+                        }
+
+                        <div class="feature-description-richtext" [innerHTML]="renderDetailRichText(feature.description)"></div>
+
+                        @if (getLimitedUseEntryForFeature(feature.name); as limitedUse) {
+                        <div class="limited-use-inline">
+                            <p class="limited-use-choice limited-use-choice--title"><strong>{{ limitedUse.choiceLabel }}</strong></p>
+                            @if (feature.name === 'Rage') {
+                            <div class="detail-drawer-richtext detail-drawer-richtext--inline" [innerHTML]="renderDetailRichText(getRageActiveDetailText())"></div>
+                            <p class="limited-use-activation">Extend Rage: 1 Bonus Action</p>
+                            }
+                            <p class="limited-use-activation">{{ limitedUse.activationLabel }}</p>
+                            <div class="limited-use-track">
+                                <span class="limited-use-label">Uses:</span>
+                                <div class="limited-use-checkboxes">
+                                    @for (boxIndex of getLimitedUseCheckboxIndexes(limitedUse.maxUses); track boxIndex) {
+                                    <label class="limited-use-check" (click)="$event.stopPropagation()">
+                                        <input type="checkbox" [checked]="boxIndex < limitedUse.usedCount" [disabled]="!char.canEdit" (click)="$event.stopPropagation()" (change)="onLimitedUseCheckboxChanged(limitedUse.id, boxIndex, $any($event.target).checked)" />
+                                        <span></span>
+                                    </label>
+                                    }
+                                </div>
+                                <span class="limited-use-reset">/ {{ limitedUse.resetLabel }}</span>
+                            </div>
+                        </div>
+                        }
+
+                        @if (getFeatureInlineActionLines(feature.name, feature.detailDescription, feature.level).length > 0 || getFeatureInlineTracker(feature.name)) {
+                        <div class="limited-use-inline">
+                            @for (actionLine of getFeatureInlineActionLines(feature.name, feature.detailDescription, feature.level); track actionLine) {
+                            <p class="limited-use-activation">{{ actionLine }}</p>
+                            }
+                            @if (getFeatureInlineTracker(feature.name); as tracker) {
+                            <div class="limited-use-track">
+                                <div class="limited-use-checkboxes">
+                                    @for (boxIndex of getLimitedUseCheckboxIndexes(tracker.maxUses); track boxIndex) {
+                                    <label class="limited-use-check" (click)="$event.stopPropagation()">
+                                        <input type="checkbox" [checked]="boxIndex < tracker.usedCount" [disabled]="!char.canEdit" (click)="$event.stopPropagation()" (change)="onLimitedUseCheckboxChanged(tracker.entryId, boxIndex, $any($event.target).checked)" />
+                                        <span></span>
+                                    </label>
+                                    }
+                                </div>
+                                <span class="limited-use-reset">/ {{ tracker.resetLabel }}</span>
+                            </div>
+                            }
+                        </div>
+                        }
                     </li>
                     }
                     @if (!classFeatures().length) {
@@ -773,6 +861,7 @@
                 </ul>
                 }
                 @if (activeFeaturesFilter() === 'all' || activeFeaturesFilter() === 'species-traits') {
+                <h3 class="subsection-title">Species Traits</h3>
                 <ul class="traits-list">
                     @for (trait of speciesTraits(); track $index) {
                     <li class="detail-trigger-row" (click)="openFeatureDetail(trait, trait, 'Species Trait')">{{ trait }}</li>
@@ -782,8 +871,27 @@
                     }
                 </ul>
                 }
-                @if (activeFeaturesFilter() === 'feats') {
-                <p class="notes-block detail-trigger-row" (click)="openFeatureDetail('Feats', 'No feats are currently recorded for this character.', 'Feats')">No feats recorded yet.</p>
+                @if (activeFeaturesFilter() === 'all' || activeFeaturesFilter() === 'feats') {
+                <h3 class="subsection-title">Feats</h3>
+                <ul class="mini-list feature-list">
+                    @for (feat of feats(); track feat.name + feat.description) {
+                    <li class="detail-trigger-row" (click)="openFeatureDetail(feat.name, feat.description, 'Feat')">
+                        <strong>{{ feat.name }}</strong>
+                        <div class="feat-description-richtext">
+                            @for (line of getFeatCardLines(feat.description); track line.text + (line.sourceName ?? '')) {
+                            @if (line.isSource) {
+                            <p class="feat-source-line">{{ line.text }} <strong class="feat-source-class">{{ line.sourceName }}</strong></p>
+                            } @else {
+                            <p>{{ line.text }}</p>
+                            }
+                            }
+                        </div>
+                    </li>
+                    }
+                    @if (!feats().length) {
+                    <li>No feats recorded yet.</li>
+                    }
+                </ul>
                 }
                 } @else if (activeCombatTab() === 'background') {
                 <h3 class="subsection-title">Background</h3>
@@ -2312,6 +2420,58 @@
         </div>
         }
 
+        @if (detail.variant === 'rage-feature') {
+        <p class="detail-drawer-description">{{ getRageSummaryText() }}</p>
+        <p class="detail-rage-instruction"><em>{{ rageDetailOption() === 'extend-rage' ? 'Extend Rage is active.' : 'Activate Rage is active.' }}</em></p>
+
+        <section class="detail-rage-option-card">
+            <p class="detail-rage-option-heading">Option</p>
+            <app-dropdown [value]="rageDetailOption()" [options]="rageDetailOptions" [placeholder]="'Select an option...'" size="wide" (changed)="onRageDetailOptionChanged($event)"></app-dropdown>
+
+            @if (detail.secondaryHeading) {
+            <button type="button" class="detail-secondary-toggle" [class.is-expanded]="detailSecondaryExpanded()" [attr.aria-expanded]="detailSecondaryExpanded()" (click)="toggleDetailSecondary()">
+                <span>{{ detail.secondaryHeading }}</span>
+                <i class="fa-duotone fa-thin fa-chevron-down"></i>
+            </button>
+            }
+
+            @if (detailSecondaryExpanded()) {
+            <div class="detail-drawer-richtext" [innerHTML]="renderDetailRichText(getRageActiveDetailText())"></div>
+            }
+
+            @if (getRageDetailActionLines().length > 0) {
+            <div class="limited-use-inline limited-use-inline--popup">
+                @for (actionLine of getRageDetailActionLines(); track actionLine) {
+                <p class="limited-use-activation">{{ actionLine }}</p>
+                }
+                @if (getLimitedUseEntryForFeature(detail.title); as limitedUse) {
+                <div class="limited-use-track">
+                    <span class="limited-use-label">Uses:</span>
+                    <div class="limited-use-checkboxes">
+                        @for (boxIndex of getLimitedUseCheckboxIndexes(limitedUse.maxUses); track boxIndex) {
+                        <label class="limited-use-check">
+                            <input type="checkbox" [checked]="boxIndex < limitedUse.usedCount" [disabled]="!character()?.canEdit" (change)="onLimitedUseCheckboxChanged(limitedUse.id, boxIndex, $any($event.target).checked)" />
+                            <span></span>
+                        </label>
+                        }
+                    </div>
+                    <span class="limited-use-reset">/ {{ limitedUse.resetLabel }}</span>
+                </div>
+                }
+            </div>
+            }
+        </section>
+        } @else if (detail.variant === 'brutal-strike-feature') {
+        <div class="detail-drawer-richtext" [innerHTML]="renderDetailRichText(getBrutalStrikeDetailText())"></div>
+
+        @if (getBrutalStrikeActionLines().length > 0) {
+        <div class="limited-use-inline limited-use-inline--popup">
+            @for (actionLine of getBrutalStrikeActionLines(); track actionLine) {
+            <p class="limited-use-activation">{{ actionLine }}</p>
+            }
+        </div>
+        }
+        } @else {
         @if (detail.secondaryHeading) {
         <button type="button" class="detail-secondary-toggle" [class.is-expanded]="detailSecondaryExpanded()" [attr.aria-expanded]="detailSecondaryExpanded()" (click)="toggleDetailSecondary()">
             <span>{{ detail.secondaryHeading }}</span>
@@ -2319,7 +2479,28 @@
         </button>
         }
 
-        <p class="detail-drawer-description">{{ detail.description }}</p>
+        <div class="detail-drawer-description detail-drawer-richtext" [innerHTML]="renderDetailRichText(detail.description)"></div>
+
+        @if ((detail.actionLines && detail.actionLines.length > 0) || detail.tracker) {
+        <div class="limited-use-inline limited-use-inline--popup">
+            @for (actionLine of detail.actionLines ?? []; track actionLine) {
+            <p class="limited-use-activation">{{ actionLine }}</p>
+            }
+            @if (detail.tracker; as tracker) {
+            <div class="limited-use-track">
+                <div class="limited-use-checkboxes">
+                    @for (boxIndex of getLimitedUseCheckboxIndexes(tracker.maxUses); track boxIndex) {
+                    <label class="limited-use-check">
+                        <input type="checkbox" [checked]="boxIndex < tracker.usedCount" [disabled]="!character()?.canEdit" (change)="onLimitedUseCheckboxChanged(tracker.entryId, boxIndex, $any($event.target).checked)" />
+                        <span></span>
+                    </label>
+                    }
+                </div>
+                <span class="limited-use-reset">/ {{ tracker.resetLabel }}</span>
+            </div>
+            }
+        </div>
+        }
 
         @if (detail.bullets && detail.bullets.length > 0 && (!detail.secondaryHeading || detailSecondaryExpanded())) {
         <ul class="detail-drawer-list">
@@ -2327,6 +2508,7 @@
             <li>{{ bullet }}</li>
             }
         </ul>
+        }
         }
         }
     </aside>

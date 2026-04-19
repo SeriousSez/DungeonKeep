@@ -149,8 +149,43 @@
                             </div>
                             <span class="feature-level">Level {{ feature.level }}</span>
                         </summary>
-                        @if (feature.description) {
+                        @if (feature.description && !isBarbarianRageFeature(className, feature)) {
                         <div class="feature-description" [innerHTML]="formatFeatureRichText(feature.description)"></div>
+                        }
+                        @if (isBarbarianRageFeature(className, feature) && feature.description; as rageDescription) {
+                        <p class="rage-feature-instruction"><em>Select Activate Rage below to apply the effects from Rage. Deselect it to stop Raging.</em></p>
+                        <div class="rage-feature-card">
+                            <div class="rage-feature-inner">
+                                <p class="rage-feature-active-label">Activate Rage</p>
+                                <button type="button" class="rage-feature-toggle" [attr.aria-expanded]="rageFeatureDetailsExpanded()" (click)="toggleRageFeatureDetails()">
+                                    <span>Show Details</span>
+                                    <i class="fa-duotone fa-thin fa-chevron-down" [class.is-expanded]="rageFeatureDetailsExpanded()"></i>
+                                </button>
+                                @if (rageFeatureDetailsExpanded()) {
+                                <div class="feature-description feature-description--rage" [innerHTML]="formatFeatureRichText(getBarbarianRageActiveText(rageDescription))"></div>
+                                }
+                                <div class="rage-feature-actions">
+                                    <p class="choice-meta">Extend Rage: 1 Bonus Action</p>
+                                    <p class="choice-meta">Rage (Enter): 1 Bonus Action</p>
+                                    <div class="rage-feature-uses">
+                                        <span class="rage-feature-uses-label">Uses:</span>
+                                        <div class="rage-feature-checkboxes">
+                                            @for (boxIndex of getRageFeatureCheckboxIndexes(className); track boxIndex) {
+                                            <label class="rage-feature-check">
+                                                <input type="checkbox" [checked]="boxIndex < rageFeatureUsedCount()" (change)="onRageFeatureCheckboxChanged(boxIndex, $any($event.target).checked)" />
+                                                <span></span>
+                                            </label>
+                                            }
+                                        </div>
+                                        <span class="choice-meta">/ Long Rest</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="feature-choices feature-choices--rage">
+                                <label class="choice-label">OPTION</label>
+                                <app-dropdown [value]="selectedRageFeatureOption()" [options]="rageFeatureOptions" [placeholder]="'Select an option...'" size="wide" (changed)="onRageFeatureOptionChanged($event)"></app-dropdown>
+                            </div>
+                        </div>
                         }
                         @if (feature.choices) {
                         <div class="feature-choices">
@@ -997,7 +1032,7 @@
                     <div class="languages-section">
                         <p class="language-proficiencies">{{ details.languages }}</p>
                         @if (!backgroundLanguageChoiceInChoices() && backgroundLanguageChoiceCount() > 0) {
-                        <app-multi-select-dropdown [groups]="languageGroups" [value]="selectedLanguages()" [disabledOptions]="backgroundLanguageDisabledOptions()" [maxSelections]="backgroundLanguageChoiceCount()" placeholder="Choose additional languages..."
+                        <app-multi-select-dropdown [groups]="backgroundLanguageGroups()" [value]="selectedLanguages()" [disabledOptions]="backgroundLanguageDisabledOptions()" [maxSelections]="backgroundLanguageChoiceCount()" [placeholder]="backgroundLanguagePlaceholder()"
                             (changed)="onBackgroundLanguagesChanged($event)"></app-multi-select-dropdown>
                         }
                     </div>

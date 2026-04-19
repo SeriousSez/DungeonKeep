@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink, NavigationEnd } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs/operators';
@@ -25,7 +25,12 @@ export class BreadcrumbComponent {
     readonly crumbs = signal<Crumb[]>([]);
 
     constructor() {
-        this.updateCrumbs();
+        effect(() => {
+            this.store.campaigns();
+            this.store.characters();
+            this.updateCrumbs();
+        });
+
         this.router.events
             .pipe(
                 filter(event => event instanceof NavigationEnd),
@@ -43,14 +48,21 @@ export class BreadcrumbComponent {
         const data = route.snapshot.data;
         const params = this.collectRouteParams(route);
         const routePath = route.snapshot.routeConfig?.path ?? '';
-        const parentCrumbs = ((data['parentCrumbs'] ?? []) as Crumb[]).map((crumb) => ({
-            ...crumb,
-            url: crumb.url ? this.resolveRouteTemplate(crumb.url, params) : undefined
-        }));
 
         const campaign = params['id']
             ? this.store.campaigns().find(c => c.id === params['id'])
             : null;
+        const character = params['id']
+            ? this.store.characters().find(c => c.id === params['id'])
+            : null;
+
+        const parentCrumbs = ((data['parentCrumbs'] ?? []) as Crumb[]).map((crumb) => {
+            const resolvedUrl = crumb.url ? this.resolveRouteTemplate(crumb.url, params) : undefined;
+            return {
+                label: this.resolveEntityCrumbLabel(crumb.label, resolvedUrl, campaign?.name ?? '', character?.name ?? ''),
+                url: resolvedUrl
+            };
+        });
 
         if (campaign && routePath === 'campaigns/:id/maps/new') {
             this.crumbs.set([...parentCrumbs, { label: 'Create' }]);
@@ -77,19 +89,35 @@ export class BreadcrumbComponent {
             }
         }
 
-        let finalLabel: string = data['breadcrumb'] || '';
-        if (params['id']) {
-            if (campaign) {
-                finalLabel = campaign.name;
-            }
-
-            const character = this.store.characters().find(c => c.id === params['id']);
-            if (character) {
-                finalLabel = character.name;
-            }
-        }
+        const finalLabel = this.resolveEntityCrumbLabel(
+            String(data['breadcrumb'] || ''),
+            undefined,
+            campaign?.name ?? '',
+            character?.name ?? ''
+        );
 
         this.crumbs.set(finalLabel ? [...parentCrumbs, { label: finalLabel }] : parentCrumbs);
+    }
+
+    private resolveEntityCrumbLabel(label: string, url: string | undefined, campaignName: string, characterName: string): string {
+        if (label === 'Campaign' && campaignName) {
+            return campaignName;
+        }
+
+        if (label === 'Character' && characterName) {
+            return characterName;
+        }
+
+        if (url?.startsWith('/campaigns/') && !url.includes('/maps') && /\/campaigns\/[^/]+$/.test(url) && campaignName) {
+            return campaignName;
+        }
+
+        if ((url?.startsWith('/characters/') && /\/characters\/[^/]+$/.test(url) && characterName)
+            || (url?.startsWith('/character/') && /\/character\/[^/]+$/.test(url) && characterName)) {
+            return characterName;
+        }
+
+        return label;
     }
 
     private collectRouteParams(route: ActivatedRoute): Record<string, string> {

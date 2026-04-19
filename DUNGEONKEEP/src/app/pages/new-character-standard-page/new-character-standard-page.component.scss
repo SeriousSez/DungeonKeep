@@ -1571,6 +1571,116 @@ input {
     color: var(--text-main);
 }
 
+.rage-feature-instruction {
+    margin: 0 0 10px;
+    font-size: 0.95rem;
+    line-height: 1.45;
+    color: var(--text-main);
+}
+
+.rage-feature-card {
+    display: grid;
+    gap: 12px;
+}
+
+.rage-feature-inner {
+    display: grid;
+    gap: 10px;
+    padding-left: 12px;
+    border-left: 3px solid color-mix(in srgb, var(--panel-border) 88%, transparent);
+}
+
+.rage-feature-active-label {
+    margin: 0;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.rage-feature-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    font: inherit;
+    font-weight: 700;
+    color: var(--text-main);
+    cursor: pointer;
+    text-align: left;
+}
+
+.rage-feature-toggle i {
+    transition: transform 0.2s ease;
+}
+
+.rage-feature-toggle i.is-expanded {
+    transform: rotate(180deg);
+}
+
+.feature-description--rage {
+    margin: 0;
+}
+
+.rage-feature-actions {
+    display: grid;
+    gap: 6px;
+}
+
+.rage-feature-uses {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.rage-feature-uses-label {
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.rage-feature-checkboxes {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.rage-feature-check {
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+}
+
+.rage-feature-check input {
+    position: absolute;
+    inset: 0;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.rage-feature-check span {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    border: 1px solid var(--panel-border);
+    background: var(--surface-raised);
+}
+
+.rage-feature-check input:checked+span {
+    border-color: var(--accent-primary);
+    background: color-mix(in srgb, var(--accent-primary) 26%, var(--surface-raised));
+}
+
+.feature-choices--rage {
+    padding-top: 0;
+}
+
 .choice-benefits {
     display: grid;
     gap: 8px;

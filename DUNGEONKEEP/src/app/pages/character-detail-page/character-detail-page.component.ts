@@ -10,6 +10,7 @@ import { CharacterPortraitModalComponent } from '../../components/character-port
 import { DropdownComponent, type DropdownOption } from '../../components/dropdown/dropdown.component';
 import { MultiSelectDropdownComponent, type MultiSelectOptionGroup } from '../../components/multi-select-dropdown/multi-select-dropdown.component';
 import { classLevelOneFeatures } from '../../data/class-features.data';
+import { classProgressionColumns } from '../../data/class-progression.data';
 import { monsterCatalog } from '../../data/monster-catalog.generated';
 import { premadeCharacters, type PremadeCharacter } from '../../data/premade-characters.data';
 import { classSpellCatalog, spellcastingProgressionByClass } from '../../data/class-spells.data';
@@ -28,6 +29,7 @@ import {
 import { spellDetailsMap } from '../../data/spell-details.data';
 import { normalizePreparedLeveledSpellNames } from '../../rules/spell-preparation.rules';
 import { getWizardPreparedSpellLimit, isWizardSpellbookCantripAlwaysPrepared } from '../../rules/wizard-class.rules';
+import { featCatalogEntries, type FeatEntry } from '../../data/feats-catalog.data';
 import type { SkillProficiencies } from '../../models/dungeon.models';
 import type { MonsterCatalogEntry } from '../../models/monster-reference.models';
 import { DungeonApiService } from '../../state/dungeon-api.service';
@@ -85,6 +87,10 @@ interface PersistedAbilityScoreImprovementChoice {
 
 interface PersistedFeatFollowUpChoice {
     abilityIncreaseAbility?: string;
+    weaponMasterWeapon?: string;
+    grapplerAbility?: string;
+    magicInitiateAbility?: string;
+    skilledSelections?: string[];
 }
 
 interface PersistedExtrasEntry {
@@ -285,6 +291,7 @@ interface PersistedBuilderState {
     classKnownSpellsByClass?: Record<string, string[]>;
     wizardSpellbookByClass?: Record<string, string[]>;
     usedSpellSlotsByLevel?: Record<number, number>;
+    limitedUseCounts?: Record<string, number>;
     hpMaxOverride?: number | null;
     tempHitPoints?: number;
     heroicInspiration?: boolean;
@@ -309,6 +316,18 @@ interface CombatRow {
     ritual: boolean;
 }
 
+interface LimitedUseEntry {
+    id: string;
+    name: string;
+    meta: string;
+    description: string;
+    choiceLabel: string;
+    activationLabel: string;
+    maxUses: number;
+    usedCount: number;
+    resetLabel: string;
+}
+
 interface DetailDrawerContent {
     title: string;
     subtitle: string;
@@ -316,7 +335,14 @@ interface DetailDrawerContent {
     bullets?: string[];
     lineItems?: Array<{ value: string; label: string; note?: string }>;
     secondaryHeading?: string;
-    variant?: 'default' | 'inventory-item';
+    variant?: 'default' | 'inventory-item' | 'rage-feature' | 'brutal-strike-feature';
+    actionLines?: string[];
+    tracker?: {
+        entryId: string;
+        maxUses: number;
+        usedCount: number;
+        resetLabel: string;
+    };
     metaLine?: string;
     profileTags?: string[];
     facts?: Array<{
@@ -358,6 +384,9 @@ export class CharacterDetailPageComponent {
     );
     private readonly premadeCharacterLookup = new Map<string, PremadeCharacter>(
         premadeCharacters.map((character) => [this.getPremadeLookupKey(character), character])
+    );
+    private readonly featCatalogByName = new Map<string, FeatEntry>(
+        featCatalogEntries.map((feat) => [feat.name.trim().toLowerCase(), feat])
     );
     readonly detailBackgroundOptions: ReadonlyArray<DropdownOption> = [
         { value: 'parchment', label: 'Parchment' },
@@ -630,10 +659,13 @@ export class CharacterDetailPageComponent {
     readonly detailBackgroundCachedImageUrl = signal('');
     readonly headerManageOpen = signal(false);
     readonly usedSpellSlotsByLevel = signal<Record<number, number>>({});
+    readonly limitedUseCounts = signal<Record<string, number>>({});
+    readonly rageDetailOption = signal('activate-rage');
+    readonly brutalStrikeDetailFeature = signal<'Brutal Strike' | 'Improved Brutal Strike'>('Brutal Strike');
     readonly expandedContainers = signal<Set<string>>(new Set());
     readonly activeDetailDrawer = signal<DetailDrawerContent | null>(null);
     readonly activeExtrasStatEntry = signal<PersistedExtrasEntry | null>(null);
-    readonly detailSecondaryExpanded = signal(true);
+    readonly detailSecondaryExpanded = signal(false);
     readonly hpManagerOpen = signal(false);
     readonly hpHealingInput = signal('0');
     readonly hpDamageInput = signal('0');
@@ -812,6 +844,11 @@ export class CharacterDetailPageComponent {
         return extrasCatalogEntries.filter((e) => e.type === type);
     });
 
+    readonly rageDetailOptions: ReadonlyArray<DropdownOption> = [
+        { value: 'activate-rage', label: 'Activate Rage' },
+        { value: 'extend-rage', label: 'Extend Rage' }
+    ];
+
     readonly coinAdjustInput = signal<PersistedCurrencyState>({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 });
     readonly partyCoinAdjustInput = signal<PersistedCurrencyState>({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 });
     readonly coinLifestyleExpanded = signal(false);
@@ -878,6 +915,11 @@ export class CharacterDetailPageComponent {
                 this.lastCharacterId = char.id;
                 this.usedSpellSlotsByLevel.set({ ...initial });
             }
+        });
+
+        effect(() => {
+            const state = this.persistedBuilderState();
+            this.limitedUseCounts.set({ ...(state?.limitedUseCounts ?? {}) });
         });
 
         effect(() => {
@@ -2828,6 +2870,36 @@ export class CharacterDetailPageComponent {
     readonly bonusActionNames = computed(() => this.noteContext().bonusActions);
     readonly reactionNames = computed(() => this.noteContext().reactions);
 
+    readonly limitedUseEntries = computed<LimitedUseEntry[]>(() => {
+        const char = this.character();
+        if (!char) {
+            return [];
+        }
+
+        const entries: LimitedUseEntry[] = [];
+
+        if (char.className === 'Barbarian') {
+            const rageUsesText = this.getClassProgressionValue('Barbarian', 'Rages', char.level);
+            const maxUses = Number.parseInt(rageUsesText, 10);
+
+            if (Number.isFinite(maxUses) && maxUses > 0) {
+                entries.push({
+                    id: 'barbarian-rage',
+                    name: 'Rage',
+                    meta: 'Rages • PHB-2024, pg. 51',
+                    description: `You can take a Bonus Action to enter Rage if you aren’t wearing Heavy Armor. You can use Rage ${maxUses} times per Long Rest and regain one expended use when you finish a Short Rest.`,
+                    choiceLabel: 'Activate Rage',
+                    activationLabel: 'Rage (Enter): 1 Bonus Action',
+                    maxUses,
+                    usedCount: Math.max(0, Math.min(maxUses, this.limitedUseCounts()['barbarian-rage'] ?? 0)),
+                    resetLabel: 'Long Rest'
+                });
+            }
+        }
+
+        return entries;
+    });
+
     readonly attacksPerAction = computed(() => {
         const value = Number(this.noteContext().attacksPerAction);
         if (Number.isFinite(value) && value > 0) {
@@ -2840,27 +2912,148 @@ export class CharacterDetailPageComponent {
     readonly classFeatures = computed(() => {
         const char = this.character();
         const state = this.persistedBuilderState();
-        if (!char || !state) {
+        if (!char) {
             return [];
         }
 
-        const selections = state.classFeatureSelections ?? {};
         const allLevels = classLevelOneFeatures[char.className] ?? [];
-        const features: Array<{ name: string; description: string }> = [];
+        const features: Array<{ name: string; level: number; description: string; detailDescription: string; summaryBadges: string[] }> = [];
 
         for (const levelGroup of allLevels) {
             if (levelGroup.level > char.level) continue;
             for (const feature of levelGroup.features) {
-                const selectedValues = (selections[feature.name] ?? []).filter(Boolean);
-                let description = feature.description ?? '';
+                const selectedValues = this.getPersistedFeatureSelections(state, char.className, feature.level, feature.name);
+                const detailLines: string[] = [
+                    ...this.getClassFeatureDynamicDetails(char.className, char.level, feature.name)
+                ];
+                const summaryBadges = this.getClassFeatureSummaryBadges(char.className, char.level, feature.name);
+                let description = this.getClassFeatureSheetDescription(char.className, char.level, feature.name, feature.description ?? '');
+                let detailDescription = feature.description ?? description;
+
                 if (feature.choices && selectedValues.length > 0) {
-                    description = `${description}${description ? '\n' : ''}Chosen: ${selectedValues.join(', ')}`;
+                    detailLines.push(`Chosen: ${selectedValues.join(', ')}`);
                 }
-                features.push({ name: feature.name, description });
+
+                if (feature.name === 'Ability Score Improvement' || feature.name === 'Epic Boon') {
+                    const asiSummary = this.getPersistedAbilityScoreImprovementSummary(state, char.className, feature.level, feature.name);
+                    if (asiSummary) {
+                        detailLines.push(asiSummary);
+                    }
+                }
+
+                const followUpLines = this.getPersistedFeatFollowUpSummary(state, char.className, feature.level, feature.name);
+                if (followUpLines.length > 0) {
+                    detailLines.push(...followUpLines);
+                }
+
+                if (detailLines.length > 0) {
+                    description = [description, ...detailLines].filter((line) => !!line).join('\n');
+                    detailDescription = [detailDescription, ...detailLines].filter((line) => !!line).join('\n');
+                }
+
+                features.push({ name: feature.name, level: feature.level, description, detailDescription, summaryBadges });
+            }
+        }
+
+        for (const featureName of char.classFeatures ?? []) {
+            if (!features.some((feature) => feature.name.toLowerCase() === featureName.toLowerCase())) {
+                features.push({
+                    name: featureName,
+                    level: char.level,
+                    description: '',
+                    detailDescription: '',
+                    summaryBadges: this.getClassFeatureSummaryBadges(char.className, char.level, featureName)
+                });
             }
         }
 
         return features;
+    });
+
+    readonly feats = computed(() => {
+        const char = this.character();
+        const state = this.persistedBuilderState();
+        if (!char) {
+            return [] as Array<{ name: string; description: string }>;
+        }
+
+        const featItems: Array<{ name: string; description: string }> = [];
+        const allLevels = classLevelOneFeatures[char.className] ?? [];
+        const speciesSourceLabel = char.race?.trim() || 'Species';
+        const backgroundSourceLabel = char.background?.trim() || 'Background';
+
+        for (const levelGroup of allLevels) {
+            if (levelGroup.level > char.level) {
+                continue;
+            }
+
+            for (const feature of levelGroup.features) {
+                if (feature.name !== 'Ability Score Improvement' && feature.name !== 'Epic Boon') {
+                    continue;
+                }
+
+                const selectedValues = this.getPersistedFeatureSelections(state, char.className, feature.level, feature.name);
+                for (const selectedValue of selectedValues) {
+                    if (selectedValue === 'Ability Score Improvement') {
+                        const asiSummary = this.getPersistedAbilityScoreImprovementSummary(state, char.className, feature.level, feature.name)
+                            || 'Increase one ability score by 2, or increase two ability scores by 1.';
+
+                        featItems.push({
+                            name: 'Ability Score Improvement',
+                            description: [`From ${char.className}`, asiSummary].join('\n')
+                        });
+                        continue;
+                    }
+
+                    const featEntry = this.featCatalogByName.get(selectedValue.toLowerCase());
+                    const followUpLines = this.getPersistedFeatFollowUpSummary(state, char.className, feature.level, feature.name);
+                    const descriptionLines = [
+                        `From ${char.className}`,
+                        featEntry?.abilityScoreIncrease ? `Feat benefit: Ability Score Increase. ${featEntry.abilityScoreIncrease}` : '',
+                        ...(featEntry?.features?.map((entry) => `${entry.title}. ${entry.text}`) ?? []),
+                        (!featEntry?.features?.length && featEntry?.benefit ? featEntry.benefit : ''),
+                        ...followUpLines
+                    ].filter((line) => !!line);
+
+                    featItems.push({
+                        name: selectedValue,
+                        description: descriptionLines.join('\n')
+                    });
+                }
+            }
+        }
+
+        const choiceEntries = [
+            ...this.getFlattenedChoiceValues(state?.selectedSpeciesTraitChoices ?? {}).map((value) => ({ value, sourceLabel: speciesSourceLabel })),
+            ...Object.values(state?.backgroundChoiceSelections ?? {})
+                .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+                .map((value) => ({ value, sourceLabel: backgroundSourceLabel }))
+        ];
+
+        for (const choiceEntry of choiceEntries) {
+            const featEntry = this.featCatalogByName.get(choiceEntry.value.toLowerCase());
+            if (!featEntry) {
+                continue;
+            }
+
+            if (featItems.some((entry) => entry.name === featEntry.name)) {
+                continue;
+            }
+
+            const descriptionLines = [
+                `From ${choiceEntry.sourceLabel}`,
+                featEntry.abilityScoreIncrease ? `Feat benefit: Ability Score Increase. ${featEntry.abilityScoreIncrease}` : '',
+                ...(featEntry.features?.map((entry) => `${entry.title}. ${entry.text}`) ?? []),
+                (!featEntry.features?.length && featEntry.benefit ? featEntry.benefit : '')
+            ].filter((line) => !!line);
+
+            featItems.push({
+                name: featEntry.name,
+                description: descriptionLines.join('\n')
+            });
+        }
+
+        return featItems;
     });
 
     readonly speciesTraits = computed(() => {
@@ -2890,6 +3083,211 @@ export class CharacterDetailPageComponent {
             return `${trait} | Chosen: ${selected.join(', ')}`;
         });
     });
+
+    getLimitedUseEntryForFeature(featureName: string): LimitedUseEntry | null {
+        return this.limitedUseEntries().find((entry) => entry.name === featureName) ?? null;
+    }
+
+    private getPersistedFeatureSelectionKey(className: string, level: number, featureName: string): string {
+        return `${className}:${level}:${featureName}`;
+    }
+
+    private getClassFeatureSheetDescription(className: string, level: number, featureName: string, fallback: string): string {
+        if (className === 'Barbarian' && featureName === 'Rage') {
+            const rageUses = this.getClassProgressionValue(className, 'Rages', level);
+            return `You can take a Bonus Action to enter Rage if you aren’t wearing Heavy Armor. You can use Rage ${rageUses} times per Long Rest and regain one expended use when you finish a Short Rest.`;
+        }
+
+        if (className === 'Barbarian' && featureName === 'Brutal Strike') {
+            return 'When you use Reckless Attack, you can give up Advantage on one Strength-based attack. On a hit, it deals extra damage and applies one Brutal Strike effect of your choice.';
+        }
+
+        if (className === 'Barbarian' && featureName === 'Improved Brutal Strike') {
+            return level >= 17
+                ? 'Your Brutal Strike now deals extra 2d10 damage and you can apply two Brutal Strike effects to the same hit.'
+                : 'You learn two additional Brutal Strike effects: Staggering Blow and Sundering Blow.';
+        }
+
+        return fallback;
+    }
+
+    private getClassProgressionValue(className: string, label: string, level: number): string {
+        const columns = classProgressionColumns[className] ?? [];
+        const column = columns.find((entry) => entry.label === label);
+        if (!column) {
+            return '';
+        }
+
+        const index = Math.max(0, Math.min(column.values.length - 1, level - 1));
+        return column.values[index] ?? '';
+    }
+
+    private getClassFeatureSummaryBadges(className: string, level: number, featureName: string): string[] {
+        const badges: string[] = [];
+
+        if (className === 'Barbarian' && featureName === 'Rage') {
+            const rageUses = this.getClassProgressionValue(className, 'Rages', level);
+            const rageDamage = this.getClassProgressionValue(className, 'Rage Damage', level);
+
+            if (rageUses) {
+                badges.push(`Max ${rageUses} uses`);
+            }
+            if (rageDamage) {
+                badges.push(`Damage ${rageDamage}`);
+            }
+            badges.push('Duration 10 min');
+        }
+
+        if (className === 'Barbarian' && featureName === 'Weapon Mastery') {
+            const masteryCount = this.getClassProgressionValue(className, 'Weapon Mastery', level);
+            if (masteryCount) {
+                badges.push(`${masteryCount} weapon types`);
+            }
+        }
+
+        if (className === 'Barbarian' && featureName === 'Brutal Strike') {
+            badges.push('Extra 1d10');
+            badges.push('1 effect');
+        }
+
+        if (className === 'Barbarian' && featureName === 'Improved Brutal Strike' && level >= 17) {
+            badges.push('Extra 2d10');
+            badges.push('2 effects');
+        }
+
+        return badges;
+    }
+
+    private getClassFeatureDynamicDetails(className: string, level: number, featureName: string): string[] {
+        const details: string[] = [];
+
+        if (className === 'Barbarian' && featureName === 'Rage') {
+            return details;
+        }
+
+        if (className === 'Barbarian' && featureName === 'Weapon Mastery') {
+            const masteryCount = this.getClassProgressionValue(className, 'Weapon Mastery', level);
+            if (masteryCount) {
+                details.push(`Current mastered weapon types: ${masteryCount}.`);
+            }
+        }
+
+        return details;
+    }
+
+    private getPersistedFeatureSelections(state: PersistedBuilderState | null, className: string, level: number, featureName: string): string[] {
+        const selections = state?.classFeatureSelections ?? {};
+        const keyedSelections = selections[this.getPersistedFeatureSelectionKey(className, level, featureName)] ?? selections[featureName] ?? [];
+        return Array.isArray(keyedSelections)
+            ? keyedSelections.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+            : [];
+    }
+
+    private getPersistedAbilityScoreImprovementSummary(state: PersistedBuilderState | null, className: string, level: number, featureName: string): string {
+        const choices = state?.abilityScoreImprovementChoices ?? {};
+        const selectionKey = this.getPersistedFeatureSelectionKey(className, level, featureName);
+        const choice = choices[selectionKey] ?? choices[featureName];
+
+        if (!choice) {
+            return '';
+        }
+
+        if (choice.mode === 'plus-two' && choice.primaryAbility) {
+            return `Ability increase: +2 ${choice.primaryAbility}.`;
+        }
+
+        if (choice.mode === 'plus-one-plus-one' && choice.primaryAbility && choice.secondaryAbility) {
+            return `Ability increase: +1 ${choice.primaryAbility}, +1 ${choice.secondaryAbility}.`;
+        }
+
+        return '';
+    }
+
+    private getPersistedFeatFollowUpSummary(state: PersistedBuilderState | null, className: string, level: number, featureName: string): string[] {
+        const followUps = state?.featFollowUpChoices ?? {};
+        const selectionKey = this.getPersistedFeatureSelectionKey(className, level, featureName);
+        const followUp = followUps[selectionKey] ?? followUps[featureName];
+        if (!followUp) {
+            return [];
+        }
+
+        const details: string[] = [];
+
+        if (followUp.abilityIncreaseAbility?.trim()) {
+            details.push(`Selected ability: ${followUp.abilityIncreaseAbility.trim()}.`);
+        }
+
+        if (followUp.weaponMasterWeapon?.trim()) {
+            details.push(`Selected weapon: ${followUp.weaponMasterWeapon.trim()}.`);
+        }
+
+        if (followUp.grapplerAbility?.trim()) {
+            details.push(`Chosen grappler ability: ${followUp.grapplerAbility.trim()}.`);
+        }
+
+        if (followUp.magicInitiateAbility?.trim()) {
+            details.push(`Spellcasting ability: ${followUp.magicInitiateAbility.trim()}.`);
+        }
+
+        if (Array.isArray(followUp.skilledSelections) && followUp.skilledSelections.length > 0) {
+            details.push(`Selections: ${followUp.skilledSelections.join(', ')}.`);
+        }
+
+        return details;
+    }
+
+    private getFlattenedChoiceValues(choiceMap: Record<string, string[]>): string[] {
+        return Object.values(choiceMap)
+            .flatMap((values) => values ?? [])
+            .filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+    }
+
+    getLimitedUseCheckboxIndexes(count: number): number[] {
+        return Array.from({ length: Math.max(0, count) }, (_, index) => index);
+    }
+
+    onLimitedUseCheckboxChanged(entryId: string, boxIndex: number, checked: boolean): void {
+        const currentCount = this.limitedUseCounts()[entryId] ?? 0;
+        const nextCount = checked
+            ? Math.max(currentCount, boxIndex + 1)
+            : Math.min(currentCount, boxIndex);
+
+        void this.saveLimitedUseCount(entryId, nextCount);
+    }
+
+    private async saveLimitedUseCount(entryId: string, nextCount: number): Promise<void> {
+        const char = this.character();
+        if (!char) {
+            return;
+        }
+
+        const nextState = { ...this.limitedUseCounts() };
+        if (nextCount > 0) {
+            nextState[entryId] = Math.max(0, Math.trunc(nextCount));
+        } else {
+            delete nextState[entryId];
+        }
+
+        this.limitedUseCounts.set(nextState);
+
+        const updatedState: PersistedBuilderState = {
+            ...(this.persistedBuilderState() ?? {}),
+            limitedUseCounts: nextState
+        };
+        const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
+
+        await this.store.updateCharacter(this.characterId, {
+            name: char.name,
+            playerName: char.playerName,
+            race: char.race,
+            className: char.className,
+            role: char.role,
+            level: char.level,
+            background: char.background,
+            notes: updatedNotes,
+            campaignId: char.campaignId
+        });
+    }
 
     readonly displayBackstoryText = computed(() => {
         const notes = this.parsedNotes().cleanedNotes.trim();
@@ -3037,7 +3435,8 @@ export class CharacterDetailPageComponent {
 
     closeDetailDrawer(): void {
         this.activeDetailDrawer.set(null);
-        this.detailSecondaryExpanded.set(true);
+        this.detailSecondaryExpanded.set(false);
+        this.rageDetailOption.set('activate-rage');
     }
 
     toggleDetailSecondary(): void {
@@ -3052,7 +3451,7 @@ export class CharacterDetailPageComponent {
         this.defenseManagerOpen.set(false);
         this.conditionsManagerOpen.set(false);
         this.activeExtrasStatEntry.set(null);
-        this.detailSecondaryExpanded.set(true);
+        this.detailSecondaryExpanded.set(content.variant === 'rage-feature' ? false : true);
         this.activeDetailDrawer.set(content);
     }
 
@@ -4491,10 +4890,18 @@ export class CharacterDetailPageComponent {
         });
     }
 
-    openFeatureDetail(name: string, description: string, category: string): void {
+    openFeatureDetail(name: string, description: string, category: string, level?: number): void {
+        const className = this.character()?.className ?? category;
+
+        const customDetail = this.getCustomFeatureDetail(name, description, category, className, level);
+        if (customDetail) {
+            this.openDetailDrawer(customDetail);
+            return;
+        }
+
         this.openDetailDrawer({
             title: name,
-            subtitle: category,
+            subtitle: category === 'Class Feature' ? className : category,
             description,
             bullets: [
                 'This feature can modify combat, exploration, or roleplay options.',
@@ -7524,6 +7931,341 @@ export class CharacterDetailPageComponent {
         const plainNumber = Number(normalized);
         if (Number.isFinite(plainNumber)) {
             return plainNumber;
+        }
+
+        return null;
+    }
+
+    renderDetailRichText(text: string): string {
+        return marked.parse(text, { gfm: true, breaks: true }) as string;
+    }
+
+    getFeatCardLines(text: string): Array<{ isSource: boolean; text: string; sourceName?: string }> {
+        return text
+            .split('\n')
+            .map((line) => line.trim())
+            .filter((line) => line.length > 0)
+            .map((line) => {
+                const sourceMatch = line.match(/^From\s+(.+)$/i);
+                if (sourceMatch) {
+                    return {
+                        isSource: true,
+                        text: 'From',
+                        sourceName: sourceMatch[1].trim()
+                    };
+                }
+
+                return {
+                    isSource: false,
+                    text: line
+                };
+            });
+    }
+
+    private getCustomFeatureDetail(name: string, description: string, category: string, className: string, level?: number): DetailDrawerContent | null {
+        if (name === 'Rage' && className === 'Barbarian') {
+            this.rageDetailOption.set('activate-rage');
+            return {
+                title: name,
+                subtitle: 'Rages • PHB-2024, pg. 51',
+                description,
+                secondaryHeading: 'Show Details',
+                variant: 'rage-feature'
+            };
+        }
+
+        if ((name === 'Brutal Strike' || name === 'Improved Brutal Strike') && className === 'Barbarian') {
+            this.brutalStrikeDetailFeature.set(name === 'Improved Brutal Strike' ? 'Improved Brutal Strike' : 'Brutal Strike');
+            return {
+                title: name,
+                subtitle: 'Brutal Strike effects • PHB-2024, pg. 53',
+                description,
+                variant: 'brutal-strike-feature'
+            };
+        }
+
+        if (category !== 'Class Feature' || className !== 'Barbarian') {
+            return null;
+        }
+
+        const parsed = this.parseFeatureDetailText(description);
+        const title = level ? `${level}: ${name}` : name;
+        const usedCounts = this.limitedUseCounts();
+
+        switch (name) {
+            case 'Relentless Rage':
+                return { title: name, subtitle: 'PHB-2024, pg. 53', description: parsed.baseDescription };
+            case 'Persistent Rage':
+                return {
+                    title: name,
+                    subtitle: 'PHB-2024, pg. 53',
+                    description: parsed.baseDescription,
+                    actionLines: ['Rage: Regain Expended Uses: 1 Action'],
+                    tracker: {
+                        entryId: 'barbarian-persistent-rage',
+                        maxUses: 1,
+                        usedCount: Math.max(0, Math.min(1, usedCounts['barbarian-persistent-rage'] ?? 0)),
+                        resetLabel: 'Long Rest'
+                    }
+                };
+            case 'Intimidating Presence':
+                return {
+                    title: name,
+                    subtitle: 'PHB-2024, pg. 54',
+                    description: parsed.baseDescription,
+                    actionLines: ['Intimidating Presence: 1 Bonus Action'],
+                    tracker: {
+                        entryId: 'barbarian-intimidating-presence',
+                        maxUses: 1,
+                        usedCount: Math.max(0, Math.min(1, usedCounts['barbarian-intimidating-presence'] ?? 0)),
+                        resetLabel: 'Long Rest'
+                    }
+                };
+            case 'Retaliation':
+                return {
+                    title: name,
+                    subtitle: 'PHB-2024, pg. 54',
+                    description: parsed.baseDescription,
+                    actionLines: ['Retaliation: 1 Reaction']
+                };
+            case 'Instinctive Pounce':
+                return {
+                    title: name,
+                    subtitle: 'PHB-2024, pg. 53',
+                    description: parsed.baseDescription,
+                    actionLines: ['Rage (Instinctive Pounce): 1 Bonus Action']
+                };
+            case 'Frenzy':
+                return { title: name, subtitle: 'PHB-2024, pg. 54', description: parsed.baseDescription };
+            case 'Primal Knowledge':
+                return {
+                    title: name,
+                    subtitle: 'PHB-2024, pg. 52',
+                    description: parsed.baseDescription,
+                    actionLines: [
+                        ...(parsed.chosenValues.length ? parsed.chosenValues : []),
+                        'Rage: Primal Knowledge: Special'
+                    ]
+                };
+            case 'Weapon Mastery': {
+                const selected = parsed.chosenValues[0] ?? '';
+                const masteryMatch = selected.match(/^(.*) \((.*)\)$/);
+                const actionLine = masteryMatch
+                    ? `${masteryMatch[2]} (${masteryMatch[1]}): 1 Action`
+                    : selected ? `${selected}: 1 Action` : '';
+
+                return {
+                    title,
+                    subtitle: 'PHB-2024',
+                    description: parsed.baseDescription,
+                    actionLines: [selected, actionLine].filter((line) => !!line)
+                };
+            }
+            case 'Ability Score Improvement':
+                return {
+                    title,
+                    subtitle: 'PHB-2024, pg. 53',
+                    description: parsed.baseDescription,
+                    actionLines: parsed.chosenValues.length ? parsed.chosenValues : (parsed.extraLines.length ? parsed.extraLines : [])
+                };
+            case 'Epic Boon':
+                return {
+                    title,
+                    subtitle: 'PHB-2024, pg. 53',
+                    description: parsed.baseDescription,
+                    actionLines: parsed.chosenValues.length ? ['Feat', ...parsed.chosenValues] : []
+                };
+            default:
+                return null;
+        }
+    }
+
+    private parseFeatureDetailText(description: string): { baseDescription: string; chosenValues: string[]; extraLines: string[] } {
+        const chosenValues: string[] = [];
+        const extraLines: string[] = [];
+        const baseLines: string[] = [];
+
+        for (const rawLine of description.split('\n')) {
+            const line = rawLine.trim();
+            if (!line) {
+                if (baseLines.length > 0 && baseLines[baseLines.length - 1] !== '') {
+                    baseLines.push('');
+                }
+                continue;
+            }
+
+            if (line.startsWith('Chosen:')) {
+                chosenValues.push(line.replace('Chosen:', '').trim());
+                continue;
+            }
+
+            if (line.startsWith('Ability increase:')) {
+                extraLines.push(line);
+                continue;
+            }
+
+            baseLines.push(line);
+        }
+
+        return {
+            baseDescription: baseLines.join('\n').trim(),
+            chosenValues,
+            extraLines
+        };
+    }
+
+    onRageDetailOptionChanged(value: string | number): void {
+        this.rageDetailOption.set(String(value));
+    }
+
+    getRageSummaryText(): string {
+        const char = this.character();
+        if (!char || char.className !== 'Barbarian') {
+            return '';
+        }
+
+        const rageUses = this.getClassProgressionValue('Barbarian', 'Rages', char.level) || '0';
+        return `You can take a Bonus action to enter Rage if you aren’t wearing Heavy Armor. You can use Rage ${rageUses} times per Long Rest, and regain one expended use when you finish a Short Rest.`;
+    }
+
+    getRageActiveDetailText(): string {
+        const char = this.character();
+        if (!char || char.className !== 'Barbarian') {
+            return '';
+        }
+
+        const rageDamage = this.getClassProgressionValue('Barbarian', 'Rage Damage', char.level) || '+2';
+
+        return [
+            'While active, your Rage follows these rules:',
+            '',
+            '- You have Resistance to Bludgeoning, Piercing, and Slashing Damage.',
+            `- When you make an attack using Strength and deal damage, you gain a ${rageDamage} bonus to damage.`,
+            '- You have Advantage on Strength checks and saving throws.',
+            '- You can’t maintain Concentration or cast spells.',
+            '',
+            'Rage lasts until the end of your next turn, ending early if you don Heavy armor or have the Incapacitated condition. If your Rage is still active, you can extend it by doing one of the following:',
+            '',
+            '- Make an attack roll against an enemy.',
+            '- Force an enemy to make a saving throw.',
+            '- Take a Bonus Action to extend your Rage.',
+            '',
+            'Each time the Rage is extended, it lasts until the end of your next turn. You can maintain a Rage for up to 10 minutes.'
+        ].join('\n');
+    }
+
+    getRageDetailActionLines(): string[] {
+        return this.rageDetailOption() === 'extend-rage'
+            ? ['Extend Rage: 1 Bonus Action']
+            : ['Rage (Enter): 1 Bonus Action'];
+    }
+
+    getBrutalStrikeDetailText(): string {
+        const char = this.character();
+        if (!char || char.className !== 'Barbarian') {
+            return '';
+        }
+
+        const damageDice = char.level >= 17 ? '2d10' : '1d10';
+        const effectCount = char.level >= 17 ? 2 : 1;
+        const effectLabel = effectCount === 1 ? 'effect' : 'effects';
+        const lines = [
+            `If you use Reckless Attack, you can forgo Advantage on one Strength-based attack of your choice on your turn. The chosen attack roll must not have Disadvantage. If the chosen attack roll hits, the target takes an extra ${damageDice} damage of the same type dealt by the weapon or Unarmed Strike, and you can cause ${effectCount} Brutal Strike ${effectLabel} of your choice.`,
+            '',
+            '**Forceful Blow.** The target is pushed 15 feet straight away from you. You can then move up to half your Speed straight toward the target without provoking Opportunity Attacks.',
+            '',
+            '**Hamstring Blow.** The target’s Speed is reduced by 15 feet until the start of your next turn. A target can be affected by only one Hamstring Blow at a time—the most recent one.'
+        ];
+
+        if (char.level >= 13) {
+            lines.push(
+                '',
+                '**Staggering Blow.** The target has Disadvantage on the next saving throw it makes, and it can’t make Opportunity Attacks until the start of your next turn.',
+                '',
+                '**Sundering Blow.** Before the start of your next turn, the next attack roll made by another creature against the target gains a +5 bonus to the roll. An attack roll can gain only one Sundering Blow bonus.'
+            );
+        }
+
+        return lines.join('\n');
+    }
+
+    getBrutalStrikeActionLines(): string[] {
+        const char = this.character();
+        if (!char || char.className !== 'Barbarian') {
+            return [];
+        }
+
+        const lines = [
+            'Brutal Strike: Forceful Blow: 1 Action',
+            'Brutal Strike: Hamstring Blow: 1 Action'
+        ];
+
+        if (char.level >= 13) {
+            lines.push('Brutal Strike: Staggering Blow: 1 Action');
+            lines.push('Brutal Strike: Sundering Blow: 1 Action');
+        }
+
+        return lines;
+    }
+
+    getFeatureInlineActionLines(featureName: string, description: string, level?: number): string[] {
+        const char = this.character();
+        if (!char || char.className !== 'Barbarian') {
+            return [];
+        }
+
+        const parsed = this.parseFeatureDetailText(description);
+
+        switch (featureName) {
+            case 'Brutal Strike':
+            case 'Improved Brutal Strike':
+                return this.getBrutalStrikeActionLines();
+            case 'Retaliation':
+                return ['Retaliation: 1 Reaction'];
+            case 'Instinctive Pounce':
+                return ['Rage (Instinctive Pounce): 1 Bonus Action'];
+            case 'Persistent Rage':
+                return ['Rage: Regain Expended Uses: 1 Action'];
+            case 'Intimidating Presence':
+                return ['Intimidating Presence: 1 Bonus Action'];
+            case 'Primal Knowledge':
+                return [...parsed.chosenValues, 'Rage: Primal Knowledge: Special'];
+            case 'Weapon Mastery': {
+                const selected = parsed.chosenValues[0] ?? '';
+                const masteryMatch = selected.match(/^(.*) \((.*)\)$/);
+                const actionLine = masteryMatch
+                    ? `${masteryMatch[2]} (${masteryMatch[1]}): 1 Action`
+                    : selected ? `${selected}: 1 Action` : '';
+                return [selected, actionLine].filter((line) => !!line);
+            }
+            case 'Ability Score Improvement':
+                return parsed.chosenValues.length ? parsed.chosenValues : parsed.extraLines;
+            case 'Epic Boon':
+                return parsed.chosenValues.length ? ['Feat', ...parsed.chosenValues] : [];
+            default:
+                return [];
+        }
+    }
+
+    getFeatureInlineTracker(featureName: string): DetailDrawerContent['tracker'] | null {
+        const usedCounts = this.limitedUseCounts();
+
+        if (featureName === 'Persistent Rage') {
+            return {
+                entryId: 'barbarian-persistent-rage',
+                maxUses: 1,
+                usedCount: Math.max(0, Math.min(1, usedCounts['barbarian-persistent-rage'] ?? 0)),
+                resetLabel: 'Long Rest'
+            };
+        }
+
+        if (featureName === 'Intimidating Presence') {
+            return {
+                entryId: 'barbarian-intimidating-presence',
+                maxUses: 1,
+                usedCount: Math.max(0, Math.min(1, usedCounts['barbarian-intimidating-presence'] ?? 0)),
+                resetLabel: 'Long Rest'
+            };
         }
 
         return null;
