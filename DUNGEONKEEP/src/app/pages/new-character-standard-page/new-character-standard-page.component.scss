@@ -110,9 +110,9 @@
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);
     border-radius: 14px;
-    box-shadow: var(--panel-shadow);
+    box-shadow: none;
     backdrop-filter: blur(18px);
-    transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+    transition: border-color 180ms ease, background 180ms ease;
     min-width: 0;
 }
 
