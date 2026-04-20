@@ -126,6 +126,9 @@
                 <button type="button" class="class-subtab" [class.active]="getActiveClassPanelTab(className) === 'class-features'" (click)="setClassPanelTab(className, 'class-features')">
                     Class Features
                 </button>
+                <button type="button" class="class-subtab" [class.active]="getActiveClassPanelTab(className) === 'core-traits'" (click)="setClassPanelTab(className, 'core-traits')">
+                    Core Traits
+                </button>
                 @if (classSupportsSpells(className, multiclassList()[className])) {
                 <button type="button" class="class-subtab" [class.active]="getActiveClassPanelTab(className) === 'spells'" (click)="setClassPanelTab(className, 'spells')">
                     Spells
@@ -379,6 +382,21 @@
                     }
                 </div>
             </details>
+            }
+
+            @if (getActiveClassPanelTab(className) === 'core-traits') {
+            <section class="class-core-traits-panel">
+                <table class="core-traits-table">
+                    <tbody>
+                        @for (trait of getClassCoreTraits(className); track trait.label) {
+                        <tr>
+                            <th scope="row">{{ trait.label }}</th>
+                            <td>{{ trait.value }}</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </section>
             }
 
             @if (getActiveClassPanelTab(className) === 'spells' && classSupportsSpells(className, multiclassList()[className])) {

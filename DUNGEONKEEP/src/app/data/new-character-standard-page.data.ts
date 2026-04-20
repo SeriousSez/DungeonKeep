@@ -1534,11 +1534,11 @@ export const classInfoMap: Record<string, BuilderInfo> = {
             coreTraits: [
                 { label: 'Primary Ability', value: 'Dexterity' },
                 { label: 'Hit Point Die', value: 'd8 per Gunslinger level' },
-                { label: 'Saving Throws', value: 'Dexterity and Charisma' },
+                { label: 'Saving Throw Proficiencies', value: 'Dexterity and Charisma' },
+                { label: 'Skill Proficiencies', value: 'Choose 2: Acrobatics, Athletics, Deception, History, Insight, Intimidation, Perception, Persuasion, Sleight of Hand, Stealth' },
                 { label: 'Armor Training', value: 'Light armor' },
                 { label: 'Weapon Proficiencies', value: 'Simple weapons and firearms' },
                 { label: 'Tool Proficiencies', value: "Tinker's Tools" },
-                { label: 'Skills', value: '2 from Acrobatics, Athletics, Deception, History, Insight, Intimidation, Perception, Persuasion, Sleight of Hand, Stealth' },
                 { label: 'Role', value: 'Ranged skirmisher using trick shots, Grit resources, and firearms to pressure and control from distance' }
             ],
             levelMilestones: [
@@ -1580,10 +1580,10 @@ export const classInfoMap: Record<string, BuilderInfo> = {
             coreTraits: [
                 { label: 'Primary Ability', value: 'Strength or Dexterity; Intelligence for Monster Lore' },
                 { label: 'Hit Point Die', value: 'd10 per Monster Hunter level' },
-                { label: 'Saving Throws', value: 'Dexterity and Intelligence' },
+                { label: 'Saving Throw Proficiencies', value: 'Dexterity and Intelligence' },
+                { label: 'Skill Proficiencies', value: 'Choose 2: Athletics, History, Insight, Investigation, Nature, Perception, Stealth, Survival' },
                 { label: 'Armor Training', value: 'Medium armor and shields' },
                 { label: 'Weapon Proficiencies', value: 'All simple and martial weapons' },
-                { label: 'Skills', value: '2 from Athletics, History, Insight, Investigation, Nature, Perception, Stealth, Survival' },
                 { label: 'Role', value: 'Frontline or skirmishing martial striker with strong emphasis on preparation, monster knowledge, and adaptive damage' }
             ],
             levelMilestones: [
@@ -1622,7 +1622,8 @@ export const classDetailFallbacks: Record<string, NonNullable<BuilderInfo['detai
         coreTraits: [
             { label: 'Primary Ability', value: 'Dexterity or Strength; Int/Wis for hemocraft features' },
             { label: 'Hit Point Die', value: 'd10 per Blood Hunter level' },
-            { label: 'Saving Throws', value: 'Dexterity and Intelligence' },
+            { label: 'Saving Throw Proficiencies', value: 'Dexterity and Intelligence' },
+            { label: 'Skill Proficiencies', value: 'Choose 3: Athletics, Deception, History, Insight, Investigation, Nature, Perception, Stealth, Survival' },
             { label: 'Armor Training', value: 'Light armor, medium armor, shields' },
             { label: 'Weapon Proficiencies', value: 'Simple and martial weapons' },
             { label: 'Role', value: 'Martial striker with curse utility, tracking support, and anti-monster control tools' }
@@ -1715,7 +1716,8 @@ export const classDetailFallbacks: Record<string, NonNullable<BuilderInfo['detai
         coreTraits: [
             { label: 'Primary Ability', value: 'Charisma' },
             { label: 'Hit Point Die', value: 'd8 per Bard level' },
-            { label: 'Saving Throws', value: 'Dexterity and Charisma' },
+            { label: 'Saving Throw Proficiencies', value: 'Dexterity and Charisma' },
+            { label: 'Skill Proficiencies', value: 'Choose 3 from any skill' },
             { label: 'Armor Training', value: 'Light armor' },
             { label: 'Weapon Proficiencies', value: 'Simple weapons, hand crossbows, longswords, rapiers, shortswords' },
             { label: 'Role', value: 'Support, control, utility, and social leadership with strong skill expression' }
@@ -1813,7 +1815,8 @@ export const classDetailFallbacks: Record<string, NonNullable<BuilderInfo['detai
         coreTraits: [
             { label: 'Primary Ability', value: 'Wisdom' },
             { label: 'Hit Point Die', value: 'd8 per Cleric level' },
-            { label: 'Saving Throws', value: 'Wisdom and Charisma' },
+            { label: 'Saving Throw Proficiencies', value: 'Wisdom and Charisma' },
+            { label: 'Skill Proficiencies', value: 'Choose 2: History, Insight, Medicine, Persuasion, Religion' },
             { label: 'Armor Training', value: 'Light and medium armor, shields (domain dependent boosts possible)' },
             { label: 'Weapon Proficiencies', value: 'Simple weapons (domain features can expand)' },
             { label: 'Role', value: 'Healing, defense, buffs, control, and divine offense across all tiers' }
@@ -1906,9 +1909,11 @@ export const classDetailFallbacks: Record<string, NonNullable<BuilderInfo['detai
         coreTraits: [
             { label: 'Primary Ability', value: 'Wisdom' },
             { label: 'Hit Point Die', value: 'd8 per Druid level' },
-            { label: 'Saving Throws', value: 'Intelligence and Wisdom' },
-            { label: 'Armor Training', value: 'Light armor, medium armor, shields (material restrictions by table rulings)' },
-            { label: 'Weapon Proficiencies', value: 'Club, dagger, dart, javelin, mace, quarterstaff, scimitar, sickle, sling, spear' },
+            { label: 'Saving Throw Proficiencies', value: 'Intelligence and Wisdom' },
+            { label: 'Skill Proficiencies', value: 'Choose 2: Animal Handling, Arcana, Insight, Medicine, Nature, Perception, Religion, Survival' },
+            { label: 'Armor Training', value: 'Light armor, medium armor, shields' },
+            { label: 'Weapon Proficiencies', value: 'Simple weapons' },
+            { label: 'Tool Proficiencies', value: 'Herbalism Kit' },
             { label: 'Role', value: 'Control, utility, scouting, sustain, and adaptable battlefield pacing' }
         ],
         levelMilestones: [
@@ -1994,7 +1999,8 @@ export const classDetailFallbacks: Record<string, NonNullable<BuilderInfo['detai
         coreTraits: [
             { label: 'Primary Ability', value: 'Strength or Dexterity' },
             { label: 'Hit Point Die', value: 'd10 per Fighter level' },
-            { label: 'Saving Throws', value: 'Strength and Constitution' },
+            { label: 'Saving Throw Proficiencies', value: 'Strength and Constitution' },
+            { label: 'Skill Proficiencies', value: 'Choose 2: Acrobatics, Animal Handling, Athletics, History, Insight, Intimidation, Perception, Survival' },
             { label: 'Armor Training', value: 'All armor and shields' },
             { label: 'Weapon Proficiencies', value: 'Simple and martial weapons' },
             { label: 'Role', value: 'Frontline damage, control, tactical flexibility, and sustained encounter reliability' }
@@ -2082,7 +2088,8 @@ export const classDetailFallbacks: Record<string, NonNullable<BuilderInfo['detai
         coreTraits: [
             { label: 'Primary Ability', value: 'Dexterity and Wisdom' },
             { label: 'Hit Point Die', value: 'd8 per Monk level' },
-            { label: 'Saving Throws', value: 'Strength and Dexterity' },
+            { label: 'Saving Throw Proficiencies', value: 'Strength and Dexterity' },
+            { label: 'Skill Proficiencies', value: 'Choose 2: Acrobatics, Athletics, History, Insight, Religion, Stealth' },
             { label: 'Armor Training', value: 'None (unarmored class profile)' },
             { label: 'Weapon Proficiencies', value: 'Simple weapons and monk weapons by ruleset' },
             { label: 'Role', value: 'Skirmish pressure, disruption, and mobility-driven tempo control' }
@@ -2170,7 +2177,8 @@ export const classDetailFallbacks: Record<string, NonNullable<BuilderInfo['detai
         coreTraits: [
             { label: 'Primary Ability', value: 'Strength and Charisma' },
             { label: 'Hit Point Die', value: 'd10 per Paladin level' },
-            { label: 'Saving Throws', value: 'Wisdom and Charisma' },
+            { label: 'Saving Throw Proficiencies', value: 'Wisdom and Charisma' },
+            { label: 'Skill Proficiencies', value: 'Choose 2: Athletics, Insight, Intimidation, Medicine, Persuasion, Religion' },
             { label: 'Armor Training', value: 'All armor and shields' },
             { label: 'Weapon Proficiencies', value: 'Simple and martial weapons' },
             { label: 'Role', value: 'Durable striker with teamwide aura support and burst conversion' }
@@ -2258,7 +2266,8 @@ export const classDetailFallbacks: Record<string, NonNullable<BuilderInfo['detai
         coreTraits: [
             { label: 'Primary Ability', value: 'Dexterity or Strength with Wisdom' },
             { label: 'Hit Point Die', value: 'd10 per Ranger level' },
-            { label: 'Saving Throws', value: 'Strength and Dexterity' },
+            { label: 'Saving Throw Proficiencies', value: 'Strength and Dexterity' },
+            { label: 'Skill Proficiencies', value: 'Choose 3: Animal Handling, Athletics, Insight, Investigation, Nature, Perception, Stealth, Survival' },
             { label: 'Armor Training', value: 'Light armor, medium armor, shields' },
             { label: 'Weapon Proficiencies', value: 'Simple and martial weapons' },
             { label: 'Role', value: 'Skirmish damage, scouting, utility control, and flexible ranged or melee pressure' }
@@ -2346,7 +2355,8 @@ export const classDetailFallbacks: Record<string, NonNullable<BuilderInfo['detai
         coreTraits: [
             { label: 'Primary Ability', value: 'Dexterity' },
             { label: 'Hit Point Die', value: 'd8 per Rogue level' },
-            { label: 'Saving Throws', value: 'Dexterity and Intelligence' },
+            { label: 'Saving Throw Proficiencies', value: 'Dexterity and Intelligence' },
+            { label: 'Skill Proficiencies', value: 'Choose 4: Acrobatics, Athletics, Deception, Insight, Intimidation, Investigation, Perception, Performance, Persuasion, Sleight of Hand, Stealth' },
             { label: 'Armor Training', value: 'Light armor' },
             { label: 'Weapon Proficiencies', value: 'Simple weapons, hand crossbows, longswords, rapiers, shortswords' },
             { label: 'Role', value: 'Single-target pressure, scouting, infiltration, and elite skill coverage' }
@@ -2434,7 +2444,8 @@ export const classDetailFallbacks: Record<string, NonNullable<BuilderInfo['detai
         coreTraits: [
             { label: 'Primary Ability', value: 'Charisma' },
             { label: 'Hit Point Die', value: 'd6 per Sorcerer level' },
-            { label: 'Saving Throws', value: 'Constitution and Charisma' },
+            { label: 'Saving Throw Proficiencies', value: 'Constitution and Charisma' },
+            { label: 'Skill Proficiencies', value: 'Choose 2: Arcana, Deception, Insight, Intimidation, Persuasion, Religion' },
             { label: 'Armor Training', value: 'None by default' },
             { label: 'Weapon Proficiencies', value: 'Simple weapons' },
             { label: 'Role', value: 'Burst caster, control specialist, and spell-shape tactician' }
@@ -2522,7 +2533,8 @@ export const classDetailFallbacks: Record<string, NonNullable<BuilderInfo['detai
         coreTraits: [
             { label: 'Primary Ability', value: 'Charisma' },
             { label: 'Hit Point Die', value: 'd8 per Warlock level' },
-            { label: 'Saving Throws', value: 'Wisdom and Charisma' },
+            { label: 'Saving Throw Proficiencies', value: 'Wisdom and Charisma' },
+            { label: 'Skill Proficiencies', value: 'Choose 2: Arcana, Deception, History, Intimidation, Investigation, Nature, Religion' },
             { label: 'Armor Training', value: 'Light armor' },
             { label: 'Weapon Proficiencies', value: 'Simple weapons (expanded by choices/subclass)' },
             { label: 'Role', value: 'Consistent pressure caster with modular invocations and adaptable utility' }
@@ -2610,7 +2622,8 @@ export const classDetailFallbacks: Record<string, NonNullable<BuilderInfo['detai
         coreTraits: [
             { label: 'Primary Ability', value: 'Intelligence' },
             { label: 'Hit Point Die', value: 'd6 per Wizard level' },
-            { label: 'Saving Throws', value: 'Intelligence and Wisdom' },
+            { label: 'Saving Throw Proficiencies', value: 'Intelligence and Wisdom' },
+            { label: 'Skill Proficiencies', value: 'Choose 2: Arcana, History, Insight, Investigation, Medicine, Religion' },
             { label: 'Armor Training', value: 'None by default' },
             { label: 'Weapon Proficiencies', value: 'Daggers, darts, slings, quarterstaffs, light crossbows' },
             { label: 'Role', value: 'Control, utility, ritual casting, and high-flexibility encounter shaping' }

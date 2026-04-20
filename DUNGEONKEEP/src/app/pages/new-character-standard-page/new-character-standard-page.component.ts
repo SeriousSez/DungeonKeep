@@ -38,7 +38,7 @@ type StandardStep = 'home' | 'class' | 'species' | 'background' | 'abilities' | 
 type AbilityGenerationMethod = '' | 'standard-array' | 'manual-rolled' | 'point-buy';
 type ClassSortMode = 'primary-ability' | 'party-role' | 'power-source' | 'complexity' | 'spellcasting' | 'armor';
 type SpeciesSortMode = 'source' | 'lineage' | 'movement' | 'world' | 'complexity';
-type ClassPanelTab = 'class-features' | 'spells';
+type ClassPanelTab = 'class-features' | 'spells' | 'core-traits';
 type WizardSpellSubTab = 'prepared' | 'spellbook' | 'catalog';
 type AbilityScoreImprovementMode = '' | 'plus-two' | 'plus-one-plus-one';
 type HitPointMode = 'fixed' | 'rolled';
@@ -5633,6 +5633,10 @@ export class NewCharacterStandardPageComponent {
 
     getActiveClassPanelTab(className: string): ClassPanelTab {
         return this.classPanelTabsByClass()[className] ?? 'class-features';
+    }
+
+    getClassCoreTraits(className: string): { label: string; value: string }[] {
+        return classInfoMap[className]?.details?.coreTraits ?? [];
     }
 
     setClassPanelTab(className: string, tab: ClassPanelTab): void {

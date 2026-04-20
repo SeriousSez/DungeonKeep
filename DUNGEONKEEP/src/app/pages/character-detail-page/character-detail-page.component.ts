@@ -2622,7 +2622,13 @@ export class CharacterDetailPageComponent {
             return { armor: [] as string[], weapons: [] as string[], tools: [] as string[] };
         }
 
-        return this.getTrainingFromSelections(this.persistedBuilderState());
+        const fromState = this.getTrainingFromSelections(this.persistedBuilderState());
+
+        if (fromState.armor.length === 0 && fromState.weapons.length === 0 && fromState.tools.length === 0) {
+            return this.getTrainingFromCoreTraits(char.className);
+        }
+
+        return fromState;
     });
 
     readonly languageList = computed(() => {
@@ -8249,6 +8255,28 @@ export class CharacterDetailPageComponent {
             .split(/[,;|]/g)
             .map((entry) => entry.trim())
             .filter((entry) => entry.length > 0);
+    }
+
+    private getTrainingFromCoreTraits(className: string): { armor: string[]; weapons: string[]; tools: string[] } {
+        const classDetail = Object.entries(classDetailFallbacks).find(([key]) => key.toLowerCase() === className.toLowerCase())?.[1] ?? null;
+        const traits = classDetail?.coreTraits ?? [];
+
+        const armor: string[] = [];
+        const weapons: string[] = [];
+        const tools: string[] = [];
+
+        for (const trait of traits) {
+            const label = trait.label.toLowerCase();
+            if (label.includes('armor')) {
+                armor.push(trait.value);
+            } else if (label.includes('weapon')) {
+                weapons.push(trait.value);
+            } else if (label.includes('tool')) {
+                tools.push(trait.value);
+            }
+        }
+
+        return { armor, weapons, tools };
     }
 
     private getTrainingFromSelections(state: PersistedBuilderState | null): { armor: string[]; weapons: string[]; tools: string[] } {
