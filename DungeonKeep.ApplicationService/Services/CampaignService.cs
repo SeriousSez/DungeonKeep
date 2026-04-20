@@ -820,7 +820,9 @@ public sealed class CampaignService(
 
         try
         {
-            var campaignUrl = BuildCampaignUrl(clientBaseUrl, updated.Id);
+            var campaignUrl = invitation.RecipientAlreadyHasAccess
+                    ? BuildCampaignUrl(clientBaseUrl, updated.Id)
+                    : BuildNotificationsUrl(clientBaseUrl);
 
             await campaignInviteEmailService.SendInvitationAsync(
                 new CampaignInvitationEmail(
@@ -918,6 +920,15 @@ public sealed class CampaignService(
             : clientBaseUrl.Trim().TrimEnd('/');
 
         return $"{normalizedBaseUrl}/campaigns/{campaignId}";
+    }
+
+    private static string BuildNotificationsUrl(string? clientBaseUrl)
+    {
+        var normalizedBaseUrl = string.IsNullOrWhiteSpace(clientBaseUrl)
+            ? "http://localhost:4200"
+            : clientBaseUrl.Trim().TrimEnd('/');
+
+        return $"{normalizedBaseUrl}/notifications";
     }
 
     public async Task DeleteAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default)
