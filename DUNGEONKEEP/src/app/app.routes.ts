@@ -37,6 +37,9 @@ import { RulesFeatsDetailPage } from './pages/rules-feats-detail-page/rules-feat
 import { RulesSpellsPage } from './pages/rules-spells-page/rules-spells-page';
 import { RulesSpellDetailPage } from './pages/rules-spell-detail-page/rules-spell-detail-page';
 import { RulesMonsterDetailPage } from './pages/rules-monster-detail-page/rules-monster-detail-page';
+import { NotificationsPageComponent } from './pages/notifications-page/notifications-page.component';
+import { MessagesPageComponent } from './pages/messages-page/messages-page.component';
+import { AccountSettingsPageComponent } from './pages/account-settings-page/account-settings-page.component';
 
 export const routes: Routes = [
     {
@@ -393,6 +396,21 @@ export const routes: Routes = [
         path: '404',
         component: NotFoundPage,
         data: { title: 'Page Not Found', breadcrumb: 'Not Found' }
+    },
+    {
+        path: 'notifications',
+        component: NotificationsPageComponent,
+        data: { title: 'Notifications', breadcrumb: 'Notifications' }
+    },
+    {
+        path: 'messages',
+        component: MessagesPageComponent,
+        data: { title: 'Messages', breadcrumb: 'Messages' }
+    },
+    {
+        path: 'account',
+        component: AccountSettingsPageComponent,
+        data: { title: 'Account Settings', breadcrumb: 'Account Settings' }
     },
     {
         path: '**',

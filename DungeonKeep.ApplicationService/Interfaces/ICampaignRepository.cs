@@ -26,6 +26,8 @@ public interface ICampaignRepository
     Task<Campaign?> UpdateMapAsync(Guid campaignId, CampaignMapLibraryDto library, CancellationToken cancellationToken = default);
     Task RemoveCharacterAssignmentsFromMapsAsync(Guid characterId, IReadOnlyCollection<Guid>? campaignIds = null, CancellationToken cancellationToken = default);
     Task<Campaign?> InviteMemberAsync(Guid campaignId, string email, AuthenticatedUser user, CancellationToken cancellationToken = default);
+    Task<Campaign?> AcceptInviteAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default);
+    Task<bool> DeclineInviteAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default);
     Task<bool> IsActiveMemberAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default);
     Task RemoveMemberAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid campaignId, CancellationToken cancellationToken = default);

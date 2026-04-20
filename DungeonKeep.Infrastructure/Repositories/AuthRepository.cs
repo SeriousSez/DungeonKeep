@@ -12,6 +12,11 @@ public sealed class AuthRepository(DungeonKeepDbContext dbContext) : IAuthReposi
         return await dbContext.AppUsers.FirstOrDefaultAsync(user => user.Email == normalizedEmail, cancellationToken);
     }
 
+    public async Task<AppUser?> GetUserByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.AppUsers.FirstOrDefaultAsync(user => user.Id == id, cancellationToken);
+    }
+
     public async Task<AppUser> AddUserAsync(AppUser user, CancellationToken cancellationToken = default)
     {
         dbContext.AppUsers.Add(user);

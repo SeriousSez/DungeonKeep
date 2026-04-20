@@ -68,6 +68,26 @@ export class SessionService {
         this.initialized.set(true);
     }
 
+    async updateProfile(displayName: string, email: string): Promise<{ ok: boolean; error?: string }> {
+        try {
+            const updated = await this.api.updateProfile(displayName, email);
+            this.currentUser.set(updated);
+            saveSessionUser(updated);
+            return { ok: true };
+        } catch (error) {
+            return { ok: false, error: this.readApiError(error, 'Could not update profile.') };
+        }
+    }
+
+    async changePassword(currentPassword: string, newPassword: string): Promise<{ ok: boolean; error?: string }> {
+        try {
+            await this.api.changePassword(currentPassword, newPassword);
+            return { ok: true };
+        } catch (error) {
+            return { ok: false, error: this.readApiError(error, 'Could not change password.') };
+        }
+    }
+
     private async restoreSession(): Promise<void> {
         if (!this.token()) {
             this.initialized.set(true);

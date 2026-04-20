@@ -11,6 +11,10 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
     public DbSet<CampaignMembership> CampaignMemberships => Set<CampaignMembership>();
     public DbSet<Character> Characters => Set<Character>();
     public DbSet<CharacterCampaignAssignment> CharacterCampaignAssignments => Set<CharacterCampaignAssignment>();
+    public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
+    public DbSet<DirectMessageThread> DirectMessageThreads => Set<DirectMessageThread>();
+    public DbSet<DirectMessageParticipant> DirectMessageParticipants => Set<DirectMessageParticipant>();
+    public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -154,6 +158,69 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
                 .WithMany(user => user.OwnedCharacters)
                 .HasForeignKey(c => c.OwnerUserId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<UserNotification>(entity =>
+        {
+            entity.HasKey(n => n.Id);
+            entity.Property(n => n.Type).HasMaxLength(64).IsRequired();
+            entity.Property(n => n.Title).HasMaxLength(256).IsRequired();
+            entity.Property(n => n.Body).HasMaxLength(1000);
+            entity.Property(n => n.Link).HasMaxLength(512);
+            entity.Property(n => n.IsRead).IsRequired();
+            entity.Property(n => n.IsDismissed).IsRequired();
+            entity.Property(n => n.CreatedAtUtc).IsRequired();
+
+            entity.HasIndex(n => n.UserId);
+
+            entity.HasOne(n => n.User)
+                .WithMany()
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DirectMessageThread>(entity =>
+        {
+            entity.HasKey(t => t.Id);
+            entity.Property(t => t.CreatedAtUtc).IsRequired();
+            entity.Property(t => t.LastMessageAtUtc).IsRequired();
+        });
+
+        modelBuilder.Entity<DirectMessageParticipant>(entity =>
+        {
+            entity.HasKey(p => p.Id);
+            entity.Property(p => p.LastReadAtUtc);
+
+            entity.HasIndex(p => new { p.ThreadId, p.UserId }).IsUnique();
+
+            entity.HasOne(p => p.Thread)
+                .WithMany(t => t.Participants)
+                .HasForeignKey(p => p.ThreadId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(p => p.User)
+                .WithMany()
+                .HasForeignKey(p => p.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DirectMessage>(entity =>
+        {
+            entity.HasKey(m => m.Id);
+            entity.Property(m => m.Body).HasColumnType("text").IsRequired();
+            entity.Property(m => m.SentAtUtc).IsRequired();
+
+            entity.HasIndex(m => m.ThreadId);
+
+            entity.HasOne(m => m.Thread)
+                .WithMany(t => t.Messages)
+                .HasForeignKey(m => m.ThreadId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(m => m.Sender)
+                .WithMany()
+                .HasForeignKey(m => m.SenderUserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

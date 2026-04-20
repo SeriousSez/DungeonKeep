@@ -104,7 +104,15 @@
             </a>
 
             <div class="nav-mobile-footer">
-                <span class="user-pill">{{ currentUser()?.displayName }}</span>
+                <a class="nav-mobile-user-link" routerLink="/account" (click)="closeMobileNav()">{{ currentUser()?.displayName }}</a>
+                <a class="nav-mobile-user-link" routerLink="/notifications" (click)="closeMobileNav()">
+                    <i class="fa-duotone fa-thin fa-bell"></i>
+                    Notifications
+                </a>
+                <a class="nav-mobile-user-link" routerLink="/messages" (click)="closeMobileNav()">
+                    <i class="fa-duotone fa-thin fa-envelope"></i>
+                    Messages
+                </a>
                 <button type="button" class="logout-btn-plain" (click)="logout()">Log Out</button>
             </div>
         </nav>
@@ -112,10 +120,32 @@
         <div class="topbar-spacer"></div>
 
         <div class="topbar-actions">
-            <span class="user-pill">{{ currentUser()?.displayName }}</span>
-            <button type="button" class="logout-icon-btn" (click)="logout()" aria-label="Log out">
-                <i class="fa-duotone fa-thin fa-right-from-bracket"></i>
-            </button>
+            <div class="user-menu-wrap" [class.is-open]="userMenuOpen()">
+                <button class="user-pill" type="button" (click)="toggleUserMenu()" aria-haspopup="true" [attr.aria-expanded]="userMenuOpen()">
+                    {{ currentUser()?.displayName }}
+                    <i class="fa-duotone fa-thin fa-chevron-down user-pill-chevron"></i>
+                </button>
+                <div class="user-dropdown">
+                    <a class="user-dropdown-item" routerLink="/notifications" (click)="closeUserMenu()">
+                        <i class="fa-duotone fa-thin fa-bell"></i>
+                        Notifications
+                    </a>
+                    <a class="user-dropdown-item" routerLink="/messages" (click)="closeUserMenu()">
+                        <i class="fa-duotone fa-thin fa-envelope"></i>
+                        Messages
+                    </a>
+                    <div class="user-dropdown-rule"></div>
+                    <a class="user-dropdown-item" routerLink="/account" (click)="closeUserMenu()">
+                        <i class="fa-duotone fa-thin fa-gear"></i>
+                        Account Settings
+                    </a>
+                    <div class="user-dropdown-rule"></div>
+                    <button class="user-dropdown-item user-dropdown-logout" type="button" (click)="logout()">
+                        <i class="fa-duotone fa-thin fa-right-from-bracket"></i>
+                        Log Out
+                    </button>
+                </div>
+            </div>
         </div>
 
         <button type="button" class="hamburger-btn" [attr.aria-expanded]="mobileNavOpen()" aria-controls="primary-nav" aria-label="Toggle navigation" (click)="toggleMobileNav()">

@@ -280,4 +280,47 @@ public sealed class AuthService(IAuthRepository authRepository, IAccountActivati
             return false;
         }
     }
+
+    public async Task<AuthUserDto> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken cancellationToken = default)
+    {
+        var displayName = request.DisplayName.Trim();
+        var normalizedEmail = NormalizeEmail(request.Email);
+
+        if (string.IsNullOrWhiteSpace(displayName))
+            throw new InvalidOperationException("Display name is required.");
+        if (string.IsNullOrWhiteSpace(normalizedEmail))
+            throw new InvalidOperationException("Email is required.");
+
+        // Check email uniqueness if changed.
+        var existing = await authRepository.GetUserByEmailAsync(normalizedEmail, cancellationToken);
+        if (existing is not null && existing.Id != userId)
+            throw new InvalidOperationException("That email address is already used by another account.");
+
+        var user = existing?.Id == userId
+            ? existing
+            : await authRepository.GetUserByIdAsync(userId, cancellationToken)
+                ?? throw new InvalidOperationException("User not found.");
+
+        user.DisplayName = displayName;
+        user.Email = normalizedEmail;
+        var updated = await authRepository.UpdateUserAsync(user, cancellationToken);
+        return new AuthUserDto(updated.Id, updated.Email, updated.DisplayName);
+    }
+
+    public async Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
+            throw new InvalidOperationException("Current password and new password are required.");
+        if (request.NewPassword.Length < 8)
+            throw new InvalidOperationException("New password must be at least 8 characters.");
+
+        var user = await authRepository.GetUserByIdAsync(userId, cancellationToken)
+            ?? throw new InvalidOperationException("User not found.");
+
+        if (!VerifyPassword(user.PasswordHash, request.CurrentPassword))
+            throw new InvalidOperationException("Current password is incorrect.");
+
+        user.PasswordHash = HashPassword(request.NewPassword);
+        await authRepository.UpdateUserAsync(user, cancellationToken);
+    }
 }

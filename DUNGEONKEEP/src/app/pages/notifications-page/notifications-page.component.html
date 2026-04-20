@@ -1,0 +1,58 @@
+<main class="page-stack">
+    <section class="panel page-intro">
+        <div class="intro-header">
+            <div>
+                <p class="eyebrow">Inbox</p>
+                <h1>Notifications</h1>
+                <p class="intro-copy">Stay up to date with campaign invites, session updates, and party activity.</p>
+            </div>
+            @if (unreadCount() > 0) {
+            <button class="mark-all-btn" type="button" (click)="markAllRead()">
+                <i class="fa-duotone fa-thin fa-check-double"></i>
+                Mark all read
+            </button>
+            }
+        </div>
+    </section>
+
+    <section class="notifications-panel panel">
+        @if (notifications().length === 0) {
+        <div class="empty-state">
+            <i class="fa-duotone fa-thin fa-bell empty-icon"></i>
+            <h2>All caught up</h2>
+            <p>No new notifications right now. Check back after your next session.</p>
+        </div>
+        } @else {
+        <ul class="notification-list">
+            @for (notif of notifications(); track notif.id) {
+            <li class="notification-item" [class.is-unread]="!notif.isRead" (click)="markRead(notif.id)">
+                <span class="notif-icon-wrap">
+                    <i class="fa-duotone fa-thin" [class]="'fa-' + iconFor(notif.type)"></i>
+                    @if (!notif.isRead) {
+                    <span class="unread-dot" aria-label="Unread"></span>
+                    }
+                </span>
+                <div class="notif-body">
+                    <p class="notif-title">{{ notif.title }}</p>
+                    <p class="notif-text">{{ notif.body }}</p>
+                    <span class="notif-time">{{ formatDate(notif.createdAtUtc) }}</span>
+                    @if (notif.type === 'CampaignInvite') {
+                    <div class="notif-actions">
+                        <button class="invite-accept-btn" type="button" (click)="$event.stopPropagation(); acceptInvite(notif)">
+                            <i class="fa-duotone fa-thin fa-check"></i> Accept
+                        </button>
+                        <button class="invite-decline-btn" type="button" (click)="$event.stopPropagation(); declineInvite(notif)">
+                            <i class="fa-duotone fa-thin fa-xmark"></i> Decline
+                        </button>
+                    </div>
+                    }
+                </div>
+                <button class="dismiss-btn" type="button" (click)="$event.stopPropagation(); dismiss(notif.id)" aria-label="Dismiss">
+                    <i class="fa-duotone fa-thin fa-xmark"></i>
+                </button>
+            </li>
+            }
+        </ul>
+        }
+    </section>
+</main>

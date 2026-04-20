@@ -45,6 +45,10 @@ public sealed record ActivateAccountRequest(
 
 public sealed record ResendActivationCodeRequest(string Email);
 
+public sealed record UpdateProfileRequest(string DisplayName, string Email);
+
+public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+
 public sealed record AccountActivationEmail(
     string RecipientEmail,
     string RecipientDisplayName,

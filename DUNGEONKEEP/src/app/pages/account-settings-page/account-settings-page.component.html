@@ -1,0 +1,176 @@
+<main class="page-stack">
+    <section class="panel page-intro">
+        <div class="intro-header">
+            <div class="intro-avatar">
+                <span class="avatar-large">{{ (currentUser()?.displayName ?? 'U').charAt(0).toUpperCase() }}</span>
+            </div>
+            <div>
+                <p class="eyebrow">Your Account</p>
+                <h1>Account Settings</h1>
+                <p class="intro-copy">Manage your profile, password, and preferences.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="settings-layout">
+        <nav class="panel settings-nav">
+            <button class="settings-nav-item" type="button" [class.is-active]="activeTab() === 'profile'" (click)="setTab('profile')">
+                <i class="fa-duotone fa-thin fa-user"></i>
+                Profile
+            </button>
+            <button class="settings-nav-item" type="button" [class.is-active]="activeTab() === 'security'" (click)="setTab('security')">
+                <i class="fa-duotone fa-thin fa-lock"></i>
+                Security
+            </button>
+            <button class="settings-nav-item" type="button" [class.is-active]="activeTab() === 'preferences'" (click)="setTab('preferences')">
+                <i class="fa-duotone fa-thin fa-sliders"></i>
+                Preferences
+            </button>
+        </nav>
+
+        <section class="panel settings-panel">
+            @if (activeTab() === 'profile') {
+            <div class="settings-section">
+                <div class="section-header">
+                    <h2>Profile</h2>
+                    <p>Update your display name and email address.</p>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label for="display-name">Display Name</label>
+                        <input id="display-name" type="text" [ngModel]="displayName()" (ngModelChange)="displayName.set($event)" placeholder="How others see you" />
+                    </div>
+                    <div class="form-field">
+                        <label for="email">Email Address</label>
+                        <input id="email" type="email" [ngModel]="email()" (ngModelChange)="email.set($event)" placeholder="your@email.com" />
+                        <span class="field-hint">Used for login and campaign invites.</span>
+                    </div>
+                </div>
+
+                @if (saveSuccess()) {
+                <p class="save-notice save-notice--ok">
+                    <i class="fa-duotone fa-thin fa-circle-check"></i>
+                    Profile saved.
+                </p>
+                }
+                @if (saveError()) {
+                <p class="save-notice save-notice--error">
+                    <i class="fa-duotone fa-thin fa-triangle-exclamation"></i>
+                    {{ saveError() }}
+                </p>
+                }
+
+                <div class="form-actions">
+                    <button class="save-btn" [class.is-loading]="savePending()" type="button" (click)="saveProfile()">
+                        @if (savePending()) {
+                        Saving…
+                        } @else {
+                        Save Changes
+                        }
+                    </button>
+                </div>
+            </div>
+            }
+
+            @if (activeTab() === 'security') {
+            <div class="settings-section">
+                <div class="section-header">
+                    <h2>Change Password</h2>
+                    <p>Use a strong password with at least 8 characters.</p>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label for="current-pw">Current Password</label>
+                        <input id="current-pw" type="password" [ngModel]="currentPassword()" (ngModelChange)="currentPassword.set($event)" placeholder="Enter current password" autocomplete="current-password" />
+                    </div>
+                    <div class="form-field">
+                        <label for="new-pw">New Password</label>
+                        <input id="new-pw" type="password" [ngModel]="newPassword()" (ngModelChange)="newPassword.set($event)" placeholder="At least 8 characters" autocomplete="new-password" />
+                    </div>
+                    <div class="form-field">
+                        <label for="confirm-pw">Confirm New Password</label>
+                        <input id="confirm-pw" type="password" [ngModel]="confirmPassword()" (ngModelChange)="confirmPassword.set($event)" placeholder="Repeat new password" autocomplete="new-password" />
+                    </div>
+                </div>
+
+                @if (passwordSuccess()) {
+                <p class="save-notice save-notice--ok">
+                    <i class="fa-duotone fa-thin fa-circle-check"></i>
+                    Password updated successfully.
+                </p>
+                }
+                @if (passwordError()) {
+                <p class="save-notice save-notice--error">
+                    <i class="fa-duotone fa-thin fa-triangle-exclamation"></i>
+                    {{ passwordError() }}
+                </p>
+                }
+
+                <div class="form-actions">
+                    <button class="save-btn" [class.is-loading]="passwordPending()" type="button" (click)="savePassword()">
+                        @if (passwordPending()) {
+                        Updating…
+                        } @else {
+                        Update Password
+                        }
+                    </button>
+                </div>
+            </div>
+            }
+
+            @if (activeTab() === 'preferences') {
+            <div class="settings-section">
+                <div class="section-header">
+                    <h2>Preferences</h2>
+                    <p>Personalise your DungeonKeep experience.</p>
+                </div>
+
+                <div class="preference-group">
+                    <p class="preference-group-label">Appearance</p>
+
+                    <div class="theme-options">
+                        <label class="theme-option" [class.is-selected]="theme() === 'system'">
+                            <input type="radio" name="theme" value="system" [checked]="theme() === 'system'" (change)="theme.set('system')" />
+                            <i class="fa-duotone fa-thin fa-display"></i>
+                            System
+                        </label>
+                        <label class="theme-option" [class.is-selected]="theme() === 'light'">
+                            <input type="radio" name="theme" value="light" [checked]="theme() === 'light'" (change)="theme.set('light')" />
+                            <i class="fa-duotone fa-thin fa-sun"></i>
+                            Light
+                        </label>
+                        <label class="theme-option" [class.is-selected]="theme() === 'dark'">
+                            <input type="radio" name="theme" value="dark" [checked]="theme() === 'dark'" (change)="theme.set('dark')" />
+                            <i class="fa-duotone fa-thin fa-moon"></i>
+                            Dark
+                        </label>
+                    </div>
+                </div>
+
+                <div class="preference-group">
+                    <p class="preference-group-label">Table Behaviour</p>
+
+                    <div class="toggle-row">
+                        <div class="toggle-info">
+                            <span class="toggle-label">Compact mode</span>
+                            <span class="toggle-desc">Reduce padding and spacing for denser views.</span>
+                        </div>
+                        <button class="toggle-switch" type="button" [class.is-on]="compactMode()" [attr.aria-pressed]="compactMode()" (click)="compactMode.update(v => !v)">
+                            <span class="toggle-thumb"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="save-btn" type="button" (click)="savePreferences()">Save Preferences</button>
+                    @if (prefSaveSuccess()) {
+                    <span class="save-notice save-notice--ok">Preferences saved.</span>
+                    }
+                </div>
+            </div>
+            }
+        </section>
+    </div>
+</main>

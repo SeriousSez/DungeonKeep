@@ -1,0 +1,299 @@
+:host {
+    display: block;
+}
+
+.page-stack {
+    display: grid;
+    gap: 24px;
+    padding-bottom: clamp(20px, 4vw, 40px);
+}
+
+.panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 28px;
+    box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(18px);
+}
+
+// ── Intro ──────────────────────────────────────────────────────────────────────
+.page-intro {
+    padding: 28px 32px;
+}
+
+.intro-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.eyebrow {
+    margin: 0 0 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.74rem;
+    color: var(--text-soft);
+}
+
+h1 {
+    margin: 0 0 8px;
+    font-family: var(--display-font);
+    font-size: clamp(1.4rem, 2.5vw, 2rem);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.intro-copy {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.mark-all-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 16px;
+    height: 36px;
+    border-radius: 999px;
+    border: 1px solid var(--pill-border);
+    background: var(--pill-bg);
+    color: var(--text-soft);
+    font: inherit;
+    font-size: 0.84rem;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
+
+    &:hover {
+        color: var(--color-primary);
+        border-color: var(--color-primary);
+        background: rgba(216, 147, 75, 0.1);
+    }
+}
+
+// ── Notifications panel ────────────────────────────────────────────────────────
+.notification-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.notification-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: 0;
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+
+    &:first-child {
+        border-radius: 28px 28px 0 0;
+    }
+
+    &:last-child {
+        border-radius: 0 0 28px 28px;
+    }
+
+    &:first-child:last-child {
+        border-radius: 14px;
+    }
+
+    &:hover {
+        background: color-mix(in srgb, var(--surface-raised) 60%, transparent);
+    }
+
+    &.is-unread {
+        background: color-mix(in srgb, var(--accent-soft) 12%, var(--panel-bg));
+
+        &:hover {
+            background: color-mix(in srgb, var(--accent-soft) 20%, var(--panel-bg));
+        }
+
+        .notif-title {
+            font-weight: 700;
+            color: var(--text-main);
+        }
+    }
+}
+
+.notif-icon-wrap {
+    position: relative;
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--accent-soft) 22%, var(--surface-raised));
+    border: 1px solid var(--panel-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: var(--color-primary);
+    flex-shrink: 0;
+
+    i {
+        pointer-events: none;
+    }
+}
+
+.unread-dot {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    border: 2px solid var(--panel-bg);
+}
+
+.notif-body {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    gap: 3px;
+}
+
+.notif-title {
+    margin: 0;
+    font-size: 0.94rem;
+    font-weight: 500;
+    color: var(--text-main);
+    line-height: 1.4;
+}
+
+.notif-text {
+    margin: 0;
+    font-size: 0.87rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.notif-time {
+    font-size: 0.78rem;
+    color: var(--text-soft);
+    margin-top: 2px;
+}
+
+.dismiss-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-soft);
+    font: inherit;
+    cursor: pointer;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s, color 0.15s;
+
+    .notification-item:hover & {
+        opacity: 1;
+    }
+
+    &:hover {
+        background: color-mix(in srgb, var(--surface-raised) 80%, transparent);
+        color: var(--text-main);
+    }
+}
+
+// ── Empty state ────────────────────────────────────────────────────────────────
+.notif-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.invite-accept-btn,
+.invite-decline-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 14px;
+    height: 30px;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+
+    &:hover {
+        opacity: 0.85;
+    }
+}
+
+.invite-accept-btn {
+    background: var(--color-primary);
+    border: none;
+    color: #fff;
+}
+
+.invite-decline-btn {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--text-muted);
+
+    &:hover {
+        border-color: var(--text-main);
+        color: var(--text-main);
+    }
+}
+
+// ── Empty state ────────────────────────────────────────────────────────────────
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 60px 24px;
+    text-align: center;
+
+    h2 {
+        margin: 0;
+        font-family: var(--display-font);
+        font-size: 1.3rem;
+    }
+
+    p {
+        margin: 0;
+        color: var(--text-muted);
+        max-width: 36ch;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+}
+
+.empty-icon {
+    font-size: 2.6rem;
+    color: var(--text-soft);
+}
+
+// ── Responsive ─────────────────────────────────────────────────────────────────
+@media (max-width: 640px) {
+    .page-intro {
+        padding: 20px 18px;
+    }
+
+    .intro-header {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .notification-item {
+        padding: 14px 16px;
+    }
+
+    .dismiss-btn {
+        opacity: 1;
+    }
+}

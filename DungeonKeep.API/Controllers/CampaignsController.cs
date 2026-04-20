@@ -1351,6 +1351,26 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         return Ok(updated);
     }
 
+    [HttpPost("{campaignId:guid}/invites/accept")]
+    public async Task<ActionResult<CampaignDto>> AcceptInvite(Guid campaignId, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null) return Unauthorized();
+
+        var result = await campaignService.AcceptInviteAsync(campaignId, user.Id, cancellationToken);
+        return result is null ? NotFound("No pending invite found for this campaign.") : Ok(result);
+    }
+
+    [HttpPost("{campaignId:guid}/invites/decline")]
+    public async Task<ActionResult> DeclineInvite(Guid campaignId, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null) return Unauthorized();
+
+        var declined = await campaignService.DeclineInviteAsync(campaignId, user.Id, cancellationToken);
+        return declined ? NoContent() : NotFound("No pending invite found for this campaign.");
+    }
+
     private string? GetClientBaseUrl()
     {
         if (TryGetAbsoluteHttpUrl(Request.Headers.Origin, out var originBaseUrl))

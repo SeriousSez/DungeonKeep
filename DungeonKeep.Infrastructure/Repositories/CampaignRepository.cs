@@ -616,7 +616,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             UserId = invitedUser?.Id,
             Email = normalizedEmail,
             Role = "Member",
-            Status = invitedUser is null ? "Pending" : "Active",
+            Status = "Pending",
             InvitedByUserId = user.Id,
             CreatedAtUtc = DateTime.UtcNow
         });
@@ -646,6 +646,41 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
         dbContext.CampaignMemberships.Remove(membership);
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<Campaign?> AcceptInviteAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var membership = await dbContext.CampaignMemberships
+            .FirstOrDefaultAsync(
+                entry => entry.CampaignId == campaignId && entry.UserId == userId && entry.Status == "Pending",
+                cancellationToken);
+
+        if (membership is null)
+        {
+            return null;
+        }
+
+        membership.Status = "Active";
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return await GetByIdAsync(campaignId, cancellationToken);
+    }
+
+    public async Task<bool> DeclineInviteAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var membership = await dbContext.CampaignMemberships
+            .FirstOrDefaultAsync(
+                entry => entry.CampaignId == campaignId && entry.UserId == userId && entry.Status == "Pending",
+                cancellationToken);
+
+        if (membership is null)
+        {
+            return false;
+        }
+
+        dbContext.CampaignMemberships.Remove(membership);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async Task DeleteAsync(Guid campaignId, CancellationToken cancellationToken = default)

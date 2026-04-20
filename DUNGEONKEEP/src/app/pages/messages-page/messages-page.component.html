@@ -1,0 +1,120 @@
+<main class="page-stack">
+    <section class="panel page-intro">
+        <div class="intro-header">
+            <div>
+                <p class="eyebrow">Correspondence</p>
+                <h1>Messages</h1>
+                <p class="intro-copy">Direct messages between campaign members, party coordination, and session notes.</p>
+            </div>
+            <button class="compose-btn" type="button" (click)="openCompose()">
+                <i class="fa-duotone fa-thin fa-pen-to-square"></i>
+                Compose
+            </button>
+        </div>
+    </section>
+
+    <div class="messages-layout">
+        <section class="panel inbox-panel">
+            @if (loading()) {
+            <div class="skeleton-list">
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+            </div>
+            } @else if (threads().length === 0) {
+            <div class="empty-state">
+                <i class="fa-duotone fa-thin fa-envelope-open empty-icon"></i>
+                <h2>No messages</h2>
+                <p>Start a conversation with a party member or campaign DM.</p>
+            </div>
+            } @else {
+            <ul class="message-list">
+                @for (thread of threads(); track thread.id) {
+                <li class="message-item" [class.is-unread]="thread.hasUnread" [class.is-selected]="selectedThread()?.id === thread.id" (click)="selectThread(thread.id)">
+                    <span class="avatar">{{ thread.otherUserInitial }}</span>
+                    <div class="message-meta">
+                        <div class="message-header-row">
+                            <span class="sender-name">{{ thread.otherUserDisplayName }}</span>
+                            <span class="message-time">{{ formatDate(thread.lastMessageAtUtc) }}</span>
+                        </div>
+                        <p class="message-preview">{{ thread.lastMessagePreview }}</p>
+                    </div>
+                    @if (thread.hasUnread) {
+                    <span class="unread-dot" aria-label="Unread"></span>
+                    }
+                </li>
+                }
+            </ul>
+            }
+        </section>
+
+        @if (selectedThread(); as thread) {
+        <section class="panel thread-panel">
+            <div class="thread-header">
+                <button class="back-btn" type="button" (click)="clearSelection()">
+                    <i class="fa-duotone fa-thin fa-arrow-left"></i>
+                </button>
+                <div class="thread-header-info">
+                    <span class="thread-sender">{{ thread.otherUserDisplayName }}</span>
+                </div>
+            </div>
+            <div class="thread-body">
+                @for (msg of thread.messages; track msg.id) {
+                <div class="thread-message" [class.is-mine]="isMine(msg)">
+                    @if (!isMine(msg)) {
+                    <span class="avatar">{{ thread.otherUserDisplayName[0] }}</span>
+                    }
+                    <div class="thread-message-content">
+                        <div class="thread-message-meta">
+                            <strong>{{ isMine(msg) ? 'You' : msg.senderDisplayName }}</strong>
+                            <span>{{ formatDate(msg.sentAtUtc) }}</span>
+                        </div>
+                        <p>{{ msg.body }}</p>
+                    </div>
+                </div>
+                }
+            </div>
+            <div class="reply-bar">
+                <textarea class="reply-input" rows="2" placeholder="Write a reply..." [ngModel]="replyBody()" (ngModelChange)="replyBody.set($event)" [ngModelOptions]="{standalone: true}"></textarea>
+                <button class="send-btn" type="button" [disabled]="!replyBody().trim() || sending()" (click)="sendReply()">
+                    <i class="fa-duotone fa-thin fa-paper-plane-top"></i>
+                    Send
+                </button>
+            </div>
+        </section>
+        }
+    </div>
+
+    @if (composeOpen()) {
+    <div class="compose-overlay" (click)="closeCompose()">
+        <div class="compose-modal panel" (click)="$event.stopPropagation()">
+            <div class="compose-header">
+                <h2>New Message</h2>
+                <button class="close-compose" type="button" (click)="closeCompose()">
+                    <i class="fa-duotone fa-thin fa-xmark"></i>
+                </button>
+            </div>
+            <div class="compose-field">
+                <label>To</label>
+                @if (contacts().length > 0) {
+                <select class="compose-select" [ngModel]="composeRecipientId()" (ngModelChange)="composeRecipientId.set($event)" [ngModelOptions]="{standalone: true}">
+                    <option value="">Select a campaign member...</option>
+                    @for (contact of contacts(); track contact.userId) {
+                    <option [value]="contact.userId">{{ contact.displayName }}</option>
+                    }
+                </select>
+                } @else {
+                <p class="compose-no-contacts">No campaign members found. Join or create a campaign first.</p>
+                }
+            </div>
+            <textarea class="compose-body" rows="6" placeholder="Write your message..." [ngModel]="composeBody()" (ngModelChange)="composeBody.set($event)" [ngModelOptions]="{standalone: true}"></textarea>
+            <div class="compose-actions">
+                <button class="send-btn" type="button" [disabled]="!composeRecipientId() || !composeBody().trim() || sending()" (click)="sendCompose()">
+                    <i class="fa-duotone fa-thin fa-paper-plane-top"></i>
+                    Send Message
+                </button>
+            </div>
+        </div>
+    </div>
+    }
+</main>

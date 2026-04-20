@@ -208,3 +208,23 @@ export function clearSessionToken(): void {
         return;
     }
 }
+
+const THEME_STORAGE_KEY = 'dungeonkeep.theme.v1';
+
+export type StoredTheme = 'system' | 'light' | 'dark';
+
+export function loadTheme(): StoredTheme {
+    if (!hasBrowserStorage()) return 'system';
+    const raw = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (raw === 'light' || raw === 'dark' || raw === 'system') return raw;
+    return 'system';
+}
+
+export function saveTheme(theme: StoredTheme): void {
+    if (!hasBrowserStorage()) return;
+    try {
+        window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {
+        return;
+    }
+}

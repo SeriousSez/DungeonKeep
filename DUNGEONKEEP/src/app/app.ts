@@ -6,6 +6,7 @@ import { BreadcrumbComponent } from './components/breadcrumb/breadcrumb.componen
 import { DndChatWidgetComponent } from './components/dnd-chat-widget/dnd-chat-widget.component';
 import { CampaignRealtimeService } from './state/campaign-realtime.service';
 import { SessionService } from './state/session.service';
+import { ThemeService } from './state/theme.service';
 import { rulesBrowseLinks, rulesResourceLinks } from './data/rules-links';
 
 @Component({
@@ -19,10 +20,12 @@ export class App {
   readonly store = inject(DungeonStoreService);
   readonly session = inject(SessionService);
   private readonly campaignRealtime = inject(CampaignRealtimeService);
+  private readonly theme = inject(ThemeService);
   private readonly document = inject(DOCUMENT);
   private readonly router = inject(Router);
   readonly mobileNavOpen = signal(false);
   readonly openDropdown = signal<string | null>(null);
+  readonly userMenuOpen = signal(false);
   readonly currentUser = computed(() => this.session.currentUser());
   readonly isInitialized = computed(() => this.session.initialized());
   readonly rulesBrowseLinks = rulesBrowseLinks;
@@ -88,6 +91,10 @@ export class App {
       this.openDropdown.set(null);
     }
 
+    if (!target.closest('.user-menu-wrap')) {
+      this.userMenuOpen.set(false);
+    }
+
     if (this.mobileNavOpen() && !target.closest('.topbar')) {
       this.closeMobileNav();
     }
@@ -97,6 +104,7 @@ export class App {
   onClosePopups(): void {
     this.closeDropdown();
     this.closeMobileNav();
+    this.userMenuOpen.set(false);
   }
 
   toggleDropdown(name: string): void {
@@ -125,11 +133,20 @@ export class App {
     this.mobileNavOpen.set(false);
   }
 
+  toggleUserMenu(): void {
+    this.userMenuOpen.update(open => !open);
+  }
+
+  closeUserMenu(): void {
+    this.userMenuOpen.set(false);
+  }
+
   logout(): void {
     this.cleanupDetachedModalHosts();
     this.session.logout();
     this.closeMobileNav();
     this.closeDropdown();
+    this.userMenuOpen.set(false);
   }
 
   private cleanupDetachedModalHosts(): void {

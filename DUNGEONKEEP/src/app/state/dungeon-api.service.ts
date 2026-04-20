@@ -792,6 +792,46 @@ export interface ApiGenerateWorldNoteDraftResponse {
     content: string;
 }
 
+export interface ApiNotificationDto {
+    id: string;
+    type: string;
+    title: string;
+    body: string;
+    link: string;
+    isRead: boolean;
+    createdAtUtc: string;
+    metadata?: Record<string, string>;
+}
+
+export interface ApiMessageContactDto {
+    userId: string;
+    displayName: string;
+}
+
+export interface ApiMessageThreadSummaryDto {
+    id: string;
+    otherUserDisplayName: string;
+    otherUserInitial: string;
+    lastMessagePreview: string;
+    lastMessageAtUtc: string;
+    hasUnread: boolean;
+}
+
+export interface ApiMessageDto {
+    id: string;
+    senderUserId: string;
+    senderDisplayName: string;
+    body: string;
+    sentAtUtc: string;
+}
+
+export interface ApiMessageThreadDto {
+    id: string;
+    otherUserDisplayName: string;
+    otherUserId: string;
+    messages: ApiMessageDto[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class DungeonApiService {
 
@@ -1082,6 +1122,62 @@ export class DungeonApiService {
 
     async getCurrentSession(): Promise<ApiAuthUserDto> {
         return await firstValueFrom(this.http.get<ApiAuthUserDto>(`${this.baseUrl}/auth/session`));
+    }
+
+    async updateProfile(displayName: string, email: string): Promise<ApiAuthUserDto> {
+        return await firstValueFrom(this.http.put<ApiAuthUserDto>(`${this.baseUrl}/account/profile`, { displayName, email }));
+    }
+
+    async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+        await firstValueFrom(this.http.put(`${this.baseUrl}/account/password`, { currentPassword, newPassword }));
+    }
+
+    async getNotifications(): Promise<ApiNotificationDto[]> {
+        return await firstValueFrom(this.http.get<ApiNotificationDto[]>(`${this.baseUrl}/notifications`));
+    }
+
+    async markNotificationRead(notificationId: string): Promise<void> {
+        await firstValueFrom(this.http.post(`${this.baseUrl}/notifications/${notificationId}/read`, {}));
+    }
+
+    async markAllNotificationsRead(): Promise<void> {
+        await firstValueFrom(this.http.post(`${this.baseUrl}/notifications/read-all`, {}));
+    }
+
+    async dismissNotification(notificationId: string): Promise<void> {
+        await firstValueFrom(this.http.delete(`${this.baseUrl}/notifications/${notificationId}`));
+    }
+
+    async acceptCampaignInvite(campaignId: string): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/invites/accept`, {}));
+    }
+
+    async declineCampaignInvite(campaignId: string): Promise<void> {
+        await firstValueFrom(this.http.post(`${this.baseUrl}/campaigns/${campaignId}/invites/decline`, {}));
+    }
+
+    async getMessageContacts(): Promise<ApiMessageContactDto[]> {
+        return await firstValueFrom(this.http.get<ApiMessageContactDto[]>(`${this.baseUrl}/messages/contacts`));
+    }
+
+    async getMessageThreads(): Promise<ApiMessageThreadSummaryDto[]> {
+        return await firstValueFrom(this.http.get<ApiMessageThreadSummaryDto[]>(`${this.baseUrl}/messages`));
+    }
+
+    async getMessageThread(threadId: string): Promise<ApiMessageThreadDto> {
+        return await firstValueFrom(this.http.get<ApiMessageThreadDto>(`${this.baseUrl}/messages/${threadId}`));
+    }
+
+    async sendMessage(threadId: string, body: string): Promise<ApiMessageThreadDto> {
+        return await firstValueFrom(this.http.post<ApiMessageThreadDto>(`${this.baseUrl}/messages/${threadId}/messages`, { body }));
+    }
+
+    async markMessageThreadRead(threadId: string): Promise<void> {
+        await firstValueFrom(this.http.post(`${this.baseUrl}/messages/${threadId}/read`, {}));
+    }
+
+    async composeMessage(recipientUserId: string, body: string): Promise<ApiMessageThreadDto> {
+        return await firstValueFrom(this.http.post<ApiMessageThreadDto>(`${this.baseUrl}/messages/compose`, { recipientUserId, body }));
     }
 }
 

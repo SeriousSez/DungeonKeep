@@ -83,6 +83,11 @@ try
         EnsureBaseSqliteSchema(dbContext);
         EnsureCharactersCampaignIdIsNullable(dbContext);
         EnsureCurrentSqliteSchema(dbContext);
+        EnsureNotificationsAndMessagesSchema(dbContext);
+    }
+    else if (databaseProvider == DatabaseProvider.MySql)
+    {
+        EnsureNotificationsAndMessagesSchemaMySQL(dbContext);
     }
 
     EnsureCharacterRichTextStorage(dbContext, databaseProvider);
@@ -111,6 +116,7 @@ app.UseCors("ClientApps");
 
 app.MapControllers();
 app.MapHub<CampaignHub>("/hubs/campaign");
+app.MapHub<UserHub>("/hubs/user");
 
 app.Run();
 
@@ -349,4 +355,93 @@ static void EnsureMySqlLongTextColumnExists(DungeonKeepDbContext dbContext, stri
 #pragma warning disable EF1002
     dbContext.Database.ExecuteSqlRaw($"ALTER TABLE `{tableName}` MODIFY COLUMN `{columnName}` LONGTEXT NULL;");
 #pragma warning restore EF1002
+}
+
+static void EnsureNotificationsAndMessagesSchemaMySQL(DungeonKeepDbContext dbContext)
+{
+    // IDs are char(36) (Pomelo default for Guid), datetimes are datetime(6).
+#pragma warning disable EF1002
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE TABLE IF NOT EXISTS `UserNotifications` (" +
+        "`Id` char(36) NOT NULL, " +
+        "`UserId` char(36) NOT NULL, " +
+        "`Type` varchar(64) NOT NULL DEFAULT '', " +
+        "`Title` varchar(256) NOT NULL DEFAULT '', " +
+        "`Body` varchar(1000) NOT NULL DEFAULT '', " +
+        "`Link` varchar(512) NOT NULL DEFAULT '', " +
+        "`IsRead` tinyint(1) NOT NULL DEFAULT 0, " +
+        "`IsDismissed` tinyint(1) NOT NULL DEFAULT 0, " +
+        "`CreatedAtUtc` datetime(6) NOT NULL DEFAULT '0001-01-01 00:00:00.000000', " +
+        "`MetadataJson` longtext NULL, " +
+        "PRIMARY KEY (`Id`), " +
+        "KEY `IX_UserNotifications_UserId` (`UserId`), " +
+        "CONSTRAINT `FK_UserNotifications_AppUsers_UserId` FOREIGN KEY (`UserId`) REFERENCES `AppUsers` (`Id`) ON DELETE CASCADE" +
+        ");"
+    );
+
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE TABLE IF NOT EXISTS `DirectMessageThreads` (" +
+        "`Id` char(36) NOT NULL, " +
+        "`CreatedAtUtc` datetime(6) NOT NULL DEFAULT '0001-01-01 00:00:00.000000', " +
+        "`LastMessageAtUtc` datetime(6) NOT NULL DEFAULT '0001-01-01 00:00:00.000000', " +
+        "PRIMARY KEY (`Id`)" +
+        ");"
+    );
+
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE TABLE IF NOT EXISTS `DirectMessageParticipants` (" +
+        "`Id` char(36) NOT NULL, " +
+        "`ThreadId` char(36) NOT NULL, " +
+        "`UserId` char(36) NOT NULL, " +
+        "`LastReadAtUtc` datetime(6) NULL, " +
+        "PRIMARY KEY (`Id`), " +
+        "UNIQUE KEY `IX_DirectMessageParticipants_ThreadId_UserId` (`ThreadId`, `UserId`), " +
+        "CONSTRAINT `FK_DirectMessageParticipants_Threads_ThreadId` FOREIGN KEY (`ThreadId`) REFERENCES `DirectMessageThreads` (`Id`) ON DELETE CASCADE, " +
+        "CONSTRAINT `FK_DirectMessageParticipants_AppUsers_UserId` FOREIGN KEY (`UserId`) REFERENCES `AppUsers` (`Id`) ON DELETE CASCADE" +
+        ");"
+    );
+
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE TABLE IF NOT EXISTS `DirectMessages` (" +
+        "`Id` char(36) NOT NULL, " +
+        "`ThreadId` char(36) NOT NULL, " +
+        "`SenderUserId` char(36) NOT NULL, " +
+        "`Body` longtext NOT NULL, " +
+        "`SentAtUtc` datetime(6) NOT NULL DEFAULT '0001-01-01 00:00:00.000000', " +
+        "PRIMARY KEY (`Id`), " +
+        "KEY `IX_DirectMessages_ThreadId` (`ThreadId`), " +
+        "CONSTRAINT `FK_DirectMessages_Threads_ThreadId` FOREIGN KEY (`ThreadId`) REFERENCES `DirectMessageThreads` (`Id`) ON DELETE CASCADE, " +
+        "CONSTRAINT `FK_DirectMessages_AppUsers_SenderUserId` FOREIGN KEY (`SenderUserId`) REFERENCES `AppUsers` (`Id`) ON DELETE CASCADE" +
+        ");"
+    );
+#pragma warning restore EF1002
+}
+
+static void EnsureNotificationsAndMessagesSchema(DungeonKeepDbContext dbContext)
+{
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE TABLE IF NOT EXISTS UserNotifications (Id TEXT NOT NULL CONSTRAINT PK_UserNotifications PRIMARY KEY, UserId TEXT NOT NULL, Type TEXT NOT NULL DEFAULT '', Title TEXT NOT NULL DEFAULT '', Body TEXT NOT NULL DEFAULT '', Link TEXT NOT NULL DEFAULT '', IsRead INTEGER NOT NULL DEFAULT 0, IsDismissed INTEGER NOT NULL DEFAULT 0, CreatedAtUtc TEXT NOT NULL, CONSTRAINT FK_UserNotifications_AppUsers_UserId FOREIGN KEY (UserId) REFERENCES AppUsers (Id) ON DELETE CASCADE);"
+    );
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE INDEX IF NOT EXISTS IX_UserNotifications_UserId ON UserNotifications (UserId);"
+    );
+    EnsureColumnExists(dbContext, "UserNotifications", "MetadataJson", "TEXT NULL");
+
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE TABLE IF NOT EXISTS DirectMessageThreads (Id TEXT NOT NULL CONSTRAINT PK_DirectMessageThreads PRIMARY KEY, CreatedAtUtc TEXT NOT NULL, LastMessageAtUtc TEXT NOT NULL);"
+    );
+
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE TABLE IF NOT EXISTS DirectMessageParticipants (Id TEXT NOT NULL CONSTRAINT PK_DirectMessageParticipants PRIMARY KEY, ThreadId TEXT NOT NULL, UserId TEXT NOT NULL, LastReadAtUtc TEXT NULL, CONSTRAINT FK_DirectMessageParticipants_DirectMessageThreads_ThreadId FOREIGN KEY (ThreadId) REFERENCES DirectMessageThreads (Id) ON DELETE CASCADE, CONSTRAINT FK_DirectMessageParticipants_AppUsers_UserId FOREIGN KEY (UserId) REFERENCES AppUsers (Id) ON DELETE CASCADE);"
+    );
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE UNIQUE INDEX IF NOT EXISTS IX_DirectMessageParticipants_ThreadId_UserId ON DirectMessageParticipants (ThreadId, UserId);"
+    );
+
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE TABLE IF NOT EXISTS DirectMessages (Id TEXT NOT NULL CONSTRAINT PK_DirectMessages PRIMARY KEY, ThreadId TEXT NOT NULL, SenderUserId TEXT NOT NULL, Body TEXT NOT NULL DEFAULT '', SentAtUtc TEXT NOT NULL, CONSTRAINT FK_DirectMessages_DirectMessageThreads_ThreadId FOREIGN KEY (ThreadId) REFERENCES DirectMessageThreads (Id) ON DELETE CASCADE, CONSTRAINT FK_DirectMessages_AppUsers_SenderUserId FOREIGN KEY (SenderUserId) REFERENCES AppUsers (Id) ON DELETE CASCADE);"
+    );
+    dbContext.Database.ExecuteSqlRaw(
+        "CREATE INDEX IF NOT EXISTS IX_DirectMessages_ThreadId ON DirectMessages (ThreadId);"
+    );
 }

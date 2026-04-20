@@ -10,6 +10,8 @@ public sealed class CampaignService(
     ICampaignRepository campaignRepository,
     ICharacterRepository characterRepository,
     ICampaignInviteEmailService campaignInviteEmailService,
+    INotificationRepository notificationRepository,
+    IAuthRepository authRepository,
     ILogger<CampaignService> logger) : ICampaignService
 {
     private static readonly CampaignThreadDto[] DefaultOpenThreads =
@@ -792,7 +794,29 @@ public sealed class CampaignService(
             return null;
         }
 
-        var invitedMembership = updated.Memberships.FirstOrDefault(member => member.Email == normalizedEmail);
+        // Send in-app notification to invited user if they already have an account.
+        var invitedUser = await authRepository.GetUserByEmailAsync(normalizedEmail, cancellationToken);
+        if (invitedUser is not null)
+        {
+            var metadata = JsonSerializer.Serialize(new Dictionary<string, string>
+            {
+                ["campaignId"] = campaignId.ToString(),
+                ["campaignName"] = updated.Name,
+                ["inviterName"] = user.DisplayName
+            });
+
+            await notificationRepository.AddAsync(new Domain.Entities.UserNotification
+            {
+                Id = Guid.NewGuid(),
+                UserId = invitedUser.Id,
+                Type = "CampaignInvite",
+                Title = $"You've been invited to join {updated.Name}",
+                Body = $"{user.DisplayName} invited you to join the campaign \u201c{updated.Name}\u201d. Accept or decline below.",
+                Link = string.Empty,
+                MetadataJson = metadata,
+                CreatedAtUtc = DateTime.UtcNow
+            }, cancellationToken);
+        }
 
         try
         {
@@ -806,7 +830,7 @@ public sealed class CampaignService(
                     normalizedEmail,
                     user.DisplayName,
                     user.Email,
-                    invitedMembership?.Status == "Active"),
+                    false),
                 cancellationToken);
         }
         catch (Exception exception)
@@ -819,6 +843,17 @@ public sealed class CampaignService(
         }
 
         return MapCampaign(updated, user.Id);
+    }
+
+    public async Task<CampaignDto?> AcceptInviteAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await campaignRepository.AcceptInviteAsync(campaignId, userId, cancellationToken);
+        return campaign is null ? null : MapCampaign(campaign, userId);
+    }
+
+    public async Task<bool> DeclineInviteAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await campaignRepository.DeclineInviteAsync(campaignId, userId, cancellationToken);
     }
 
     public async Task<CampaignDto?> RemoveMemberAsync(Guid campaignId, RemoveCampaignMemberRequest request, Guid userId, CancellationToken cancellationToken = default)
