@@ -68,6 +68,7 @@ interface PersistedInventoryEntry {
     isContainer?: boolean;
     containedItems?: PersistedInventoryEntry[];
     maxCapacity?: number;
+    equipped?: boolean;
 }
 
 interface PersistedCurrencyState {
@@ -2664,14 +2665,17 @@ export class CharacterDetailPageComponent {
         }
 
         const persistedEntries = this.normalizedInventoryEntries()
-            .filter((entry) => !entry.isContainer)
-            .map((entry) => ({
+            .map((entry, index) => ({ entry, index }))
+            .filter(({ entry }) => !entry.isContainer)
+            .map(({ entry, index }) => ({
                 name: entry.name,
                 category: entry.category,
                 quantity: entry.quantity,
                 weight: entry.weight,
                 costGp: entry.costGp,
-                notes: entry.notes
+                notes: entry.notes,
+                equipped: entry.equipped,
+                sourceIndex: index
             }));
 
         if (persistedEntries.length > 0) {
@@ -2684,12 +2688,16 @@ export class CharacterDetailPageComponent {
                 const normalizedCategory = entry.category.toLowerCase();
 
                 if (normalizedCategory.includes('weapon') || normalizedCategory.includes('firearm')) {
-                    weapons.push(label);
+                    if (entry.equipped !== false) {
+                        weapons.push(label);
+                    }
                     continue;
                 }
 
                 if (normalizedCategory.includes('armor') || normalizedCategory.includes('shield')) {
-                    armor.push(label);
+                    if (entry.equipped !== false) {
+                        armor.push(label);
+                    }
                     continue;
                 }
 
@@ -2725,7 +2733,7 @@ export class CharacterDetailPageComponent {
             gear: [] as string[],
             currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 },
             totalItemCount: 0,
-            items: [] as Array<{ name: string; category: string; quantity: number; weight?: number; costGp?: number; notes?: string }>
+            items: [] as Array<{ name: string; category: string; quantity: number; weight?: number; costGp?: number; notes?: string; equipped?: boolean; sourceIndex: number }>
         };
     });
 
@@ -7163,6 +7171,33 @@ export class CharacterDetailPageComponent {
                 maxCapacity: currentEntry.maxCapacity ?? this.getContainerCapacity(currentEntry.name)
             };
         });
+    }
+
+    isEquippableItem(entry: PersistedInventoryEntry): boolean {
+        const cat = entry.category.toLowerCase();
+        return cat.includes('weapon') || cat.includes('firearm') || cat.includes('armor') || cat.includes('shield');
+    }
+
+    isItemEquipped(entry: PersistedInventoryEntry): boolean {
+        return entry.equipped !== false;
+    }
+
+    async toggleInventoryEntryEquipped(index: number): Promise<void> {
+        const char = this.character();
+        if (!char?.canEdit) {
+            return;
+        }
+
+        const current = this.normalizedInventoryEntries();
+        if (index < 0 || index >= current.length) {
+            return;
+        }
+
+        const entry = current[index];
+        const nextEquipped = entry.equipped === false; // unequipped → equipped; equipped/undefined → unequipped
+        await this.persistInventoryEntries(
+            current.map((e, i) => i === index ? { ...e, equipped: nextEquipped } : e)
+        );
     }
 
     async removeInventoryEntryByIndex(index: number): Promise<void> {

@@ -720,6 +720,7 @@
                     <table class="inventory-table">
                         <thead>
                             <tr>
+                                <th class="col-active">Active</th>
                                 <th>Name</th>
                                 <th>Weight</th>
                                 <th>QTY</th>
@@ -729,7 +730,12 @@
                         </thead>
                         <tbody>
                             @for (item of filteredInventoryItems(); track item.name + '_' + item.category) {
-                            <tr class="inventory-row detail-trigger-row" (click)="openInventoryItemDetail(item)">
+                            <tr class="inventory-row detail-trigger-row" [class.inventory-row--unequipped]="isEquippableItem(item) && item.equipped === false" (click)="openInventoryItemDetail(item)">
+                                <td class="col-active" (click)="$event.stopPropagation()">
+                                    @if (isEquippableItem(item)) {
+                                    <input type="checkbox" class="equip-checkbox" [checked]="item.equipped !== false" [disabled]="!character()?.canEdit" (change)="toggleInventoryEntryEquipped(item.sourceIndex)" />
+                                    }
+                                </td>
                                 <td class="item-name">{{ item.name }}</td>
                                 <td class="item-weight">{{ item.weight != null ? (item.weight + ' lb') : '—' }}</td>
                                 <td class="item-quantity">{{ item.quantity }}</td>
@@ -758,7 +764,7 @@
                         @if (isContainerExpanded(containerItem.entry.name + '_' + containerItem.index)) {
                         <div class="container-contents">
                             @if ((containerItem.entry.containedItems || []).length > 0) {
-                            <table class="inventory-table">
+                            <table class="inventory-table inventory-table--container">
                                 <thead>
                                     <tr>
                                         <th>Name</th>
@@ -770,7 +776,7 @@
                                 </thead>
                                 <tbody>
                                     @for (item of containerItem.entry.containedItems || []; track item.name) {
-                                    <tr class="inventory-row detail-trigger-row" (click)="openInventoryItemDetail(item)">
+                                    <tr class="inventory-row inventory-row--container detail-trigger-row" (click)="openInventoryItemDetail(item)">
                                         <td class="item-name">{{ item.name }}</td>
                                         <td class="item-weight">{{ item.weight != null ? (item.weight + ' lb') : '—' }}</td>
                                         <td class="item-quantity">{{ item.quantity }}</td>
@@ -1634,6 +1640,15 @@
                                 <p class="item-description item-description--rules">{{ rulesText }}</p>
                                 }
                                 <div class="inventory-item-controls">
+                                    @if (isEquippableItem(row.entry)) {
+                                    <div class="inventory-item-equip">
+                                        <span>Status</span>
+                                        <button type="button" class="equip-toggle" [class.equip-toggle--equipped]="isItemEquipped(row.entry)" [disabled]="!character()?.canEdit" (click)="$event.stopPropagation(); toggleInventoryEntryEquipped(row.index)">
+                                            <i class="fa-duotone fa-thin" [class.fa-shield-check]="isItemEquipped(row.entry)" [class.fa-shield-slash]="!isItemEquipped(row.entry)"></i>
+                                            {{ isItemEquipped(row.entry) ? 'Equipped' : 'Unequipped' }}
+                                        </button>
+                                    </div>
+                                    }
                                     <div class="inventory-item-quantity">
                                         <span>Quantity</span>
                                         <div class="inventory-item-stepper">
