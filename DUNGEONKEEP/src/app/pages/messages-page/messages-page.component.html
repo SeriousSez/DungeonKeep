@@ -75,7 +75,7 @@
                 }
             </div>
             <div class="reply-bar">
-                <textarea class="reply-input" rows="2" placeholder="Write a reply..." [ngModel]="replyBody()" (ngModelChange)="replyBody.set($event)" [ngModelOptions]="{standalone: true}"></textarea>
+                <textarea class="reply-input" rows="2" placeholder="Write a reply..." [ngModel]="replyBody()" (ngModelChange)="replyBody.set($event)" [ngModelOptions]="{standalone: true}" (keydown)="onReplyKeydown($event)"></textarea>
                 <button class="send-btn" type="button" [disabled]="!replyBody().trim() || sending()" [class.is-loading]="sending()" (click)="sendReply()">
                     <i class="fa-duotone fa-thin fa-paper-plane-top"></i>
                     Send
@@ -107,7 +107,7 @@
                 <p class="compose-no-contacts">No campaign members found. Join or create a campaign first.</p>
                 }
             </div>
-            <textarea class="compose-body" rows="6" placeholder="Write your message..." [ngModel]="composeBody()" (ngModelChange)="composeBody.set($event)" [ngModelOptions]="{standalone: true}"></textarea>
+            <textarea class="compose-body" rows="6" placeholder="Write your message..." [ngModel]="composeBody()" (ngModelChange)="composeBody.set($event)" [ngModelOptions]="{standalone: true}" (keydown)="onComposeKeydown($event)"></textarea>
             <div class="compose-actions">
                 <button class="send-btn" type="button" [disabled]="!composeRecipientId() || !composeBody().trim() || sending()" [class.is-loading]="sending()" (click)="sendCompose()">
                     <i class="fa-duotone fa-thin fa-paper-plane-top"></i>

@@ -29,9 +29,11 @@ export class NotificationsPageComponent implements OnInit {
 
     readonly notifications = signal<ApiNotificationDto[]>([]);
     readonly loading = signal(true);
+    readonly pendingIds = signal<Set<string>>(new Set());
 
     readonly unreadCount = () => this.notifications().filter(n => !n.isRead).length;
     readonly iconFor = (type: string) => NOTIFICATION_ICONS[type] ?? 'bell';
+    readonly isPending = (id: string) => this.pendingIds().has(id);
 
     ngOnInit(): void {
         void this.loadNotifications();
@@ -79,6 +81,8 @@ export class NotificationsPageComponent implements OnInit {
 
     async dismiss(id: string): Promise<void> {
         const notif = this.notifications().find(n => n.id === id);
+        this.pendingIds.update(s => new Set(s).add(id));
+        this.cdr.detectChanges();
         try {
             await this.api.dismissNotification(id);
             this.notifications.update(list => list.filter(n => n.id !== id));
@@ -86,12 +90,17 @@ export class NotificationsPageComponent implements OnInit {
             this.cdr.detectChanges();
         } catch {
             // silent
+        } finally {
+            this.pendingIds.update(s => { const next = new Set(s); next.delete(id); return next; });
+            this.cdr.detectChanges();
         }
     }
 
     async acceptInvite(notif: ApiNotificationDto): Promise<void> {
         const campaignId = notif.metadata?.['campaignId'];
         if (!campaignId) return;
+        this.pendingIds.update(s => new Set(s).add(notif.id + '_accept'));
+        this.cdr.detectChanges();
         try {
             await this.api.acceptCampaignInvite(campaignId);
             await this.api.dismissNotification(notif.id);
@@ -100,12 +109,17 @@ export class NotificationsPageComponent implements OnInit {
             this.cdr.detectChanges();
         } catch {
             // silent
+        } finally {
+            this.pendingIds.update(s => { const next = new Set(s); next.delete(notif.id + '_accept'); return next; });
+            this.cdr.detectChanges();
         }
     }
 
     async declineInvite(notif: ApiNotificationDto): Promise<void> {
         const campaignId = notif.metadata?.['campaignId'];
         if (!campaignId) return;
+        this.pendingIds.update(s => new Set(s).add(notif.id + '_decline'));
+        this.cdr.detectChanges();
         try {
             await this.api.declineCampaignInvite(campaignId);
             await this.api.dismissNotification(notif.id);
@@ -114,6 +128,9 @@ export class NotificationsPageComponent implements OnInit {
             this.cdr.detectChanges();
         } catch {
             // silent
+        } finally {
+            this.pendingIds.update(s => { const next = new Set(s); next.delete(notif.id + '_decline'); return next; });
+            this.cdr.detectChanges();
         }
     }
 

@@ -38,17 +38,31 @@
                     <span class="notif-time">{{ formatDate(notif.createdAtUtc) }}</span>
                     @if (notif.type === 'CampaignInvite') {
                     <div class="notif-actions">
-                        <button class="invite-accept-btn" type="button" (click)="$event.stopPropagation(); acceptInvite(notif)">
-                            <i class="fa-duotone fa-thin fa-check"></i> Accept
+                        <button class="invite-accept-btn" type="button" [class.is-loading]="isPending(notif.id + '_accept')" [disabled]="isPending(notif.id + '_accept') || isPending(notif.id + '_decline')" (click)="$event.stopPropagation(); acceptInvite(notif)">
+                            @if (isPending(notif.id + '_accept')) {
+                            <i class="fa-duotone fa-thin fa-spinner-third fa-spin"></i>
+                            } @else {
+                            <i class="fa-duotone fa-thin fa-check"></i>
+                            }
+                            Accept
                         </button>
-                        <button class="invite-decline-btn" type="button" (click)="$event.stopPropagation(); declineInvite(notif)">
-                            <i class="fa-duotone fa-thin fa-xmark"></i> Decline
+                        <button class="invite-decline-btn" type="button" [class.is-loading]="isPending(notif.id + '_decline')" [disabled]="isPending(notif.id + '_accept') || isPending(notif.id + '_decline')" (click)="$event.stopPropagation(); declineInvite(notif)">
+                            @if (isPending(notif.id + '_decline')) {
+                            <i class="fa-duotone fa-thin fa-spinner-third fa-spin"></i>
+                            } @else {
+                            <i class="fa-duotone fa-thin fa-xmark"></i>
+                            }
+                            Decline
                         </button>
                     </div>
                     }
                 </div>
-                <button class="dismiss-btn" type="button" (click)="$event.stopPropagation(); dismiss(notif.id)" aria-label="Dismiss">
+                <button class="dismiss-btn" type="button" [disabled]="isPending(notif.id)" (click)="$event.stopPropagation(); dismiss(notif.id)" aria-label="Dismiss">
+                    @if (isPending(notif.id)) {
+                    <i class="fa-duotone fa-thin fa-spinner-third fa-spin"></i>
+                    } @else {
                     <i class="fa-duotone fa-thin fa-xmark"></i>
+                    }
                 </button>
             </li>
             }

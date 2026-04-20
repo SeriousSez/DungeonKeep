@@ -11,7 +11,7 @@
 .panel {
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);
-    border-radius: 28px;
+    border-radius: 14px;
     box-shadow: var(--panel-shadow);
     backdrop-filter: blur(18px);
 }
@@ -98,11 +98,11 @@ h1 {
     transition: background 0.15s, color 0.15s;
 
     &:first-child {
-        border-radius: 28px 28px 0 0;
+        border-radius: 14px 14px 0 0;
     }
 
     &:last-child {
-        border-radius: 0 0 28px 28px;
+        border-radius: 0 0 14px 14px;
     }
 
     i {
@@ -126,6 +126,7 @@ h1 {
 // ── Settings panel ─────────────────────────────────────────────────────────────
 .settings-panel {
     padding: 28px 32px;
+    border-radius: 14px;
 }
 
 .settings-section {

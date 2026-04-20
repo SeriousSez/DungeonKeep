@@ -158,6 +158,20 @@ export class MessagesPageComponent implements OnInit {
         }
     }
 
+    onReplyKeydown(event: KeyboardEvent): void {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            void this.sendReply();
+        }
+    }
+
+    onComposeKeydown(event: KeyboardEvent): void {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            void this.sendCompose();
+        }
+    }
+
     formatDate(isoString: string): string {
         const date = new Date(isoString);
         const now = new Date();
