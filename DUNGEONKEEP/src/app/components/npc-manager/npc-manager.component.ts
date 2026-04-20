@@ -63,6 +63,7 @@ export class NpcManagerComponent {
         sortBy: 'RecentlyUpdated'
     });
     readonly feedback = signal('');
+    readonly npcSaveInProgress = signal(false);
     readonly lastAutosavedAt = signal('');
     readonly deleteCandidate = signal<CampaignNpc | null>(null);
     readonly libraryNpcs = signal<CampaignNpc[]>([]);
@@ -376,11 +377,16 @@ export class NpcManagerComponent {
             return;
         }
 
-        const syncSucceeded = await this.syncNpcName(currentNpc, sanitizedNpc);
-        this.feedback.set(syncSucceeded
-            ? 'NPC saved.'
-            : 'NPC draft saved locally, but the campaign NPC name list could not be synced.');
-        this.cdr.detectChanges();
+        this.npcSaveInProgress.set(true);
+        try {
+            const syncSucceeded = await this.syncNpcName(currentNpc, sanitizedNpc);
+            this.feedback.set(syncSucceeded
+                ? 'NPC saved.'
+                : 'NPC draft saved locally, but the campaign NPC name list could not be synced.');
+        } finally {
+            this.npcSaveInProgress.set(false);
+            this.cdr.detectChanges();
+        }
     }
 
     async duplicateSelectedNpc(): Promise<void> {

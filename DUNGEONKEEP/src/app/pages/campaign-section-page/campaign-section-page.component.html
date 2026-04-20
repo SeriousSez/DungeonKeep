@@ -202,7 +202,7 @@
                         <a type="button" class="ghost-button" [routerLink]="['/campaigns', campaign.id, 'sessions', session.id]" (click)="$event.stopPropagation()">View</a>
                         @if (campaign.currentUserRole === 'Owner') {
                         <a type="button" class="ghost-button" [routerLink]="['/campaigns', campaign.id, 'sessions', session.id, 'edit']" (click)="$event.stopPropagation()">Edit</a>
-                        <button type="button" class="ghost-button" (click)="$event.stopPropagation(); deleteSession(session.id)">Delete</button>
+                        <button type="button" class="ghost-button" [class.is-loading]="isDeletingSession()" [disabled]="isDeletingSession()" (click)="$event.stopPropagation(); deleteSession(session.id)">Delete</button>
                         }
                     </div>
                 </div>
@@ -266,7 +266,7 @@
                     <label class="equipment-filter-label" for="loot-draft">Add custom loot</label>
                     <div class="inline-creator-row">
                         <input id="loot-draft" type="text" [value]="lootDraft()" (input)="updateLootDraft($any($event.target).value)" placeholder="Search or type custom loot, clue, or treasure" />
-                        <button type="button" class="primary-button" [disabled]="!lootDraft().trim()" (click)="addLoot()">Add Loot</button>
+                        <button type="button" class="primary-button" [disabled]="!lootDraft().trim() || isAddingLoot()" [class.is-loading]="isAddingLoot()" (click)="addLoot()">Add Loot</button>
                     </div>
 
                     <p class="loot-catalog-note">Or add from the item catalog.</p>
@@ -296,7 +296,8 @@
                                 <strong>{{ item.name }}</strong>
                                 <p>{{ item.category }}</p>
                             </div>
-                            <button type="button" class="equipment-pill-action" (click)="$event.stopPropagation(); addCatalogLoot(item.name)" (keydown.enter)="$event.stopPropagation()" (keydown.space)="$event.stopPropagation()">Add</button>
+                            <button type="button" class="equipment-pill-action" [class.is-loading]="isAddingLoot()" [disabled]="isAddingLoot()" (click)="$event.stopPropagation(); addCatalogLoot(item.name)" (keydown.enter)="$event.stopPropagation()"
+                                (keydown.space)="$event.stopPropagation()">Add</button>
                         </div>
                         }
                         @if (filteredLootCatalog().length === 0) {
@@ -493,7 +494,7 @@
             </div>
 
             <div class="world-note-editor-actions">
-                <button type="button" class="primary-button" [disabled]="!noteTitle().trim() || !noteContent().trim()" (click)="submitWorldNote()">{{ noteEditorMode() === 'edit' ? 'Save Changes' : 'Add Note' }}</button>
+                <button type="button" class="primary-button" [disabled]="!noteTitle().trim() || !noteContent().trim() || isSavingNote()" [class.is-loading]="isSavingNote()" (click)="submitWorldNote()">{{ noteEditorMode() === 'edit' ? 'Save Changes' : 'Add Note' }}</button>
             </div>
             }
         </div>
@@ -512,7 +513,7 @@
                     @if (campaign.currentUserRole === 'Owner') {
                     <div class="thread-actions">
                         <button type="button" class="ghost-button" (click)="openEditWorldNoteForm(note)">Edit</button>
-                        <button type="button" class="ghost-button" (click)="deleteWorldNote(note.id)">Delete</button>
+                        <button type="button" class="ghost-button" [class.is-loading]="isDeletingNoteId() === note.id" [disabled]="isDeletingNoteId() === note.id" (click)="deleteWorldNote(note.id)">Delete</button>
                     </div>
                     }
                 </div>
@@ -535,7 +536,7 @@
         @if (campaign.currentUserRole === 'Owner') {
         <div class="inline-creator-row">
             <input type="email" [value]="inviteEmail()" (input)="updateInviteEmail($any($event.target).value)" placeholder="Invite player by email" />
-            <button type="button" class="primary-button" [disabled]="!inviteEmail().trim()" (click)="inviteMember()">Send Invite</button>
+            <button type="button" class="primary-button" [disabled]="!inviteEmail().trim() || isInviting()" [class.is-loading]="isInviting()" (click)="inviteMember()">Send Invite</button>
         </div>
         }
 

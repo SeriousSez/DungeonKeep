@@ -168,6 +168,7 @@ export class SessionEditorPageComponent {
     readonly submitAttempted = signal(false);
     readonly saveMessage = signal('');
     readonly saveError = signal('');
+    readonly isSavingSession = signal(false);
     readonly generationError = signal('');
     readonly generationInProgress = signal(false);
     readonly generationHints = signal<SessionGenerationHints>({
@@ -545,10 +546,15 @@ export class SessionEditorPageComponent {
         const sessionSummary = this.toCampaignSessionSummary(draft);
         let saveSucceeded = false;
 
-        if (this.sessionId()) {
-            saveSucceeded = await this.store.updateCampaignSession(campaignId, this.sessionId()!, sessionSummary);
-        } else {
-            saveSucceeded = await this.store.addCampaignSession(campaignId, sessionSummary);
+        this.isSavingSession.set(true);
+        try {
+            if (this.sessionId()) {
+                saveSucceeded = await this.store.updateCampaignSession(campaignId, this.sessionId()!, sessionSummary);
+            } else {
+                saveSucceeded = await this.store.addCampaignSession(campaignId, sessionSummary);
+            }
+        } finally {
+            this.isSavingSession.set(false);
         }
 
         if (!saveSucceeded) {

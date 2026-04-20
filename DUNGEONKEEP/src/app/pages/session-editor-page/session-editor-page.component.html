@@ -11,7 +11,7 @@
         <div class="header-actions">
             <span class="autosave-pill">{{ autosaveLabel() }}</span>
             <button type="button" class="ghost-button" (click)="loadSampleDraft()">Load Sample</button>
-            <button type="button" class="primary-button" (click)="saveSession()">Save Session</button>
+            <button type="button" class="primary-button" [disabled]="isSavingSession()" [class.is-loading]="isSavingSession()" (click)="saveSession()">Save Session</button>
         </div>
     </section>
 

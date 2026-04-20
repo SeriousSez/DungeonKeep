@@ -136,10 +136,10 @@
                             <div class="campaign-assignment-controls">
                                 <app-multi-select-dropdown [groups]="assignableCampaignGroups()" [value]="selectedCampaignAssignments()" [placeholder]="'Choose campaigns...'" (changed)="onCampaignAssignmentChanged($event)"></app-multi-select-dropdown>
                                 <div class="campaign-assignment-buttons">
-                                    <button type="button" class="assign-btn" [disabled]="isUpdatingCampaign() || selectedCampaignAssignments().length === 0" (click)="assignCharacterToCampaign()">
+                                    <button type="button" class="assign-btn" [disabled]="isUpdatingCampaign() || selectedCampaignAssignments().length === 0" [class.is-loading]="isUpdatingCampaign()" (click)="assignCharacterToCampaign()">
                                         {{ isUpdatingCampaign() ? 'Updating...' : 'Assign' }}
                                     </button>
-                                    <button type="button" class="remove-btn" [disabled]="isUpdatingCampaign() || campaignName() === 'Unassigned'" (click)="removeCharacterFromCampaign()" aria-label="Remove from Campaign">
+                                    <button type="button" class="remove-btn" [disabled]="isUpdatingCampaign() || campaignName() === 'Unassigned'" [class.is-loading]="isUpdatingCampaign()" (click)="removeCharacterFromCampaign()" aria-label="Remove from Campaign">
                                         Remove
                                     </button>
                                 </div>
@@ -1146,7 +1146,7 @@
                 <span>Restore life with 1 HP</span>
             </button>
             <div class="hp-restore-life-actions">
-                <button type="button" class="secondary-btn" [disabled]="isSavingHp() || !hpRestoreChoice()" (click)="confirmHpRestore()">Restore</button>
+                <button type="button" class="secondary-btn" [disabled]="isSavingHp() || !hpRestoreChoice()" [class.is-loading]="isSavingHp()" (click)="confirmHpRestore()">Restore</button>
                 <button type="button" class="ghost-button" [disabled]="isSavingHp() || !hpRestoreChoice()" (click)="resetHpRestoreChoice()">Reset</button>
             </div>
             @if (isExhaustionDeath()) {
@@ -1172,7 +1172,7 @@
         </div>
 
         <div class="hp-direct-edit">
-            <button type="button" class="secondary-btn" [disabled]="isSavingHp()" (click)="applyCurrentAndTempHp()">Apply Current & Temp</button>
+            <button type="button" class="secondary-btn" [disabled]="isSavingHp()" [class.is-loading]="isSavingHp()" (click)="applyCurrentAndTempHp()">Apply Current & Temp</button>
         </div>
 
         <div class="hp-adjust-grid">
@@ -1211,7 +1211,7 @@
                 <span>Resolved Max HP</span>
                 <strong>{{ hpResolvedMax() }}</strong>
             </div>
-            <button type="button" class="secondary-btn" [disabled]="isSavingHp()" (click)="applyMaxHpChanges()">Apply Max HP</button>
+            <button type="button" class="secondary-btn" [disabled]="isSavingHp()" [class.is-loading]="isSavingHp()" (click)="applyMaxHpChanges()">Apply Max HP</button>
         </div>
     </aside>
     }

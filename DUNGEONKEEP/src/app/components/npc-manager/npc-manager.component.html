@@ -24,7 +24,7 @@
 
         @if (!listOnly()) {
         <div class="manager-column editor-column">
-            <app-npc-editor [npc]="activeNpc()" [canEdit]="canEdit()" [nameConflict]="nameConflict()" [autosaveLabel]="autosaveLabel()" [relationshipTargets]="relationshipTargetOptions()" (draftChanged)="handleDraftChanged($event)" (saveNpc)="handleSaveNpc($event)"
+            <app-npc-editor [npc]="activeNpc()" [canEdit]="canEdit()" [nameConflict]="nameConflict()" [autosaveLabel]="autosaveLabel()" [relationshipTargets]="relationshipTargetOptions()" (draftChanged)="handleDraftChanged($event)" (saveNpc)="handleSaveNpc($event)" [isSaving]="npcSaveInProgress()"
                 [generationBusy]="npcGenerationInProgress()" [generationError]="npcGenerationError()" (generateNpc)="generateActiveNpc($event)" (saveToLibrary)="saveActiveNpcToLibrary()" (duplicateNpc)="duplicateSelectedNpc()" (deleteNpc)="requestDeleteNpc(activeNpcId() ?? '')"></app-npc-editor>
 
             <div class="manager-tools">

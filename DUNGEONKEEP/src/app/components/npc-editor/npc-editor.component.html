@@ -23,7 +23,7 @@
             @if (showDeleteAction()) {
             <button type="button" class="ghost-button danger-button" (click)="deleteNpc.emit()">Delete</button>
             }
-            <button type="button" class="primary-button" (click)="save()">Save NPC</button>
+            <button type="button" class="primary-button" [disabled]="isSaving()" [class.is-loading]="isSaving()" (click)="save()">Save NPC</button>
             }
         </div>
     </div>

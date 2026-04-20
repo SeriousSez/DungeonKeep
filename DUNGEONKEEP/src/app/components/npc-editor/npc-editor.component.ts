@@ -101,6 +101,7 @@ export class NpcEditorComponent {
     readonly showSaveToLibraryAction = input<boolean>(true);
     readonly showDuplicateAction = input<boolean>(true);
     readonly showDeleteAction = input<boolean>(true);
+    readonly isSaving = input<boolean>(false);
 
     readonly draftChanged = output<CampaignNpc>();
     readonly saveNpc = output<CampaignNpc>();

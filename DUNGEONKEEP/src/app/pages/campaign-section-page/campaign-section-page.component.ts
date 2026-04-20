@@ -103,6 +103,11 @@ export class CampaignSectionPageComponent {
     readonly noteAiError = signal('');
     readonly inviteEmail = signal('');
     readonly sectionFeedback = signal('');
+    readonly isDeletingSession = signal(false);
+    readonly isAddingLoot = signal(false);
+    readonly isInviting = signal(false);
+    readonly isSavingNote = signal(false);
+    readonly isDeletingNoteId = signal<string | null>(null);
 
     readonly threadVisibilityOptions: DropdownOption[] = [
         { value: 'Party', label: 'Party', description: 'Visible to all campaign members.' },
@@ -622,12 +627,16 @@ export class CampaignSectionPageComponent {
             return;
         }
 
-        const succeeded = await this.store.deleteCampaignSession(campaign.id, sessionId);
-        if (!succeeded) {
-            this.sectionFeedback.set('Could not remove that session.');
+        this.isDeletingSession.set(true);
+        try {
+            const succeeded = await this.store.deleteCampaignSession(campaign.id, sessionId);
+            if (!succeeded) {
+                this.sectionFeedback.set('Could not remove that session.');
+            }
+        } finally {
+            this.isDeletingSession.set(false);
+            this.cdr.detectChanges();
         }
-
-        this.cdr.detectChanges();
     }
 
     updateLootDraft(value: string): void {
@@ -742,17 +751,21 @@ export class CampaignSectionPageComponent {
             return;
         }
 
-        const succeeded = await this.store.addCampaignLoot(campaign.id, name);
-        if (succeeded) {
-            this.lootDraft.set('');
-        } else {
-            this.sectionFeedback.set('Could not add that loot item.');
-            if (closeModalOnFailure) {
-                this.closeLootItemModal();
+        this.isAddingLoot.set(true);
+        try {
+            const succeeded = await this.store.addCampaignLoot(campaign.id, name);
+            if (succeeded) {
+                this.lootDraft.set('');
+            } else {
+                this.sectionFeedback.set('Could not add that loot item.');
+                if (closeModalOnFailure) {
+                    this.closeLootItemModal();
+                }
             }
+        } finally {
+            this.isAddingLoot.set(false);
+            this.cdr.detectChanges();
         }
-
-        this.cdr.detectChanges();
     }
 
     updateInviteEmail(value: string): void {
@@ -766,14 +779,18 @@ export class CampaignSectionPageComponent {
             return;
         }
 
-        const succeeded = await this.store.inviteCampaignMember(campaign.id, email);
-        if (succeeded) {
-            this.inviteEmail.set('');
-        } else {
-            this.sectionFeedback.set('Could not send that invite.');
+        this.isInviting.set(true);
+        try {
+            const succeeded = await this.store.inviteCampaignMember(campaign.id, email);
+            if (succeeded) {
+                this.inviteEmail.set('');
+            } else {
+                this.sectionFeedback.set('Could not send that invite.');
+            }
+        } finally {
+            this.isInviting.set(false);
+            this.cdr.detectChanges();
         }
-
-        this.cdr.detectChanges();
     }
 
     openAddWorldNoteForm(): void {
@@ -914,19 +931,23 @@ export class CampaignSectionPageComponent {
         };
 
         const noteId = this.noteEditorId();
-        const saved = this.noteEditorMode() === 'edit' && noteId
-            ? await this.store.updateCampaignWorldNote(campaign.id, noteId, payload)
-            : await this.store.addCampaignWorldNote(campaign.id, payload);
+        this.isSavingNote.set(true);
+        try {
+            const saved = this.noteEditorMode() === 'edit' && noteId
+                ? await this.store.updateCampaignWorldNote(campaign.id, noteId, payload)
+                : await this.store.addCampaignWorldNote(campaign.id, payload);
 
-        this.sectionFeedback.set(saved
-            ? this.noteEditorMode() === 'edit' ? 'World note updated.' : 'World note added.'
-            : 'Unable to save the world note right now.');
+            this.sectionFeedback.set(saved
+                ? this.noteEditorMode() === 'edit' ? 'World note updated.' : 'World note added.'
+                : 'Unable to save the world note right now.');
 
-        if (saved) {
-            this.closeWorldNoteForm();
+            if (saved) {
+                this.closeWorldNoteForm();
+            }
+        } finally {
+            this.isSavingNote.set(false);
+            this.cdr.detectChanges();
         }
-
-        this.cdr.detectChanges();
     }
 
     async deleteWorldNote(noteId: string): Promise<void> {
@@ -935,14 +956,18 @@ export class CampaignSectionPageComponent {
             return;
         }
 
-        const removed = await this.store.removeCampaignWorldNote(campaign.id, noteId);
-        this.sectionFeedback.set(removed ? 'World note removed.' : 'Unable to remove the world note right now.');
+        this.isDeletingNoteId.set(noteId);
+        try {
+            const removed = await this.store.removeCampaignWorldNote(campaign.id, noteId);
+            this.sectionFeedback.set(removed ? 'World note removed.' : 'Unable to remove the world note right now.');
 
-        if (removed && this.noteEditorId() === noteId) {
-            this.closeWorldNoteForm();
+            if (removed && this.noteEditorId() === noteId) {
+                this.closeWorldNoteForm();
+            }
+        } finally {
+            this.isDeletingNoteId.set(null);
+            this.cdr.detectChanges();
         }
-
-        this.cdr.detectChanges();
     }
 
     submitThread(): void {
