@@ -247,16 +247,16 @@ export class CampaignSectionPageComponent {
     }
 
     constructor() {
-        void this.ensureCampaignDetails();
+        void this.refreshCampaignDetails();
     }
 
-    private async ensureCampaignDetails(): Promise<void> {
+    private async refreshCampaignDetails(): Promise<void> {
         const campaignId = this.campaignId();
         if (!campaignId) {
             return;
         }
 
-        await this.store.ensureCampaignLoaded(campaignId);
+        await this.store.refreshCampaignLoaded(campaignId);
         this.cdr.detectChanges();
     }
 

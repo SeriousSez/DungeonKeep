@@ -73,7 +73,7 @@ export class CampaignEditPageComponent {
             return;
         }
 
-        await this.store.ensureCampaignLoaded(campaignId);
+        await this.store.refreshCampaignLoaded(campaignId);
         this.cdr.detectChanges();
     }
 

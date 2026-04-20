@@ -122,6 +122,77 @@ export class DungeonStoreService {
         await this.loadCampaignDetails(campaignId);
     }
 
+    async refreshCampaignSummaries(): Promise<void> {
+        try {
+            const [campaignDtos, accessibleCharacterDtos] = await Promise.all([
+                this.api.getCampaignSummaries(),
+                this.api.getAccessibleCharacters()
+            ]);
+
+            const characterMap = new Map<string, Character>();
+            const characterLookup = new Map<string, string[]>();
+
+            for (const characterDto of accessibleCharacterDtos) {
+                const mappedCharacter = this.mapCharacterFromApi(characterDto);
+                const existing = characterMap.get(mappedCharacter.id);
+
+                if (!existing) {
+                    characterMap.set(mappedCharacter.id, mappedCharacter);
+                } else {
+                    const mergedCampaignIds = Array.from(new Set([...(existing.campaignIds ?? []), ...(mappedCharacter.campaignIds ?? [])]));
+                    characterMap.set(mappedCharacter.id, { ...existing, ...mappedCharacter, campaignIds: mergedCampaignIds });
+                }
+
+                const ids = mappedCharacter.campaignIds ?? (mappedCharacter.campaignId ? [mappedCharacter.campaignId] : []);
+                for (const cid of ids) {
+                    const arr = characterLookup.get(cid) ?? [];
+                    arr.push(mappedCharacter.id);
+                    characterLookup.set(cid, arr);
+                }
+            }
+
+            this.characters.set(Array.from(characterMap.values()));
+
+            const incomingIds = new Set(campaignDtos.map((c) => c.id));
+            const existing = this.campaigns();
+
+            const merged = campaignDtos.map((dto) => {
+                const partyCharacterIds = characterLookup.get(dto.id) ?? [];
+                const existingCampaign = existing.find((c) => c.id === dto.id);
+
+                const summary = this.mapCampaignSummaryFromApi(dto, partyCharacterIds);
+
+                if (!existingCampaign?.detailsLoaded) {
+                    return summary;
+                }
+
+                // Preserve already-loaded details; only update summary-level fields
+                return {
+                    ...existingCampaign,
+                    name: summary.name,
+                    setting: summary.setting,
+                    tone: summary.tone,
+                    levelStart: summary.levelStart,
+                    levelEnd: summary.levelEnd,
+                    levelRange: summary.levelRange,
+                    summary: summary.summary,
+                    hook: summary.hook,
+                    nextSession: summary.nextSession,
+                    characterCount: summary.characterCount,
+                    sessionCount: summary.sessionCount,
+                    npcCount: summary.npcCount,
+                    openThreadCount: summary.openThreadCount,
+                    currentUserRole: summary.currentUserRole,
+                    partyCharacterIds
+                };
+            });
+
+            this.campaigns.set(merged);
+        } catch {
+            // Keep existing state on error
+        }
+    }
+
     async refreshCampaignCharacters(campaignId?: string): Promise<void> {
         try {
             const accessibleCharacterDtos = await this.api.getAccessibleCharacters();

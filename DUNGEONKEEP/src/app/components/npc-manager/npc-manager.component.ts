@@ -170,6 +170,15 @@ export class NpcManagerComponent {
 
             const stored = loadCampaignNpcDrafts(campaignId) ?? [];
             const merged = mergeStoredNpcDrafts(names, stored);
+
+            // Persist immediately if any NPCs were newly created from legacy names.
+            // Without this, each effect re-run regenerates random UUIDs for legacy NPCs,
+            // causing selectedNpcId to never match and looping indefinitely.
+            const storedIds = new Set(stored.map((s) => s.id));
+            if (merged.some((npc) => !storedIds.has(npc.id))) {
+                saveCampaignNpcDrafts(campaignId, merged);
+            }
+
             this.allNpcs.set(merged);
 
             const selectedNpcId = this.selectedNpcId();

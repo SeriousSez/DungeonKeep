@@ -13,6 +13,10 @@ import { DungeonStoreService } from '../../state/dungeon-store.service';
 export class CampaignsPageComponent {
     readonly store = inject(DungeonStoreService);
 
+    constructor() {
+        void this.store.refreshCampaignSummaries();
+    }
+
     readonly visibleCampaigns = computed(() =>
         this.store.campaigns().filter((campaign) => campaign.currentUserRole === 'Owner' || campaign.currentUserRole === 'Member')
     );
