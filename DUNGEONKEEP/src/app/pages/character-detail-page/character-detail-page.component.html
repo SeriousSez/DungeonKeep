@@ -193,9 +193,9 @@
                     <span class="summary-label">Initiative</span>
                     <strong class="summary-value">{{ initiative() >= 0 ? '+' : '' }}{{ initiative() }}</strong>
                 </div>
-                <div class="summary-item detail-trigger" role="button" tabindex="0" (click)="openArmorClassDetail(char.armorClass)" (keydown.enter)="openArmorClassDetail(char.armorClass)" (keydown.space)="openArmorClassDetail(char.armorClass)">
+                <div class="summary-item detail-trigger" role="button" tabindex="0" (click)="openArmorClassDetail(computedArmorClass())" (keydown.enter)="openArmorClassDetail(computedArmorClass())" (keydown.space)="openArmorClassDetail(computedArmorClass())">
                     <span class="summary-label">Armor Class</span>
-                    <strong class="summary-value">{{ char.armorClass }}</strong>
+                    <strong class="summary-value">{{ computedArmorClass() }}</strong>
                 </div>
                 @if (isExhaustionDeath()) {
                 <section class="exhaustion-death-banner detail-trigger-card" aria-label="Exhaustion level 6 death state" role="button" tabindex="0" (click)="openHpManager()" (keydown.enter)="openHpManager()" (keydown.space)="openHpManager()">
@@ -2374,7 +2374,7 @@
     </aside>
     }
 
-    @if (activeDetailDrawer(); as detail) {
+    @if (computedDetailDrawer(); as detail) {
     <aside class="panel detail-popup" role="dialog" [attr.aria-label]="detail.title">
         <header class="detail-drawer-header">
             <div>

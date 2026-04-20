@@ -937,7 +937,8 @@ const baseEquipmentCatalog: ReadonlyArray<EquipmentItem> = [
     { name: 'Chain Mail', category: 'Armor', sourceUrl: 'https://dnd5e.wikidot.com/armor', weight: 55, costGp: 75, notes: 'Heavy Armor, AC 16, Str 13 required, Stealth Disadvantage' },
     { name: 'Splint Armor', category: 'Armor', sourceUrl: 'https://dnd5e.wikidot.com/armor', weight: 60, costGp: 200, notes: 'Heavy Armor, AC 17, Str 15 required, Stealth Disadvantage' },
     { name: 'Plate Armor', category: 'Armor', sourceUrl: 'https://dnd5e.wikidot.com/armor', weight: 65, costGp: 1500, notes: 'Heavy Armor, AC 18, Str 15 required, Stealth Disadvantage' },
-    { name: 'Shield', category: 'Armor', sourceUrl: 'https://dnd5e.wikidot.com/armor', weight: 6, costGp: 10, notes: '+2 AC' },
+    { name: 'Shield', category: 'Armor', sourceUrl: 'https://dnd5e.wikidot.com/armor', weight: 6, costGp: 10, notes: '+2 AC. A shield is made from wood or metal and carried in one hand.' },
+    { name: 'Wooden Shield', category: 'Armor', sourceUrl: 'https://dnd5e.wikidot.com/armor', weight: 6, costGp: 10, notes: '+2 AC. A wooden shield carried in one hand.' },
     // Adventuring Gear
     { name: 'Abacus', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 2, costGp: 2, notes: 'Utility' },
     { name: 'Acid (Vial)', category: 'Adventuring Gear', sourceUrl: 'https://dnd5e.wikidot.com/adventuring-gear', weight: 1, costGp: 25, notes: 'Throwable, 2d6 acid damage in 5-ft square' },

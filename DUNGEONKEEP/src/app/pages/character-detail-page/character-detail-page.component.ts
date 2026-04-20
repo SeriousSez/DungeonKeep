@@ -496,6 +496,7 @@ interface DetailDrawerContent {
     title: string;
     subtitle: string;
     description: string;
+    key?: string;
     bullets?: string[];
     lineItems?: Array<{ value: string; label: string; note?: string }>;
     secondaryHeading?: string;
@@ -834,6 +835,15 @@ export class CharacterDetailPageComponent {
     readonly brutalStrikeDetailFeature = signal<'Brutal Strike' | 'Improved Brutal Strike'>('Brutal Strike');
     readonly expandedContainers = signal<Set<string>>(new Set());
     readonly activeDetailDrawer = signal<DetailDrawerContent | null>(null);
+
+    readonly computedDetailDrawer = computed(() => {
+        const drawer = this.activeDetailDrawer();
+        if (!drawer) return null;
+        if (drawer.key === 'armor-class') {
+            return this.buildArmorClassDrawerContent();
+        }
+        return drawer;
+    });
     readonly activeExtrasStatEntry = signal<PersistedExtrasEntry | null>(null);
     readonly detailSecondaryExpanded = signal(false);
     readonly hpManagerOpen = signal(false);
@@ -2760,6 +2770,55 @@ export class CharacterDetailPageComponent {
     readonly selectedLifestyleExpenseDescription = computed(() =>
         this.lifestyleExpenseDescriptions[this.selectedLifestyleExpense()] ?? ''
     );
+
+    private getUnarmoredSecondaryMod(): { mod: number; label: string } | null {
+        const char = this.character();
+        if (!char) return null;
+        const className = char.className?.toLowerCase();
+        const scores = this.effectiveAbilityScores();
+        if (className === 'barbarian') {
+            return { mod: this.getAbilityModifier(scores?.constitution ?? 10), label: 'Constitution Bonus' };
+        }
+        if (className === 'monk') {
+            return { mod: this.getAbilityModifier(scores?.wisdom ?? 10), label: 'Wisdom Bonus' };
+        }
+        return null;
+    }
+
+    readonly computedArmorClass = computed(() => {
+        const char = this.character();
+        if (!char) return 0;
+
+        const scores = this.effectiveAbilityScores();
+        const dexMod = this.getAbilityModifier(scores?.dexterity ?? 10);
+        const armorItems = this.inventory()?.armor ?? [];
+
+        let armorName = '';
+        let hasShield = false;
+        for (const item of armorItems) {
+            const normalized = this.stripInventoryQuantity(item).toLowerCase();
+            if (normalized.includes('shield')) {
+                hasShield = true;
+                continue;
+            }
+            if (!armorName) {
+                armorName = this.stripInventoryQuantity(item);
+            }
+        }
+
+        const shieldBonus = hasShield ? 2 : 0;
+
+        if (!armorName) {
+            // Unarmored — compute from ability scores
+            const secondary = this.getUnarmoredSecondaryMod();
+            return 10 + dexMod + (secondary?.mod ?? 0) + shieldBonus;
+        }
+
+        const profile = this.getArmorClassProfile(armorName);
+        const armorBase = profile?.base ?? 10;
+        const dexApplied = profile?.dexCap == null ? dexMod : Math.min(dexMod, profile.dexCap);
+        return armorBase + dexApplied + shieldBonus;
+    });
 
     readonly filteredInventoryItems = computed(() => {
         const bag = this.inventory();
@@ -5087,8 +5146,11 @@ export class CharacterDetailPageComponent {
         });
     }
 
-    openArmorClassDetail(value: number): void {
-        const char = this.character();
+    openArmorClassDetail(_value: number): void {
+        this.openDetailDrawer({ ...this.buildArmorClassDrawerContent(), key: 'armor-class' });
+    }
+
+    private buildArmorClassDrawerContent(): DetailDrawerContent {
         const dexterity = this.effectiveAbilityScores()?.dexterity ?? 10;
         const dexterityMod = this.getAbilityModifier(dexterity);
         const armorItems = this.inventory()?.armor ?? [];
@@ -5101,7 +5163,6 @@ export class CharacterDetailPageComponent {
                 hasShield = true;
                 continue;
             }
-
             if (!armorName) {
                 armorName = this.stripInventoryQuantity(item);
             }
@@ -5113,8 +5174,9 @@ export class CharacterDetailPageComponent {
             ? dexterityMod
             : Math.min(dexterityMod, profile.dexCap);
         const shieldBonus = hasShield ? 2 : 0;
-        const expectedAc = armorBase + dexterityApplied + shieldBonus;
-        const magicBonus = value - expectedAc;
+        const secondary = !armorName ? this.getUnarmoredSecondaryMod() : null;
+        const secondaryMod = secondary?.mod ?? 0;
+        const totalAc = armorBase + dexterityApplied + shieldBonus + secondaryMod;
         const armorWarnings: string[] = [];
 
         const stealthReason = this.getArmorDisadvantageReasonForSkill('stealth', 'DEX');
@@ -5139,21 +5201,21 @@ export class CharacterDetailPageComponent {
             }
         ];
 
+        if (secondary) {
+            lineItems.push({ value: this.formatSigned(secondary.mod), label: secondary.label });
+        }
+
         if (hasShield) {
             lineItems.push({ value: '+2', label: 'Shield Bonus' });
         }
 
-        if (magicBonus !== 0) {
-            lineItems.push({ value: this.formatSigned(magicBonus), label: 'Magic Bonus' });
-        }
-
-        this.openDetailDrawer({
-            title: `Armor Class: ${value}`,
+        return {
+            title: `Armor Class: ${totalAc}`,
             subtitle: 'Defense Breakdown',
             lineItems,
             description: 'Your Armor Class (AC) represents how well your character avoids being wounded in battle. Things that contribute to your AC include the armor you wear, the shield you carry, and your Dexterity modifier. Without armor or a shield, your AC equals 10 + your Dexterity modifier.',
             bullets: armorWarnings
-        });
+        };
     }
 
     private stripInventoryQuantity(label: string): string {
