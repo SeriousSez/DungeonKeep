@@ -96,6 +96,7 @@ export interface ApiCampaignMapDto {
     gridColor: string;
     gridOffsetX: number;
     gridOffsetY: number;
+    visionEnabled?: boolean;
     strokes: ApiCampaignMapStrokeDto[];
     walls: ApiCampaignMapWallDto[];
     icons: ApiCampaignMapIconDto[];

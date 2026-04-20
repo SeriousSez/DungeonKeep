@@ -820,7 +820,7 @@ public sealed class CampaignService(
 
         try
         {
-            var campaignUrl = invitation.RecipientAlreadyHasAccess
+            var campaignUrl = invitedUser is not null
                     ? BuildCampaignUrl(clientBaseUrl, updated.Id)
                     : BuildNotificationsUrl(clientBaseUrl);
 
@@ -1034,7 +1034,7 @@ public sealed class CampaignService(
             ParseNamedItems(campaign.LootJson),
             ParseOpenThreads(campaign.OpenThreadsJson),
             ParseWorldNotes(campaign.WorldNotesJson),
-            new CampaignMapDto(activeMap.Background, activeMap.BackgroundImageUrl, activeMap.GridColumns, activeMap.GridRows, activeMap.GridColor, activeMap.GridOffsetX, activeMap.GridOffsetY, activeMap.Strokes, activeMap.Walls, activeMap.Icons, activeMap.Tokens, activeMap.Decorations, activeMap.Labels, activeMap.Layers, activeMap.VisionMemory),
+            new CampaignMapDto(activeMap.Background, activeMap.BackgroundImageUrl, activeMap.GridColumns, activeMap.GridRows, activeMap.GridColor, activeMap.GridOffsetX, activeMap.GridOffsetY, activeMap.Strokes, activeMap.Walls, activeMap.Icons, activeMap.Tokens, activeMap.Decorations, activeMap.Labels, activeMap.Layers, activeMap.VisionMemory, activeMap.VisionEnabled),
             visibleMaps,
             activeMap.Id,
             currentUserRole,
@@ -1406,7 +1406,8 @@ public sealed class CampaignService(
             normalizedDecorations,
             normalizedLabels,
                 normalizedLayers,
-                normalizedVisionMemory);
+                normalizedVisionMemory,
+                map.VisionEnabled);
     }
 
     private static CampaignMapBoardDto NormalizeCampaignMapBoard(CampaignMapBoardDto map)
@@ -1426,7 +1427,8 @@ public sealed class CampaignService(
             map.Decorations,
             map.Labels,
             map.Layers,
-            map.VisionMemory));
+            map.VisionMemory,
+            map.VisionEnabled));
 
         return new CampaignMapBoardDto(
             map.Id == Guid.Empty ? Guid.NewGuid() : map.Id,
@@ -1445,7 +1447,8 @@ public sealed class CampaignService(
             normalized.Decorations,
             normalized.Labels,
             normalized.Layers,
-            normalized.VisionMemory);
+            normalized.VisionMemory,
+            map.VisionEnabled);
     }
 
     private static CampaignMapLibraryDto NormalizeCampaignMapLibrary(CampaignMapLibraryDto library)

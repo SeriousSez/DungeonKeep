@@ -173,6 +173,7 @@ export interface CampaignMap {
     gridColor: string;
     gridOffsetX: number;
     gridOffsetY: number;
+    visionEnabled: boolean;
     strokes: CampaignMapStroke[];
     walls: CampaignMapWall[];
     icons: CampaignMapIcon[];

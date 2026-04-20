@@ -472,6 +472,13 @@
                     <button type="button" class="tool-toggle-button" [class.is-active]="showForestBelts()" (click)="toggleForestLayer()">Forests {{ workingMap().layers.forestBelts.length }}</button>
                     <button type="button" class="tool-toggle-button" [class.is-active]="showLabels()" (click)="toggleLabelLayer()">Labels {{ workingMap().labels.length }}</button>
                 </div>
+                <div class="map-vision-setting">
+                    <button type="button" class="tool-toggle-button tool-toggle-button--full" [class.is-active]="workingMap().visionEnabled" [disabled]="!canModify()" (click)="toggleMapVision()">
+                        <i class="fa-duotone fa-thin" [class.fa-eye]="workingMap().visionEnabled" [class.fa-eye-slash]="!workingMap().visionEnabled"></i>
+                        {{ workingMap().visionEnabled ? 'Player Vision On' : 'Player Vision Off' }}
+                    </button>
+                    <p class="sidebar-note">When off, players see the full map regardless of token positions or walls.</p>
+                </div>
                 @if (showGrid()) {
                 <details class="map-disclosure" [attr.open]="gridControlsExpanded() ? '' : null" (toggle)="syncGridControlsDisclosure($event)">
                     <summary>Grid Controls</summary>

@@ -872,7 +872,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                 NormalizeMapStrokeCollection(map.Layers?.Rivers),
                 NormalizeMapDecorationCollection(map.Layers?.MountainChains),
                 NormalizeMapDecorationCollection(map.Layers?.ForestBelts)),
-            []);
+            [],
+            map.VisionEnabled);
     }
 
     private static CampaignMapBoardDto NormalizeCampaignMapBoard(CampaignMapBoardDto map)
@@ -892,7 +893,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             map.Decorations,
             map.Labels,
             map.Layers,
-            map.VisionMemory));
+            map.VisionMemory,
+            map.VisionEnabled));
 
         return new CampaignMapBoardDto(
             map.Id == Guid.Empty ? Guid.NewGuid() : map.Id,
@@ -911,7 +913,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             normalized.Decorations,
             normalized.Labels,
             normalized.Layers,
-            normalized.VisionMemory);
+            normalized.VisionMemory,
+            map.VisionEnabled);
     }
 
     private static CampaignMapLibraryDto NormalizeCampaignMapLibrary(CampaignMapLibraryDto library)

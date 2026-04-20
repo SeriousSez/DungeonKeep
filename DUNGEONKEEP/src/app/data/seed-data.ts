@@ -98,7 +98,8 @@ export const seedCampaigns: Campaign[] = [
                 mountainChains: [],
                 forestBelts: []
             },
-            visionMemory: []
+            visionMemory: [],
+            visionEnabled: true
         },
         maps: [
             {
@@ -139,7 +140,8 @@ export const seedCampaigns: Campaign[] = [
                     mountainChains: [],
                     forestBelts: []
                 },
-                visionMemory: []
+                visionMemory: [],
+                visionEnabled: true
             }
         ],
         activeMapId: 'map-board-crown-of-embers',
@@ -229,7 +231,8 @@ export const seedCampaigns: Campaign[] = [
                 mountainChains: [],
                 forestBelts: []
             },
-            visionMemory: []
+            visionMemory: [],
+            visionEnabled: true
         },
         maps: [
             {
@@ -270,7 +273,8 @@ export const seedCampaigns: Campaign[] = [
                     mountainChains: [],
                     forestBelts: []
                 },
-                visionMemory: []
+                visionMemory: [],
+                visionEnabled: true
             }
         ],
         activeMapId: 'map-board-moonwake-ledger',
@@ -355,7 +359,8 @@ export const seedCampaigns: Campaign[] = [
                 mountainChains: [],
                 forestBelts: []
             },
-            visionMemory: []
+            visionMemory: [],
+            visionEnabled: true
         },
         maps: [
             {
@@ -396,7 +401,8 @@ export const seedCampaigns: Campaign[] = [
                     mountainChains: [],
                     forestBelts: []
                 },
-                visionMemory: []
+                visionMemory: [],
+                visionEnabled: true
             }
         ],
         activeMapId: 'map-board-wild-below',

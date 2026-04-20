@@ -581,7 +581,12 @@ export class CampaignMapPageComponent {
     readonly activeIconOption = computed(() => this.iconOptions.find((option) => option.type === this.pendingIconType()) ?? null);
     readonly activeTerrainOption = computed(() => this.terrainOptions.find((option) => option.type === this.pendingTerrainType()) ?? null);
     readonly previewableTokens = computed(() => this.workingMap().tokens.filter((token) => this.canEdit() || this.canControlToken(token)));
-    readonly automaticVisionTokens = computed(() => this.canEdit() ? [] : this.previewableTokens());
+    readonly automaticVisionTokens = computed(() => {
+        if (this.canEdit() || !this.workingMap().visionEnabled) {
+            return [];
+        }
+        return this.previewableTokens();
+    });
     readonly visionPreviewToken = computed(() => {
         const token = this.selectedToken();
         if (!token) {
@@ -3681,6 +3686,19 @@ export class CampaignMapPageComponent {
         this.showWallsInViewer.update((value) => !value);
     }
 
+    toggleMapVision(): void {
+        if (!this.canModify()) {
+            return;
+        }
+
+        this.mutateMap((map) => {
+            map.visionEnabled = !map.visionEnabled;
+        });
+
+        const enabled = this.workingMap().visionEnabled;
+        this.markDirty(enabled ? 'Player vision enabled.' : 'Player vision disabled — players see the full map.');
+    }
+
     toggleVisionPreview(): void {
         if (!this.canPreviewVision()) {
             this.showVisionPreview.set(false);
@@ -4259,6 +4277,7 @@ export class CampaignMapPageComponent {
             gridColor: this.normalizeMapGridColor(map.gridColor, map.background),
             gridOffsetX,
             gridOffsetY,
+            visionEnabled: map.visionEnabled ?? true,
             strokes: map.strokes.map((stroke) => ({
                 id: stroke.id,
                 color: stroke.color,
@@ -4319,6 +4338,7 @@ export class CampaignMapPageComponent {
             gridColor: this.defaultGridColorForBackground(background),
             gridOffsetX: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X,
             gridOffsetY: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y,
+            visionEnabled: true,
             strokes: [],
             walls: [],
             icons: [],
@@ -6247,7 +6267,8 @@ export class CampaignMapPageComponent {
                 decorations: this.createDecorations(background, anchors, seed),
                 labels: this.createLabels(background, anchors, seed),
                 layers: this.createTerrainLayers(background, anchors, seed),
-                visionMemory: []
+                visionMemory: [],
+                visionEnabled: true
             };
         });
     }

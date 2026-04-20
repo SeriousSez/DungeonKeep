@@ -1422,7 +1422,8 @@ export class DungeonStoreService {
                     : null,
                 lastPolygonHash: entry.lastPolygonHash?.trim() || '',
                 revision: this.normalizeMapVisionRevision(entry.revision)
-            })).filter((entry) => !!entry.key && entry.polygons.length > 0)
+            })).filter((entry) => !!entry.key && entry.polygons.length > 0),
+            visionEnabled: map?.visionEnabled ?? true
         };
     }
 
@@ -1548,7 +1549,8 @@ export class DungeonStoreService {
                     : null,
                 lastPolygonHash: entry.lastPolygonHash,
                 revision: this.normalizeMapVisionRevision(entry.revision)
-            })).filter((entry) => !!entry.key && entry.polygons.length > 0)
+            })).filter((entry) => !!entry.key && entry.polygons.length > 0),
+            visionEnabled: map.visionEnabled
         };
     }
 

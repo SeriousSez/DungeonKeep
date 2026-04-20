@@ -126,7 +126,7 @@ public sealed class SmtpCampaignInviteEmailService(
                         <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8a6a55;font-weight:700;margin-bottom:6px;">Invite details</div>
                         <p style="margin:0;font-size:14px;line-height:1.6;color:#4d3b30;">Use the email address <strong>{{HtmlEncoder.Encode(recipientEmail)}}</strong> in DungeonKeep to access this campaign.</p>
                       </div>
-      <p style="margin:20px 0 0;font-size:13px;line-height:1.6;color:#7b6554;">If the button does not work, copy and paste this link into your browser:<br><a href="{{campaignUrl}}" style="color:#7a4c2e;word-break:break-all;">{{campaignUrl}}</a></p>
+                      <p style="margin:20px 0 0;font-size:13px;line-height:1.6;color:#7b6554;">If the button does not work, copy and paste this link into your browser:<br><a href="{{campaignUrl}}" style="color:#7a4c2e;word-break:break-all;">{{campaignUrl}}</a></p>
                     </td>
                   </tr>
                 </table>
