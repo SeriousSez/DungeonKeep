@@ -7,6 +7,8 @@ import { DndChatWidgetComponent } from './components/dnd-chat-widget/dnd-chat-wi
 import { CampaignRealtimeService } from './state/campaign-realtime.service';
 import { SessionService } from './state/session.service';
 import { ThemeService } from './state/theme.service';
+import { CompactModeService } from './state/compact-mode.service';
+import { NotificationBadgeService } from './state/notification-badge.service';
 import { rulesBrowseLinks, rulesResourceLinks } from './data/rules-links';
 
 @Component({
@@ -21,6 +23,8 @@ export class App {
   readonly session = inject(SessionService);
   private readonly campaignRealtime = inject(CampaignRealtimeService);
   private readonly theme = inject(ThemeService);
+  private readonly compactMode = inject(CompactModeService);
+  readonly notificationBadge = inject(NotificationBadgeService);
   private readonly document = inject(DOCUMENT);
   private readonly router = inject(Router);
   readonly mobileNavOpen = signal(false);

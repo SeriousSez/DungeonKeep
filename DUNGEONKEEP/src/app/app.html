@@ -108,6 +108,9 @@
                 <a class="nav-mobile-user-link" routerLink="/notifications" (click)="closeMobileNav()">
                     <i class="fa-duotone fa-thin fa-bell"></i>
                     Notifications
+                    @if (notificationBadge.unreadCount() > 0) {
+                    <span class="nav-mobile-notif-badge">{{ notificationBadge.unreadCount() > 9 ? '9+' : notificationBadge.unreadCount() }}</span>
+                    }
                 </a>
                 <a class="nav-mobile-user-link" routerLink="/messages" (click)="closeMobileNav()">
                     <i class="fa-duotone fa-thin fa-envelope"></i>
@@ -123,12 +126,20 @@
             <div class="user-menu-wrap" [class.is-open]="userMenuOpen()">
                 <button class="user-pill" type="button" (click)="toggleUserMenu()" aria-haspopup="true" [attr.aria-expanded]="userMenuOpen()">
                     {{ currentUser()?.displayName }}
+                    @if (notificationBadge.unreadCount() > 0) {
+                    <span class="user-pill-badge" aria-label="{{ notificationBadge.unreadCount() }} unread notifications">
+                        {{ notificationBadge.unreadCount() > 9 ? '9+' : notificationBadge.unreadCount() }}
+                    </span>
+                    }
                     <i class="fa-duotone fa-thin fa-chevron-down user-pill-chevron"></i>
                 </button>
                 <div class="user-dropdown">
                     <a class="user-dropdown-item" routerLink="/notifications" (click)="closeUserMenu()">
                         <i class="fa-duotone fa-thin fa-bell"></i>
                         Notifications
+                        @if (notificationBadge.unreadCount() > 0) {
+                        <span class="user-dropdown-badge">{{ notificationBadge.unreadCount() > 9 ? '9+' : notificationBadge.unreadCount() }}</span>
+                        }
                     </a>
                     <a class="user-dropdown-item" routerLink="/messages" (click)="closeUserMenu()">
                         <i class="fa-duotone fa-thin fa-envelope"></i>

@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterModule } from '@angular/router';
 import { ApiNotificationDto, DungeonApiService } from '../../state/dungeon-api.service';
 import { UserHubService } from '../../state/user-hub.service';
+import { NotificationBadgeService } from '../../state/notification-badge.service';
 
 const NOTIFICATION_ICONS: Record<string, string> = {
     CampaignInvite: 'scroll',
@@ -24,6 +25,7 @@ export class NotificationsPageComponent implements OnInit {
     private readonly cdr = inject(ChangeDetectorRef);
     readonly destroyRef = inject(DestroyRef);
     private readonly userHub = inject(UserHubService);
+    private readonly badge = inject(NotificationBadgeService);
 
     readonly notifications = signal<ApiNotificationDto[]>([]);
     readonly loading = signal(true);
@@ -55,6 +57,7 @@ export class NotificationsPageComponent implements OnInit {
         try {
             await this.api.markAllNotificationsRead();
             this.notifications.update(list => list.map(n => ({ ...n, isRead: true })));
+            this.badge.clear();
             this.cdr.detectChanges();
         } catch {
             // silent
@@ -67,6 +70,7 @@ export class NotificationsPageComponent implements OnInit {
         try {
             await this.api.markNotificationRead(id);
             this.notifications.update(list => list.map(n => n.id === id ? { ...n, isRead: true } : n));
+            this.badge.decrement();
             this.cdr.detectChanges();
         } catch {
             // silent
@@ -74,9 +78,11 @@ export class NotificationsPageComponent implements OnInit {
     }
 
     async dismiss(id: string): Promise<void> {
+        const notif = this.notifications().find(n => n.id === id);
         try {
             await this.api.dismissNotification(id);
             this.notifications.update(list => list.filter(n => n.id !== id));
+            if (notif && !notif.isRead) this.badge.decrement();
             this.cdr.detectChanges();
         } catch {
             // silent
@@ -90,6 +96,7 @@ export class NotificationsPageComponent implements OnInit {
             await this.api.acceptCampaignInvite(campaignId);
             await this.api.dismissNotification(notif.id);
             this.notifications.update(list => list.filter(n => n.id !== notif.id));
+            if (!notif.isRead) this.badge.decrement();
             this.cdr.detectChanges();
         } catch {
             // silent
@@ -103,6 +110,7 @@ export class NotificationsPageComponent implements OnInit {
             await this.api.declineCampaignInvite(campaignId);
             await this.api.dismissNotification(notif.id);
             this.notifications.update(list => list.filter(n => n.id !== notif.id));
+            if (!notif.isRead) this.badge.decrement();
             this.cdr.detectChanges();
         } catch {
             // silent

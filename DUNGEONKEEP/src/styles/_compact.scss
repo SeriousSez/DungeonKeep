@@ -1,0 +1,24 @@
+// Compact mode — applied via :root.layout-compact set by CompactModeService.
+// Reduces spacing, font size, and border-radius globally for a denser layout.
+
+:root.layout-compact {
+    --compact-page-padding: clamp(10px, 2vw, 20px);
+    --compact-panel-padding: 16px 20px;
+    --compact-gap: 14px;
+    --compact-section-gap: 18px;
+
+    font-size: 14px;
+
+    .page-container,
+    .page-content,
+    .page-body {
+        padding-top: var(--compact-page-padding);
+        padding-bottom: var(--compact-page-padding);
+        gap: var(--compact-gap);
+    }
+
+    .panel,
+    [class*="-panel"] {
+        border-radius: 16px;
+    }
+}

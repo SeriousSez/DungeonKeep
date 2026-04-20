@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, signal }
 import { FormsModule } from '@angular/forms';
 import { SessionService } from '../../state/session.service';
 import { ThemeService } from '../../state/theme.service';
+import { CompactModeService } from '../../state/compact-mode.service';
 
 type SettingsTab = 'profile' | 'security' | 'preferences';
 
@@ -18,6 +19,7 @@ export class AccountSettingsPageComponent {
     private readonly session = inject(SessionService);
     private readonly cdr = inject(ChangeDetectorRef);
     private readonly themeService = inject(ThemeService);
+    private readonly compactModeService = inject(CompactModeService);
 
     readonly activeTab = signal<SettingsTab>('profile');
     readonly savePending = signal(false);
@@ -35,9 +37,9 @@ export class AccountSettingsPageComponent {
     readonly passwordSuccess = signal(false);
     readonly passwordError = signal('');
 
-    // Preferences — backed by ThemeService
+    // Preferences — backed by ThemeService / CompactModeService
     readonly theme = this.themeService.theme;
-    readonly compactMode = signal(false);
+    readonly compactMode = this.compactModeService.compactMode;
 
     readonly currentUser = this.session.currentUser;
 

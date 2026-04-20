@@ -3,10 +3,11 @@ using DungeonKeep.ApplicationService.Interfaces;
 using DungeonKeep.Domain.Entities;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 
 namespace DungeonKeep.ApplicationService.Services;
 
-public sealed class AuthService(IAuthRepository authRepository, IAccountActivationEmailService accountActivationEmailService) : IAuthService
+public sealed class AuthService(IAuthRepository authRepository, IAccountActivationEmailService accountActivationEmailService, INotificationRepository notificationRepository) : IAuthService
 {
     private static readonly TimeSpan ActivationCodeLifetime = TimeSpan.FromMinutes(20);
 
@@ -98,7 +99,28 @@ public sealed class AuthService(IAuthRepository authRepository, IAccountActivati
         user.ActivationCodeExpiresAtUtc = null;
 
         await authRepository.UpdateUserAsync(user, cancellationToken);
-        await authRepository.ActivatePendingMembershipsAsync(user.Email, user.Id, cancellationToken);
+        var linkedMemberships = await authRepository.ActivatePendingMembershipsAsync(user.Email, user.Id, cancellationToken);
+
+        foreach (var (campaignId, campaignName, invitedByUserId) in linkedMemberships)
+        {
+            var metadata = JsonSerializer.Serialize(new Dictionary<string, string>
+            {
+                ["campaignId"] = campaignId.ToString(),
+                ["campaignName"] = campaignName
+            });
+
+            await notificationRepository.AddAsync(new UserNotification
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                Type = "CampaignInvite",
+                Title = $"You've been invited to join {campaignName}",
+                Body = $"You were invited to join the campaign \u201c{campaignName}\u201d. Accept or decline below.",
+                Link = string.Empty,
+                MetadataJson = metadata,
+                CreatedAtUtc = DateTime.UtcNow
+            }, cancellationToken);
+        }
 
         return new ActivationResultDto(user.Email, "Account activated. You can sign in now.");
     }

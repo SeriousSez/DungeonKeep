@@ -45,21 +45,27 @@ public sealed class AuthRepository(DungeonKeepDbContext dbContext) : IAuthReposi
             .FirstOrDefaultAsync(session => session.Token == token, cancellationToken);
     }
 
-    public async Task ActivatePendingMembershipsAsync(string normalizedEmail, Guid userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<(Guid CampaignId, string CampaignName, Guid? InvitedByUserId)>> ActivatePendingMembershipsAsync(string normalizedEmail, Guid userId, CancellationToken cancellationToken = default)
     {
         var memberships = await dbContext.CampaignMemberships
+            .Include(membership => membership.Campaign)
             .Where(membership => membership.Email == normalizedEmail && membership.UserId == null && membership.Status == "Pending")
             .ToListAsync(cancellationToken);
 
         foreach (var membership in memberships)
         {
             membership.UserId = userId;
-            membership.Status = "Active";
+            // Keep Status as "Pending" so the user can accept or decline from notifications.
         }
 
         if (memberships.Count > 0)
         {
             await dbContext.SaveChangesAsync(cancellationToken);
         }
+
+        return memberships
+            .Where(m => m.Campaign is not null)
+            .Select(m => (m.CampaignId, m.Campaign!.Name, m.InvitedByUserId))
+            .ToList();
     }
 }

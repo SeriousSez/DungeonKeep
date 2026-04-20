@@ -362,6 +362,22 @@
     }
 }
 
+.nav-mobile-notif-badge {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
 // ── Spacer ────────────────────────────────────────────────────────────────────
 .topbar-spacer {
     flex: 1;
@@ -453,6 +469,22 @@
     }
 }
 
+.user-pill-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
 .user-dropdown {
     position: absolute;
     top: calc(100% + 8px);
@@ -498,6 +530,22 @@
         background: color-mix(in srgb, var(--surface-raised) 70%, transparent);
         color: var(--text-main);
     }
+}
+
+.user-dropdown-badge {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
 }
 
 .user-dropdown-logout {

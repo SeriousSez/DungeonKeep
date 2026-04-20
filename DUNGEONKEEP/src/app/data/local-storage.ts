@@ -213,6 +213,22 @@ const THEME_STORAGE_KEY = 'dungeonkeep.theme.v1';
 
 export type StoredTheme = 'system' | 'light' | 'dark';
 
+const COMPACT_MODE_STORAGE_KEY = 'dungeonkeep.compactMode.v1';
+
+export function loadCompactMode(): boolean {
+    if (!hasBrowserStorage()) return false;
+    return window.localStorage.getItem(COMPACT_MODE_STORAGE_KEY) === 'true';
+}
+
+export function saveCompactMode(compact: boolean): void {
+    if (!hasBrowserStorage()) return;
+    try {
+        window.localStorage.setItem(COMPACT_MODE_STORAGE_KEY, compact ? 'true' : 'false');
+    } catch {
+        return;
+    }
+}
+
 export function loadTheme(): StoredTheme {
     if (!hasBrowserStorage()) return 'system';
     const raw = window.localStorage.getItem(THEME_STORAGE_KEY);
