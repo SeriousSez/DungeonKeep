@@ -14,6 +14,7 @@ import {
     ApiDndChatCampaignMapContext,
     ApiDndChatCampaignSummaryContext,
     ApiDndChatCharacterContext,
+    ApiDndChatCharacterDetailContext,
     ApiDndChatCharacterSummaryContext,
     ApiDndChatNpcContext,
     ApiDndChatNpcLibrarySummaryContext,
@@ -27,6 +28,31 @@ import { DungeonStoreService } from '../../state/dungeon-store.service';
 interface ChatMessage {
     role: 'user' | 'assistant';
     content: string;
+}
+
+interface ChatPersistedInventoryEntry {
+    name: string;
+    category: string;
+    quantity: number;
+    notes?: string;
+    isContainer?: boolean;
+    containedItems?: ChatPersistedInventoryEntry[];
+    equipped?: boolean;
+}
+
+interface ChatPersistedBuilderState {
+    inventoryEntries?: ChatPersistedInventoryEntry[];
+    classPreparedSpells?: Record<string, string[]>;
+    classKnownSpellsByClass?: Record<string, string[]>;
+    wizardSpellbookByClass?: Record<string, string[]>;
+    usedSpellSlotsByLevel?: Record<string, number>;
+    limitedUseCounts?: Record<string, number>;
+    usedHitDiceCount?: number;
+    tempHitPoints?: number;
+    deathSaveFailures?: number;
+    deathSaveSuccesses?: number;
+    activeConditions?: string[];
+    exhaustionLevel?: number;
 }
 
 @Component({
@@ -149,7 +175,8 @@ export class DndChatWidgetComponent {
     private buildPageContext(): ApiDndChatPageContext | undefined {
         const route = this.router.url.split('?')[0] || '/';
         const campaign = this.getCampaignFromRoute(route);
-        const character = this.getCharacterContextFromRoute(route);
+        const characterRecord = this.getCharacterFromRoute(route);
+        const character = characterRecord ? this.mapCharacterContext(characterRecord) : undefined;
         const session = this.getSessionContextFromRoute(route, campaign);
         const npc = this.getNpcContextFromRoute(route, campaign);
 
@@ -157,6 +184,7 @@ export class DndChatWidgetComponent {
             route,
             pageType: this.getPageType(route),
             character,
+            characterDetail: characterRecord ? this.getCharacterDetailContext(route, characterRecord) : undefined,
             campaign: this.mapCampaignContext(campaign),
             session,
             npc,
@@ -167,7 +195,7 @@ export class DndChatWidgetComponent {
         };
     }
 
-    private getCharacterContextFromRoute(route: string): ApiDndChatCharacterContext | undefined {
+    private getCharacterFromRoute(route: string): Character | undefined {
         const detailMatch = route.match(/^\/character\/([^/]+)$/);
         const builderMatch = route.match(/^\/characters\/([^/]+)\/builder(?:\/.*)?$/);
         const characterId = detailMatch?.[1] ?? builderMatch?.[1];
@@ -175,12 +203,7 @@ export class DndChatWidgetComponent {
             return undefined;
         }
 
-        const character = this.store.characters().find((entry) => entry.id === characterId);
-        if (!character) {
-            return undefined;
-        }
-
-        return this.mapCharacterContext(character);
+        return this.store.characters().find((entry) => entry.id === characterId);
     }
 
     private getCampaignFromRoute(route: string): Campaign | null {
@@ -485,6 +508,39 @@ export class DndChatWidgetComponent {
         };
     }
 
+    private getCharacterDetailContext(route: string, character: Character): ApiDndChatCharacterDetailContext | undefined {
+        if (!/^\/character\/[^/]+$/.test(route) && !/^\/characters\/[^/]+\/builder(?:\/.*)?$/.test(route)) {
+            return undefined;
+        }
+
+        const state = this.extractBuilderState(character.notes);
+        const inventoryEntries = this.flattenInventoryEntries(state?.inventoryEntries ?? []);
+        const nonContainerEntries = inventoryEntries.filter((entry) => !entry.isContainer);
+        const equippedItems = nonContainerEntries
+            .filter((entry) => this.isEquippedInventoryEntry(entry))
+            .map((entry) => this.formatInventoryEntryLabel(entry));
+        const inventorySummary = nonContainerEntries.length > 0
+            ? nonContainerEntries.map((entry) => this.formatInventoryEntryLabel(entry))
+            : [...(character.equipment ?? [])];
+
+        return {
+            activeConditions: this.limitChatContextList((state?.activeConditions ?? []).map((condition) => this.formatConditionLabel(condition)), 8),
+            exhaustionLevel: this.normalizeNonNegativeInteger(state?.exhaustionLevel),
+            tempHitPoints: this.normalizeNonNegativeInteger(state?.tempHitPoints),
+            deathSaveFailures: this.normalizeNonNegativeInteger(state?.deathSaveFailures ?? character.deathSaveFailures),
+            deathSaveSuccesses: this.normalizeNonNegativeInteger(state?.deathSaveSuccesses ?? character.deathSaveSuccesses),
+            usedHitDiceCount: this.normalizeNonNegativeInteger(state?.usedHitDiceCount),
+            totalHitDice: Math.max(character.level, 0),
+            usedSpellSlots: this.limitChatContextList(this.formatSpellSlotUsage(state?.usedSpellSlotsByLevel), 9),
+            limitedUseCounts: this.limitChatContextList(this.formatLimitedUseCounts(state?.limitedUseCounts), 10),
+            preparedSpells: this.limitChatContextList(this.flattenSpellMap(state?.classPreparedSpells), 16),
+            knownSpells: this.limitChatContextList(this.flattenSpellMap(state?.classKnownSpellsByClass), 16),
+            spellbookSpells: this.limitChatContextList(this.flattenSpellMap(state?.wizardSpellbookByClass), 16),
+            equippedItems: this.limitChatContextList(equippedItems, 12),
+            inventorySummary: this.limitChatContextList(inventorySummary, 16)
+        };
+    }
+
     private extractNarrativeContext(notes: string): {
         backstory: string;
         personalityTraits: string[];
@@ -501,6 +557,28 @@ export class DndChatWidgetComponent {
             bonds: this.extractDelimitedValues(cleanedNotes, /(^|\n)Include these bonds:\s*(.+?)(?=\n|$)/i),
             flaws: this.extractDelimitedValues(cleanedNotes, /(^|\n)Reflect these flaws:\s*(.+?)(?=\n|$)/i)
         };
+    }
+
+    private extractBuilderState(notes: string): ChatPersistedBuilderState | null {
+        const startTag = '[DK_BUILDER_STATE_START]';
+        const endTag = '[DK_BUILDER_STATE_END]';
+        const startIndex = notes.indexOf(startTag);
+        const endIndex = notes.indexOf(endTag);
+        if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex + startTag.length) {
+            return null;
+        }
+
+        const rawState = notes.slice(startIndex + startTag.length, endIndex).trim();
+        if (!rawState) {
+            return null;
+        }
+
+        try {
+            const parsed = JSON.parse(rawState);
+            return parsed && typeof parsed === 'object' ? parsed as ChatPersistedBuilderState : null;
+        } catch {
+            return null;
+        }
     }
 
     private stripBuilderState(notes: string): string {
@@ -533,6 +611,127 @@ export class DndChatWidgetComponent {
             .split(';')
             .map((value) => value.trim())
             .filter(Boolean);
+    }
+
+    private flattenInventoryEntries(entries: ChatPersistedInventoryEntry[]): ChatPersistedInventoryEntry[] {
+        const flattened: ChatPersistedInventoryEntry[] = [];
+
+        for (const entry of entries) {
+            flattened.push(entry);
+
+            if (Array.isArray(entry.containedItems) && entry.containedItems.length > 0) {
+                flattened.push(...this.flattenInventoryEntries(entry.containedItems));
+            }
+        }
+
+        return flattened;
+    }
+
+    private isEquippedInventoryEntry(entry: ChatPersistedInventoryEntry): boolean {
+        if (entry.equipped === true) {
+            return true;
+        }
+
+        const normalizedCategory = entry.category.trim().toLowerCase();
+        return entry.equipped !== false && (
+            normalizedCategory.includes('weapon')
+            || normalizedCategory.includes('firearm')
+            || normalizedCategory.includes('armor')
+            || normalizedCategory.includes('shield')
+        );
+    }
+
+    private formatInventoryEntryLabel(entry: ChatPersistedInventoryEntry): string {
+        const quantity = Math.max(1, this.normalizeNonNegativeInteger(entry.quantity) || 1);
+        return quantity > 1 ? `${entry.name} x${quantity}` : entry.name;
+    }
+
+    private formatConditionLabel(value: string): string {
+        return value
+            .trim()
+            .split(/[-_\s]+/)
+            .filter(Boolean)
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(' ');
+    }
+
+    private formatSpellSlotUsage(usage: Record<string, number> | undefined): string[] {
+        if (!usage) {
+            return [];
+        }
+
+        return Object.entries(usage)
+            .map(([level, used]) => ({
+                level: Number(level),
+                used: this.normalizeNonNegativeInteger(used)
+            }))
+            .filter((entry) => Number.isFinite(entry.level) && entry.used > 0)
+            .sort((left, right) => left.level - right.level)
+            .map((entry) => `Level ${entry.level}: ${entry.used} used`);
+    }
+
+    private formatLimitedUseCounts(usage: Record<string, number> | undefined): string[] {
+        if (!usage) {
+            return [];
+        }
+
+        return Object.entries(usage)
+            .map(([key, used]) => ({
+                label: key
+                    .split('-')
+                    .filter(Boolean)
+                    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+                    .join(' '),
+                used: this.normalizeNonNegativeInteger(used)
+            }))
+            .filter((entry) => entry.used > 0)
+            .sort((left, right) => left.label.localeCompare(right.label))
+            .map((entry) => `${entry.label}: ${entry.used} used`);
+    }
+
+    private flattenSpellMap(spellMap: Record<string, string[]> | undefined): string[] {
+        if (!spellMap) {
+            return [];
+        }
+
+        const entries: string[] = [];
+
+        for (const [className, spells] of Object.entries(spellMap)) {
+            for (const spell of spells ?? []) {
+                const trimmedSpell = spell.trim();
+                if (!trimmedSpell) {
+                    continue;
+                }
+
+                entries.push(`${className}: ${trimmedSpell}`);
+            }
+        }
+
+        return entries.sort((left, right) => left.localeCompare(right));
+    }
+
+    private limitChatContextList(values: string[], maxItems: number): string[] {
+        const normalized = values
+            .map((value) => this.truncateText(value, 120))
+            .filter(Boolean);
+
+        if (normalized.length <= maxItems) {
+            return normalized;
+        }
+
+        return [
+            ...normalized.slice(0, maxItems),
+            `+${normalized.length - maxItems} more`
+        ];
+    }
+
+    private normalizeNonNegativeInteger(value: unknown): number {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) {
+            return 0;
+        }
+
+        return Math.max(0, Math.trunc(parsed));
     }
 
     private compactParts(values: Array<string | undefined>, separator: string, maxLength: number): string {

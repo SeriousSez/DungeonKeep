@@ -403,6 +403,23 @@ export interface ApiDndChatCharacterContext {
     flaws: string[];
 }
 
+export interface ApiDndChatCharacterDetailContext {
+    activeConditions: string[];
+    exhaustionLevel: number;
+    tempHitPoints: number;
+    deathSaveFailures: number;
+    deathSaveSuccesses: number;
+    usedHitDiceCount: number;
+    totalHitDice: number;
+    usedSpellSlots: string[];
+    limitedUseCounts: string[];
+    preparedSpells: string[];
+    knownSpells: string[];
+    spellbookSpells: string[];
+    equippedItems: string[];
+    inventorySummary: string[];
+}
+
 export interface ApiDndChatCampaignPartyMemberContext {
     id: string;
     name: string;
@@ -587,6 +604,7 @@ export interface ApiDndChatPageContext {
     route: string;
     pageType: string;
     character?: ApiDndChatCharacterContext;
+    characterDetail?: ApiDndChatCharacterDetailContext;
     campaign?: ApiDndChatCampaignContext;
     session?: ApiDndChatSessionContext;
     npc?: ApiDndChatNpcContext;

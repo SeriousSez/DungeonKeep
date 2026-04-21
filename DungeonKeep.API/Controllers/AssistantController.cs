@@ -229,6 +229,27 @@ public sealed class AssistantController : ControllerBase
             });
         }
 
+        if (context.CharacterDetail is not null)
+        {
+            lines.AddRange(
+            new[]
+            {
+                "Character Detail Context:",
+                $"- Active Conditions: {FormatList(context.CharacterDetail.ActiveConditions, "none active")}",
+                $"- Exhaustion Level: {context.CharacterDetail.ExhaustionLevel}",
+                $"- Temporary HP: {context.CharacterDetail.TempHitPoints}",
+                $"- Death Saves: {context.CharacterDetail.DeathSaveFailures} failures, {context.CharacterDetail.DeathSaveSuccesses} successes",
+                $"- Hit Dice Used: {context.CharacterDetail.UsedHitDiceCount}/{context.CharacterDetail.TotalHitDice}",
+                $"- Spell Slots Used: {FormatList(context.CharacterDetail.UsedSpellSlots, "none recorded")}",
+                $"- Limited Use Trackers: {FormatList(context.CharacterDetail.LimitedUseCounts, "none recorded")}",
+                $"- Prepared Spells: {FormatList(context.CharacterDetail.PreparedSpells, "none recorded")}",
+                $"- Known Spells: {FormatList(context.CharacterDetail.KnownSpells, "none recorded")}",
+                $"- Spellbook Spells: {FormatList(context.CharacterDetail.SpellbookSpells, "none recorded")}",
+                $"- Equipped Items: {FormatList(context.CharacterDetail.EquippedItems, "none recorded")}",
+                $"- Inventory Summary: {FormatList(context.CharacterDetail.InventorySummary, "none recorded")}"
+            });
+        }
+
         if (context.Campaign is not null)
         {
             lines.AddRange(
@@ -564,6 +585,7 @@ public sealed class AssistantController : ControllerBase
         string Route,
         string PageType,
         DndChatCharacterContext? Character,
+        DndChatCharacterDetailContext? CharacterDetail,
         DndChatCampaignContext? Campaign,
         DndChatSessionContext? Session,
         DndChatNpcContext? Npc,
@@ -593,6 +615,22 @@ public sealed class AssistantController : ControllerBase
         IReadOnlyList<string> Ideals,
         IReadOnlyList<string> Bonds,
         IReadOnlyList<string> Flaws);
+
+    public sealed record DndChatCharacterDetailContext(
+        IReadOnlyList<string> ActiveConditions,
+        int ExhaustionLevel,
+        int TempHitPoints,
+        int DeathSaveFailures,
+        int DeathSaveSuccesses,
+        int UsedHitDiceCount,
+        int TotalHitDice,
+        IReadOnlyList<string> UsedSpellSlots,
+        IReadOnlyList<string> LimitedUseCounts,
+        IReadOnlyList<string> PreparedSpells,
+        IReadOnlyList<string> KnownSpells,
+        IReadOnlyList<string> SpellbookSpells,
+        IReadOnlyList<string> EquippedItems,
+        IReadOnlyList<string> InventorySummary);
 
     public sealed record DndChatAbilityScores(int Strength, int Dexterity, int Constitution, int Intelligence, int Wisdom, int Charisma);
 
