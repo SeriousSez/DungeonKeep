@@ -271,20 +271,32 @@ public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : IChara
         return character;
     }
 
-    private static void SyncCampaignAssignments(Character character, IEnumerable<Guid> campaignIds)
+    private void SyncCampaignAssignments(Character character, IEnumerable<Guid> campaignIds)
     {
         var normalizedCampaignIds = NormalizeCampaignIds(campaignIds);
         var currentAssignments = character.CampaignAssignments ?? [];
-        var assignmentsByCampaignId = currentAssignments.ToDictionary(assignment => assignment.CampaignId, assignment => assignment);
+        var currentAssignmentsByCampaignId = currentAssignments
+            .GroupBy(assignment => assignment.CampaignId)
+            .ToDictionary(group => group.Key, group => group.ToList());
+
+        foreach (var duplicateGroup in currentAssignmentsByCampaignId.Where(entry => entry.Value.Count > 1))
+        {
+            foreach (var duplicateAssignment in duplicateGroup.Value.Skip(1).ToList())
+            {
+                currentAssignments.Remove(duplicateAssignment);
+                dbContext.CharacterCampaignAssignments.Remove(duplicateAssignment);
+            }
+        }
 
         foreach (var staleAssignment in currentAssignments.Where(assignment => !normalizedCampaignIds.Contains(assignment.CampaignId)).ToList())
         {
             currentAssignments.Remove(staleAssignment);
+            dbContext.CharacterCampaignAssignments.Remove(staleAssignment);
         }
 
         foreach (var campaignId in normalizedCampaignIds)
         {
-            if (assignmentsByCampaignId.ContainsKey(campaignId))
+            if (currentAssignments.Any(assignment => assignment.CampaignId == campaignId))
             {
                 continue;
             }
