@@ -7,6 +7,7 @@ public interface ICampaignService
     Task<IReadOnlyList<CampaignSummaryDto>> GetAllSummariesAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CampaignDto>> GetAllAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<CampaignDto?> GetByIdAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default);
+    Task<CampaignMapLibraryDto?> GetMapLibraryAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default);
     Task<CampaignDto> CreateAsync(CreateCampaignRequest request, AuthenticatedUser owner, CancellationToken cancellationToken = default);
     Task<CampaignDto?> UpdateAsync(Guid campaignId, UpdateCampaignRequest request, Guid userId, CancellationToken cancellationToken = default);
     Task<CampaignDto?> AddSessionAsync(Guid campaignId, CreateCampaignSessionRequest request, Guid userId, CancellationToken cancellationToken = default);

@@ -1171,12 +1171,14 @@ export class CampaignMapPageComponent {
 
     private async ensureCampaignDetails(campaignId: string): Promise<void> {
         await this.store.ensureCampaignLoaded(campaignId);
+        await this.store.refreshCampaignMapLibrary(campaignId);
         this.cdr.detectChanges();
     }
 
     private async refreshCampaignCharactersForEditor(campaignId: string): Promise<void> {
         await this.store.refreshCampaignCharacters(campaignId);
         await this.store.refreshCampaignLoaded(campaignId);
+        await this.store.refreshCampaignMapLibrary(campaignId);
         this.cdr.detectChanges();
     }
 
@@ -1187,6 +1189,7 @@ export class CampaignMapPageComponent {
         }
 
         await this.store.refreshCampaignLoaded(campaignId);
+        await this.store.refreshCampaignMapLibrary(campaignId);
         this.saveState.set('saved');
         this.saveMessage.set('Map data refreshed.');
         this.cdr.detectChanges();

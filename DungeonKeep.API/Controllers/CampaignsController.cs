@@ -63,6 +63,19 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         return campaign is null ? NotFound() : Ok(campaign);
     }
 
+    [HttpGet("{campaignId:guid}/maps/library")]
+    public async Task<ActionResult<CampaignMapLibraryDto>> GetMapLibrary(Guid campaignId, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var library = await campaignService.GetMapLibraryAsync(campaignId, user.Id, cancellationToken);
+        return library is null ? NotFound() : Ok(library);
+    }
+
     [HttpPost]
     public async Task<ActionResult<CampaignDto>> Create([FromBody] CreateCampaignRequest request, CancellationToken cancellationToken)
     {

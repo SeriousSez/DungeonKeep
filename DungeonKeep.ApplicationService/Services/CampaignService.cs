@@ -59,6 +59,36 @@ public sealed class CampaignService(
         return membership is null ? null : MapCampaign(campaign, userId);
     }
 
+    public async Task<CampaignMapLibraryDto?> GetMapLibraryAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await campaignRepository.GetByIdAsync(campaignId, cancellationToken);
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var membership = campaign.Memberships.FirstOrDefault(member => member.UserId == userId && member.Status == "Active");
+        if (membership is null)
+        {
+            return null;
+        }
+
+        var library = ParseCampaignMapLibrary(campaign.CampaignMapJson);
+        if (string.Equals(membership.Role, "Owner", StringComparison.OrdinalIgnoreCase))
+        {
+            return library;
+        }
+
+        var activeMap = library.Maps.FirstOrDefault(map => map.Id == library.ActiveMapId) ?? library.Maps[0];
+        var firstMap = library.Maps[0];
+        var visibleMaps = library.Maps
+            .Where(map => map.Id == firstMap.Id || map.Id == activeMap.Id)
+            .DistinctBy(map => map.Id)
+            .ToList();
+
+        return new CampaignMapLibraryDto(activeMap.Id, visibleMaps);
+    }
+
     public async Task<CampaignDto> CreateAsync(CreateCampaignRequest request, AuthenticatedUser owner, CancellationToken cancellationToken = default)
     {
         var levelStart = Math.Clamp(request.LevelStart, 1, 20);
@@ -1038,10 +1068,10 @@ public sealed class CampaignService(
         var activeMap = library.Maps.FirstOrDefault(map => map.Id == library.ActiveMapId) ?? library.Maps[0];
         var firstMap = library.Maps[0];
         IReadOnlyList<CampaignMapBoardDto> visibleMaps = string.Equals(currentUserRole, "Owner", StringComparison.OrdinalIgnoreCase)
-            ? library.Maps.Select(map => map.Id == activeMap.Id ? CreateCompactMapBoard(map) : map).ToList()
+            ? library.Maps.Select(CreateCompactMapBoard).ToList()
             : library.Maps
                 .Where(map => map.Id == firstMap.Id || map.Id == activeMap.Id)
-                .Select(map => map.Id == activeMap.Id ? CreateCompactMapBoard(map) : map)
+                .Select(CreateCompactMapBoard)
                 .DistinctBy(map => map.Id)
                 .ToList();
 
@@ -1086,6 +1116,14 @@ public sealed class CampaignService(
     {
         return map with
         {
+            BackgroundImageUrl = string.Empty,
+            Strokes = [],
+            Walls = [],
+            Icons = [],
+            Tokens = [],
+            Decorations = [],
+            Labels = [],
+            Layers = new CampaignMapLayersDto([], [], []),
             VisionMemory = []
         };
     }

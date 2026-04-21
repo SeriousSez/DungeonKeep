@@ -52,6 +52,7 @@ export class CampaignMapsPageComponent {
 
     private async ensureCampaignDetails(campaignId: string): Promise<void> {
         await this.store.refreshCampaignLoaded(campaignId);
+        await this.store.refreshCampaignMapLibrary(campaignId);
         this.cdr.detectChanges();
     }
 

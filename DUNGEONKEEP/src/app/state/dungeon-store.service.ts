@@ -123,6 +123,32 @@ export class DungeonStoreService {
         await this.loadCampaignDetails(campaignId);
     }
 
+    async refreshCampaignMapLibrary(campaignId: string): Promise<void> {
+        if (!campaignId) {
+            return;
+        }
+
+        try {
+            const library = await this.api.getCampaignMapLibrary(campaignId);
+            const maps = (library.maps?.length
+                ? library.maps.map((map) => this.mapCampaignMapBoardFromApi(map))
+                : [this.createEmptyCampaignMapBoard()]);
+            const activeMapId = library.activeMapId?.trim() || maps[0]?.id || '';
+            const activeMap = maps.find((map) => map.id === activeMapId) ?? maps[0] ?? this.createEmptyCampaignMapBoard();
+
+            this.campaigns.update((campaigns) => campaigns.map((campaign) => campaign.id === campaignId
+                ? {
+                    ...campaign,
+                    maps,
+                    activeMapId: activeMap.id,
+                    map: this.mapCampaignMapFromApi(activeMap)
+                }
+                : campaign));
+        } catch {
+            // Preserve the currently loaded campaign state on map-library load failures.
+        }
+    }
+
     async refreshCampaignSummaries(): Promise<void> {
         try {
             const [campaignDtos, accessibleCharacterDtos] = await Promise.all([

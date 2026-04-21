@@ -895,6 +895,10 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.get<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}`));
     }
 
+    async getCampaignMapLibrary(campaignId: string): Promise<ApiCampaignMapLibraryDto> {
+        return await firstValueFrom(this.http.get<ApiCampaignMapLibraryDto>(`${this.baseUrl}/campaigns/${campaignId}/maps/library`));
+    }
+
     async createCampaign(payload: { name: string; setting: string; tone: ApiCampaignTone; levelStart: number; levelEnd: number; hook: string; nextSession: string; summary: string }): Promise<ApiCampaignDto> {
         return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns`, payload));
     }
