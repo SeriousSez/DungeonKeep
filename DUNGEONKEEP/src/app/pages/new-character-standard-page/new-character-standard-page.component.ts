@@ -7913,8 +7913,11 @@ export class NewCharacterStandardPageComponent {
                     : (matchedPremade?.speciesTraitChoices ?? {})
             );
 
+            const restoredClassLevels = persistedClassLevels && Object.keys(persistedClassLevels).length > 0
+                ? persistedClassLevels
+                : { [character.className]: this.getPrimaryClassLevel() };
             const inferredFeatureSelections = this.inferClassFeatureSelectionsFromCharacter(character);
-            const persistedFeatureSelections = this.normalizePersistedFeatureSelections(character.className, persisted.classFeatureSelections ?? {});
+            const persistedFeatureSelections = this.normalizePersistedFeatureSelections(restoredClassLevels, persisted.classFeatureSelections ?? {});
             this.classFeatureSelections.set({
                 ...inferredFeatureSelections,
                 ...persistedFeatureSelections
@@ -8255,44 +8258,88 @@ export class NewCharacterStandardPageComponent {
         };
     }
 
-    private normalizePersistedFeatureSelections(className: string, selections: Record<string, string[]>): Record<string, string[]> {
-        const normalizedSelections: Record<string, string[]> = { ...selections };
-        const classProgression = classLevelOneFeatures[className] ?? [];
-        const featureCounts = classProgression
-            .flatMap((levelEntry) => levelEntry.features)
-            .reduce<Record<string, number>>((counts, feature) => {
-                counts[feature.name] = (counts[feature.name] ?? 0) + 1;
-                return counts;
-            }, {});
+    private normalizePersistedFeatureSelections(classLevels: Record<string, number>, selections: Record<string, string[]>): Record<string, string[]> {
+        const normalizedSelections: Record<string, string[]> = {};
 
-        for (const levelEntry of classProgression) {
-            for (const feature of levelEntry.features) {
-                if (!feature.choices) {
+        for (const [className, rawLevel] of Object.entries(classLevels)) {
+            const classLevel = Math.min(20, Math.max(1, Math.trunc(Number(rawLevel) || 1)));
+            const classProgression = classLevelOneFeatures[className] ?? [];
+            const legacyPools = new Map<string, string[]>(
+                classProgression
+                    .flatMap((levelEntry) => levelEntry.features)
+                    .filter((feature) => !!feature.choices)
+                    .map((feature) => {
+                        const legacySelections = Array.isArray(selections[feature.name]) ? selections[feature.name] : [];
+                        return [feature.name, legacySelections
+                            .map((value) => value?.trim())
+                            .filter((value): value is string => !!value)] as const;
+                    })
+            );
+
+            for (const levelEntry of classProgression) {
+                if (levelEntry.level > classLevel) {
                     continue;
                 }
 
-                const key = this.getFeatureSelectionKey(className, feature);
-                if (normalizedSelections[key]?.length) {
-                    continue;
-                }
+                for (const feature of levelEntry.features) {
+                    if (!feature.choices) {
+                        continue;
+                    }
 
-                if ((featureCounts[feature.name] ?? 0) !== 1) {
-                    continue;
-                }
+                    const key = this.getFeatureSelectionKey(className, feature);
+                    const keyedSelections = Array.isArray(selections[key]) ? selections[key] : [];
+                    const sourceSelections = keyedSelections.length > 0
+                        ? keyedSelections
+                        : (legacyPools.get(feature.name) ?? []).slice(0, feature.choices.count);
 
-                const legacySelections = normalizedSelections[feature.name] ?? [];
-                const cleanedSelections = legacySelections
-                    .map((value) => value?.trim())
-                    .filter((value): value is string => !!value)
-                    .slice(0, feature.choices.count);
+                    const normalizedValues = this.normalizePersistedFeatureChoiceValues(feature, sourceSelections)
+                        .slice(0, feature.choices.count);
 
-                if (cleanedSelections.length > 0) {
-                    normalizedSelections[key] = cleanedSelections;
+                    if (normalizedValues.length > 0) {
+                        normalizedSelections[key] = normalizedValues;
+
+                        if (keyedSelections.length === 0) {
+                            const remainingLegacyValues = legacyPools.get(feature.name) ?? [];
+                            legacyPools.set(feature.name, remainingLegacyValues.slice(normalizedValues.length));
+                        }
+                    }
                 }
             }
         }
 
         return normalizedSelections;
+    }
+
+    private normalizePersistedFeatureChoiceValues(feature: ClassFeature, values: readonly string[]): string[] {
+        const options = feature.choices?.options ?? [];
+        const normalizedOptions = new Map(options.map((option) => [option.trim().toLowerCase(), option] as const));
+        const normalizedWeaponMasteryOptions = this.isWeaponMasteryFeature(feature)
+            ? new Map(options.map((option) => [this.normalizeWeaponMasteryChoice(option), option] as const))
+            : null;
+
+        return values
+            .map((value) => value?.trim())
+            .filter((value): value is string => !!value)
+            .map((value) => {
+                const exactMatch = normalizedOptions.get(value.toLowerCase());
+                if (exactMatch) {
+                    return exactMatch;
+                }
+
+                if (normalizedWeaponMasteryOptions) {
+                    return normalizedWeaponMasteryOptions.get(this.normalizeWeaponMasteryChoice(value)) ?? value;
+                }
+
+                return options.find((option) => option.localeCompare(value, undefined, { sensitivity: 'accent' }) === 0) ?? value;
+            })
+            .filter((value, index, array) => array.indexOf(value) === index);
+    }
+
+    private normalizeWeaponMasteryChoice(value: string): string {
+        return value
+            .trim()
+            .toLowerCase()
+            .replace(/\s*\([^)]+\)\s*$/, '');
     }
 
     private resolveNavigationEditLevel(): number | null {

@@ -3936,7 +3936,7 @@
 }
 
 .inventory-popup-list:has(.app-dropdown-host--open) {
-    overflow: visible;
+    overflow: auto;
 }
 
 .extras-popup-list {

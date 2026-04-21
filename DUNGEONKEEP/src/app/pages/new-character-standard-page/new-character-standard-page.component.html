@@ -1727,7 +1727,7 @@
                 <div class="ability-assignment-tile">
                     <span class="ability-assignment-label">{{ abilityAbbreviations[ability] }}</span>
                     <app-dropdown [value]="getStandardArraySelection(ability)" [options]="getStandardArrayDropdownOptions(ability)" [placeholder]="'--'" size="narrow" (changed)="onStandardArraySelectedFromDropdown(ability, $event)"></app-dropdown>
-                    <span class="ability-assignment-total">TOTAL: {{ getAbilityBaseScore(ability) || '--' }}</span>
+                    <span class="ability-assignment-total">TOTAL: {{ getTotalScore(ability) || '--' }}</span>
                 </div>
                 }
             </div>
@@ -1742,7 +1742,7 @@
                     <span class="ability-assignment-label">{{ abilityAbbreviations[ability] }}</span>
                     <input type="number" min="3" max="20" style="min-height:30px;font:inherit;border:1px solid var(--panel-border);border-radius:6px;background:var(--surface-raised);color:var(--text-main);padding:0 6px" [value]="getAbilityBaseScore(ability) || ''"
                         (input)="onAbilityScoreInput(ability, $any($event.target).value)" (blur)="onAbilityScoreCommit(ability, $any($event.target).value)" (change)="onAbilityScoreCommit(ability, $any($event.target).value)" />
-                    <span class="ability-assignment-total">TOTAL: {{ getAbilityBaseScore(ability) || '--' }}</span>
+                    <span class="ability-assignment-total">TOTAL: {{ getTotalScore(ability) || '--' }}</span>
                 </div>
                 }
             </div>
@@ -1785,7 +1785,7 @@
                 <div class="ability-assignment-tile">
                     <span class="ability-assignment-label">{{ abilityAbbreviations[ability] }}</span>
                     <app-dropdown [value]="getPointBuySelection(ability)" [options]="getPointBuyDropdownOptions(ability)" size="narrow" (changed)="onPointBuySelectedFromDropdown(ability, $event)"></app-dropdown>
-                    <span class="ability-assignment-total">TOTAL: {{ getAbilityBaseScore(ability) }}</span>
+                    <span class="ability-assignment-total">TOTAL: {{ getTotalScore(ability) }}</span>
                 </div>
                 }
             </div>
