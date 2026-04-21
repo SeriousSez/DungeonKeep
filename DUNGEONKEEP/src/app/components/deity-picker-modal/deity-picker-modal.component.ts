@@ -29,13 +29,7 @@ export class DeityPickerModalComponent {
             return deities;
         }
 
-        return deities.filter((deity) =>
-            deity.name.toLowerCase().includes(query)
-            || deity.domain.toLowerCase().includes(query)
-            || deity.pantheon.toLowerCase().includes(query)
-            || deity.summary?.toLowerCase().includes(query)
-            || deity.titles?.some((title) => title.toLowerCase().includes(query))
-        );
+        return deities.filter((deity) => this.getSearchableText(deity).includes(query));
     });
 
     constructor() {
@@ -120,6 +114,26 @@ export class DeityPickerModalComponent {
             .split(',')
             .map((entry) => entry.trim())
             .filter((entry) => entry.length > 0);
+    }
+
+    private getSearchableText(deity: Deity): string {
+        return [
+            deity.name,
+            deity.domain,
+            deity.pantheon,
+            deity.summary,
+            deity.alignment,
+            deity.symbol,
+            deity.realm,
+            deity.worshipers,
+            deity.dogma,
+            deity.relationships,
+            deity.favoredWeapon,
+            ...(deity.titles ?? [])
+        ]
+            .filter((value): value is string => !!value?.trim())
+            .join(' ')
+            .toLowerCase();
     }
 
     isExpanded(deityName: string): boolean {

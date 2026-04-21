@@ -28,7 +28,7 @@ import { spellDetailsMap, type SpellDetail } from '../../data/spell-details.data
 import { featCatalogEntries, type FeatEntry } from '../../data/feats-catalog.data';
 import { normalizePreparedLeveledSpellNames } from '../../rules/spell-preparation.rules';
 import { getWizardCantripLimit, getWizardFreeLeveledSpellLimit, getWizardPreparedSpellLimit, isWizardClassName, isWizardSpellbookCantripAlwaysPrepared } from '../../rules/wizard-class.rules';
-import { deitiesList } from '../../data/deities.data';
+import { deitiesList, type Deity } from '../../data/deities.data';
 import { classProgressionColumns } from '../../data/class-progression.data';
 import { subclassFeatureProgressionByClass as sharedSubclassFeatureProgressionByClass, subclassConfigs as sharedSubclassConfigs, subclassChoiceTitles as sharedSubclassChoiceTitles, subclassOptionsByClass as sharedSubclassOptionsByClass, type SubclassConfig } from '../../data/subclass-features.data';
 import { premadeCharacters, type PremadeCharacter } from '../../data/premade-characters.data';
@@ -1045,7 +1045,7 @@ export class NewCharacterStandardPageComponent {
         const query = this.selectedFaith().trim().toLowerCase();
         if (!query) return [];
         return deitiesList
-            .filter((d) => d.name.toLowerCase().includes(query) || d.domain.toLowerCase().includes(query))
+            .filter((deity) => this.getDeitySearchableText(deity).includes(query))
             .slice(0, 8);
     });
     readonly lifestyleOptions: ReadonlyArray<DropdownOption> = [
@@ -1068,6 +1068,27 @@ export class NewCharacterStandardPageComponent {
     };
     readonly selectedLifestyle = signal('');
     readonly selectedLifestyleDescription = computed(() => this.lifestyleDescriptions[this.selectedLifestyle()] ?? '');
+
+    private getDeitySearchableText(deity: Deity): string {
+        return [
+            deity.name,
+            deity.domain,
+            deity.pantheon,
+            deity.summary,
+            deity.alignment,
+            deity.symbol,
+            deity.realm,
+            deity.worshipers,
+            deity.dogma,
+            deity.relationships,
+            deity.favoredWeapon,
+            ...(deity.titles ?? [])
+        ]
+            .filter((value): value is string => !!value?.trim())
+            .join(' ')
+            .toLowerCase();
+    }
+
     readonly heightUnitOptions: ReadonlyArray<DropdownOption> = [
         { value: 'ft', label: 'ft' },
         { value: 'in', label: 'in' },
@@ -3923,6 +3944,10 @@ export class NewCharacterStandardPageComponent {
             return '- Choose an Origin Feat -';
         }
 
+        if (traitTitle === 'Draconic Ancestry') {
+            return '- Choose a Draconic Ancestry -';
+        }
+
         if (traitTitle === 'Elven Lineage') {
             return '- Choose an Elven Lineage -';
         }
@@ -3939,11 +3964,13 @@ export class NewCharacterStandardPageComponent {
             ? this.speciesSkillChoiceOptions
             : traitTitle === 'Versatile'
                 ? this.speciesOriginFeatOptions
-                : traitTitle === 'Elven Lineage'
-                    ? ['Drow', 'High Elf', 'Wood Elf']
-                    : traitTitle === 'Lineage Spellcasting Ability'
-                        ? ['Intelligence', 'Wisdom', 'Charisma']
-                        : [];
+                : traitTitle === 'Draconic Ancestry'
+                    ? ['Black (Acid)', 'Blue (Lightning)', 'Brass (Fire)', 'Bronze (Lightning)', 'Copper (Acid)', 'Gold (Fire)', 'Green (Poison)', 'Red (Fire)', 'Silver (Cold)', 'White (Cold)']
+                    : traitTitle === 'Elven Lineage'
+                        ? ['Drow', 'High Elf', 'Wood Elf']
+                        : traitTitle === 'Lineage Spellcasting Ability'
+                            ? ['Intelligence', 'Wisdom', 'Charisma']
+                            : [];
 
         const selected = this.selectedSpeciesTraitChoices()[traitTitle] ?? [];
 
@@ -5768,11 +5795,9 @@ export class NewCharacterStandardPageComponent {
             const available = this.getAvailableClassSpells(className, classLevel);
             const knownNames = this.classKnownSpellsByClass()[className] ?? [];
             const availableByName = new Map(available.map((spell) => [spell.name, spell]));
-            const knownLimit = this.getKnownSpellLimitForClass(className, classLevel);
             return knownNames
                 .map((spellName) => availableByName.get(spellName))
-                .filter((spell): spell is ClassSpellOption => !!spell)
-                .slice(0, knownLimit);
+                .filter((spell): spell is ClassSpellOption => !!spell);
         }
 
         return this.getAvailableClassSpells(className, classLevel);

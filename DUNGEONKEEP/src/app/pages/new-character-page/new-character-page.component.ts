@@ -135,6 +135,70 @@ export class NewCharacterPageComponent {
         Wizard: ['Quarterstaff', 'Spellbook', 'Component Pouch', 'Scholar\'s Pack']
     };
 
+    private readonly quickBuildPackContents: Readonly<Record<string, ReadonlyArray<InventoryEntry>>> = {
+        "Explorer's Pack": [
+            { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Mess Kit', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Tinderbox', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Torch', category: 'Adventuring Gear', quantity: 10 },
+            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 10 },
+            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Hempen Rope (50 feet)', category: 'Adventuring Gear', quantity: 1 }
+        ],
+        "Dungeoneer's Pack": [
+            { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Hammer', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Piton', category: 'Adventuring Gear', quantity: 10 },
+            { name: 'Torch', category: 'Adventuring Gear', quantity: 10 },
+            { name: 'Tinderbox', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 10 },
+            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Hempen Rope (50 feet)', category: 'Adventuring Gear', quantity: 1 }
+        ],
+        "Scholar's Pack": [
+            { name: 'Book of Lore', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Ink (1-ounce bottle)', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Ink Pen', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Parchment (sheet)', category: 'Adventuring Gear', quantity: 10 },
+            { name: 'Little Bag of Sand', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Small Knife', category: 'Adventuring Gear', quantity: 1 }
+        ],
+        "Priest's Pack": [
+            { name: 'Blanket', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Candle', category: 'Adventuring Gear', quantity: 10 },
+            { name: 'Tinderbox', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Alms Box', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Block of Incense', category: 'Adventuring Gear', quantity: 2 },
+            { name: 'Censer', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Vestments', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 2 },
+            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1 }
+        ],
+        "Burglar's Pack": [
+            { name: 'Ball Bearings (bag)', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'String (10 feet)', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Bell', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Candle', category: 'Adventuring Gear', quantity: 5 },
+            { name: 'Crowbar', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Hammer', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Piton', category: 'Adventuring Gear', quantity: 10 },
+            { name: 'Hooded Lantern', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Oil (flask)', category: 'Adventuring Gear', quantity: 2 },
+            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 5 },
+            { name: 'Tinderbox', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Hempen Rope (50 feet)', category: 'Adventuring Gear', quantity: 1 }
+        ],
+        "Entertainer's Pack": [
+            { name: 'Bedroll', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Costume', category: 'Adventuring Gear', quantity: 2 },
+            { name: 'Candle', category: 'Adventuring Gear', quantity: 5 },
+            { name: 'Rations (1 day)', category: 'Adventuring Gear', quantity: 5 },
+            { name: 'Waterskin', category: 'Adventuring Gear', quantity: 1 },
+            { name: 'Disguise Kit', category: 'Tools', quantity: 1 }
+        ]
+    };
+
     private readonly classStarterSpells: Record<string, string[]> = {
         Artificer: ['Mending', 'Mage Hand', 'Cure Wounds', 'Faerie Fire'],
         Bard: ['Vicious Mockery', 'Minor Illusion', 'Healing Word', 'Dissonant Whispers'],
@@ -294,7 +358,7 @@ export class NewCharacterPageComponent {
         equipment: string[];
         spells: string[];
     }): string {
-        const inventoryEntries = payload.equipment.map((item) => this.toInventoryEntry(item));
+        const inventoryEntries = payload.equipment.flatMap((item) => this.toInventoryEntries(item));
         const state: Record<string, unknown> = {
             inventoryEntries,
             currency: this.getStartingCurrencyForClass(payload.className),
@@ -334,16 +398,28 @@ export class NewCharacterPageComponent {
         return baseByClass[className] ?? { pp: 0, gp: 10, ep: 0, sp: 0, cp: 0 };
     }
 
-    private toInventoryEntry(rawItem: string): InventoryEntry {
+    private toInventoryEntries(rawItem: string): InventoryEntry[] {
         const quantityMatch = rawItem.match(/\((\d+)\)\s*$/);
         const quantity = quantityMatch ? Math.max(1, Number(quantityMatch[1])) : 1;
         const name = rawItem.replace(/\s*\((\d+)\)\s*$/, '').trim();
 
-        return {
+        const packContents = this.quickBuildPackContents[name];
+        if (packContents) {
+            return Array.from({ length: quantity }, () => ({
+                name: 'Backpack',
+                category: 'Adventuring Gear',
+                quantity: 1,
+                isContainer: true,
+                maxCapacity: 60,
+                containedItems: packContents.map((item) => ({ ...item }))
+            }));
+        }
+
+        return [{
             name,
             category: this.guessInventoryCategory(name),
             quantity
-        };
+        }];
     }
 
     private guessInventoryCategory(name: string): string {
