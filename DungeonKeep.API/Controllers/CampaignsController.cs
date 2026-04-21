@@ -278,6 +278,10 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             return Problem(title: "Session generation unavailable.", detail: "OpenAI API key is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable);
         }
 
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(190));
+        var ct = timeoutCts.Token;
+
         try
         {
             var text = await SendOpenAiPromptAsync(
@@ -287,10 +291,10 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                 BuildSessionDraftPrompt(campaign, request),
                 referenceImageUrl: null,
                 temperature: 0.9,
-                maxOutputTokens: 3200,
+                maxOutputTokens: 2000,
                 textFormat: BuildSessionDraftJsonSchemaFormat(),
                 fallbackToPlainTextOnBadRequest: true,
-                cancellationToken: cancellationToken);
+                cancellationToken: ct);
 
             var generated = TryParseGeneratedSessionDraftPayload(text);
             if (generated is null)
@@ -300,8 +304,8 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                     responsesUrl,
                     model,
                     BuildSessionDraftRepairPrompt(text),
-                    maxOutputTokens: 3600,
-                    cancellationToken);
+                    maxOutputTokens: 2200,
+                    ct);
 
                 generated = TryParseGeneratedSessionDraftPayload(repairedText);
             }
@@ -312,6 +316,10 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             }
 
             return Ok(NormalizeSessionDraft(generated, campaign));
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return Problem(title: "Session generation timed out.", detail: "Generation is taking too long. Try again or simplify your request.", statusCode: StatusCodes.Status503ServiceUnavailable);
         }
         catch (HttpRequestException exception)
         {
@@ -442,6 +450,10 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
 
             return Ok(NormalizeNpcDraft(generated, request));
         }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return Problem(title: "NPC generation timed out.", detail: "Generation is taking too long. Try again.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
         catch (HttpRequestException exception)
         {
             return Problem(title: "NPC generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
@@ -516,6 +528,10 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
 
             return Ok(NormalizeTableDraft(generated, request));
         }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return Problem(title: "Table generation timed out.", detail: "Generation is taking too long. Try again.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
         catch (HttpRequestException exception)
         {
             return Problem(title: "Table generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
@@ -585,6 +601,10 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             }
 
             return Ok(NormalizeWorldNoteDraft(generated, request));
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return Problem(title: "World note generation timed out.", detail: "Generation is taking too long. Try again.", statusCode: StatusCodes.Status503ServiceUnavailable);
         }
         catch (HttpRequestException exception)
         {
@@ -725,68 +745,83 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         };
 
         var client = httpClientFactory.CreateClient();
-        using var response = await client.SendAsync(message, cancellationToken);
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        client.Timeout = OpenAiRequestTimeout;
 
-        if (!response.IsSuccessStatusCode)
+        try
         {
-            var detail = body.Length > 240 ? body[..240] : body;
-            return Problem(title: "Campaign generation failed.", detail: detail, statusCode: StatusCodes.Status502BadGateway);
-        }
 
-        var payload = JsonSerializer.Deserialize<OpenAiResponsesApiResponse>(body, SerializerOptions);
-        var text = ExtractResponseText(payload);
-        if (string.IsNullOrWhiteSpace(text))
+            using var response = await client.SendAsync(message, cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var detail = body.Length > 240 ? body[..240] : body;
+                return Problem(title: "Campaign generation failed.", detail: detail, statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            var payload = JsonSerializer.Deserialize<OpenAiResponsesApiResponse>(body, SerializerOptions);
+            var text = ExtractResponseText(payload);
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return Problem(title: "Campaign generation failed.", detail: "The model returned no text.", statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            var generated = TryParseGeneratedCampaignDraftPayload(text);
+            if (generated is null)
+            {
+                var repairedText = await RepairJsonAsync(
+                    apiKey,
+                    responsesUrl,
+                    model,
+                    BuildCampaignDraftRepairPrompt(text),
+                    maxOutputTokens: 900,
+                    cancellationToken);
+
+                generated = TryParseGeneratedCampaignDraftPayload(repairedText);
+            }
+
+            if (generated is null)
+            {
+                return Problem(title: "Campaign generation failed.", detail: "Model output was not valid JSON.", statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            var normalizedTone = NormalizeTone(generated.Tone, request.Tone);
+            var normalizedSetting = string.IsNullOrWhiteSpace(generated.Setting)
+                ? (request.SettingHint?.Trim() ?? string.Empty)
+                : generated.Setting.Trim();
+
+            var draft = new GenerateCampaignDraftResponse(
+                Name: string.IsNullOrWhiteSpace(generated.Name) ? "Generated Campaign" : generated.Name.Trim(),
+                Setting: normalizedSetting,
+                Tone: normalizedTone,
+                LevelStart: NormalizeLevel(generated.LevelStart, request.LevelStart, 1),
+                LevelEnd: NormalizeLevel(generated.LevelEnd, request.LevelEnd, 4),
+                Hook: string.IsNullOrWhiteSpace(generated.Hook) ? "A volatile mystery erupts and drags the party into the center of it." : generated.Hook.Trim(),
+                NextSession: string.IsNullOrWhiteSpace(generated.NextSession) ? string.Empty : generated.NextSession.Trim(),
+                Summary: string.IsNullOrWhiteSpace(generated.Summary) ? "A generated campaign draft ready for your table." : generated.Summary.Trim()
+            );
+
+            if (draft.LevelEnd < draft.LevelStart)
+            {
+                draft = draft with { LevelEnd = draft.LevelStart };
+            }
+
+            if (string.IsNullOrWhiteSpace(draft.Setting) || string.IsNullOrWhiteSpace(draft.Hook))
+            {
+                return Problem(title: "Campaign generation failed.", detail: "Model response missed required campaign fields.", statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            return Ok(draft);
+
+        } // end try
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return Problem(title: "Campaign generation failed.", detail: "The model returned no text.", statusCode: StatusCodes.Status502BadGateway);
+            return Problem(title: "Campaign generation timed out.", detail: "Generation is taking too long. Try again.", statusCode: StatusCodes.Status503ServiceUnavailable);
         }
-
-        var generated = TryParseGeneratedCampaignDraftPayload(text);
-        if (generated is null)
+        catch (HttpRequestException exception)
         {
-            var repairedText = await RepairJsonAsync(
-                apiKey,
-                responsesUrl,
-                model,
-                BuildCampaignDraftRepairPrompt(text),
-                maxOutputTokens: 900,
-                cancellationToken);
-
-            generated = TryParseGeneratedCampaignDraftPayload(repairedText);
+            return Problem(title: "Campaign generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
         }
-
-        if (generated is null)
-        {
-            return Problem(title: "Campaign generation failed.", detail: "Model output was not valid JSON.", statusCode: StatusCodes.Status502BadGateway);
-        }
-
-        var normalizedTone = NormalizeTone(generated.Tone, request.Tone);
-        var normalizedSetting = string.IsNullOrWhiteSpace(generated.Setting)
-            ? (request.SettingHint?.Trim() ?? string.Empty)
-            : generated.Setting.Trim();
-
-        var draft = new GenerateCampaignDraftResponse(
-            Name: string.IsNullOrWhiteSpace(generated.Name) ? "Generated Campaign" : generated.Name.Trim(),
-            Setting: normalizedSetting,
-            Tone: normalizedTone,
-            LevelStart: NormalizeLevel(generated.LevelStart, request.LevelStart, 1),
-            LevelEnd: NormalizeLevel(generated.LevelEnd, request.LevelEnd, 4),
-            Hook: string.IsNullOrWhiteSpace(generated.Hook) ? "A volatile mystery erupts and drags the party into the center of it." : generated.Hook.Trim(),
-            NextSession: string.IsNullOrWhiteSpace(generated.NextSession) ? string.Empty : generated.NextSession.Trim(),
-            Summary: string.IsNullOrWhiteSpace(generated.Summary) ? "A generated campaign draft ready for your table." : generated.Summary.Trim()
-        );
-
-        if (draft.LevelEnd < draft.LevelStart)
-        {
-            draft = draft with { LevelEnd = draft.LevelStart };
-        }
-
-        if (string.IsNullOrWhiteSpace(draft.Setting) || string.IsNullOrWhiteSpace(draft.Hook))
-        {
-            return Problem(title: "Campaign generation failed.", detail: "Model response missed required campaign fields.", statusCode: StatusCodes.Status502BadGateway);
-        }
-
-        return Ok(draft);
     }
 
     [HttpGet("{campaignId:guid}/characters")]
