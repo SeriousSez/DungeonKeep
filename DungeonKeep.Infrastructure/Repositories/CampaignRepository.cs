@@ -32,7 +32,9 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         [],
         [],
         new CampaignMapLayersDto([], [], []),
-        []);
+        [],
+        true,
+        true);
     private readonly bool campaignSchemaReady = dbContext.Database.IsSqlite() ? EnsureCampaignSchema(dbContext) : true;
 
     public async Task<IReadOnlyList<CampaignSummaryRecord>> GetAllSummariesForUserAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -846,7 +848,9 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                     legacyMap.Decorations,
                     legacyMap.Labels,
                     legacyMap.Layers,
-                    legacyMap.VisionMemory)]));
+                        legacyMap.VisionMemory,
+                        legacyMap.VisionEnabled,
+                        legacyMap.MembersCanViewAnytime)]));
             }
         }
         catch
@@ -1099,7 +1103,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                 NormalizeMapDecorationCollection(map.Layers?.MountainChains),
                 NormalizeMapDecorationCollection(map.Layers?.ForestBelts)),
             [],
-            map.VisionEnabled);
+            map.VisionEnabled,
+            map.MembersCanViewAnytime);
     }
 
     private static CampaignMapBoardDto NormalizeCampaignMapBoard(CampaignMapBoardDto map)
@@ -1120,7 +1125,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             map.Labels,
             map.Layers,
             map.VisionMemory,
-            map.VisionEnabled));
+            map.VisionEnabled,
+            map.MembersCanViewAnytime));
 
         return new CampaignMapBoardDto(
             map.Id == Guid.Empty ? Guid.NewGuid() : map.Id,
@@ -1140,7 +1146,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             normalized.Labels,
             normalized.Layers,
             normalized.VisionMemory,
-            map.VisionEnabled);
+            map.VisionEnabled,
+            map.MembersCanViewAnytime);
     }
 
     private static CampaignMapLibraryDto NormalizeCampaignMapLibrary(CampaignMapLibraryDto library)
@@ -1152,7 +1159,26 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
         if (maps.Count == 0)
         {
-            maps.Add(new CampaignMapBoardDto(Guid.NewGuid(), "Main Map", "Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], [], new CampaignMapLayersDto([], [], []), []));
+            maps.Add(new CampaignMapBoardDto(
+                DefaultCampaignMapBoard.Id,
+                DefaultCampaignMapBoard.Name,
+                DefaultCampaignMapBoard.Background,
+                DefaultCampaignMapBoard.BackgroundImageUrl,
+                DefaultCampaignMapBoard.GridColumns,
+                DefaultCampaignMapBoard.GridRows,
+                DefaultCampaignMapBoard.GridColor,
+                DefaultCampaignMapBoard.GridOffsetX,
+                DefaultCampaignMapBoard.GridOffsetY,
+                DefaultCampaignMapBoard.Strokes,
+                DefaultCampaignMapBoard.Walls,
+                DefaultCampaignMapBoard.Icons,
+                DefaultCampaignMapBoard.Tokens,
+                DefaultCampaignMapBoard.Decorations,
+                DefaultCampaignMapBoard.Labels,
+                DefaultCampaignMapBoard.Layers,
+                DefaultCampaignMapBoard.VisionMemory,
+                DefaultCampaignMapBoard.VisionEnabled,
+                DefaultCampaignMapBoard.MembersCanViewAnytime));
         }
 
         var activeMapId = library.ActiveMapId != Guid.Empty && maps.Any(map => map.Id == library.ActiveMapId)

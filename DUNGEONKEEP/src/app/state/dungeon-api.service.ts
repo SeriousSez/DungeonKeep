@@ -110,6 +110,7 @@ export interface ApiCampaignMapDto {
     gridOffsetX: number;
     gridOffsetY: number;
     visionEnabled?: boolean;
+    membersCanViewAnytime?: boolean;
     strokes: ApiCampaignMapStrokeDto[];
     walls: ApiCampaignMapWallDto[];
     icons: ApiCampaignMapIconDto[];
@@ -1013,7 +1014,7 @@ export class DungeonApiService {
     }
 
     async resetCampaignMapVision(campaignId: string, payload: ApiResetCampaignMapVisionRequest): Promise<void> {
-        await firstValueFrom(this.http.post<void>(`${this.baseUrl}/campaigns/${campaignId}/map/${payload.mapId}/vision/reset`, {}));
+        await firstValueFrom(this.http.post<void>(`${this.baseUrl}/campaigns/${campaignId}/map/${payload.mapId}/vision/reset`, payload));
     }
 
     async updateCampaignMapVision(campaignId: string, payload: ApiUpdateCampaignMapVisionRequest): Promise<void> {

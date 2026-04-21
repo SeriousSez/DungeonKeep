@@ -714,6 +714,7 @@ export class DungeonStoreService {
         try {
             const updated = await this.api.updateCampaignMap(campaignId, this.mapCampaignMapLibraryToApi(payload));
             this.replaceCampaignFromApi(campaignId, updated);
+            await this.refreshCampaignMapLibrary(campaignId);
             return true;
         } catch {
             return false;
@@ -1148,6 +1149,7 @@ export class DungeonStoreService {
     private mapCampaignFromApi(campaign: ApiCampaignDto, partyCharacterIds: string[]): Campaign {
         const levelStart = Math.min(Math.max(Math.trunc(campaign.levelStart ?? 1), 1), 20);
         const levelEnd = Math.min(Math.max(Math.trunc(campaign.levelEnd ?? 4), levelStart), 20);
+        const members = Array.isArray(campaign.members) ? campaign.members : [];
 
         const activeMapId = campaign.activeMapId?.trim() || campaign.maps?.[0]?.id?.trim() || '';
         const activeMapFromApi = this.mapCampaignMapFromApi(campaign.map);
@@ -1211,8 +1213,8 @@ export class DungeonStoreService {
             loot: [...(campaign.loot ?? [])],
             npcs: [...(campaign.npcs ?? [])],
             campaignNpcs: (campaign.campaignNpcs ?? []).map((npc) => this.mapCampaignNpcFromApi(npc)),
-            currentUserRole: campaign.currentUserRole,
-            members: campaign.members.map((member) => ({
+            currentUserRole: campaign.currentUserRole ?? 'Member',
+            members: members.map((member) => ({
                 userId: member.userId,
                 email: member.email,
                 displayName: member.displayName,
@@ -1303,7 +1305,7 @@ export class DungeonStoreService {
             combatNotes: npc.combatNotes,
             statBlockReference: npc.statBlockReference,
             tags: [...(npc.tags ?? [])],
-            relationships: (npc.relationships ?? []).map((relationship) => ({
+            relationships: (Array.isArray(npc.relationships) ? npc.relationships : []).map((relationship) => ({
                 id: relationship.id,
                 targetNpcId: relationship.targetNpcId,
                 relationshipType: relationship.relationshipType,
@@ -1312,11 +1314,11 @@ export class DungeonStoreService {
             questLinks: [...(npc.questLinks ?? [])],
             sessionAppearances: [...(npc.sessionAppearances ?? [])],
             inventory: [...(npc.inventory ?? [])],
-            imageUrl: npc.imageUrl,
+            imageUrl: npc.imageUrl ?? '',
             hostility: npc.hostility === 'Friendly' || npc.hostility === 'Hostile' ? npc.hostility : 'Indifferent',
-            isAlive: npc.isAlive,
-            isImportant: npc.isImportant,
-            updatedAt: npc.updatedAt
+            isAlive: npc.isAlive ?? true,
+            isImportant: npc.isImportant ?? false,
+            updatedAt: npc.updatedAt ?? ''
         };
     }
 
@@ -1486,6 +1488,7 @@ export class DungeonStoreService {
             gridColor: this.normalizeMapGridColor(map?.gridColor, map?.background),
             gridOffsetX: this.normalizeMapGridOffset(map?.gridOffsetX, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X),
             gridOffsetY: this.normalizeMapGridOffset(map?.gridOffsetY, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y),
+            membersCanViewAnytime: map?.membersCanViewAnytime ?? false,
             strokes: (map?.strokes ?? []).map((stroke) => ({
                 id: stroke.id,
                 color: this.normalizeMapColor(stroke.color),
@@ -1613,6 +1616,7 @@ export class DungeonStoreService {
             gridColor: this.normalizeMapGridColor(map.gridColor, map.background),
             gridOffsetX: this.normalizeMapGridOffset(map.gridOffsetX, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X),
             gridOffsetY: this.normalizeMapGridOffset(map.gridOffsetY, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y),
+            membersCanViewAnytime: map.membersCanViewAnytime,
             strokes: map.strokes.map((stroke) => ({
                 id: stroke.id,
                 color: this.normalizeMapColor(stroke.color),

@@ -28,8 +28,8 @@ public sealed class CampaignService(
     private const string DefaultMapGridColor = "#745338";
     private const double DefaultMapGridOffsetX = 0d;
     private const double DefaultMapGridOffsetY = 0d;
-    private static readonly CampaignMapDto DefaultCampaignMap = new("Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], [], new CampaignMapLayersDto([], [], []), []);
-    private static readonly CampaignMapBoardDto DefaultCampaignMapBoard = new(Guid.Parse("11111111-1111-1111-1111-111111111111"), "Main Map", "Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], [], new CampaignMapLayersDto([], [], []), []);
+    private static readonly CampaignMapDto DefaultCampaignMap = new("Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], [], new CampaignMapLayersDto([], [], []), [], true, true);
+    private static readonly CampaignMapBoardDto DefaultCampaignMapBoard = new(Guid.Parse("11111111-1111-1111-1111-111111111111"), "Main Map", "Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], [], new CampaignMapLayersDto([], [], []), [], true, true);
 
     public async Task<IReadOnlyList<CampaignSummaryDto>> GetAllSummariesAsync(Guid userId, CancellationToken cancellationToken = default)
     {
@@ -82,7 +82,7 @@ public sealed class CampaignService(
         var activeMap = library.Maps.FirstOrDefault(map => map.Id == library.ActiveMapId) ?? library.Maps[0];
         var firstMap = library.Maps[0];
         var visibleMaps = library.Maps
-            .Where(map => map.Id == firstMap.Id || map.Id == activeMap.Id)
+            .Where(map => map.Id == firstMap.Id || map.Id == activeMap.Id || map.MembersCanViewAnytime)
             .DistinctBy(map => map.Id)
             .ToList();
 
@@ -1070,7 +1070,7 @@ public sealed class CampaignService(
         IReadOnlyList<CampaignMapBoardDto> visibleMaps = string.Equals(currentUserRole, "Owner", StringComparison.OrdinalIgnoreCase)
             ? library.Maps.Select(CreateCompactMapBoard).ToList()
             : library.Maps
-                .Where(map => map.Id == firstMap.Id || map.Id == activeMap.Id)
+                .Where(map => map.Id == firstMap.Id || map.Id == activeMap.Id || map.MembersCanViewAnytime)
                 .Select(CreateCompactMapBoard)
                 .DistinctBy(map => map.Id)
                 .ToList();
@@ -1093,7 +1093,7 @@ public sealed class CampaignService(
             ParseNamedItems(campaign.LootJson),
             ParseOpenThreads(campaign.OpenThreadsJson),
             ParseWorldNotes(campaign.WorldNotesJson),
-            new CampaignMapDto(activeMap.Background, activeMap.BackgroundImageUrl, activeMap.GridColumns, activeMap.GridRows, activeMap.GridColor, activeMap.GridOffsetX, activeMap.GridOffsetY, activeMap.Strokes, activeMap.Walls, activeMap.Icons, activeMap.Tokens, activeMap.Decorations, activeMap.Labels, activeMap.Layers, activeMap.VisionMemory, activeMap.VisionEnabled),
+            new CampaignMapDto(activeMap.Background, activeMap.BackgroundImageUrl, activeMap.GridColumns, activeMap.GridRows, activeMap.GridColor, activeMap.GridOffsetX, activeMap.GridOffsetY, activeMap.Strokes, activeMap.Walls, activeMap.Icons, activeMap.Tokens, activeMap.Decorations, activeMap.Labels, activeMap.Layers, activeMap.VisionMemory, activeMap.VisionEnabled, activeMap.MembersCanViewAnytime),
             visibleMaps,
             activeMap.Id,
             currentUserRole,
@@ -1357,7 +1357,9 @@ public sealed class CampaignService(
                     legacyMap.Decorations,
                     legacyMap.Labels,
                     legacyMap.Layers,
-                    legacyMap.VisionMemory)]));
+                    legacyMap.VisionMemory,
+                    legacyMap.VisionEnabled,
+                    legacyMap.MembersCanViewAnytime)]));
             }
         }
         catch
@@ -1637,7 +1639,8 @@ public sealed class CampaignService(
             normalized.Labels,
             normalized.Layers,
             normalized.VisionMemory,
-            map.VisionEnabled);
+                map.VisionEnabled,
+                map.MembersCanViewAnytime);
     }
 
     private static CampaignMapLibraryDto NormalizeCampaignMapLibrary(CampaignMapLibraryDto library)
@@ -1666,7 +1669,9 @@ public sealed class CampaignService(
                 DefaultCampaignMapBoard.Decorations,
                 DefaultCampaignMapBoard.Labels,
                 DefaultCampaignMapBoard.Layers,
-                DefaultCampaignMapBoard.VisionMemory));
+                DefaultCampaignMapBoard.VisionMemory,
+                DefaultCampaignMapBoard.VisionEnabled,
+                DefaultCampaignMapBoard.MembersCanViewAnytime));
         }
 
         var activeMapId = library.ActiveMapId != Guid.Empty && maps.Any(map => map.Id == library.ActiveMapId)

@@ -699,15 +699,21 @@ export class CampaignMapPageComponent {
             return [];
         }
 
-        return tokens.flatMap((token) => {
-            const memory = this.visionExploration()[this.visionMemoryKey(token)];
-            return (memory?.polygons ?? []).map((polygon) => this.formatVisionPolygonPoints(polygon));
-        });
+        const polygonPoints = new Set<string>();
+        for (const token of tokens) {
+            for (const memory of this.visionMemoryEntriesForToken(token)) {
+                for (const polygon of memory.polygons ?? []) {
+                    polygonPoints.add(this.formatVisionPolygonPoints(polygon));
+                }
+            }
+        }
+
+        return [...polygonPoints];
     });
     readonly hasVisionMemory = computed(() => {
         const token = this.selectedToken();
         if (token) {
-            return !!this.visionExploration()[this.visionMemoryKey(token)];
+            return this.visionMemoryEntriesForToken(token).length > 0;
         }
 
         const prefix = `${this.currentMapId()}::`;
@@ -974,7 +980,7 @@ export class CampaignMapPageComponent {
                 if (!this.canEdit()
                     && displayedMapId
                     && displayedMapId !== 'new'
-                    && displayedMapId !== event.activeMapId) {
+                    && !this.canMemberStayOnMap(displayedMapId, this.mapBoards(), event.activeMapId)) {
                     void this.navigateToMapViewWithFallback(event.campaignId, event.activeMapId);
                 }
 
@@ -1051,7 +1057,7 @@ export class CampaignMapPageComponent {
                 && displayedMapId
                 && displayedMapId !== 'new'
                 && nextActiveMap
-                && displayedMapId !== nextActiveMap.id) {
+                && !this.canMemberStayOnMap(displayedMapId, maps, nextActiveMap.id)) {
                 void this.navigateToMapViewWithFallback(campaign.id, nextActiveMap.id);
                 this.showMapNotice(`The active map changed to ${nextActiveMap.name}.`);
                 return;
@@ -2130,6 +2136,20 @@ export class CampaignMapPageComponent {
 
     updateMapNameDraft(value: string): void {
         this.mapNameDraft.set(value);
+    }
+
+    updateMembersCanViewAnytime(enabled: boolean): void {
+        if (!this.canModify() || this.workingMap().membersCanViewAnytime === enabled) {
+            return;
+        }
+
+        this.captureHistorySnapshot();
+        this.mutateMap((map) => {
+            map.membersCanViewAnytime = enabled;
+        });
+        this.markDirty(enabled
+            ? 'Members can now open this map at any time.'
+            : 'Members can now open this map only when it becomes active.');
     }
 
     applyMapName(): void {
@@ -3850,10 +3870,13 @@ export class CampaignMapPageComponent {
         }
 
         const token = this.selectedToken();
-        const visionKey = token ? this.visionMemoryScopeKey(token) : null;
+        const visionKeys = token ? this.visionMemoryScopeKeys(token) : [];
+        const primaryVisionKey = visionKeys[0] ?? null;
 
-        if (visionKey) {
-            this.clearVisionExplorationEntry(mapId, visionKey);
+        if (visionKeys.length > 0) {
+            for (const visionKey of visionKeys) {
+                this.clearVisionExplorationEntry(mapId, visionKey);
+            }
             this.showMapNotice('Sight memory reset for this token.');
         } else {
             this.clearVisionExplorationForMap(mapId);
@@ -3864,12 +3887,23 @@ export class CampaignMapPageComponent {
             return;
         }
 
-        void this.store.resetCampaignMapVision(campaignId, mapId, visionKey)
+        if (visionKeys.length > 0) {
+            void Promise.all(visionKeys.map((visionKey) => this.store.resetCampaignMapVision(campaignId, mapId, visionKey)))
+                .then((results) => {
+                    const ok = results.every((result) => result);
+                    if (!ok) {
+                        this.showMapNotice('Sight memory reset here, but other viewers could not be updated for this token.');
+                    }
+
+                    this.cdr.detectChanges();
+                });
+            return;
+        }
+
+        void this.store.resetCampaignMapVision(campaignId, mapId, primaryVisionKey)
             .then((ok) => {
                 if (!ok) {
-                    this.showMapNotice(visionKey
-                        ? 'Sight memory reset here, but other viewers could not be updated for this token.'
-                        : 'Sight memory reset here, but other viewers could not be updated.');
+                    this.showMapNotice('Sight memory reset here, but other viewers could not be updated.');
                 }
 
                 this.cdr.detectChanges();
@@ -4400,6 +4434,7 @@ export class CampaignMapPageComponent {
             gridOffsetX,
             gridOffsetY,
             visionEnabled: map.visionEnabled ?? true,
+            membersCanViewAnytime: map.membersCanViewAnytime ?? false,
             strokes: map.strokes.map((stroke) => ({
                 id: stroke.id,
                 color: stroke.color,
@@ -4461,6 +4496,7 @@ export class CampaignMapPageComponent {
             gridOffsetX: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X,
             gridOffsetY: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y,
             visionEnabled: true,
+            membersCanViewAnytime: false,
             strokes: [],
             walls: [],
             icons: [],
@@ -4669,6 +4705,18 @@ export class CampaignMapPageComponent {
 
         const targetUrl = this.router.serializeUrl(this.router.createUrlTree(targetRoute));
         globalThis.location.assign(targetUrl);
+    }
+
+    private canMemberStayOnMap(displayedMapId: string, maps: CampaignMapBoard[], activeMapId: string): boolean {
+        if (!displayedMapId) {
+            return false;
+        }
+
+        const displayedMap = maps.find((map) => map.id === displayedMapId) ?? null;
+        const mainMapId = maps[0]?.id ?? '';
+        return displayedMapId === activeMapId
+            || (!!displayedMap?.membersCanViewAnytime)
+            || (!!mainMapId && displayedMapId === mainMapId);
     }
 
     private mapEditRoute(campaignId: string, mapId: string): string[] {
@@ -5247,15 +5295,31 @@ export class CampaignMapPageComponent {
     }
 
     private visionMemoryScopeKey(token: CampaignMapToken): string {
+        return this.visionMemoryScopeKeys(token)[0] ?? `token:${token.id}`;
+    }
+
+    private visionMemoryScopeKeys(token: CampaignMapToken): string[] {
+        const keys: string[] = [];
+
         if (token.assignedCharacterId) {
-            return `character:${token.assignedCharacterId}`;
+            keys.push(`character:${token.assignedCharacterId}`);
         }
 
         if (token.assignedUserId) {
-            return `user:${token.assignedUserId}`;
+            keys.push(`user:${token.assignedUserId}`);
         }
 
-        return `token:${token.id}`;
+        keys.push(`token:${token.id}`);
+
+        return [...new Set(keys.filter((key) => !!key.trim()))];
+    }
+
+    private visionMemoryEntriesForToken(token: CampaignMapToken): MapVisionMemoryEntryState[] {
+        const visionExploration = this.visionExploration();
+
+        return this.visionMemoryScopeKeys(token)
+            .map((scopeKey) => visionExploration[`${this.currentMapId()}::${scopeKey}`])
+            .filter((entry): entry is MapVisionMemoryEntryState => Boolean(entry));
     }
 
     private shouldPersistVisionMemory(token: CampaignMapToken): boolean {
@@ -5607,6 +5671,21 @@ export class CampaignMapPageComponent {
         }
     }
 
+    private findMapBoardById(mapId: string): CampaignMapBoard | null {
+        return this.mapBoards().find((map) => map.id === mapId)
+            ?? this.selectedCampaign()?.maps?.find((map) => map.id === mapId)
+            ?? null;
+    }
+
+    private findTokenForVisionMemory(mapId: string, visionKey: string): CampaignMapToken | null {
+        const map = this.findMapBoardById(mapId);
+        if (!map) {
+            return null;
+        }
+
+        return map.tokens.find((token) => this.visionMemoryScopeKeys(token).includes(visionKey)) ?? null;
+    }
+
     private async persistQueuedVisionMemory(): Promise<void> {
         const campaignId = this.campaignId();
         if (this.visionMemoryPersistInFlight) {
@@ -5659,7 +5738,7 @@ export class CampaignMapPageComponent {
                     continue;
                 }
 
-                const result = await this.store.updateCampaignMapVision(campaignId, mapId, {
+                const sharedMemory: CampaignMap['visionMemory'][number] = {
                     key: entry.key,
                     polygons: entry.polygons.map((polygon) => ({
                         points: polygon.map((point) => ({ ...point }))
@@ -5667,7 +5746,12 @@ export class CampaignMapPageComponent {
                     lastOrigin: entry.lastOrigin ? { ...entry.lastOrigin } : null,
                     lastPolygonHash: entry.lastPolygonHash,
                     revision: entry.revision
-                });
+                };
+
+                const token = this.findTokenForVisionMemory(mapId, entry.key);
+                const result = token
+                    ? (await this.store.moveCampaignMapToken(campaignId, mapId, token.id, { x: token.x, y: token.y }, sharedMemory) ? 'ok' : 'error')
+                    : await this.store.updateCampaignMapVision(campaignId, mapId, sharedMemory);
 
                 this.inFlightVisionMemoryPersistenceKeys.delete(compoundKey);
                 if (result === 'not-found') {
@@ -5976,6 +6060,11 @@ export class CampaignMapPageComponent {
         const entry = this.visionExploration()[key];
         if (!entry) {
             return null;
+        }
+
+        if (this.canEdit()) {
+            this.pendingVisionMemoryPersistenceKeys.delete(key);
+            this.syncPendingVisionMemorySnapshot();
         }
 
         this.clearVisionMemoryPersistTimer();
@@ -6377,6 +6466,7 @@ export class CampaignMapPageComponent {
                 gridColor: this.defaultGridColorForBackground(background),
                 gridOffsetX: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X,
                 gridOffsetY: DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y,
+                membersCanViewAnytime: false,
                 strokes: strokes.filter((stroke) => stroke.points.length > 1),
                 walls: [],
                 icons: anchors.map((anchor) => ({

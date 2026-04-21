@@ -99,7 +99,8 @@ export const seedCampaigns: Campaign[] = [
                 forestBelts: []
             },
             visionMemory: [],
-            visionEnabled: true
+            visionEnabled: true,
+            membersCanViewAnytime: true
         },
         maps: [
             {
@@ -141,7 +142,8 @@ export const seedCampaigns: Campaign[] = [
                     forestBelts: []
                 },
                 visionMemory: [],
-                visionEnabled: true
+                visionEnabled: true,
+                membersCanViewAnytime: true
             }
         ],
         activeMapId: 'map-board-crown-of-embers',
@@ -233,7 +235,8 @@ export const seedCampaigns: Campaign[] = [
                 forestBelts: []
             },
             visionMemory: [],
-            visionEnabled: true
+            visionEnabled: true,
+            membersCanViewAnytime: true
         },
         maps: [
             {
@@ -275,7 +278,8 @@ export const seedCampaigns: Campaign[] = [
                     forestBelts: []
                 },
                 visionMemory: [],
-                visionEnabled: true
+                visionEnabled: true,
+                membersCanViewAnytime: true
             }
         ],
         activeMapId: 'map-board-moonwake-ledger',
@@ -363,7 +367,8 @@ export const seedCampaigns: Campaign[] = [
                 forestBelts: []
             },
             visionMemory: [],
-            visionEnabled: true
+            visionEnabled: true,
+            membersCanViewAnytime: true
         },
         maps: [
             {
@@ -405,7 +410,8 @@ export const seedCampaigns: Campaign[] = [
                     forestBelts: []
                 },
                 visionMemory: [],
-                visionEnabled: true
+                visionEnabled: true,
+                membersCanViewAnytime: true
             }
         ],
         activeMapId: 'map-board-wild-below',

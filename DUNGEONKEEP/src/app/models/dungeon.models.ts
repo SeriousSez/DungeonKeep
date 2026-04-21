@@ -176,6 +176,7 @@ export interface CampaignMap {
     gridOffsetX: number;
     gridOffsetY: number;
     visionEnabled: boolean;
+    membersCanViewAnytime: boolean;
     strokes: CampaignMapStroke[];
     walls: CampaignMapWall[];
     icons: CampaignMapIcon[];

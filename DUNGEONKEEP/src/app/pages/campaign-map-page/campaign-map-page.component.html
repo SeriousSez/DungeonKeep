@@ -54,6 +54,11 @@
                     <input id="map-board-name" type="text" [value]="mapNameDraft()" (input)="updateMapNameDraft($any($event.target).value)" placeholder="Name this map" />
                     <button type="button" class="primary-button" (click)="applyMapName()">Apply</button>
                 </div>
+                <label class="map-visibility-toggle" for="map-members-visible-anytime">
+                    <input id="map-members-visible-anytime" type="checkbox" [checked]="activeMap.membersCanViewAnytime" (change)="updateMembersCanViewAnytime($any($event.target).checked)" />
+                    <span>Members can open this map at any time</span>
+                </label>
+                <p class="sidebar-note">When disabled, members can still open the main map and whichever map is currently active.</p>
                 <div class="tool-actions">
                     <button type="button" class="ghost-button full-width-button" [disabled]="saveState() === 'saving' || isAiArtGenerating()" (click)="createMapBoard()">Create Another Map</button>
                     <button type="button" class="ghost-button danger-button full-width-button" [disabled]="mapBoards().length <= 1" (click)="requestDeleteCurrentMap()">Delete {{ activeMap.name }}</button>

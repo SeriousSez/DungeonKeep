@@ -147,7 +147,8 @@ public sealed record CampaignMapDto(
     IReadOnlyList<CampaignMapLabelDto> Labels,
     CampaignMapLayersDto Layers,
     IReadOnlyList<CampaignMapVisionMemoryDto> VisionMemory,
-    bool VisionEnabled = true
+    bool VisionEnabled = true,
+    bool MembersCanViewAnytime = false
 );
 
 public sealed record CampaignMapBoardDto(
@@ -168,7 +169,8 @@ public sealed record CampaignMapBoardDto(
     IReadOnlyList<CampaignMapLabelDto> Labels,
     CampaignMapLayersDto Layers,
     IReadOnlyList<CampaignMapVisionMemoryDto> VisionMemory,
-    bool VisionEnabled = true
+    bool VisionEnabled = true,
+    bool MembersCanViewAnytime = false
 );
 
 public sealed record CampaignMapLibraryDto(
