@@ -1123,15 +1123,25 @@ export class DungeonStoreService {
         const levelStart = Math.min(Math.max(Math.trunc(campaign.levelStart ?? 1), 1), 20);
         const levelEnd = Math.min(Math.max(Math.trunc(campaign.levelEnd ?? 4), levelStart), 20);
 
+        const activeMapId = campaign.activeMapId?.trim() || campaign.maps?.[0]?.id?.trim() || '';
+        const activeMapFromApi = this.mapCampaignMapFromApi(campaign.map);
         const maps = (campaign.maps?.length
-            ? campaign.maps.map((map) => this.mapCampaignMapBoardFromApi(map))
+            ? campaign.maps.map((map) => {
+                const mappedBoard = this.mapCampaignMapBoardFromApi(map);
+                return mappedBoard.id === activeMapId
+                    ? {
+                        ...mappedBoard,
+                        ...activeMapFromApi
+                    }
+                    : mappedBoard;
+            })
             : [{
-                id: campaign.activeMapId?.trim() || crypto.randomUUID(),
+                id: activeMapId || crypto.randomUUID(),
                 name: 'Main Map',
-                ...this.mapCampaignMapFromApi(campaign.map)
+                ...activeMapFromApi
             }]);
-        const activeMapId = campaign.activeMapId?.trim() || maps[0]?.id || '';
-        const activeMap = maps.find((map) => map.id === activeMapId) ?? maps[0] ?? this.createEmptyCampaignMapBoard();
+        const resolvedActiveMapId = activeMapId || maps[0]?.id || '';
+        const activeMap = maps.find((map) => map.id === resolvedActiveMapId) ?? maps[0] ?? this.createEmptyCampaignMapBoard();
 
         return {
             id: campaign.id,

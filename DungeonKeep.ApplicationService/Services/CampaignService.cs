@@ -1038,9 +1038,10 @@ public sealed class CampaignService(
         var activeMap = library.Maps.FirstOrDefault(map => map.Id == library.ActiveMapId) ?? library.Maps[0];
         var firstMap = library.Maps[0];
         IReadOnlyList<CampaignMapBoardDto> visibleMaps = string.Equals(currentUserRole, "Owner", StringComparison.OrdinalIgnoreCase)
-            ? library.Maps
+            ? library.Maps.Select(map => map.Id == activeMap.Id ? CreateCompactMapBoard(map) : map).ToList()
             : library.Maps
                 .Where(map => map.Id == firstMap.Id || map.Id == activeMap.Id)
+                .Select(map => map.Id == activeMap.Id ? CreateCompactMapBoard(map) : map)
                 .DistinctBy(map => map.Id)
                 .ToList();
 
@@ -1079,6 +1080,14 @@ public sealed class CampaignService(
                 ))
                 .ToList()
         );
+    }
+
+    private static CampaignMapBoardDto CreateCompactMapBoard(CampaignMapBoardDto map)
+    {
+        return map with
+        {
+            VisionMemory = []
+        };
     }
 
     private static CampaignSummaryDto MapCampaignSummary(CampaignSummaryRecord campaign)
