@@ -44,6 +44,12 @@
     --paper-soft: rgba(255, 247, 234, 0.76);
     --accent-soft: #f1c676;
     --accent-primary: var(--color-primary);
+    --field-border: rgba(118, 86, 63, 0.22);
+    --field-bg: rgba(255, 252, 245, 0.78);
+    --field-bg-strong: rgba(255, 248, 233, 0.56);
+    --field-bg-focus: rgba(255, 252, 245, 0.92);
+    --field-focus-border: rgba(157, 91, 44, 0.5);
+    --field-focus-ring: rgba(211, 155, 87, 0.14);
 }
 
 :root.theme-dark {
@@ -77,4 +83,10 @@
     --paper-strong: #3a2a1f;
     --paper-soft: rgba(58, 42, 31, 0.76);
     --accent-soft: #e8bb7b;
+    --field-border: rgba(228, 205, 178, 0.24);
+    --field-bg: rgba(71, 52, 39, 0.82);
+    --field-bg-strong: rgba(79, 58, 44, 0.88);
+    --field-bg-focus: rgba(92, 68, 52, 0.94);
+    --field-focus-border: rgba(240, 200, 143, 0.48);
+    --field-focus-ring: rgba(214, 161, 103, 0.2);
 }

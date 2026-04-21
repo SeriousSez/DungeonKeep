@@ -105,8 +105,8 @@ input {
     width: 100%;
     padding: 12px 14px;
     border-radius: 14px;
-    border: 1px solid rgba(118, 86, 63, 0.22);
-    background: rgba(255, 252, 245, 0.78);
+    border: 1px solid var(--field-border);
+    background: var(--field-bg);
     color: var(--text-main);
 }
 

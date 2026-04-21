@@ -273,8 +273,8 @@ textarea {
     width: 100%;
     padding: 12px 14px;
     border-radius: 14px;
-    border: 1px solid rgba(118, 86, 63, 0.22);
-    background: rgba(255, 252, 245, 0.78);
+    border: 1px solid var(--field-border);
+    background: var(--field-bg);
     color: var(--text-main);
     outline: none;
     transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
@@ -287,9 +287,9 @@ textarea::placeholder {
 
 input:focus,
 textarea:focus {
-    border-color: rgba(157, 91, 44, 0.5);
-    box-shadow: 0 0 0 4px rgba(211, 155, 87, 0.14);
-    background: rgba(255, 252, 245, 0.92);
+    border-color: var(--field-focus-border);
+    box-shadow: 0 0 0 4px var(--field-focus-ring);
+    background: var(--field-bg-focus);
 }
 
 textarea {
