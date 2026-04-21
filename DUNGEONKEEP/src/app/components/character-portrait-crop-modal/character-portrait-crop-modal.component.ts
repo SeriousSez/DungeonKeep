@@ -21,6 +21,7 @@ export class CharacterPortraitCropModalComponent implements AfterViewInit, OnDes
 
     readonly open = input(false);
     readonly imageUrl = input('');
+    readonly entityLabel = input('Character');
     readonly characterName = input('Character');
 
     readonly closed = output<void>();

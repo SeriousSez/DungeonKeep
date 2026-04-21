@@ -155,6 +155,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             EnsureColumnExists(dbContext, "Campaigns", "CampaignMapJson", "TEXT NOT NULL DEFAULT '{}'");
             EnsureColumnExists(dbContext, "Campaigns", "SessionsJson", "TEXT NOT NULL DEFAULT '[]'");
             EnsureColumnExists(dbContext, "Campaigns", "NpcsJson", "TEXT NOT NULL DEFAULT '[]'");
+            EnsureColumnExists(dbContext, "Campaigns", "CampaignNpcsJson", "TEXT NOT NULL DEFAULT '[]'");
             EnsureColumnExists(dbContext, "Campaigns", "LootJson", "TEXT NOT NULL DEFAULT '[]'");
             EnsureColumnExists(dbContext, "Campaigns", "Tone", "TEXT NOT NULL DEFAULT 'Heroic'");
             EnsureColumnExists(dbContext, "Campaigns", "LevelStart", "INTEGER NOT NULL DEFAULT 1");
@@ -295,12 +296,123 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         }, campaign => campaign.NpcsJson, (campaign, json) => campaign.NpcsJson = json, cancellationToken);
     }
 
+    public async Task<Campaign?> SaveNpcAsync(Guid campaignId, CampaignNpcDto npc, CancellationToken cancellationToken = default)
+    {
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var normalizedNpc = NormalizeCampaignNpc(npc);
+        var campaignNpcs = ParseCampaignNpcs(campaign.CampaignNpcsJson);
+        var existingIndex = campaignNpcs.FindIndex(entry => entry.Id == normalizedNpc.Id);
+        var previousName = existingIndex >= 0 ? campaignNpcs[existingIndex].Name : string.Empty;
+
+        if (existingIndex >= 0)
+        {
+            campaignNpcs[existingIndex] = normalizedNpc;
+        }
+        else
+        {
+            campaignNpcs.Add(normalizedNpc);
+        }
+
+        campaign.CampaignNpcsJson = SerializeCampaignNpcs(campaignNpcs);
+
+        var names = ParseNamedItems(campaign.NpcsJson);
+        if (!string.IsNullOrWhiteSpace(previousName)
+            && !string.Equals(previousName, normalizedNpc.Name, StringComparison.OrdinalIgnoreCase)
+            && !campaignNpcs.Any(entry => string.Equals(entry.Name, previousName, StringComparison.OrdinalIgnoreCase)))
+        {
+            names.RemoveAll(item => string.Equals(item, previousName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!names.Contains(normalizedNpc.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            names.Add(normalizedNpc.Name);
+        }
+
+        foreach (var campaignNpc in campaignNpcs)
+        {
+            if (!names.Contains(campaignNpc.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                names.Add(campaignNpc.Name);
+            }
+        }
+
+        campaign.NpcsJson = JsonSerializer.Serialize(names
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase));
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return await GetByIdAsync(campaignId, cancellationToken);
+    }
+
+    public async Task<Campaign?> RemoveNpcByIdAsync(Guid campaignId, Guid npcId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var campaignNpcs = ParseCampaignNpcs(campaign.CampaignNpcsJson);
+        var removedNpc = campaignNpcs.FirstOrDefault(entry => entry.Id == npcId);
+        if (removedNpc is null)
+        {
+            return null;
+        }
+
+        campaignNpcs.RemoveAll(entry => entry.Id == npcId);
+        campaign.CampaignNpcsJson = SerializeCampaignNpcs(campaignNpcs);
+
+        var names = ParseNamedItems(campaign.NpcsJson);
+        names.RemoveAll(item => string.Equals(item, removedNpc.Name, StringComparison.OrdinalIgnoreCase));
+        foreach (var campaignNpc in campaignNpcs)
+        {
+            if (!names.Contains(campaignNpc.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                names.Add(campaignNpc.Name);
+            }
+        }
+
+        campaign.NpcsJson = JsonSerializer.Serialize(names
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase));
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return await GetByIdAsync(campaignId, cancellationToken);
+    }
+
     public async Task<Campaign?> RemoveNpcAsync(Guid campaignId, string name, CancellationToken cancellationToken = default)
     {
-        return await UpdateNamedCollectionAsync(campaignId, collection =>
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+
+        if (campaign is null)
         {
-            collection.RemoveAll(item => string.Equals(item, name, StringComparison.OrdinalIgnoreCase));
-        }, campaign => campaign.NpcsJson, (campaign, json) => campaign.NpcsJson = json, cancellationToken);
+            return null;
+        }
+
+        var trimmedName = name.Trim();
+        var names = ParseNamedItems(campaign.NpcsJson);
+        names.RemoveAll(item => string.Equals(item, trimmedName, StringComparison.OrdinalIgnoreCase));
+        campaign.NpcsJson = JsonSerializer.Serialize(names
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase));
+
+        var campaignNpcs = ParseCampaignNpcs(campaign.CampaignNpcsJson)
+            .Where(entry => !string.Equals(entry.Name, trimmedName, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        campaign.CampaignNpcsJson = SerializeCampaignNpcs(campaignNpcs);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return await GetByIdAsync(campaignId, cancellationToken);
     }
 
     public async Task<Campaign?> AddLootAsync(Guid campaignId, string name, CancellationToken cancellationToken = default)
@@ -742,6 +854,120 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         }
 
         return new CampaignMapLibraryDto(DefaultCampaignMapBoard.Id, [DefaultCampaignMapBoard]);
+    }
+
+    private static List<CampaignNpcDto> ParseCampaignNpcs(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return [];
+        }
+
+        try
+        {
+            var npcs = JsonSerializer.Deserialize<List<CampaignNpcDto>>(json);
+            if (npcs is not null)
+            {
+                return npcs
+                    .Select(NormalizeCampaignNpc)
+                    .Where(npc => !string.IsNullOrWhiteSpace(npc.Name))
+                    .GroupBy(npc => npc.Id)
+                    .Select(group => group.OrderByDescending(npc => npc.UpdatedAt, StringComparer.Ordinal).First())
+                    .ToList();
+            }
+        }
+        catch
+        {
+        }
+
+        return [];
+    }
+
+    private static string SerializeCampaignNpcs(IEnumerable<CampaignNpcDto> npcs)
+    {
+        return JsonSerializer.Serialize(npcs
+            .Select(NormalizeCampaignNpc)
+            .Where(npc => !string.IsNullOrWhiteSpace(npc.Name))
+            .DistinctBy(npc => npc.Id)
+            .OrderByDescending(npc => npc.UpdatedAt, StringComparer.Ordinal));
+    }
+
+    private static CampaignNpcDto NormalizeCampaignNpc(CampaignNpcDto npc)
+    {
+        var npcId = npc.Id == Guid.Empty ? Guid.NewGuid() : npc.Id;
+        var normalizedUpdatedAt = string.IsNullOrWhiteSpace(npc.UpdatedAt)
+            ? DateTime.UtcNow.ToString("O")
+            : npc.UpdatedAt.Trim();
+
+        return new CampaignNpcDto(
+            npcId,
+            npc.Name.Trim(),
+            npc.Title.Trim(),
+            npc.Race.Trim(),
+            npc.ClassOrRole.Trim(),
+            npc.Faction.Trim(),
+            npc.Occupation.Trim(),
+            npc.Age.Trim(),
+            npc.Gender.Trim(),
+            npc.Alignment.Trim(),
+            npc.CurrentStatus.Trim(),
+            npc.Location.Trim(),
+            npc.ShortDescription.Trim(),
+            npc.Appearance.Trim(),
+            NormalizeStringList(npc.PersonalityTraits),
+            NormalizeStringList(npc.Ideals),
+            NormalizeStringList(npc.Bonds),
+            NormalizeStringList(npc.Flaws),
+            npc.Motivations.Trim(),
+            npc.Goals.Trim(),
+            npc.Fears.Trim(),
+            NormalizeStringList(npc.Secrets),
+            NormalizeStringList(npc.Mannerisms),
+            npc.VoiceNotes.Trim(),
+            npc.Backstory.Trim(),
+            npc.Notes.Trim(),
+            npc.CombatNotes.Trim(),
+            npc.StatBlockReference.Trim(),
+            NormalizeStringList(npc.Tags),
+            NormalizeRelationships(npc.Relationships),
+            NormalizeStringList(npc.QuestLinks),
+            NormalizeStringList(npc.SessionAppearances),
+            NormalizeStringList(npc.Inventory),
+            npc.ImageUrl.Trim(),
+            NormalizeHostility(npc.Hostility),
+            npc.IsAlive,
+            npc.IsImportant,
+            normalizedUpdatedAt
+        );
+    }
+
+    private static IReadOnlyList<CampaignNpcRelationshipDto> NormalizeRelationships(IReadOnlyList<CampaignNpcRelationshipDto>? relationships)
+    {
+        return (relationships ?? [])
+            .Select(relationship => new CampaignNpcRelationshipDto(
+                relationship.Id == Guid.Empty ? Guid.NewGuid() : relationship.Id,
+                relationship.TargetNpcId,
+                relationship.RelationshipType.Trim(),
+                relationship.Description.Trim()))
+            .ToList();
+    }
+
+    private static IReadOnlyList<string> NormalizeStringList(IReadOnlyList<string>? values)
+    {
+        return (values ?? [])
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim())
+            .ToList();
+    }
+
+    private static string NormalizeHostility(string? hostility)
+    {
+        return hostility?.Trim() switch
+        {
+            "Friendly" => "Friendly",
+            "Hostile" => "Hostile",
+            _ => "Indifferent"
+        };
     }
 
     private static List<PersistedCampaignThread> ParseThreads(string json)

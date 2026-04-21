@@ -763,6 +763,52 @@ app-dropdown {
     display: block;
 }
 
+.token-avatar-fallback {
+    position: absolute;
+    inset: 0;
+    left: 50%;
+    top: 50%;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    border: 2px solid color-mix(in srgb, var(--surface-raised-solid) 64%, var(--accent-primary) 36%);
+    background:
+        radial-gradient(circle at top, color-mix(in srgb, var(--accent-primary) 26%, transparent), transparent 58%),
+        color-mix(in srgb, var(--surface-raised-solid) 82%, var(--accent-primary) 18%);
+    color: var(--text-main);
+    font-size: 0.95rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+    box-shadow: 0 14px 32px rgba(39, 25, 16, 0.28);
+    transform: translate(-50%, -50%);
+    box-sizing: border-box;
+    user-select: none;
+    pointer-events: none;
+}
+
+.token-avatar-fallback--panel {
+    position: static;
+    transform: none;
+    width: 100%;
+    height: 100%;
+    font-size: 1rem;
+    box-shadow: none;
+}
+
+.token-avatar-fallback--upload {
+    position: static;
+    transform: none;
+    width: 56px;
+    height: 56px;
+    flex: 0 0 56px;
+    font-size: 0.95rem;
+    box-shadow: none;
+}
+
 .field-label {
     font-size: 0.74rem;
     font-weight: 700;
@@ -1820,6 +1866,10 @@ app-dropdown {
     pointer-events: none;
 }
 
+.map-token .token-avatar-fallback {
+    font-size: clamp(0.7rem, 0.6rem + 0.35vw, 1.05rem);
+}
+
 .map-token span {
     position: absolute;
     left: 50%;
@@ -1847,6 +1897,11 @@ app-dropdown {
     box-shadow: 0 16px 36px rgba(39, 25, 16, 0.36);
 }
 
+.map-token.is-selected .token-avatar-fallback {
+    border-color: color-mix(in srgb, var(--accent-primary) 72%, var(--panel-border) 28%);
+    box-shadow: 0 16px 36px rgba(39, 25, 16, 0.36);
+}
+
 .map-token.is-selected span {
     border-color: color-mix(in srgb, var(--accent-primary) 62%, var(--panel-border) 38%);
 }
@@ -1864,6 +1919,10 @@ app-dropdown {
 }
 
 .map-token--viewer:not(.is-controllable) img {
+    border-color: color-mix(in srgb, var(--panel-border) 82%, transparent);
+}
+
+.map-token--viewer:not(.is-controllable) .token-avatar-fallback {
     border-color: color-mix(in srgb, var(--panel-border) 82%, transparent);
 }
 

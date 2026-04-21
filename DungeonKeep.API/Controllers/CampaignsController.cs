@@ -335,6 +335,36 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         }
     }
 
+    [HttpPut("{campaignId:guid}/npcs/{npcId:guid}")]
+    public async Task<ActionResult<CampaignDto>> SaveNpc(Guid campaignId, Guid npcId, [FromBody] SaveCampaignNpcRequest request, CancellationToken cancellationToken)
+    {
+        if (request.Npc is null || string.IsNullOrWhiteSpace(request.Npc.Name))
+        {
+            return BadRequest("NPC name is required.");
+        }
+
+        if (request.Npc.Id != Guid.Empty && request.Npc.Id != npcId)
+        {
+            return BadRequest("NPC id in the route must match the payload.");
+        }
+
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var updated = await campaignService.SaveNpcAsync(campaignId, request with { Npc = request.Npc with { Id = npcId } }, user.Id, cancellationToken);
+            return updated is null ? NotFound("Campaign was not found.") : Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
     [HttpPost("npcs/generate-draft")]
     public async Task<ActionResult<GenerateNpcDraftResponse>> GenerateNpcDraft([FromBody] GenerateNpcDraftRequest request, CancellationToken cancellationToken)
     {
@@ -570,6 +600,26 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         try
         {
             var updated = await campaignService.RemoveNpcAsync(campaignId, request, user.Id, cancellationToken);
+            return updated is null ? NotFound("Campaign or NPC was not found.") : Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
+    [HttpDelete("{campaignId:guid}/npcs/{npcId:guid}")]
+    public async Task<ActionResult<CampaignDto>> RemoveNpcById(Guid campaignId, Guid npcId, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var updated = await campaignService.RemoveNpcByIdAsync(campaignId, npcId, user.Id, cancellationToken);
             return updated is null ? NotFound("Campaign or NPC was not found.") : Ok(updated);
         }
         catch (UnauthorizedAccessException)

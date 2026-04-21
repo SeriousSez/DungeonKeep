@@ -13,6 +13,8 @@ public interface ICampaignService
     Task<CampaignDto?> UpdateSessionAsync(Guid campaignId, Guid sessionId, UpdateCampaignSessionRequest request, Guid userId, CancellationToken cancellationToken = default);
     Task<CampaignDto?> RemoveSessionAsync(Guid campaignId, Guid sessionId, Guid userId, CancellationToken cancellationToken = default);
     Task<CampaignDto?> AddNpcAsync(Guid campaignId, CreateCampaignNpcRequest request, Guid userId, CancellationToken cancellationToken = default);
+    Task<CampaignDto?> SaveNpcAsync(Guid campaignId, SaveCampaignNpcRequest request, Guid userId, CancellationToken cancellationToken = default);
+    Task<CampaignDto?> RemoveNpcByIdAsync(Guid campaignId, Guid npcId, Guid userId, CancellationToken cancellationToken = default);
     Task<CampaignDto?> RemoveNpcAsync(Guid campaignId, RemoveCampaignNpcRequest request, Guid userId, CancellationToken cancellationToken = default);
     Task<CampaignDto?> AddLootAsync(Guid campaignId, CreateCampaignLootRequest request, Guid userId, CancellationToken cancellationToken = default);
     Task<CampaignDto?> RemoveLootAsync(Guid campaignId, RemoveCampaignLootRequest request, Guid userId, CancellationToken cancellationToken = default);

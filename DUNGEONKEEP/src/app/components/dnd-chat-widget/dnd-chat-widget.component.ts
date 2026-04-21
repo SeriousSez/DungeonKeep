@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { marked } from 'marked';
 import { Router } from '@angular/router';
 import { loadCampaignNpcDrafts, loadNpcLibrary } from '../../data/campaign-npc.storage';
-import { mergeStoredNpcDrafts, sanitizeNpc } from '../../data/campaign-npc.helpers';
+import { mergeCampaignNpcSources, sanitizeNpc } from '../../data/campaign-npc.helpers';
 import { readStoredSessionEditorDraft } from '../../data/session-editor.storage';
 import { getRulesEntryBySlug, rulesEntries } from '../../data/rules-links';
 import { Campaign, Character } from '../../models/dungeon.models';
@@ -354,7 +354,7 @@ export class DndChatWidgetComponent {
         const campaignNpcMatch = route.match(/^\/campaigns\/[^/]+\/npcs\/([^/]+)(?:\/edit)?$/);
         if (campaignNpcMatch?.[1] && campaign) {
             const stored = loadCampaignNpcDrafts(campaign.id) ?? [];
-            const merged = mergeStoredNpcDrafts(campaign.npcs, stored);
+            const merged = mergeCampaignNpcSources(campaign.npcs, campaign.campaignNpcs ?? [], stored);
             const npc = merged.find((entry) => entry.id === campaignNpcMatch[1]);
             return npc ? this.mapNpcContext(npc, merged) : undefined;
         }

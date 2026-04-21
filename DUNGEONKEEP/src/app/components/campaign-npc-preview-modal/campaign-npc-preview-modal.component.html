@@ -1,7 +1,11 @@
 <div class="modal-backdrop" (click)="close()">
     <article class="npc-preview-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
         <header class="npc-preview-header">
+            @if (npc().imageUrl.trim()) {
+            <img class="npc-preview-portrait" [src]="npc().imageUrl" [alt]="npc().name + ' portrait'" />
+            } @else {
             <div class="npc-preview-sigil" aria-hidden="true">{{ npc().name.charAt(0) || '?' }}</div>
+            }
             <div class="npc-preview-copy">
                 <p class="npc-preview-eyebrow">Campaign NPC</p>
                 <h3>{{ npc().name }}</h3>

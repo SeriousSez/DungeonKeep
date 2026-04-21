@@ -267,6 +267,37 @@ p {
     vertical-align: middle;
 }
 
+.npc-image-preview-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--surface-raised) 84%, transparent);
+}
+
+.npc-image-preview {
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
+    object-fit: cover;
+    border: 1px solid var(--panel-border);
+    background: var(--surface-raised);
+}
+
+.npc-image-preview-copy {
+    display: grid;
+    gap: 4px;
+}
+
+.npc-image-preview-copy span {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
 .section-grid.two-up {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -285,6 +316,10 @@ p {
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+}
+
+.npc-portrait-action-field {
+    align-content: end;
 }
 
 .full-span {

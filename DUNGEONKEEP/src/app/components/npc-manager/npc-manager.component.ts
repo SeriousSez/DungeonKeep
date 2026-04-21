@@ -6,7 +6,7 @@ import { Router } from '@angular/router';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { ApiGenerateNpcDraftResponse, DungeonApiService } from '../../state/dungeon-api.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
-import { cloneNpcForCampaign, createDefaultNpc, duplicateNpc, filterAndSortNpcs, hasNpcNameConflict, mergeStoredNpcDrafts, sanitizeNpc, touchNpc } from '../../data/campaign-npc.helpers';
+import { cloneNpcForCampaign, createDefaultNpc, duplicateNpc, filterAndSortNpcs, hasNpcNameConflict, mergeCampaignNpcSources, sanitizeNpc, touchNpc } from '../../data/campaign-npc.helpers';
 import { clearCampaignNpcDrafts, clearNpcLibrary, loadCampaignNpcDrafts, loadNpcLibrary, saveCampaignNpcDrafts, saveNpcLibrary } from '../../data/campaign-npc.storage';
 import { CampaignNpc, NpcFilters, NpcSortField } from '../../models/campaign-npc.models';
 import { DropdownOption } from '../dropdown/dropdown.component';
@@ -81,7 +81,7 @@ export class NpcManagerComponent {
         const usage = new Map<string, Set<string>>();
 
         for (const campaign of this.store.campaigns()) {
-            const mergedDrafts = mergeStoredNpcDrafts(campaign.npcs, loadCampaignNpcDrafts(campaign.id) ?? []);
+            const mergedDrafts = mergeCampaignNpcSources(campaign.npcs, campaign.campaignNpcs ?? [], loadCampaignNpcDrafts(campaign.id) ?? []);
 
             for (const npc of mergedDrafts) {
                 const normalizedName = this.normalizeNpcName(npc.name);
@@ -169,8 +169,9 @@ export class NpcManagerComponent {
                 return;
             }
 
+            const campaign = this.store.campaigns().find((entry) => entry.id === campaignId) ?? null;
             const stored = loadCampaignNpcDrafts(campaignId) ?? [];
-            const merged = mergeStoredNpcDrafts(names, stored);
+            const merged = mergeCampaignNpcSources(names, campaign?.campaignNpcs ?? [], stored);
 
             // Persist immediately if any NPCs were newly created from legacy names.
             // Without this, each effect re-run regenerates random UUIDs for legacy NPCs,
@@ -359,7 +360,6 @@ export class NpcManagerComponent {
     }
 
     async handleSaveNpc(npc: CampaignNpc): Promise<void> {
-        const currentNpc = this.allNpcs().find((entry) => entry.id === npc.id) ?? null;
         const sanitizedNpc = sanitizeNpc(npc);
 
         if (hasNpcNameConflict(this.allNpcs(), sanitizedNpc)) {
@@ -379,10 +379,10 @@ export class NpcManagerComponent {
 
         this.npcSaveInProgress.set(true);
         try {
-            const syncSucceeded = await this.syncNpcName(currentNpc, sanitizedNpc);
+            const syncSucceeded = await this.store.saveCampaignNpc(this.campaignId(), sanitizedNpc);
             this.feedback.set(syncSucceeded
                 ? 'NPC saved.'
-                : 'NPC draft saved locally, but the campaign NPC name list could not be synced.');
+                : 'NPC draft saved locally, but the campaign NPC could not be synced.');
         } finally {
             this.npcSaveInProgress.set(false);
             this.cdr.detectChanges();
@@ -415,10 +415,10 @@ export class NpcManagerComponent {
             return;
         }
 
-        const syncSucceeded = await this.syncNpcName(null, clone);
+        const syncSucceeded = await this.store.saveCampaignNpc(this.campaignId(), clone);
         this.feedback.set(syncSucceeded
             ? 'NPC duplicated.'
-            : 'NPC duplicate saved locally, but the campaign NPC name list could not be synced.');
+            : 'NPC duplicate saved locally, but the campaign NPC could not be synced.');
         this.cdr.detectChanges();
     }
 
@@ -447,10 +447,10 @@ export class NpcManagerComponent {
             return;
         }
 
-        const syncSucceeded = await this.removeNpcName(candidate.name);
+        const syncSucceeded = await this.store.deleteCampaignNpc(this.campaignId(), candidate.id);
         this.feedback.set(syncSucceeded
             ? 'NPC removed.'
-            : 'NPC removed locally, but the campaign NPC name list could not be synced.');
+            : 'NPC removed locally, but the campaign NPC could not be synced.');
         this.cdr.detectChanges();
     }
 
@@ -482,7 +482,8 @@ export class NpcManagerComponent {
         }
 
         clearCampaignNpcDrafts(this.campaignId());
-        const merged = mergeStoredNpcDrafts(this.npcNames(), []);
+        const campaign = this.store.campaigns().find((entry) => entry.id === this.campaignId()) ?? null;
+        const merged = mergeCampaignNpcSources(this.npcNames(), campaign?.campaignNpcs ?? [], []);
         this.allNpcs.set(merged);
         this.selectedNpcId.set(merged[0]?.id ?? null);
         this.feedback.set('Local NPC drafts reset to the campaign list.');
@@ -524,10 +525,10 @@ export class NpcManagerComponent {
         const nextList = [imported, ...this.allNpcs()];
         this.persistLocalState(nextList, imported.id);
 
-        const syncSucceeded = await this.syncNpcName(null, imported);
+        const syncSucceeded = await this.store.saveCampaignNpc(this.campaignId(), imported);
         this.feedback.set(syncSucceeded
             ? 'Library NPC imported into this campaign.'
-            : 'Library NPC imported locally, but the campaign NPC name list could not be synced.');
+            : 'Library NPC imported locally, but the campaign NPC could not be synced.');
         this.cdr.detectChanges();
     }
 
@@ -657,48 +658,4 @@ export class NpcManagerComponent {
         return nextName;
     }
 
-    private async syncNpcName(previousNpc: CampaignNpc | null, nextNpc: CampaignNpc): Promise<boolean> {
-        if (!this.canEdit()) {
-            return true;
-        }
-
-        const campaignId = this.campaignId();
-        if (!campaignId) {
-            return false;
-        }
-
-        if (!previousNpc) {
-            return await this.store.addCampaignNpc(campaignId, nextNpc.name);
-        }
-
-        if (previousNpc.name === nextNpc.name) {
-            return true;
-        }
-
-        const added = await this.store.addCampaignNpc(campaignId, nextNpc.name);
-        if (!added) {
-            return false;
-        }
-
-        const removed = await this.store.removeCampaignNpc(campaignId, previousNpc.name);
-        if (!removed) {
-            await this.store.removeCampaignNpc(campaignId, nextNpc.name);
-            return false;
-        }
-
-        return true;
-    }
-
-    private async removeNpcName(name: string): Promise<boolean> {
-        if (!this.canEdit()) {
-            return true;
-        }
-
-        const campaignId = this.campaignId();
-        if (!campaignId) {
-            return false;
-        }
-
-        return await this.store.removeCampaignNpc(campaignId, name);
-    }
 }

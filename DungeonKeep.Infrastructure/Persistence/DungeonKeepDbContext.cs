@@ -60,6 +60,7 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
             entity.Property(c => c.Summary).HasMaxLength(1000);
             entity.Property(c => c.SessionsJson).HasColumnType("longtext").IsRequired();
             entity.Property(c => c.NpcsJson).HasColumnType("longtext").IsRequired();
+            entity.Property(c => c.CampaignNpcsJson).HasColumnType("longtext").IsRequired();
             entity.Property(c => c.LootJson).HasColumnType("longtext").IsRequired();
             entity.Property(c => c.OpenThreadsJson).HasColumnType("longtext").IsRequired();
             entity.Property(c => c.WorldNotesJson).HasColumnType("longtext").IsRequired();

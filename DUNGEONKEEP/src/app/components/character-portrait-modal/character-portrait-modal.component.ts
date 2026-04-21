@@ -14,6 +14,7 @@ export class CharacterPortraitModalComponent {
     private readonly renderer = inject(Renderer2);
 
     readonly open = input(false);
+    readonly entityLabel = input('Character');
     readonly characterName = input('Character');
     readonly imageUrl = input('');
     readonly portraitInitials = input('');

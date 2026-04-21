@@ -255,21 +255,32 @@
                             }
                         </div>
                     </div>
-                    <label class="field-label" for="map-token-character">Character portrait</label>
-                    <app-dropdown id="map-token-character" ariaLabel="Character portrait" [value]="tokenPlacementCharacterId()" [options]="characterTokenOptions()" [minWidth]="220" [disabled]="isEditorLocked()" (changed)="updateTokenPlacementCharacter($event)"></app-dropdown>
+                    <label class="field-label" for="map-token-character">Character token</label>
+                    <app-dropdown id="map-token-character" ariaLabel="Character token" [value]="tokenPlacementCharacterId()" [options]="characterTokenOptions()" [minWidth]="220" [disabled]="isEditorLocked()" (changed)="updateTokenPlacementCharacter($event)"></app-dropdown>
                     @if (campaignCharacters().length === 0) {
-                    <p class="sidebar-note">Add characters to this campaign first to place portrait-linked tokens.</p>
+                    <p class="sidebar-note">Add characters to this campaign first to place linked tokens.</p>
                     } @else if (characterTokenOptions().length === 1) {
-                    <p class="sidebar-note">Characters need portraits before they can be placed as linked tokens.</p>
+                    <p class="sidebar-note">Characters will appear here once they are part of this campaign.</p>
+                    }
+                    <label class="field-label" for="map-token-npc">NPC token</label>
+                    <app-dropdown id="map-token-npc" ariaLabel="NPC token" [value]="tokenPlacementNpcId()" [options]="npcTokenOptions()" [minWidth]="220" [disabled]="isEditorLocked()" (changed)="updateTokenPlacementNpc($event)"></app-dropdown>
+                    @if (campaignNpcs().length === 0) {
+                    <p class="sidebar-note">Add NPCs to this campaign first to place NPC tokens.</p>
+                    } @else if (npcTokenOptions().length === 1) {
+                    <p class="sidebar-note">NPCs will appear here once they are part of this campaign.</p>
                     }
                     <label class="field-label" for="map-token-upload">Token art</label>
                     <input id="map-token-upload" class="map-file-input" type="file" accept="image/*" [disabled]="isEditorLocked()" (change)="handleTokenUpload($event)" />
-                    @if (tokenPlacementImageUrl()) {
+                    @if (hasPendingTokenPlacement()) {
                     <div class="token-upload-preview-card">
-                        <img class="token-upload-preview" [src]="tokenPlacementImageUrl()" alt="Token preview" />
+                        @if (pendingTokenHasRenderableImage()) {
+                        <img class="token-upload-preview" [src]="tokenPlacementImageUrl()" alt="Token preview" (error)="markPendingTokenImageFailed()" />
+                        } @else {
+                        <div class="token-upload-preview token-avatar-fallback token-avatar-fallback--upload" aria-hidden="true">{{ tokenInitials(tokenPlacementNameDraft()) }}</div>
+                        }
                         <div class="token-upload-copy">
                             <strong>{{ tokenPlacementNameDraft().trim() || 'Token' }}</strong>
-                            <span>{{ tokenPlacementAssignedCharacterId() ? 'Linked to a character and ready to place' : 'Ready to place on the board' }}</span>
+                            <span>{{ tokenPlacementAssignedCharacterId() ? 'Linked to a character and ready to place' : tokenPlacementNpcId() ? 'Linked to an NPC and ready to place' : 'Ready to place on the board' }}</span>
                         </div>
                     </div>
                     }
@@ -325,7 +336,11 @@
                 <div class="selected-icon-card selected-token-card">
                     <div class="selected-icon-header">
                         <div class="selected-token-mark">
+                            @if (tokenHasRenderableImage(token)) {
                             <img [src]="token.imageUrl" [alt]="token.name" />
+                            } @else {
+                            <div class="token-avatar-fallback token-avatar-fallback--panel" aria-hidden="true">{{ tokenInitials(token.name) }}</div>
+                            }
                         </div>
                         <div>
                             <strong>{{ token.name }}</strong>
@@ -637,7 +652,11 @@
                         @for (token of workingMap().tokens; track token.id) {
                         <button type="button" class="map-token" [class.is-selected]="selectedTokenId() === token.id" [style.left.%]="token.x * 100" [style.top.%]="token.y * 100" [style.width]="tokenRenderSize(token.size)" (click)="$event.stopPropagation(); selectToken(token.id)"
                             (pointerdown)="handleTokenPointerDown($event, token.id)" (pointermove)="handleTokenPointerMove($event, token.id)" (pointerup)="handleTokenPointerUp($event, token.id)" (pointercancel)="handleTokenPointerUp($event, token.id)">
-                            <img [src]="token.imageUrl" [alt]="token.name" draggable="false" />
+                            @if (tokenHasRenderableImage(token)) {
+                            <img [src]="token.imageUrl" [alt]="token.name" draggable="false" (error)="markTokenImageFailed(token)" />
+                            } @else {
+                            <div class="token-avatar-fallback" aria-hidden="true">{{ tokenInitials(token.name) }}</div>
+                            }
                             @if (selectedTokenId() === token.id) {
                             <span>{{ token.name }}</span>
                             }

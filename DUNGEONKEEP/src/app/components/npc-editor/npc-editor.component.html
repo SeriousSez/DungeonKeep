@@ -182,6 +182,27 @@
                 <label class="field"><span>Short Description</span><textarea formControlName="shortDescription" rows="3" placeholder="A sharp-eyed fixer with an expensive coat and a permanent smirk." [readonly]="!canEdit()"></textarea></label>
                 <label class="field"><span>Appearance</span><textarea formControlName="appearance" rows="4" placeholder="Describe posture, clothing, scars, jewelry, and any memorable tells." [readonly]="!canEdit()"></textarea></label>
                 <label class="field"><span>Image URL</span><input type="url" formControlName="imageUrl" placeholder="https://example.com/npc-portrait.jpg" [readonly]="!canEdit()" /></label>
+                @if (canEdit()) {
+                <div class="field npc-portrait-action-field">
+                    <span>Portrait Tools</span>
+                    <button type="button" class="ghost-button" (click)="openPortraitModal()">Edit Portrait</button>
+                </div>
+                }
+                @if (editorForm.controls.imageUrl.value.trim()) {
+                <div class="npc-image-preview-card field full-span">
+                    <img class="npc-image-preview" [src]="editorForm.controls.imageUrl.value" [alt]="activeNpcName()" />
+                    <div class="npc-image-preview-copy">
+                        <strong>{{ activeNpcName() }}</strong>
+                        <span>Portrait ready for NPC previews and map tokens.</span>
+                    </div>
+                </div>
+                }
+                @if (portraitGenerationError()) {
+                <p class="editor-status full-span">{{ portraitGenerationError() }}</p>
+                }
+                @if (portraitSaveMessage()) {
+                <p class="editor-status full-span">{{ portraitSaveMessage() }}</p>
+                }
             </div>
         </details>
 
@@ -397,6 +418,13 @@
 
     @if (activeCharacteristicModal()) {
     <app-characteristics-modal [characteristicType]="activeCharacteristicModal()!" [selectedValues]="characteristicModalValues()" (onClose)="closeCharacteristicModal()" (onSubmit)="onCharacteristicSubmit($event)"></app-characteristics-modal>
+    }
+
+    @if (npc(); as activeNpc) {
+    <app-character-portrait-modal [open]="portraitModalOpen()" [entityLabel]="'NPC'" [characterName]="activeNpcName()" [imageUrl]="editorForm.controls.imageUrl.value" [portraitInitials]="activeNpcName().charAt(0) || 'N'" [promptDetails]="portraitPromptDetails()" [isSaving]="isSavingPortrait()"
+        [isGenerating]="isGeneratingPortrait()" [errorMessage]="portraitGenerationError()" [saveMessage]="portraitSaveMessage()" [canRemove]="!!editorForm.controls.imageUrl.value.trim()" (closed)="closePortraitModal()" (promptDetailsChanged)="portraitPromptDetails.set($event)"
+        (fileSelected)="onPortraitFileSelected($event)" (generateRequested)="generatePortrait()" (recropRequested)="openPortraitRecrop()" (removeRequested)="clearPortrait()"></app-character-portrait-modal>
+    <app-character-portrait-crop-modal [open]="portraitCropModalOpen()" [entityLabel]="'NPC'" [imageUrl]="portraitCropSourceImageUrl()" [characterName]="activeNpcName()" (closed)="closePortraitCropModal()" (applied)="applyPortraitCrop($event)"></app-character-portrait-crop-modal>
     }
     }
 </section>

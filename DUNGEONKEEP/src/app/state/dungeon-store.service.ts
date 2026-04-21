@@ -1,9 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 
+import { CampaignNpc } from '../models/campaign-npc.models';
 import { raceMap } from '../data/races';
 import { AbilityScores, Campaign, CampaignDraft, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecorationType, CampaignMapIconType, CampaignMapLabelStyle, CampaignMapLabelTone, CampaignMapToken, CampaignThreadVisibility, CampaignWorldNoteCategory, Character, CharacterDraft, CharacterStatus, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS, SkillProficiencies, ThreatLevel } from '../models/dungeon.models';
-import { ApiCampaignDto, ApiCampaignMapBoardDto, ApiCampaignMapDecorationDto, ApiCampaignMapDto, ApiCampaignMapLabelDto, ApiCampaignMapLabelStyleDto, ApiCampaignMapLibraryDto, ApiCampaignMapTokenDto, ApiCampaignMapTokenMovedDto, ApiCampaignMapVisionMemoryDto, ApiCampaignMapVisionUpdatedDto, ApiCampaignSummaryDto, ApiCampaignWorldNoteDto, ApiCharacterDto, DungeonApiService } from './dungeon-api.service';
+import { ApiCampaignDto, ApiCampaignMapBoardDto, ApiCampaignMapDecorationDto, ApiCampaignMapDto, ApiCampaignMapLabelDto, ApiCampaignMapLabelStyleDto, ApiCampaignMapLibraryDto, ApiCampaignMapTokenDto, ApiCampaignMapTokenMovedDto, ApiCampaignMapVisionMemoryDto, ApiCampaignMapVisionUpdatedDto, ApiCampaignNpcDto, ApiCampaignSummaryDto, ApiCampaignWorldNoteDto, ApiCharacterDto, DungeonApiService } from './dungeon-api.service';
 import { SessionService } from './session.service';
 
 @Injectable({ providedIn: 'root' })
@@ -539,6 +540,48 @@ export class DungeonStoreService {
             this.replaceCampaignFromApi(campaignId, updated);
             return true;
         } catch {
+            return false;
+        }
+    }
+
+    async saveCampaignNpc(campaignId: string, npc: CampaignNpc): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
+        try {
+            const updated = await this.api.saveCampaignNpc(campaignId, this.mapCampaignNpcToApi(npc));
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch (error) {
+            if (error instanceof HttpErrorResponse && error.status === 404) {
+                return await this.syncCampaignNpcNameFallback(campaignId, npc);
+            }
+
+            return false;
+        }
+    }
+
+    async deleteCampaignNpc(campaignId: string, npcId: string): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
+        try {
+            const updated = await this.api.deleteCampaignNpc(campaignId, npcId);
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch (error) {
+            if (error instanceof HttpErrorResponse && error.status === 404) {
+                const campaign = this.campaigns().find((entry) => entry.id === campaignId) ?? null;
+                const npc = campaign?.campaignNpcs.find((entry) => entry.id === npcId) ?? null;
+                if (!npc) {
+                    return false;
+                }
+
+                return await this.removeCampaignNpc(campaignId, npc.name);
+            }
+
             return false;
         }
     }
@@ -1103,7 +1146,7 @@ export class DungeonStoreService {
             nextSession: campaign.nextSession || 'TBD',
             characterCount: Math.max(campaign.characterCount ?? partyCharacterIds.length, partyCharacterIds.length),
             sessionCount: campaign.sessions?.length ?? 0,
-            npcCount: campaign.npcs?.length ?? 0,
+            npcCount: Math.max(campaign.npcs?.length ?? 0, campaign.campaignNpcs?.length ?? 0),
             openThreadCount: campaign.openThreads?.length ?? 0,
             detailsLoaded: true,
             partyCharacterIds,
@@ -1131,6 +1174,7 @@ export class DungeonStoreService {
             activeMapId: activeMap.id,
             loot: [...(campaign.loot ?? [])],
             npcs: [...(campaign.npcs ?? [])],
+            campaignNpcs: (campaign.campaignNpcs ?? []).map((npc) => this.mapCampaignNpcFromApi(npc)),
             currentUserRole: campaign.currentUserRole,
             members: campaign.members.map((member) => ({
                 userId: member.userId,
@@ -1172,6 +1216,7 @@ export class DungeonStoreService {
             activeMapId: '',
             loot: [],
             npcs: [],
+            campaignNpcs: [],
             currentUserRole: campaign.currentUserRole,
             members: []
         };
@@ -1189,6 +1234,94 @@ export class DungeonStoreService {
                 return mapped;
             })
         );
+    }
+
+    private mapCampaignNpcFromApi(npc: ApiCampaignNpcDto): CampaignNpc {
+        return {
+            id: npc.id,
+            name: npc.name,
+            title: npc.title,
+            race: npc.race,
+            classOrRole: npc.classOrRole,
+            faction: npc.faction,
+            occupation: npc.occupation,
+            age: npc.age,
+            gender: npc.gender,
+            alignment: npc.alignment,
+            currentStatus: npc.currentStatus,
+            location: npc.location,
+            shortDescription: npc.shortDescription,
+            appearance: npc.appearance,
+            personalityTraits: [...(npc.personalityTraits ?? [])],
+            ideals: [...(npc.ideals ?? [])],
+            bonds: [...(npc.bonds ?? [])],
+            flaws: [...(npc.flaws ?? [])],
+            motivations: npc.motivations,
+            goals: npc.goals,
+            fears: npc.fears,
+            secrets: [...(npc.secrets ?? [])],
+            mannerisms: [...(npc.mannerisms ?? [])],
+            voiceNotes: npc.voiceNotes,
+            backstory: npc.backstory,
+            notes: npc.notes,
+            combatNotes: npc.combatNotes,
+            statBlockReference: npc.statBlockReference,
+            tags: [...(npc.tags ?? [])],
+            relationships: (npc.relationships ?? []).map((relationship) => ({
+                id: relationship.id,
+                targetNpcId: relationship.targetNpcId,
+                relationshipType: relationship.relationshipType,
+                description: relationship.description
+            })),
+            questLinks: [...(npc.questLinks ?? [])],
+            sessionAppearances: [...(npc.sessionAppearances ?? [])],
+            inventory: [...(npc.inventory ?? [])],
+            imageUrl: npc.imageUrl,
+            hostility: npc.hostility === 'Friendly' || npc.hostility === 'Hostile' ? npc.hostility : 'Indifferent',
+            isAlive: npc.isAlive,
+            isImportant: npc.isImportant,
+            updatedAt: npc.updatedAt
+        };
+    }
+
+    private mapCampaignNpcToApi(npc: CampaignNpc): ApiCampaignNpcDto {
+        return {
+            ...npc,
+            relationships: npc.relationships.map((relationship) => ({
+                id: relationship.id,
+                targetNpcId: relationship.targetNpcId,
+                relationshipType: relationship.relationshipType,
+                description: relationship.description
+            }))
+        };
+    }
+
+    private async syncCampaignNpcNameFallback(campaignId: string, npc: CampaignNpc): Promise<boolean> {
+        const campaign = this.campaigns().find((entry) => entry.id === campaignId) ?? null;
+        const existingNpc = campaign?.campaignNpcs.find((entry) => entry.id === npc.id)
+            ?? campaign?.campaignNpcs.find((entry) => entry.name.trim().toLowerCase() === npc.name.trim().toLowerCase())
+            ?? null;
+
+        if (!existingNpc) {
+            return await this.addCampaignNpc(campaignId, npc.name);
+        }
+
+        if (existingNpc.name === npc.name) {
+            return true;
+        }
+
+        const added = await this.addCampaignNpc(campaignId, npc.name);
+        if (!added) {
+            return false;
+        }
+
+        const removed = await this.removeCampaignNpc(campaignId, existingNpc.name);
+        if (!removed) {
+            await this.removeCampaignNpc(campaignId, npc.name);
+            return false;
+        }
+
+        return true;
     }
 
     private tokenMoveRequestKey(campaignId: string, mapId: string, tokenId: string): string {

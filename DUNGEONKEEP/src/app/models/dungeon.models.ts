@@ -1,3 +1,5 @@
+import { CampaignNpc } from './campaign-npc.models';
+
 export type CampaignTone =
     | 'Heroic'
     | 'Grim'
@@ -214,6 +216,7 @@ export interface Campaign {
     activeMapId: string;
     loot: string[];
     npcs: string[];
+    campaignNpcs: CampaignNpc[];
     currentUserRole?: CampaignMemberRole;
     members?: CampaignMember[];
 }

@@ -6,6 +6,9 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MapArtBattlemapLocale, MapArtGenerationModalComponent, MapArtGenerationOptions, MapArtLighting } from '../../components/map-art-generation-modal/map-art-generation-modal.component';
 import { TokenImageCropModalComponent } from '../../components/token-image-crop-modal/token-image-crop-modal.component';
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
+import { mergeCampaignNpcSources } from '../../data/campaign-npc.helpers';
+import { loadCampaignNpcDrafts } from '../../data/campaign-npc.storage';
+import { CampaignNpc } from '../../models/campaign-npc.models';
 import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelFontFamily, CampaignMapLabelTone, CampaignMapPoint, CampaignMapStroke, CampaignMapToken, CampaignMapWall, CampaignTone, Character, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS } from '../../models/dungeon.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { CampaignMapTokenMovedEvent, CampaignMapVisionUpdatedEvent, CampaignRealtimeService } from '../../state/campaign-realtime.service';
@@ -283,6 +286,7 @@ export class CampaignMapPageComponent {
     readonly tokenNoteDraft = signal('');
     readonly tokenAssignmentDraft = signal('none');
     readonly tokenPlacementCharacterId = signal('');
+    readonly tokenPlacementNpcId = signal('');
     readonly tokenPlacementAssignedUserId = signal<string | null>(null);
     readonly tokenPlacementAssignedCharacterId = signal<string | null>(null);
     readonly tokenPlacementNameDraft = signal('Token');
@@ -290,6 +294,8 @@ export class CampaignMapPageComponent {
     readonly tokenPlacementImageUrl = signal('');
     readonly tokenPlacementSize = signal(1);
     readonly tokenUploadFeedback = signal('');
+    readonly pendingTokenImageLoadFailed = signal(false);
+    readonly failedTokenImages = signal<Record<string, string>>({});
     readonly tokenCropModalOpen = signal(false);
     readonly tokenCropSourceImageUrl = signal('');
     readonly tokenCropSourceName = signal('Token');
@@ -505,17 +511,25 @@ export class CampaignMapPageComponent {
             .filter((character) => this.isCharacterInCampaign(character, campaignId))
             .sort((left, right) => left.name.localeCompare(right.name));
     });
+    readonly campaignNpcs = computed<CampaignNpc[]>(() => {
+        const campaign = this.selectedCampaign();
+        const campaignId = this.campaignId();
+        if (!campaign || !campaignId) {
+            return [];
+        }
+
+        return mergeCampaignNpcSources(campaign.npcs, campaign.campaignNpcs ?? [], loadCampaignNpcDrafts(campaignId) ?? []);
+    });
     readonly characterTokenOptions = computed<DropdownOption[]>(() => {
         const options: DropdownOption[] = [
             {
                 value: '',
-                label: 'Choose a character portrait',
+                label: 'Choose a character',
                 description: 'Place a token using a party character portrait and auto-assign control.'
             }
         ];
 
         options.push(...this.campaignCharacters()
-            .filter((character) => !!character.image)
             .map((character) => ({
                 value: character.id,
                 label: character.name,
@@ -523,6 +537,25 @@ export class CampaignMapPageComponent {
                     ? `${character.ownerDisplayName} will automatically control this token.`
                     : 'This token will stay linked to the selected character.',
                 group: 'Character Portraits'
+            } satisfies DropdownOption)));
+
+        return options;
+    });
+    readonly npcTokenOptions = computed<DropdownOption[]>(() => {
+        const options: DropdownOption[] = [
+            {
+                value: '',
+                label: 'Choose an NPC',
+                description: 'Place a token using a campaign NPC portrait.'
+            }
+        ];
+
+        options.push(...this.campaignNpcs()
+            .map((npc) => ({
+                value: npc.id,
+                label: npc.name,
+                description: npc.title || npc.classOrRole || npc.location || 'Campaign NPC portrait',
+                group: 'NPC Portraits'
             } satisfies DropdownOption)));
 
         return options;
@@ -691,7 +724,11 @@ export class CampaignMapPageComponent {
         const renderPoints = previewPoint ? [...points, previewPoint] : points;
         return this.formatStrokePoints(renderPoints);
     });
-    readonly hasPendingTokenPlacement = computed(() => this.activeTool() === 'token' && !!this.tokenPlacementImageUrl());
+    readonly hasPendingTokenPlacement = computed(() => this.activeTool() === 'token' && !!(
+        this.tokenPlacementImageUrl().trim()
+        || this.tokenPlacementCharacterId()
+        || this.tokenPlacementNpcId()
+    ));
     readonly placementHint = computed(() => {
         if (this.ctrlPolylineActive()) {
             return 'Ctrl line mode is active. Click to add corners, hold Shift to snap them to the grid, and release Ctrl to apply the line.';
@@ -1455,31 +1492,66 @@ export class CampaignMapPageComponent {
         const characterId = typeof value === 'string' ? value : String(value);
         if (!characterId) {
             this.tokenPlacementCharacterId.set('');
+            this.tokenPlacementNpcId.set('');
             this.tokenPlacementAssignedCharacterId.set(null);
             this.tokenPlacementAssignedUserId.set(null);
             this.tokenUploadFeedback.set(this.tokenPlacementImageUrl() ? 'Custom token art ready. Click the board to place it.' : '');
             return;
         }
 
-        const character = this.campaignCharacters().find((entry) => entry.id === characterId && !!entry.image);
-        if (!character?.image) {
-            this.tokenUploadFeedback.set('That character does not have a portrait yet. Add one on the character page first.');
+        const character = this.campaignCharacters().find((entry) => entry.id === characterId);
+        if (!character) {
+            this.tokenUploadFeedback.set('That character is not currently available in this campaign.');
             this.tokenPlacementCharacterId.set('');
+            this.tokenPlacementNpcId.set('');
             this.tokenPlacementAssignedCharacterId.set(null);
             this.tokenPlacementAssignedUserId.set(null);
             return;
         }
 
         this.tokenPlacementCharacterId.set(character.id);
-        this.tokenPlacementImageUrl.set(character.image);
+        this.tokenPlacementNpcId.set('');
+        this.tokenPlacementImageUrl.set(character.image?.trim() ?? '');
+        this.pendingTokenImageLoadFailed.set(false);
         this.tokenPlacementNameDraft.set(character.name);
         this.tokenPlacementNoteDraft.set('');
         this.tokenPlacementAssignedCharacterId.set(character.id);
         this.tokenPlacementAssignedUserId.set(character.ownerUserId ?? null);
         this.tokenPlacementSize.set(1);
         this.tokenUploadFeedback.set(character.ownerDisplayName
-            ? `${character.name} is ready to place. ${character.ownerDisplayName} will be able to move this token.`
-            : `${character.name} is ready to place. This token will stay linked to the selected character.`);
+            ? `${character.name} is ready to place. ${character.ownerDisplayName} will be able to move this token.${character.image?.trim() ? '' : ' The token will use initials until a portrait is added.'}`
+            : `${character.name} is ready to place. This token will stay linked to the selected character.${character.image?.trim() ? '' : ' The token will use initials until a portrait is added.'}`);
+        this.selectTokenTool();
+        this.cdr.detectChanges();
+    }
+
+    updateTokenPlacementNpc(value: string | number): void {
+        const npcId = typeof value === 'string' ? value : String(value);
+        if (!npcId) {
+            this.tokenPlacementNpcId.set('');
+            this.tokenPlacementAssignedCharacterId.set(null);
+            this.tokenPlacementAssignedUserId.set(null);
+            this.tokenUploadFeedback.set(this.tokenPlacementImageUrl() ? 'Custom token art ready. Click the board to place it.' : '');
+            return;
+        }
+
+        const npc = this.campaignNpcs().find((entry) => entry.id === npcId);
+        if (!npc) {
+            this.tokenUploadFeedback.set('That NPC is not currently available in this campaign.');
+            this.tokenPlacementNpcId.set('');
+            return;
+        }
+
+        this.tokenPlacementNpcId.set(npc.id);
+        this.tokenPlacementCharacterId.set('');
+        this.tokenPlacementImageUrl.set(npc.imageUrl?.trim() ?? '');
+        this.pendingTokenImageLoadFailed.set(false);
+        this.tokenPlacementNameDraft.set(npc.name);
+        this.tokenPlacementNoteDraft.set(npc.title || npc.classOrRole || '');
+        this.tokenPlacementAssignedCharacterId.set(null);
+        this.tokenPlacementAssignedUserId.set(null);
+        this.tokenPlacementSize.set(1);
+        this.tokenUploadFeedback.set(`${npc.name} is ready to place as an NPC token.${npc.imageUrl?.trim() ? '' : ' The token will use initials until a portrait is added.'}`);
         this.selectTokenTool();
         this.cdr.detectChanges();
     }
@@ -1636,6 +1708,48 @@ export class CampaignMapPageComponent {
         const verticalCellPercent = (MAP_BOARD_HEIGHT_RATIO * 100) / this.gridRows();
 
         return `calc(min(${horizontalCellPercent}%, ${verticalCellPercent}%) * ${span})`;
+    }
+
+    tokenHasRenderableImage(token: CampaignMapToken): boolean {
+        const imageUrl = token.imageUrl.trim();
+        if (!imageUrl) {
+            return false;
+        }
+
+        return this.failedTokenImages()[token.id] !== imageUrl;
+    }
+
+    markTokenImageFailed(token: CampaignMapToken): void {
+        const imageUrl = token.imageUrl.trim();
+        if (!imageUrl) {
+            return;
+        }
+
+        this.failedTokenImages.update((current) => current[token.id] === imageUrl
+            ? current
+            : { ...current, [token.id]: imageUrl });
+    }
+
+    tokenInitials(name: string): string {
+        const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
+        if (parts.length === 0) {
+            return 'TK';
+        }
+
+        return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
+    }
+
+    pendingTokenHasRenderableImage(): boolean {
+        return !!this.tokenPlacementImageUrl().trim() && !this.pendingTokenImageLoadFailed();
+    }
+
+    markPendingTokenImageFailed(): void {
+        if (!this.tokenPlacementImageUrl().trim()) {
+            return;
+        }
+
+        this.pendingTokenImageLoadFailed.set(true);
+        this.cdr.detectChanges();
     }
 
     gridColumns(): number {
@@ -1877,6 +1991,7 @@ export class CampaignMapPageComponent {
 
             const tokenName = this.sanitizeTokenName(file.name);
             this.tokenPlacementCharacterId.set('');
+            this.tokenPlacementNpcId.set('');
             this.tokenPlacementAssignedCharacterId.set(null);
             this.tokenPlacementAssignedUserId.set(null);
             this.tokenCropSourceImageUrl.set(imageUrl);
@@ -1902,9 +2017,11 @@ export class CampaignMapPageComponent {
         }
 
         this.tokenPlacementCharacterId.set('');
+        this.tokenPlacementNpcId.set('');
         this.tokenPlacementAssignedUserId.set(null);
         this.tokenPlacementAssignedCharacterId.set(null);
         this.tokenPlacementImageUrl.set('');
+        this.pendingTokenImageLoadFailed.set(false);
         this.tokenPlacementNameDraft.set('Token');
         this.tokenPlacementNoteDraft.set('');
         this.tokenPlacementSize.set(1);
@@ -1923,9 +2040,11 @@ export class CampaignMapPageComponent {
     applyTokenCrop(croppedImageUrl: string): void {
         const tokenName = this.tokenCropSourceName().trim() || 'Token';
         this.tokenPlacementCharacterId.set('');
+        this.tokenPlacementNpcId.set('');
         this.tokenPlacementAssignedCharacterId.set(null);
         this.tokenPlacementAssignedUserId.set(null);
         this.tokenPlacementImageUrl.set(croppedImageUrl);
+        this.pendingTokenImageLoadFailed.set(false);
         this.tokenPlacementNameDraft.set(tokenName);
         this.tokenPlacementNoteDraft.set('');
         this.tokenPlacementSize.set(1);
@@ -4453,6 +4572,7 @@ export class CampaignMapPageComponent {
         this.tokenPlacementNameDraft.set('Token');
         this.tokenPlacementNoteDraft.set('');
         this.tokenPlacementImageUrl.set('');
+        this.tokenPlacementNpcId.set('');
         this.tokenPlacementSize.set(1);
         this.tokenAssignmentDraft.set('none');
         this.tokenUploadFeedback.set('');

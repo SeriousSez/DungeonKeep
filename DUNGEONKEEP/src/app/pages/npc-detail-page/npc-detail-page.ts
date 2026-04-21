@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { MultiSelectDropdownComponent, type MultiSelectOptionGroup } from '../../components/multi-select-dropdown/multi-select-dropdown.component';
-import { cloneNpcForCampaign, mergeStoredNpcDrafts, sanitizeNpc } from '../../data/campaign-npc.helpers';
+import { cloneNpcForCampaign, mergeCampaignNpcSources, sanitizeNpc } from '../../data/campaign-npc.helpers';
 import { loadCampaignNpcDrafts, loadNpcLibrary, saveCampaignNpcDrafts } from '../../data/campaign-npc.storage';
 import { CampaignNpc } from '../../models/campaign-npc.models';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
@@ -36,6 +36,7 @@ export class NpcDetailPage {
   readonly importBusy = signal(false);
   readonly importError = signal('');
   readonly importMessage = signal('');
+  readonly portraitLoadFailed = signal(false);
 
   readonly currentCampaign = computed(() =>
     this.store.campaigns().find((campaign) => campaign.id === this.campaignId()) ?? null
@@ -132,6 +133,14 @@ export class NpcDetailPage {
       description: relationship.description || 'No details recorded.'
     }));
   });
+  readonly showPortraitImage = computed(() => {
+    const npc = this.npc();
+    return !!npc?.imageUrl.trim() && !this.portraitLoadFailed();
+  });
+  readonly npcInitial = computed(() => {
+    const name = this.npc()?.name.trim() ?? '';
+    return name.charAt(0).toUpperCase() || '?';
+  });
 
   constructor() {
     this.route.paramMap
@@ -144,6 +153,7 @@ export class NpcDetailPage {
         this.allNpcs.set([]);
         this.npc.set(null);
         this.loadError.set('');
+        this.portraitLoadFailed.set(false);
         this.cdr.detectChanges();
       });
 
@@ -190,7 +200,7 @@ export class NpcDetailPage {
       }
 
       const stored = loadCampaignNpcDrafts(campaignId) ?? [];
-      const merged = mergeStoredNpcDrafts(campaign.npcs, stored);
+      const merged = mergeCampaignNpcSources(campaign.npcs, campaign.campaignNpcs ?? [], stored);
       this.allNpcs.set(merged);
       this.npc.set(merged.find((entry) => entry.id === npcId) ?? null);
 
@@ -201,6 +211,11 @@ export class NpcDetailPage {
       this.initialized.set(true);
       this.cdr.detectChanges();
     });
+  }
+
+  markPortraitLoadFailed(): void {
+    this.portraitLoadFailed.set(true);
+    this.cdr.detectChanges();
   }
 
   async importNpcToCampaign(): Promise<void> {
@@ -221,7 +236,7 @@ export class NpcDetailPage {
 
       for (const targetCampaign of targetCampaigns) {
         const storedDrafts = loadCampaignNpcDrafts(targetCampaign.id) ?? [];
-        const mergedDrafts = mergeStoredNpcDrafts(targetCampaign.npcs, storedDrafts);
+        const mergedDrafts = mergeCampaignNpcSources(targetCampaign.npcs, targetCampaign.campaignNpcs ?? [], storedDrafts);
         const importedNpc = cloneNpcForCampaign(sourceNpc, mergedDrafts.map((npc) => npc.name));
 
         saveCampaignNpcDrafts(targetCampaign.id, [importedNpc, ...mergedDrafts]);

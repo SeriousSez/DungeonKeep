@@ -6,7 +6,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { DropdownOption } from '../../components/dropdown/dropdown.component';
 import { NpcEditorComponent } from '../../components/npc-editor/npc-editor.component';
-import { createDefaultNpc, hasNpcNameConflict, mergeStoredNpcDrafts, sanitizeNpc, touchNpc } from '../../data/campaign-npc.helpers';
+import { createDefaultNpc, hasNpcNameConflict, mergeCampaignNpcSources, sanitizeNpc, touchNpc } from '../../data/campaign-npc.helpers';
 import { loadCampaignNpcDrafts, loadNpcLibrary, saveCampaignNpcDrafts, saveNpcLibrary } from '../../data/campaign-npc.storage';
 import { CampaignNpc } from '../../models/campaign-npc.models';
 import { ApiGenerateNpcDraftResponse, DungeonApiService } from '../../state/dungeon-api.service';
@@ -132,7 +132,7 @@ export class NpcEditorPageComponent {
             }
 
             const stored = loadCampaignNpcDrafts(campaignId) ?? [];
-            const merged = mergeStoredNpcDrafts(campaign.npcs, stored);
+            const merged = mergeCampaignNpcSources(campaign.npcs, campaign.campaignNpcs ?? [], stored);
             this.allNpcs.set(merged);
 
             if (npcId) {
@@ -222,10 +222,6 @@ export class NpcEditorPageComponent {
         }
 
         const sanitizedNpc = sanitizeNpc(npc);
-        const existingNpc = this.npcId()
-            ? this.allNpcs().find((entry) => entry.id === this.npcId()) ?? null
-            : null;
-
         if (hasNpcNameConflict(this.allNpcs(), sanitizedNpc)) {
             this.saveError.set('Choose a unique NPC name before saving.');
             this.cdr.detectChanges();
@@ -240,9 +236,9 @@ export class NpcEditorPageComponent {
             return;
         }
 
-        const syncSucceeded = await this.syncNpcName(existingNpc, sanitizedNpc);
+        const syncSucceeded = await this.store.saveCampaignNpc(this.campaignId(), sanitizedNpc);
         if (!syncSucceeded) {
-            this.saveError.set('NPC draft saved locally, but the campaign NPC name list could not be synced.');
+            this.saveError.set('NPC draft saved locally, but the campaign NPC could not be synced.');
             this.cdr.detectChanges();
             return;
         }
@@ -327,38 +323,6 @@ export class NpcEditorPageComponent {
             isAlive: generated.isAlive,
             isImportant: generated.isImportant
         }));
-    }
-
-    private async syncNpcName(previousNpc: CampaignNpc | null, nextNpc: CampaignNpc): Promise<boolean> {
-        if (!this.canEdit()) {
-            return true;
-        }
-
-        const campaignId = this.campaignId();
-        if (!campaignId) {
-            return false;
-        }
-
-        if (!previousNpc) {
-            return await this.store.addCampaignNpc(campaignId, nextNpc.name);
-        }
-
-        if (previousNpc.name === nextNpc.name) {
-            return true;
-        }
-
-        const added = await this.store.addCampaignNpc(campaignId, nextNpc.name);
-        if (!added) {
-            return false;
-        }
-
-        const removed = await this.store.removeCampaignNpc(campaignId, previousNpc.name);
-        if (!removed) {
-            await this.store.removeCampaignNpc(campaignId, nextNpc.name);
-            return false;
-        }
-
-        return true;
     }
 
     private readApiError(error: unknown, fallback: string): string {

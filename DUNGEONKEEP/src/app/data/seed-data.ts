@@ -146,6 +146,7 @@ export const seedCampaigns: Campaign[] = [
         ],
         activeMapId: 'map-board-crown-of-embers',
         loot: ['Glasssteel buckler', 'Map to the Cinder Vault', 'Three sealed phoenix feathers'],
+        campaignNpcs: [],
         npcs: ['Regent Maelis', 'Brother Tovin', 'Rook the soot broker']
     },
     {
@@ -279,11 +280,13 @@ export const seedCampaigns: Campaign[] = [
         ],
         activeMapId: 'map-board-moonwake-ledger',
         loot: ['Whisper-shell compass', 'Stormglass vial'],
+        campaignNpcs: [],
         npcs: ['Captain Nereza', 'Ledger-Keeper Sol', 'The Lantern Magistrate']
     },
     {
         id: 'wild-below',
         name: 'The Wild Below',
+        campaignNpcs: [],
         setting: 'Rootmaze Hollow',
         tone: 'Chaotic',
         levelStart: 1,

@@ -39,6 +39,16 @@
     background: var(--gradient-primary);
 }
 
+.npc-preview-portrait {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    object-fit: cover;
+    display: block;
+    border: 1px solid var(--panel-border);
+    background: color-mix(in srgb, var(--surface-raised) 86%, var(--accent-primary) 14%);
+}
+
 .npc-preview-copy h3,
 .npc-preview-panel h4 {
     margin: 0;

@@ -180,24 +180,52 @@ export function cloneNpcForCampaign(source: CampaignNpc, namesInUse: string[]): 
 }
 
 export function mergeStoredNpcDrafts(legacyNames: readonly string[], storedNpcs: readonly CampaignNpc[]): CampaignNpc[] {
-    const normalizedStored = storedNpcs.map((npc) => sanitizeNpc(npc));
-    const storedByName = new Map(normalizedStored.map((npc) => [npc.name.toLowerCase(), npc]));
+    return mergeCampaignNpcSources(legacyNames, [], storedNpcs);
+}
+
+export function mergeCampaignNpcSources(
+    legacyNames: readonly string[],
+    persistedNpcs: readonly CampaignNpc[],
+    draftNpcs: readonly CampaignNpc[]
+): CampaignNpc[] {
+    const normalizedPersisted = persistedNpcs.map((npc) => sanitizeNpc(npc));
+    const normalizedDrafts = draftNpcs.map((npc) => sanitizeNpc(npc));
+    const combinedById = new Map<string, CampaignNpc>();
+    const combinedByName = new Map<string, CampaignNpc>();
+
+    for (const npc of normalizedPersisted) {
+        combinedById.set(npc.id, npc);
+        combinedByName.set(npc.name.toLowerCase(), npc);
+    }
+
+    for (const npc of normalizedDrafts) {
+        const existing = combinedById.get(npc.id);
+        combinedById.set(npc.id, npc);
+        combinedByName.set(npc.name.toLowerCase(), npc);
+        if (existing) {
+            combinedByName.set(existing.name.toLowerCase(), npc);
+        }
+    }
+
+    const combined = [...combinedById.values()];
     const merged: CampaignNpc[] = [];
+    const usedIds = new Set<string>();
 
     for (const legacyName of legacyNames) {
         const key = legacyName.trim().toLowerCase();
-        const existing = storedByName.get(key);
+        const existing = combinedByName.get(key);
         if (existing) {
             merged.push(existing);
-            storedByName.delete(key);
+            usedIds.add(existing.id);
         } else if (legacyName.trim()) {
             merged.push(createNpcFromLegacyName(legacyName));
         }
     }
 
-    for (const npc of normalizedStored) {
-        if (!merged.some((entry) => entry.id === npc.id)) {
+    for (const npc of combined) {
+        if (!usedIds.has(npc.id)) {
             merged.push(npc);
+            usedIds.add(npc.id);
         }
     }
 

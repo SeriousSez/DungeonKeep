@@ -3,7 +3,7 @@
     <section class="portrait-modal panel" role="dialog" aria-modal="true" [attr.aria-label]="'Edit portrait for ' + characterName()" (click)="$event.stopPropagation()">
         <header class="portrait-modal-header">
             <div>
-                <p class="portrait-modal-eyebrow">Character Portrait</p>
+                <p class="portrait-modal-eyebrow">{{ entityLabel() }} Portrait</p>
                 <h2>Edit Portrait</h2>
                 <p>Upload art or generate a new portrait with AI-guided direction.</p>
             </div>

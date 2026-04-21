@@ -14,6 +14,8 @@ public interface ICampaignRepository
     Task<Campaign?> UpdateSessionAsync(Guid campaignId, CampaignSessionDto session, CancellationToken cancellationToken = default);
     Task<Campaign?> RemoveSessionAsync(Guid campaignId, Guid sessionId, CancellationToken cancellationToken = default);
     Task<Campaign?> AddNpcAsync(Guid campaignId, string name, CancellationToken cancellationToken = default);
+    Task<Campaign?> SaveNpcAsync(Guid campaignId, CampaignNpcDto npc, CancellationToken cancellationToken = default);
+    Task<Campaign?> RemoveNpcByIdAsync(Guid campaignId, Guid npcId, CancellationToken cancellationToken = default);
     Task<Campaign?> RemoveNpcAsync(Guid campaignId, string name, CancellationToken cancellationToken = default);
     Task<Campaign?> AddLootAsync(Guid campaignId, string name, CancellationToken cancellationToken = default);
     Task<Campaign?> RemoveLootAsync(Guid campaignId, string name, CancellationToken cancellationToken = default);

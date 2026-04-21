@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { CampaignNpc } from '../models/campaign-npc.models';
 
 type ApiCampaignTone =
     | 'Heroic'
@@ -38,6 +39,7 @@ export interface ApiCampaignDto {
     characterCount: number;
     sessions: ApiCampaignSessionDto[];
     npcs: string[];
+    campaignNpcs: ApiCampaignNpcDto[];
     loot: string[];
     openThreads: ApiCampaignThreadDto[];
     worldNotes: ApiCampaignWorldNoteDto[];
@@ -73,6 +75,17 @@ export interface ApiCampaignSessionDto {
     location: string;
     objective: string;
     threat: 'Low' | 'Moderate' | 'High' | 'Deadly';
+}
+
+export interface ApiCampaignNpcRelationshipDto {
+    id: string;
+    targetNpcId: string;
+    relationshipType: string;
+    description: string;
+}
+
+export interface ApiCampaignNpcDto extends CampaignNpc {
+    relationships: ApiCampaignNpcRelationshipDto[];
 }
 
 export interface ApiCampaignThreadDto {
@@ -925,6 +938,14 @@ export class DungeonApiService {
 
     async addCampaignNpc(campaignId: string, name: string): Promise<ApiCampaignDto> {
         return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/npcs`, { name }));
+    }
+
+    async saveCampaignNpc(campaignId: string, npc: ApiCampaignNpcDto): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/npcs/${npc.id}`, { npc }));
+    }
+
+    async deleteCampaignNpc(campaignId: string, npcId: string): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.delete<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/npcs/${npcId}`));
     }
 
     async removeCampaignNpc(campaignId: string, name: string): Promise<ApiCampaignDto> {

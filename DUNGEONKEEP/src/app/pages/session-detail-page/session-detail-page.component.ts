@@ -7,7 +7,7 @@ import { marked } from 'marked';
 
 import { CampaignNpcPreviewModalComponent } from '../../components/campaign-npc-preview-modal/campaign-npc-preview-modal.component';
 import { MonsterStatBlockModalComponent } from '../../components/monster-stat-block-modal/monster-stat-block-modal.component';
-import { createDefaultNpc, sanitizeNpc, touchNpc } from '../../data/campaign-npc.helpers';
+import { createDefaultNpc, mergeCampaignNpcSources, sanitizeNpc, touchNpc } from '../../data/campaign-npc.helpers';
 import { loadCampaignNpcDrafts, saveCampaignNpcDrafts } from '../../data/campaign-npc.storage';
 import { monsterCatalog } from '../../data/monster-catalog.generated';
 import { readStoredSessionEditorDraft } from '../../data/session-editor.storage';
@@ -99,7 +99,7 @@ export class SessionDetailPageComponent {
         this.npcDraftVersion();
 
         return new Map(
-            (loadCampaignNpcDrafts(this.campaignId()) ?? [])
+            mergeCampaignNpcSources(this.currentCampaign()?.npcs ?? [], this.currentCampaign()?.campaignNpcs ?? [], loadCampaignNpcDrafts(this.campaignId()) ?? [])
                 .map((npc) => sanitizeNpc(npc))
                 .map((npc) => [normalizeLookupValue(npc.name), npc] as const)
         );
@@ -405,11 +405,9 @@ export class SessionDetailPageComponent {
             const savedNpc = this.persistCampaignNpcDraft(draft);
             let syncMessage = '';
 
-            if (!this.isCampaignNpc(savedNpc.name)) {
-                const added = await this.store.addCampaignNpc(campaignId, savedNpc.name);
-                if (!added) {
-                    syncMessage = ' The full NPC draft was saved locally, but the campaign NPC name list could not be synced.';
-                }
+            const synced = await this.store.saveCampaignNpc(campaignId, savedNpc);
+            if (!synced) {
+                syncMessage = ' The full NPC draft was saved locally, but the campaign NPC could not be synced.';
             }
 
             if (!this.interactionMessage()) {

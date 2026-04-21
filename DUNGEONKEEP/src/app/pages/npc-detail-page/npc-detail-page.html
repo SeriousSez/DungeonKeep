@@ -6,7 +6,11 @@
         <div class="detail-hero-copy">
             <p class="eyebrow">{{ pageEyebrow() }}</p>
             <div class="detail-title-row">
-                <div class="npc-sigil" aria-hidden="true">{{ npc.name.charAt(0) || '?' }}</div>
+                @if (showPortraitImage()) {
+                <img class="npc-portrait" [src]="npc.imageUrl" [alt]="npc.name + ' portrait'" (error)="markPortraitLoadFailed()" />
+                } @else {
+                <div class="npc-sigil" aria-hidden="true">{{ npcInitial() }}</div>
+                }
                 <div>
                     <h1>{{ npc.name }}</h1>
                     <p class="detail-summary">{{ pageSummary() }}</p>
