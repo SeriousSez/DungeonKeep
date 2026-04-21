@@ -112,13 +112,13 @@
                     </div>
                     <div class="member-info">
                         <h3>{{ character.name }}</h3>
-                        <p class="member-meta">{{ character.className }} • Level {{ character.level }} • {{ character.status }}</p>
+                        <p class="member-meta">{{ character.className }} • Level {{ character.level }}</p>
+                        <p class="member-owner">Owner: {{ character.ownerDisplayName || character.playerName }}</p>
                     </div>
                 </a>
                 <div class="party-member-side">
                     <div class="member-pill-group">
                         <span class="role-badge">{{ character.role }}</span>
-                        <span class="member-status-pill">{{ character.status }}</span>
                     </div>
                     @if (campaign.currentUserRole === 'Owner') {
                     <div class="member-actions">
@@ -154,6 +154,7 @@
                     <div class="member-info">
                         <h3>{{ character.name }}</h3>
                         <p class="member-meta">{{ character.className }} • Level {{ character.level }} • Not currently active</p>
+                        <p class="member-owner">Owner: {{ character.ownerDisplayName || character.playerName }}</p>
                     </div>
                 </a>
                 <div class="party-member-side">

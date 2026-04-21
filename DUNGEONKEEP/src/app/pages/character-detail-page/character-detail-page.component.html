@@ -95,7 +95,13 @@
 
                 <div class="header-actions">
                     <div class="header-status-row">
+                        @if (char.status !== 'Ready') {
                         <span class="status-pill" [attr.data-status]="char.status">{{ char.status }}</span>
+                        }
+                        <div class="header-rest-actions">
+                            <button type="button" class="header-rest-button" [class.is-active]="activeRestPopup() === 'short'" [disabled]="!char.canEdit || isApplyingRest()" (click)="activeRestPopup() === 'short' ? closeRestPopup() : openShortRestPopup()">Short Rest</button>
+                            <button type="button" class="header-rest-button" [class.is-active]="activeRestPopup() === 'long'" [disabled]="!char.canEdit || isApplyingRest()" (click)="activeRestPopup() === 'long' ? closeRestPopup() : openLongRestPopup()">Long Rest</button>
+                        </div>
                         <a class="edit-character-btn" [routerLink]="['/characters', char.id, 'builder', 'class']" aria-label="Open character builder" title="Open Character Builder">
                             <i class="fa-duotone fa-thin fa-scroll"></i>
                         </a>
@@ -2370,6 +2376,136 @@
                 }
             </article>
             }
+        </section>
+    </aside>
+    }
+
+    @if (activeRestPopup() === 'short' && character(); as restCharacter) {
+    <aside class="panel detail-popup rest-popup" role="dialog" aria-label="Short Rest popup">
+        <header class="rest-popup-header">
+            <div>
+                <h3>Short Rest</h3>
+            </div>
+            <button type="button" class="ghost-button" (click)="closeRestPopup()">Close</button>
+        </header>
+
+        <p class="rest-popup-copy">A short rest is a period of downtime, at least 1 hour long, during which a character does nothing more strenuous than eating, drinking, reading, and tending to wounds.</p>
+
+        <section class="rest-popup-section">
+            <h4>Recover</h4>
+            <label class="rest-popup-check">
+                <input type="checkbox" [checked]="shortRestResetMaxHp()" (change)="onShortRestResetMaxHpChanged($any($event.target).checked)" />
+                <span>Reset Maximum HP changes during this rest</span>
+            </label>
+            <label class="rest-popup-check">
+                <input type="checkbox" [checked]="shortRestAutoHeal()" (change)="onShortRestAutoHealChanged($any($event.target).checked)" />
+                <span>Automatically apply healing with dice result</span>
+            </label>
+        </section>
+
+        <section class="rest-popup-section">
+            <div class="rest-popup-hitdice-heading">
+                <h4>{{ restCharacter.className }}</h4>
+                <p>Hit Die: 1d{{ getRestHitDie() }} · Total: {{ restCharacter.level }}</p>
+            </div>
+            @if (getShortRestAdditionalHitDiceCount() > 0) {
+            <div class="rest-hit-dice-preview" aria-live="polite">
+                <span>{{ getShortRestPreviewFormula() }}</span>
+                <i class="fa-duotone fa-thin fa-heart"></i>
+            </div>
+            }
+            <div class="rest-hit-dice-grid">
+                @for (hitDieIndex of getRestHitDieIndexes(); track hitDieIndex) {
+                <button type="button" class="rest-hit-die" [class.is-selected]="shortRestUsedHitDieSlots().includes(hitDieIndex)" [disabled]="!restCharacter.canEdit" [attr.aria-pressed]="shortRestUsedHitDieSlots().includes(hitDieIndex)" (click)="toggleShortRestHitDie(hitDieIndex)"></button>
+                }
+            </div>
+        </section>
+
+        @if (restPopupError()) {
+        <p class="rest-popup-error">{{ restPopupError() }}</p>
+        }
+
+        @if (restPopupResult()) {
+        <p class="rest-popup-result">{{ restPopupResult() }}</p>
+        }
+
+        <div class="rest-popup-actions">
+            <button type="button" class="rest-popup-primary" [disabled]="!restCharacter.canEdit || isApplyingRest()" (click)="takeShortRest()">Take Short Rest</button>
+            <button type="button" class="rest-popup-secondary" [disabled]="isApplyingRest()" (click)="resetShortRestPopup()">Reset</button>
+        </div>
+    </aside>
+    }
+
+    @if (activeRestPopup() === 'long' && character(); as restCharacter) {
+    <aside class="panel detail-popup rest-popup rest-popup--long" role="dialog" aria-label="Long Rest popup">
+        <header class="rest-popup-header">
+            <div>
+                <h3>Long Rest</h3>
+            </div>
+            <button type="button" class="ghost-button" (click)="closeRestPopup()">Close</button>
+        </header>
+
+        <p class="rest-popup-copy">A Long Rest is a period of extended downtime, at least 8 hours, available to any creature. During a Long Rest, you sleep for at least 6 hours and perform no more than 2 hours of light activity, such as reading, talking, eating, or standing watch.</p>
+        <p class="rest-popup-copy">While asleep, you have the Unconscious condition. After you finish a Long Rest, you must wait at least 16 hours before starting another one.</p>
+
+        <section class="rest-popup-section rest-popup-section--tight">
+            <h4>Long Rest Rules</h4>
+            <label class="rest-popup-radio">
+                <input type="radio" name="long-rest-rule" [checked]="longRestRule() === 'recover-half'" (change)="onLongRestRuleChanged('recover-half')" />
+                <span>
+                    <strong>Recover 1/2 Hit Dice</strong>
+                    <small>Use 5e Rules</small>
+                </span>
+            </label>
+            <label class="rest-popup-radio">
+                <input type="radio" name="long-rest-rule" [checked]="longRestRule() === 'recover-all'" (change)="onLongRestRuleChanged('recover-all')" />
+                <span>
+                    <strong>Recover all Hit Dice</strong>
+                    <small>Use 5.5e Rules</small>
+                </span>
+            </label>
+        </section>
+
+        <section class="rest-popup-section">
+            <h4>Recover</h4>
+            <p class="rest-popup-note">{{ getLongRestHitDiceRecoveryText() }}</p>
+            <label class="rest-popup-check">
+                <input type="checkbox" [checked]="longRestResetMaxHp()" (change)="onLongRestResetMaxHpChanged($any($event.target).checked)" />
+                <span>Reset Maximum HP changes during this rest</span>
+            </label>
+        </section>
+
+        @if (restPopupError()) {
+        <p class="rest-popup-error">{{ restPopupError() }}</p>
+        }
+
+        <div class="rest-popup-actions">
+            <button type="button" class="rest-popup-primary" [disabled]="!restCharacter.canEdit || isApplyingRest()" (click)="takeLongRest()">Take Long Rest</button>
+            <button type="button" class="rest-popup-secondary" [disabled]="isApplyingRest()" (click)="resetLongRestPopup()">Reset</button>
+        </div>
+
+        <hr class="rest-popup-divider" />
+
+        <section class="rest-popup-section rest-popup-section--tight">
+            <p class="rest-popup-rules"><strong><em>Benefits of the Rest.</em></strong> To start a Long Rest, you must have at least 1 HP. When you finish the rest, you gain the following benefits:</p>
+            <ul class="rest-popup-list">
+                <li>You regain all lost HP and all spent Hit Point Dice. If your HP maximum was reduced, it returns to normal.</li>
+                <li>If any of your ability scores were reduced, they return to normal.</li>
+                <li>If you have the Exhaustion condition, its level decreases by 1.</li>
+                <li>If you have a feature that is recharged by a Long Rest, it recharges in the way specified in its description.</li>
+            </ul>
+        </section>
+
+        <section class="rest-popup-section rest-popup-section--tight">
+            <p class="rest-popup-rules"><strong><em>Interrupting the Rest.</em></strong> A Long Rest is stopped by the following interruptions:</p>
+            <ul class="rest-popup-list">
+                <li>Rolling Initiative</li>
+                <li>Casting a spell other than a cantrip</li>
+                <li>Taking any damage</li>
+                <li>1 hour of walking or other physical exertion</li>
+            </ul>
+            <p class="rest-popup-rules">If you rested at least 1 hour before the interruption, you gain the benefits of a Short Rest.</p>
+            <p class="rest-popup-rules">You can resume a Long Rest immediately after an interruption. If you do so, the rest requires 1 additional hour per interruption to finish.</p>
         </section>
     </aside>
     }

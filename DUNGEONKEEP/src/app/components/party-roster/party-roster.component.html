@@ -24,7 +24,9 @@
                         <p>{{ character.race }} {{ character.className }} · Level {{ character.level }}</p>
                     </div>
                 </div>
+                @if (character.status !== 'Ready') {
                 <span class="status-pill" [attr.data-status]="character.status">{{ character.status }}</span>
+                }
             </div>
             <div class="character-meta">
                 <span>{{ character.playerName }}</span>

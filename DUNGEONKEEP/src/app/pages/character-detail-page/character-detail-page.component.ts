@@ -442,6 +442,7 @@ interface PersistedBuilderState {
     wizardSpellbookByClass?: Record<string, string[]>;
     usedSpellSlotsByLevel?: Record<number, number>;
     limitedUseCounts?: Record<string, number>;
+    usedHitDiceCount?: number;
     hpMaxOverride?: number | null;
     tempHitPoints?: number;
     heroicInspiration?: boolean;
@@ -518,6 +519,8 @@ interface DetailDrawerContent {
     }>;
     rulesText?: string | null;
 }
+
+type RestPopupKind = 'short' | 'long';
 
 @Component({
     selector: 'app-character-detail-page',
@@ -829,6 +832,15 @@ export class CharacterDetailPageComponent {
     readonly portraitOriginalImageUrl = signal('');
     readonly detailBackgroundCachedImageUrl = signal('');
     readonly headerManageOpen = signal(false);
+    readonly activeRestPopup = signal<RestPopupKind | null>(null);
+    readonly isApplyingRest = signal(false);
+    readonly restPopupError = signal('');
+    readonly restPopupResult = signal('');
+    readonly shortRestResetMaxHp = signal(false);
+    readonly shortRestAutoHeal = signal(true);
+    readonly shortRestUsedHitDieSlots = signal<number[]>([]);
+    readonly longRestRule = signal<'recover-half' | 'recover-all'>('recover-half');
+    readonly longRestResetMaxHp = signal(true);
     readonly usedSpellSlotsByLevel = signal<Record<number, number>>({});
     readonly limitedUseCounts = signal<Record<string, number>>({});
     readonly rageDetailOption = signal('activate-rage');
@@ -1158,6 +1170,10 @@ export class CharacterDetailPageComponent {
         if (!target.closest('.header-manage-menu')) {
             this.headerManageOpen.set(false);
         }
+
+        if (this.activeRestPopup() && !target.closest('.rest-popup') && !target.closest('.header-rest-actions')) {
+            this.closeRestPopup();
+        }
     }
 
     @HostListener('document:dungeonkeep-close-popups')
@@ -1172,6 +1188,7 @@ export class CharacterDetailPageComponent {
         this.defenseManagerOpen.set(false);
         this.conditionsManagerOpen.set(false);
         this.headerManageOpen.set(false);
+        this.activeRestPopup.set(null);
     }
 
     private requestCloseChat(): void {
@@ -3980,6 +3997,329 @@ export class CharacterDetailPageComponent {
         this.rageDetailOption.set('activate-rage');
     }
 
+    openShortRestPopup(): void {
+        const char = this.character();
+        if (!char) {
+            return;
+        }
+
+        this.requestCloseChat();
+        this.closeDetailDrawer();
+        this.hpManagerOpen.set(false);
+        this.coinManagerOpen.set(false);
+        this.spellManagerOpen.set(false);
+        this.inventoryManagerOpen.set(false);
+        this.extrasManagerOpen.set(false);
+        this.defenseManagerOpen.set(false);
+        this.conditionsManagerOpen.set(false);
+        this.activeExtrasStatEntry.set(null);
+        this.headerManageOpen.set(false);
+        this.resetShortRestPopup();
+        this.activeRestPopup.set('short');
+    }
+
+    openLongRestPopup(): void {
+        const char = this.character();
+        if (!char) {
+            return;
+        }
+
+        this.requestCloseChat();
+        this.closeDetailDrawer();
+        this.hpManagerOpen.set(false);
+        this.coinManagerOpen.set(false);
+        this.spellManagerOpen.set(false);
+        this.inventoryManagerOpen.set(false);
+        this.extrasManagerOpen.set(false);
+        this.defenseManagerOpen.set(false);
+        this.conditionsManagerOpen.set(false);
+        this.activeExtrasStatEntry.set(null);
+        this.headerManageOpen.set(false);
+        this.resetLongRestPopup();
+        this.activeRestPopup.set('long');
+    }
+
+    closeRestPopup(): void {
+        this.activeRestPopup.set(null);
+        this.restPopupError.set('');
+        this.restPopupResult.set('');
+    }
+
+    resetShortRestPopup(): void {
+        this.shortRestResetMaxHp.set(false);
+        this.shortRestAutoHeal.set(true);
+        this.shortRestUsedHitDieSlots.set(this.getSpentHitDieIndexes());
+        this.restPopupError.set('');
+        this.restPopupResult.set('');
+    }
+
+    resetLongRestPopup(): void {
+        this.longRestRule.set('recover-half');
+        this.longRestResetMaxHp.set(true);
+        this.restPopupError.set('');
+        this.restPopupResult.set('');
+    }
+
+    toggleShortRestHitDie(index: number): void {
+        const spentCount = this.getUsedHitDiceCount();
+        if (index < spentCount) {
+            this.shortRestUsedHitDieSlots.set(this.getSpentHitDieIndexes());
+            return;
+        }
+
+        this.shortRestUsedHitDieSlots.set(Array.from({ length: Math.max(index + 1, 0) }, (_, currentIndex) => currentIndex));
+    }
+
+    onShortRestResetMaxHpChanged(checked: boolean): void {
+        this.shortRestResetMaxHp.set(checked);
+    }
+
+    onShortRestAutoHealChanged(checked: boolean): void {
+        this.shortRestAutoHeal.set(checked);
+    }
+
+    onLongRestRuleChanged(rule: 'recover-half' | 'recover-all'): void {
+        this.longRestRule.set(rule);
+    }
+
+    onLongRestResetMaxHpChanged(checked: boolean): void {
+        this.longRestResetMaxHp.set(checked);
+    }
+
+    async takeShortRest(): Promise<void> {
+        const initialCharacter = this.character();
+        if (!initialCharacter?.canEdit || this.isApplyingRest()) {
+            return;
+        }
+
+        const selectedHitDice = this.shortRestUsedHitDieSlots();
+        const spentCount = this.getUsedHitDiceCount();
+        const additionalHitDiceCount = Math.max(0, selectedHitDice.length - spentCount);
+        if (additionalHitDiceCount === 0) {
+            this.restPopupError.set('Select at least one unused Hit Die to spend.');
+            this.restPopupResult.set('');
+            return;
+        }
+
+        this.isApplyingRest.set(true);
+        this.restPopupError.set('');
+        this.restPopupResult.set('');
+
+        try {
+            const hitDie = this.getRestHitDie();
+            const conModifier = this.getAbilityModifier(this.effectiveAbilityScores()?.constitution ?? 10);
+            const rolls = Array.from({ length: additionalHitDiceCount }, () => Math.floor(Math.random() * hitDie) + 1);
+            const healingTotal = rolls.reduce((total, roll) => total + Math.max(0, roll + conModifier), 0);
+            const nextUsedHitDiceCount = spentCount + additionalHitDiceCount;
+
+            if (this.shortRestResetMaxHp()) {
+                await this.persistHpOverrideState(null);
+                this.appliedMaxHpOverride.set(null);
+            }
+
+            const currentCharacter = this.character();
+            if (!currentCharacter) {
+                this.restPopupError.set('Unable to load the updated character right now.');
+                return;
+            }
+
+            if (!this.shortRestAutoHeal()) {
+                const didPersistUsedDice = await this.persistUsedHitDiceCount(nextUsedHitDiceCount);
+                if (!didPersistUsedDice) {
+                    this.restPopupError.set('Unable to save spent Hit Dice right now.');
+                    return;
+                }
+
+                this.restPopupResult.set(`Rolled ${rolls.join(', ')} for ${healingTotal} total healing.`);
+                return;
+            }
+
+            const resolvedMax = currentCharacter.maxHitPoints;
+            const nextCurrent = Math.min(resolvedMax, Math.max(0, currentCharacter.hitPoints) + healingTotal);
+
+            await this.persistShortRestHealing(nextCurrent, nextUsedHitDiceCount);
+
+            this.closeRestPopup();
+        } catch {
+            this.restPopupError.set('Unable to complete a short rest right now.');
+        } finally {
+            this.isApplyingRest.set(false);
+            this.cdr.detectChanges();
+        }
+    }
+
+    async takeLongRest(): Promise<void> {
+        const initialCharacter = this.character();
+        if (!initialCharacter?.canEdit || this.isApplyingRest()) {
+            return;
+        }
+
+        if (initialCharacter.hitPoints < 1) {
+            this.restPopupError.set('You must have at least 1 HP to start a long rest.');
+            return;
+        }
+
+        this.isApplyingRest.set(true);
+        this.restPopupError.set('');
+        this.restPopupResult.set('');
+
+        try {
+            if (this.saveSpellSlotTimeout) {
+                clearTimeout(this.saveSpellSlotTimeout);
+                this.saveSpellSlotTimeout = null;
+            }
+
+            if (this.longRestResetMaxHp()) {
+                await this.persistHpOverrideState(null);
+                this.appliedMaxHpOverride.set(null);
+            }
+
+            const currentCharacter = this.character();
+            if (!currentCharacter) {
+                this.restPopupError.set('Unable to load the updated character right now.');
+                return;
+            }
+
+            const nextUsedHitDiceCount = this.getNextLongRestUsedHitDiceCount();
+            const nextExhaustionLevel = Math.max(0, this.exhaustionLevel() - 1);
+            const currentState: PersistedBuilderState = this.persistedBuilderState() ?? {};
+            const updatedState: PersistedBuilderState = {
+                ...currentState,
+                usedSpellSlotsByLevel: {},
+                limitedUseCounts: {},
+                usedHitDiceCount: nextUsedHitDiceCount,
+                exhaustionLevel: this.normalizeExhaustionLevel(nextExhaustionLevel),
+                deathSaveFailures: 0,
+                deathSaveSuccesses: 0
+            };
+
+            delete updatedState.tempHitPoints;
+            if (this.longRestResetMaxHp()) {
+                delete updatedState.hpMaxOverride;
+            }
+
+            const updatedNotes = this.createPersistedNotesString(currentCharacter.notes ?? '', updatedState);
+            const updated = await this.store.updateCharacter(this.characterId, {
+                name: currentCharacter.name,
+                playerName: currentCharacter.playerName,
+                race: currentCharacter.race,
+                className: currentCharacter.className,
+                role: currentCharacter.role,
+                level: currentCharacter.level,
+                background: currentCharacter.background,
+                notes: updatedNotes,
+                campaignId: currentCharacter.campaignId,
+                hitPoints: currentCharacter.maxHitPoints,
+                maxHitPoints: currentCharacter.maxHitPoints,
+                deathSaveFailures: 0,
+                deathSaveSuccesses: 0
+            });
+
+            if (!updated) {
+                this.restPopupError.set('Unable to complete a long rest right now.');
+                return;
+            }
+
+            this.usedSpellSlotsByLevel.set({});
+            this.limitedUseCounts.set({});
+            this.shortRestUsedHitDieSlots.set(Array.from({ length: nextUsedHitDiceCount }, (_, index) => index));
+            this.tempHitPoints.set(0);
+            this.hpDraftTemp.set(0);
+            this.hpDraftCurrent.set(updated.hitPoints);
+            this.hpDraftMax.set(updated.maxHitPoints);
+            this.hpDraftDeathSaveFailures.set(0);
+            this.hpDraftDeathSaveSuccesses.set(0);
+            this.optimisticExhaustionLevel.set(null);
+
+            this.closeRestPopup();
+        } catch {
+            this.restPopupError.set('Unable to complete a long rest right now.');
+        } finally {
+            this.isApplyingRest.set(false);
+            this.cdr.detectChanges();
+        }
+    }
+
+    getRestHitDie(): number {
+        const char = this.character();
+        if (!char) {
+            return 8;
+        }
+
+        return this.hitDieByClass[char.className] ?? 8;
+    }
+
+    getRestHitDieIndexes(): number[] {
+        const char = this.character();
+        return Array.from({ length: Math.max(char?.level ?? 0, 0) }, (_, index) => index);
+    }
+
+    getUsedHitDiceCount(): number {
+        const char = this.character();
+        const level = Math.max(char?.level ?? 0, 0);
+        const persisted = this.persistedBuilderState()?.usedHitDiceCount;
+        if (typeof persisted !== 'number' || !Number.isFinite(persisted)) {
+            return 0;
+        }
+
+        return Math.max(0, Math.min(level, Math.trunc(persisted)));
+    }
+
+    getSpentHitDieIndexes(): number[] {
+        return Array.from({ length: this.getUsedHitDiceCount() }, (_, index) => index);
+    }
+
+    getShortRestAdditionalHitDiceCount(): number {
+        return Math.max(0, this.shortRestUsedHitDieSlots().length - this.getUsedHitDiceCount());
+    }
+
+    getShortRestPreviewFormula(): string {
+        const additionalHitDiceCount = this.getShortRestAdditionalHitDiceCount();
+        if (additionalHitDiceCount <= 0) {
+            return '';
+        }
+
+        const hitDie = this.getRestHitDie();
+        const conModifier = this.getAbilityModifier(this.effectiveAbilityScores()?.constitution ?? 10);
+        const totalModifier = conModifier * additionalHitDiceCount;
+
+        if (totalModifier > 0) {
+            return `${additionalHitDiceCount}d${hitDie}+${totalModifier}`;
+        }
+
+        if (totalModifier < 0) {
+            return `${additionalHitDiceCount}d${hitDie}${totalModifier}`;
+        }
+
+        return `${additionalHitDiceCount}d${hitDie}`;
+    }
+
+    getLongRestRecoverableHitDice(): number {
+        const char = this.character();
+        const level = Math.max(char?.level ?? 1, 1);
+        return Math.max(1, Math.floor(level / 2));
+    }
+
+    getLongRestHitDiceRecoveryText(): string {
+        const char = this.character();
+        const level = Math.max(char?.level ?? 1, 1);
+
+        if (this.longRestRule() === 'recover-all') {
+            return 'Recover all spent Hit Dice.';
+        }
+
+        return `Recover up to ${this.getLongRestRecoverableHitDice()} of ${level} total Hit Dice.`;
+    }
+
+    getNextLongRestUsedHitDiceCount(): number {
+        const usedHitDiceCount = this.getUsedHitDiceCount();
+        if (this.longRestRule() === 'recover-all') {
+            return 0;
+        }
+
+        return Math.max(0, usedHitDiceCount - this.getLongRestRecoverableHitDice());
+    }
+
     toggleDetailSecondary(): void {
         this.detailSecondaryExpanded.update((value) => !value);
     }
@@ -4226,6 +4566,87 @@ export class CharacterDetailPageComponent {
         }
 
         await this.persistHitPoints(nextCurrent, char.maxHitPoints);
+    }
+
+    private async persistShortRestHealing(nextCurrent: number, nextUsedHitDiceCount: number): Promise<void> {
+        const char = this.character();
+        if (!char || this.isSavingHp()) {
+            return;
+        }
+
+        const currentState: PersistedBuilderState = this.persistedBuilderState() ?? {};
+        const updatedState: PersistedBuilderState = {
+            ...currentState,
+            usedHitDiceCount: nextUsedHitDiceCount
+        };
+        const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
+
+        this.isSavingHp.set(true);
+        this.hpDraftCurrent.set(nextCurrent);
+        this.hpDraftDeathSaveFailures.set(0);
+        this.hpDraftDeathSaveSuccesses.set(0);
+        this.shortRestUsedHitDieSlots.set(Array.from({ length: nextUsedHitDiceCount }, (_, index) => index));
+
+        try {
+            const updated = await this.store.updateCharacter(this.characterId, {
+                name: char.name,
+                playerName: char.playerName,
+                race: char.race,
+                className: char.className,
+                role: char.role,
+                level: char.level,
+                background: char.background,
+                notes: updatedNotes,
+                campaignId: char.campaignId,
+                hitPoints: nextCurrent,
+                maxHitPoints: char.maxHitPoints,
+                deathSaveFailures: 0,
+                deathSaveSuccesses: 0
+            });
+
+            if (updated) {
+                this.hpDraftCurrent.set(updated.hitPoints);
+                this.hpDraftMax.set(updated.maxHitPoints);
+            }
+        } finally {
+            this.isSavingHp.set(false);
+            this.cdr.detectChanges();
+        }
+    }
+
+    private async persistUsedHitDiceCount(nextUsedHitDiceCount: number): Promise<boolean> {
+        const char = this.character();
+        if (!char) {
+            return false;
+        }
+
+        const currentState: PersistedBuilderState = this.persistedBuilderState() ?? {};
+        const updatedState: PersistedBuilderState = {
+            ...currentState,
+            usedHitDiceCount: nextUsedHitDiceCount
+        };
+        const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
+
+        const updated = await this.store.updateCharacter(this.characterId, {
+            name: char.name,
+            playerName: char.playerName,
+            race: char.race,
+            className: char.className,
+            role: char.role,
+            level: char.level,
+            background: char.background,
+            notes: updatedNotes,
+            campaignId: char.campaignId,
+            hitPoints: char.hitPoints,
+            maxHitPoints: char.maxHitPoints
+        });
+
+        if (!updated) {
+            return false;
+        }
+
+        this.shortRestUsedHitDieSlots.set(Array.from({ length: nextUsedHitDiceCount }, (_, index) => index));
+        return true;
     }
 
     private async restoreLife(nextCurrent: number): Promise<void> {

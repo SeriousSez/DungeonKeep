@@ -1592,9 +1592,7 @@ export class DungeonStoreService {
         const persistedMaxHpOverride = this.extractPersistedHpMaxOverride(resolvedNotes);
         const draftMaxHitPoints = typeof draft?.maxHitPoints === 'number' && Number.isFinite(draft.maxHitPoints)
             ? draft.maxHitPoints
-            : (typeof draft?.hitPoints === 'number' && Number.isFinite(draft.hitPoints) && draft.hitPoints > 0
-                ? draft.hitPoints
-                : undefined);
+            : undefined;
         const maxHitPoints = Number.isFinite(draftMaxHitPoints)
             ? Math.max(1, Math.trunc(draftMaxHitPoints as number))
             : Number.isFinite(persistedMaxHpOverride)

@@ -16,8 +16,8 @@ export class CharactersPageComponent {
     readonly store = inject(DungeonStoreService);
     readonly ownedCharacters = computed(() => this.store.characters().filter((character) => character.canEdit !== false));
     readonly ownedCharacterCount = computed(() => this.ownedCharacters().length);
-    readonly ownedReadyCharacterCount = computed(
-        () => this.ownedCharacters().filter((character) => character.status === 'Ready').length
+    readonly ownedInactiveCharacterCount = computed(
+        () => this.ownedCharacters().filter((character) => character.status === 'Inactive').length
     );
 
     confirmDeleteId: string | null = null;
