@@ -291,7 +291,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                 BuildSessionDraftPrompt(campaign, request),
                 referenceImageUrl: null,
                 temperature: 0.9,
-                maxOutputTokens: 2000,
+                maxOutputTokens: 2600,
                 textFormat: BuildSessionDraftJsonSchemaFormat(),
                 fallbackToPlainTextOnBadRequest: true,
                 cancellationToken: ct);
@@ -304,7 +304,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                     responsesUrl,
                     model,
                     BuildSessionDraftRepairPrompt(text),
-                    maxOutputTokens: 2200,
+                    maxOutputTokens: 2800,
                     ct);
 
                 generated = TryParseGeneratedSessionDraftPayload(repairedText);
@@ -1890,7 +1890,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
                     ["date"] = BuildJsonSchemaStringProperty(),
                     ["inGameLocation"] = BuildJsonSchemaStringProperty(),
                     ["estimatedLength"] = BuildJsonSchemaStringProperty(),
-                    ["markdownNotes"] = BuildJsonSchemaStringProperty("Detailed markdown DM notes with multiple sections such as summary, scene flow, complications, NPC portrayals, secrets, contingencies, and improvisation guidance. Make this substantially detailed rather than brief."),
+                    ["markdownNotes"] = BuildJsonSchemaStringProperty("Concise DM prep notes with brief markdown sections: Overview, Scene Flow, NPC Plays, Secrets, Contingencies. Each section 1-3 short paragraphs. Useful and concrete, not exhaustive."),
                     ["scenes"] = BuildJsonSchemaArrayProperty(new Dictionary<string, object?>
                     {
                         ["type"] = "object",
@@ -2690,8 +2690,8 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             "Return only valid JSON.",
             "Use these exact top-level fields: title, shortDescription, date, inGameLocation, estimatedLength, markdownNotes, scenes, npcs, monsters, locations, loot, skillChecks, secrets, branchingPaths, nextSessionHooks.",
             "Do not wrap the JSON in a session, draft, data, result, or response object.",
-            "markdownNotes must be substantially detailed and useful at the table, not a short summary.",
-            "markdownNotes should read like a DM prep document with multiple markdown sections such as Overview, Scene Flow, NPC Plays, Secrets and Revelations, Combat or Tension Beats, Contingencies, and Improvisation Hooks.",
+            "Be concise but concrete — aim for quality over quantity in every field. Prefer 2-4 scenes, 2-3 NPCs, 1-3 monsters, 2-3 locations, 2-4 loot items, 2-4 skill checks, 3-5 secrets, 3 branching paths, and 3 next session hooks unless the guidance demands more.",
+            "markdownNotes must be a useful DM prep document with brief markdown sections: Overview, Scene Flow, NPC Plays, Secrets, Contingencies. Write tightly — each section 1-3 short paragraphs.",
             "Favor concrete table-ready material over vague atmosphere.",
             "scenes must be an array of objects with: title, description, trigger, keyEvents, possibleOutcomes.",
             "npcs must be an array of objects with: name, role, personality, motivation, voiceNotes.",
@@ -2700,7 +2700,6 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             "loot must be an array of objects with: name, type, quantity, notes.",
             "skillChecks must be an array of objects with: situation, skill, dc, successOutcome, failureOutcome.",
             "secrets, branchingPaths, and nextSessionHooks must be arrays of concise strings.",
-            "Write richer descriptions, stronger motivations, and more specific outcomes than a minimal outline would provide.",
             "Keep the session practical for a DM to run at the table.",
             "Ground the material in the existing campaign context and avoid contradicting it.",
             "When suggesting monsters, prefer the curated monster list provided below. Reuse exact monster names from that list whenever they fit.",
