@@ -1132,7 +1132,34 @@ export class DungeonStoreService {
             }
 
             this.characters.set(Array.from(characterMap.values()));
-            this.campaigns.set(mappedCampaigns);
+
+            const existingCampaigns = this.campaigns();
+            const mergedCampaigns = mappedCampaigns.map((mapped) => {
+                const existing = existingCampaigns.find((c) => c.id === mapped.id);
+                if (!existing?.detailsLoaded) {
+                    return mapped;
+                }
+
+                return {
+                    ...existing,
+                    name: mapped.name,
+                    setting: mapped.setting,
+                    tone: mapped.tone,
+                    levelStart: mapped.levelStart,
+                    levelEnd: mapped.levelEnd,
+                    levelRange: mapped.levelRange,
+                    summary: mapped.summary,
+                    hook: mapped.hook,
+                    nextSession: mapped.nextSession,
+                    characterCount: mapped.characterCount,
+                    sessionCount: mapped.sessionCount,
+                    npcCount: mapped.npcCount,
+                    openThreadCount: mapped.openThreadCount,
+                    currentUserRole: mapped.currentUserRole,
+                    partyCharacterIds: mapped.partyCharacterIds
+                };
+            });
+            this.campaigns.set(mergedCampaigns);
 
             const selected = this.selectedCampaignId();
             if (!selected) {
