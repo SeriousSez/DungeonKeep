@@ -3354,6 +3354,12 @@ input {
     gap: 10px;
 }
 
+.trait-choice-selection-text {
+    margin: -2px 0 0;
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
 /* ── End Species Detail ──────────────────────────────────────────── */
 
 @media (max-width: 980px) {

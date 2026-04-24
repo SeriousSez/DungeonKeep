@@ -650,7 +650,7 @@ export const classLevelOneFeatures: Record<string, ClassFeaturesForLevel[]> = {
                     }
                 },
                 { name: 'Spellcasting', level: 1, description: 'You cast Druid spells using Wisdom, preparing a daily mix of battlefield control, healing, summoning, and nature utility.' },
-                { name: 'Druidic', level: 1, description: 'You know the secret Druidic language, allowing you to leave hidden messages and signs only trained Druids easily understand.' },
+                { name: 'Druidic', level: 1, description: 'You know Druidic and always have Speak with Animals prepared. You can use Druidic to leave hidden messages. Druids automatically spot those messages, while others only notice their presence with a successful DC 15 Intelligence (Investigation) check and cannot decipher them without magic.' },
                 { name: 'Primal Order', level: 1, description: 'Choose the form of druidic training that best matches your role, whether that leans toward martial survival or deeper spell mastery.' }
             ]
         },

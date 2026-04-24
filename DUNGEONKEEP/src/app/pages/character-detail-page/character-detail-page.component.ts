@@ -43,484 +43,93 @@ import {
     type ExtrasCatalogType,
     type VehicleStatBlock
 } from '../../data/extras-catalog.data';
-
-type AbilityKey = 'strength' | 'dexterity' | 'constitution' | 'intelligence' | 'wisdom' | 'charisma';
-
-type CombatTab = 'actions' | 'spells' | 'inventory' | 'features' | 'background' | 'notes' | 'extras';
-type SpellFilter = 'all' | '0' | '1' | '2' | '3';
-type SpellManagerTab = 'prepared' | 'spellbook' | 'all';
-type ActionFilter = 'all' | 'attack' | 'action' | 'bonus-action' | 'reaction' | 'other' | 'limited-use';
-type BackgroundFilter = 'all' | 'background' | 'characteristics' | 'appearance';
-type InventoryFilter = string; // Can be 'all', 'equipment', 'other', or a container name
-type FeaturesFilter = 'all' | 'class-features' | 'species-traits' | 'feats';
-type NotesFilter = 'all' | 'orgs' | 'allies' | 'enemies' | 'backstory' | 'other';
-type MeasurementSystem = 'imperial' | 'metric';
-type InventoryDraftField = 'name' | 'category' | 'quantity' | 'weight' | 'costGp' | 'notes';
-type DetailBackgroundTheme = 'parchment' | 'forest' | 'ember' | 'moonlit' | 'storm' | 'urban' | 'dunes' | 'tundra' | 'coastal' | 'underground' | 'custom';
-
-interface PersistedInventoryEntry {
-    name: string;
-    category: string;
-    quantity: number;
-    weight?: number;
-    costGp?: number;
-    notes?: string;
-    isContainer?: boolean;
-    containedItems?: PersistedInventoryEntry[];
-    maxCapacity?: number;
-    equipped?: boolean;
-}
-
-interface PersistedCurrencyState {
-    pp: number;
-    gp: number;
-    ep: number;
-    sp: number;
-    cp: number;
-}
-
-type PersistedAbilityScoreImprovementMode = '' | 'plus-two' | 'plus-one-plus-one';
-
-interface PersistedAbilityScoreImprovementChoice {
-    mode: PersistedAbilityScoreImprovementMode;
-    primaryAbility: string;
-    secondaryAbility: string;
-}
-
-interface PersistedFeatFollowUpChoice {
-    abilityIncreaseAbility?: string;
-    weaponMasterWeapon?: string;
-    grapplerAbility?: string;
-    magicInitiateAbility?: string;
-    skilledSelections?: string[];
-}
-
-interface PersistedExtrasEntry {
-    uid: string;
-    name: string;
-    type: ExtrasCatalogType;
-    monsterStatBlockName?: string;
-    currentHp?: number;
-    maxHp?: number;
-    customNotes?: string;
-}
-
-type PersistedDefenseType = 'resistance' | 'immunity' | 'vulnerability' | 'condition-immunity';
-type PersistedConditionKey = 'blinded' | 'charmed' | 'deafened' | 'frightened' | 'grappled' | 'incapacitated' | 'invisible' | 'paralyzed' | 'petrified' | 'poisoned' | 'prone' | 'restrained' | 'stunned' | 'unconscious';
-type ConditionPanelKey = PersistedConditionKey | 'exhaustion';
-
-interface PersistedDefenseEntry {
-    type: PersistedDefenseType;
-    value: string;
-    note?: string;
-}
-
-interface ConditionDefinition {
-    key: PersistedConditionKey;
-    label: string;
-    icon: string;
-    bullets: string[];
-}
-
-const CONDITION_DEFINITIONS: ReadonlyArray<ConditionDefinition> = [
-    {
-        key: 'blinded',
-        label: 'Blinded',
-        icon: 'fa-eye-slash',
-        bullets: [
-            "You can't see and automatically fail checks that require sight.",
-            'Attack rolls against you have advantage.',
-            'Your attack rolls have disadvantage.'
-        ]
-    },
-    {
-        key: 'charmed',
-        label: 'Charmed',
-        icon: 'fa-heart',
-        bullets: [
-            "You can't attack the charmer or target them with harmful effects.",
-            'The charmer has advantage on social checks involving you.'
-        ]
-    },
-    {
-        key: 'deafened',
-        label: 'Deafened',
-        icon: 'fa-ear-deaf',
-        bullets: [
-            "You can't hear.",
-            'Checks that require hearing automatically fail.'
-        ]
-    },
-    {
-        key: 'frightened',
-        label: 'Frightened',
-        icon: 'fa-skull',
-        bullets: [
-            'You have disadvantage on attacks and ability checks while the fear source is in sight.',
-            "You can't willingly move closer to the source of fear."
-        ]
-    },
-    {
-        key: 'grappled',
-        label: 'Grappled',
-        icon: 'fa-hand-back-fist',
-        bullets: [
-            'Your speed becomes 0 and cannot increase.',
-            'You have disadvantage on attacks against targets other than the grappler.'
-        ]
-    },
-    {
-        key: 'incapacitated',
-        label: 'Incapacitated',
-        icon: 'fa-user-slash',
-        bullets: [
-            "You can't take actions, bonus actions, or reactions.",
-            'Your concentration ends, and you cannot speak.'
-        ]
-    },
-    {
-        key: 'invisible',
-        label: 'Invisible',
-        icon: 'fa-user-secret',
-        bullets: [
-            "You can't be seen without magic or a special sense.",
-            'Attack rolls against you have disadvantage, and your attacks have advantage.'
-        ]
-    },
-    {
-        key: 'paralyzed',
-        label: 'Paralyzed',
-        icon: 'fa-bolt',
-        bullets: [
-            'You are incapacitated and your speed is 0.',
-            'You automatically fail Strength and Dexterity saves.',
-            'Hits from creatures within 5 feet are critical hits.'
-        ]
-    },
-    {
-        key: 'petrified',
-        label: 'Petrified',
-        icon: 'fa-gem',
-        bullets: [
-            'You turn into an inanimate substance, usually stone.',
-            'You are incapacitated, your speed is 0, and attacks against you have advantage.',
-            'You gain resistance to all damage.'
-        ]
-    },
-    {
-        key: 'poisoned',
-        label: 'Poisoned',
-        icon: 'fa-skull-crossbones',
-        bullets: [
-            'You have disadvantage on attack rolls and ability checks.'
-        ]
-    },
-    {
-        key: 'prone',
-        label: 'Prone',
-        icon: 'fa-person-falling',
-        bullets: [
-            'Your movement is limited to crawling unless you stand up.',
-            'You have disadvantage on attacks.',
-            'Nearby melee attackers gain advantage against you.'
-        ]
-    },
-    {
-        key: 'restrained',
-        label: 'Restrained',
-        icon: 'fa-hands-bound',
-        bullets: [
-            'Your speed becomes 0 and cannot increase.',
-            'Attacks against you have advantage, and your attacks have disadvantage.',
-            'You have disadvantage on Dexterity saving throws.'
-        ]
-    },
-    {
-        key: 'stunned',
-        label: 'Stunned',
-        icon: 'fa-stars',
-        bullets: [
-            'You are incapacitated.',
-            'You automatically fail Strength and Dexterity saves.',
-            'Attack rolls against you have advantage.'
-        ]
-    },
-    {
-        key: 'unconscious',
-        label: 'Unconscious',
-        icon: 'fa-bed',
-        bullets: [
-            'You are incapacitated and prone and drop what you are holding.',
-            'Your speed becomes 0, and you are unaware of your surroundings.',
-            'Hits from attackers within 5 feet are critical hits.'
-        ]
-    }
-];
-
-const CONDITION_KEY_ORDER = CONDITION_DEFINITIONS.map((entry) => entry.key) as PersistedConditionKey[];
-const CONDITION_LABEL_LOOKUP = CONDITION_DEFINITIONS.reduce((lookup, entry) => {
-    lookup[entry.key] = entry.label;
-    return lookup;
-}, {} as Record<PersistedConditionKey, string>);
-
-const EXHAUSTION_LEVEL_RULES: ReadonlyArray<{ level: number; effect: string }> = [
-    { level: 1, effect: 'Disadvantage on ability checks.' },
-    { level: 2, effect: 'Speed halved.' },
-    { level: 3, effect: 'Disadvantage on attack rolls and saving throws.' },
-    { level: 4, effect: 'Hit point maximum halved.' },
-    { level: 5, effect: 'Speed reduced to 0.' },
-    { level: 6, effect: 'Death.' }
-];
-
-const COMBAT_ACTION_DETAILS: Readonly<Record<string, { description: string; bullets: string[]; rulesText?: string }>> = {
-    attack: {
-        description: 'Make one attack with a weapon or an unarmed strike on your turn.',
-        bullets: [
-            'You can draw or put away one weapon as part of the attack.',
-            'If you have Extra Attack, you can move between those attacks.',
-            'An unarmed strike can deal damage, start a grapple, or shove a target.'
-        ],
-        rulesText: 'Use Attack when you want to directly harm a target or make a physical combat maneuver.'
-    },
-    dash: {
-        description: 'You trade your action for more movement this turn.',
-        bullets: [
-            'Gain extra movement equal to your current Speed after modifiers.',
-            'You can choose a special speed such as Fly or Swim if you have one.'
-        ],
-        rulesText: 'Dash is ideal for closing distance, retreating, or repositioning across the battlefield.'
-    },
-    disengage: {
-        description: 'Move carefully so enemies cannot make opportunity attacks against you this turn.',
-        bullets: [
-            'Your movement stops provoking opportunity attacks for the rest of the current turn.',
-            'It is the safest way to slip out of melee without teleporting or forcing movement.'
-        ]
-    },
-    dodge: {
-        description: 'You focus entirely on defense and awareness until your next turn begins.',
-        bullets: [
-            'Attack rolls against you have disadvantage if you can see the attacker.',
-            'You make Dexterity saving throws with advantage.'
-        ],
-        rulesText: 'These benefits end early if you become Incapacitated or if your Speed drops to 0.'
-    },
-    grapple: {
-        description: 'Try to seize a nearby creature and hold it in place.',
-        bullets: [
-            'Usually done as an unarmed strike against a creature within 5 feet.',
-            'You need a free hand, and the target cannot be more than one size larger than you.',
-            'On a failed Strength or Dexterity save against your escape DC, the target becomes Grappled.'
-        ],
-        rulesText: 'A Grappled creature has Speed 0 and can use its action to try to escape.'
-    },
-    help: {
-        description: 'You assist an ally with a task or distract an enemy for them.',
-        bullets: [
-            'Aid a nearby ally on a skill or tool check, granting advantage on their next relevant check.',
-            'Or distract a foe within 5 feet so the next allied attack against it has advantage.'
-        ],
-        rulesText: 'The benefit expires if it is not used before the start of your next turn.'
-    },
-    hide: {
-        description: 'Conceal yourself so enemies lose track of you.',
-        bullets: [
-            'Make a Dexterity (Stealth) check, typically against DC 15.',
-            'You usually need heavy obscurity, strong cover, and to be out of enemy sight.',
-            'If you succeed, you count as hidden until something gives you away.'
-        ],
-        rulesText: 'You stop being hidden if you make more than a whisper of noise, get found, attack, or cast a spell with a verbal component.'
-    },
-    improvise: {
-        description: 'Attempt a creative stunt that does not fit one of the standard action options.',
-        bullets: [
-            'Describe what your character is trying to do in the scene.',
-            'The DM decides whether it needs a check, an attack roll, a saving throw, or another ruling.'
-        ],
-        rulesText: 'Improvised actions are intentionally flexible and depend on the situation at the table.'
-    },
-    influence: {
-        description: 'Use words, presence, or demeanor to sway a creature during the encounter.',
-        bullets: [
-            'Deception, Intimidation, Performance, Persuasion, or Animal Handling may apply.',
-            'If the creature is hesitant, the default DC is often 15 or its Intelligence score, whichever is higher.'
-        ],
-        rulesText: 'On a failed attempt, the same approach usually cannot be pressed again for a while unless the situation changes.'
-    },
-    magic: {
-        description: 'Cast a spell or activate a magical feature or item that uses the Magic action.',
-        bullets: [
-            'Most spells with a casting time of an action use this option.',
-            'Longer casts require you to keep taking the Magic action on later turns.',
-            'If concentration breaks during that process, the effect fizzles.'
-        ]
-    },
-    ready: {
-        description: 'Prepare a response now so you can react to a trigger before your next turn.',
-        bullets: [
-            'Choose a clear, perceivable trigger.',
-            'Choose the action you will take or move up to your Speed when that trigger happens.',
-            'You use your Reaction to follow through when the trigger occurs.'
-        ],
-        rulesText: 'Readied spells are cast in advance and then held with concentration until released.'
-    },
-    search: {
-        description: 'Scan the area or a creature for something that is not immediately obvious.',
-        bullets: [
-            'This is a Wisdom check guided by what you are trying to detect.',
-            'Perception may find hidden creatures or objects, Survival may reveal tracks, and Medicine or Insight can uncover other clues.'
-        ]
-    },
-    shove: {
-        description: 'Knock a nearby creature back or send it to the ground.',
-        bullets: [
-            'Usually performed as part of an unarmed strike.',
-            'The target makes a Strength or Dexterity save against your unarmed strike DC.',
-            'On a failure, you push it 5 feet away or knock it Prone.'
-        ]
-    },
-    study: {
-        description: 'Pause to analyze lore, clues, magic, religion, or a piece of information.',
-        bullets: [
-            'This is an Intelligence check based on the topic at hand.',
-            'Arcana, History, Investigation, Nature, or Religion commonly apply.'
-        ],
-        rulesText: 'Use Study when the answer depends on knowledge, memory, or careful analysis rather than quick observation.'
-    },
-    utilize: {
-        description: 'Use an item or object when that interaction specifically requires an action.',
-        bullets: [
-            'Examples include activating gear, pulling mechanisms, or using an object with a listed action cost.',
-            'Simple object interactions are often folded into movement or another action instead.'
-        ]
-    },
-    'two-weapon fighting': {
-        description: 'Follow up a Light-weapon attack with an off-hand strike as a bonus action.',
-        bullets: [
-            'You normally need a different Light weapon in the other hand.',
-            'The bonus attack is separate from your main attack sequence.'
-        ],
-        rulesText: 'This is a quick extra attack option for dual-wielding characters.'
-    },
-    'opportunity attack': {
-        description: 'Make a quick melee strike when a creature you can see leaves your reach.',
-        bullets: [
-            'This uses your Reaction.',
-            'The attack happens just before the creature gets away.',
-            'You make one melee weapon attack or one unarmed strike.'
-        ],
-        rulesText: 'Forced movement or teleportation usually does not trigger this response.'
-    },
-    'interact with an object': {
-        description: 'Handle a door, lever, pouch, torch, or similar object during the flow of your turn.',
-        bullets: [
-            'Many simple interactions are free once per turn when paired with movement or another action.',
-            'If the object explicitly needs an action, use Utilize instead.'
-        ]
-    }
-};
-
-interface PersistedBuilderState {
-    selectedBackgroundName?: string;
-    selectedLanguages?: string[];
-    selectedSpeciesLanguages?: string[];
-    selectedSpeciesTraitChoices?: Record<string, string[]>;
-    classFeatureSelections?: Record<string, string[]>;
-    abilityScoreImprovementChoices?: Record<string, PersistedAbilityScoreImprovementChoice>;
-    featFollowUpChoices?: Record<string, PersistedFeatFollowUpChoice>;
-    backgroundChoiceSelections?: Record<string, string>;
-    abilityBaseScores?: Record<string, number>;
-    abilityOverrideScores?: Record<string, number | null>;
-    bgAbilityMode?: string;
-    bgAbilityScoreFor2?: string;
-    bgAbilityScoreFor1?: string;
-    inventoryEntries?: PersistedInventoryEntry[];
-    currency?: PersistedCurrencyState;
-    lifestyleExpense?: string;
-    classPreparedSpells?: Record<string, string[]>;
-    classKnownSpellsByClass?: Record<string, string[]>;
-    wizardSpellbookByClass?: Record<string, string[]>;
-    usedSpellSlotsByLevel?: Record<number, number>;
-    limitedUseCounts?: Record<string, number>;
-    usedHitDiceCount?: number;
-    hpMaxOverride?: number | null;
-    tempHitPoints?: number;
-    heroicInspiration?: boolean;
-    deathSaveFailures?: number;
-    deathSaveSuccesses?: number;
-    extrasEntries?: PersistedExtrasEntry[];
-    defenseEntries?: PersistedDefenseEntry[];
-    activeConditions?: PersistedConditionKey[];
-    exhaustionLevel?: number;
-    detailBackgroundTheme?: DetailBackgroundTheme;
-    detailBackgroundImageUrl?: string;
-}
-
-interface CombatRow {
-    name: string;
-    subtitle: string;
-    range: string;
-    hitDcLabel: string;
-    damage: string;
-    notes: string;
-    concentration: boolean;
-    ritual: boolean;
-}
-
-interface FeatureListEntry {
-    name: string;
-    level: number;
-    description: string;
-    detailDescription: string;
-    summaryBadges: string[];
-}
-
-interface SpeciesTraitEntry {
-    name: string;
-    description: string;
-    detailDescription: string;
-}
-
-interface LimitedUseEntry {
-    id: string;
-    name: string;
-    meta: string;
-    description: string;
-    choiceLabel: string;
-    activationLabel: string;
-    maxUses: number;
-    usedCount: number;
-    resetLabel: string;
-}
-
-interface DetailDrawerContent {
-    title: string;
-    subtitle: string;
-    description: string;
-    key?: string;
-    bullets?: string[];
-    lineItems?: Array<{ value: string; label: string; note?: string }>;
-    secondaryHeading?: string;
-    variant?: 'default' | 'inventory-item' | 'rage-feature' | 'brutal-strike-feature';
-    actionLines?: string[];
-    tracker?: {
-        entryId: string;
-        maxUses: number;
-        usedCount: number;
-        resetLabel: string;
-    };
-    metaLine?: string;
-    profileTags?: string[];
-    facts?: Array<{
-        label: string;
-        value?: string;
-        linkLabel?: string;
-        linkUrl?: string;
-    }>;
-    rulesText?: string | null;
-}
-
-type RestPopupKind = 'short' | 'long';
+import {
+    ALIGNMENT_DETAILS,
+    COMBAT_ACTION_DETAILS,
+    CONDITION_DEFINITIONS,
+    CONDITION_KEY_ORDER,
+    CONDITION_LABEL_LOOKUP,
+    DEITY_FAITH_DETAILS,
+    EXHAUSTION_LEVEL_RULES,
+    LIFESTYLE_COSTS,
+    LIFESTYLE_DETAILS,
+    SPECIES_LORE_DETAILS,
+    XP_THRESHOLDS,
+} from './character-detail-page.constants';
+import {
+    getTieflingGrantedSpellCatalogForLevel,
+    getTieflingGrantedSpellNamesForLevel
+} from './character-detail-page.tiefling-spells';
+import {
+    defenseTypeHeading,
+    defenseTypeIcon,
+    defenseTypeLabel,
+    describeDefenseEntry,
+    normalizeConditionKey,
+    normalizeDefenseEntry,
+    normalizeExhaustionLevel
+} from './character-detail-page.defenses';
+import {
+    buildAlignmentDetail,
+    buildAppearanceDetail,
+    buildBackgroundEntryDetail,
+    buildClassLevelDetail,
+    buildExperienceDetail,
+    buildFaithDetail,
+    buildLifestyleDetail,
+    buildNameDetail,
+    buildRaceDetail,
+    getSpeciesInfo,
+    getSpeciesLore,
+    buildSpeciesAgeDetail,
+    buildSpeciesHeightDetail,
+    buildSpeciesWeightDetail,
+    formatAlignmentValue,
+} from './character-detail-page.background-drawers';
+import {
+    buildBarbarianFeatureDetail,
+    buildDruidFeatureDetail,
+    buildRogueFeatureDetail,
+    getBarbarianFeatureActionLines,
+    getBarbarianFeatureInlineTracker,
+    getBrutalStrikeActionLines,
+    getBrutalStrikeDetailText,
+    getDruidFeatureActionLines,
+    getDruidFeatureInlineTracker,
+    getDruidFeatureInlineTrackers,
+    getRogueFeatureActionLines,
+    getRogueFeatureInlineTracker,
+    getWildShapeDetailText,
+    parseFeatureDetailText
+} from './character-detail-page.feature-details';
+import type {
+    AbilityKey,
+    ActionFilter,
+    BackgroundFilter,
+    CombatRow,
+    CombatTab,
+    ConditionPanelKey,
+    DetailBackgroundTheme,
+    DetailDrawerContent,
+    FeatureListEntry,
+    FeaturesFilter,
+    InventoryDraftField,
+    InventoryFilter,
+    LimitedUseEntry,
+    MeasurementSystem,
+    NotesFilter,
+    PersistedBuilderState,
+    PersistedConditionKey,
+    PersistedCurrencyState,
+    PersistedDefenseEntry,
+    PersistedDefenseType,
+    PersistedExtrasEntry,
+    PersistedInventoryEntry,
+    RestPopupKind,
+    SpeciesTraitEntry,
+    SpellFilter,
+    SpellManagerTab
+} from './character-detail-page.types';
 
 @Component({
     selector: 'app-character-detail-page',
@@ -542,6 +151,8 @@ export class CharacterDetailPageComponent {
     private readonly cdr = inject(ChangeDetectorRef);
     private readonly destroyRef = inject(DestroyRef);
     private readonly campaignHub = inject(CampaignHubService);
+    readonly defenseTypeIcon = defenseTypeIcon;
+    readonly defenseTypeLabel = defenseTypeLabel;
     private readonly builderStateStartTag = '[DK_BUILDER_STATE_START]';
     private readonly builderStateEndTag = '[DK_BUILDER_STATE_END]';
     private readonly partyCurrencyStartTag = '[DK_PARTY_CURRENCY_START]';
@@ -2303,7 +1914,8 @@ export class CharacterDetailPageComponent {
 
         const className = char.className;
         const preparedNames = persisted.classPreparedSpells?.[className] ?? [];
-        const knownNames = persisted.classKnownSpellsByClass?.[className] ?? [];
+        const grantedSpellNames = getTieflingGrantedSpellNamesForLevel(char.race, char.level, persisted);
+        const knownNames = [...new Set([...(persisted.classKnownSpellsByClass?.[className] ?? []), ...grantedSpellNames])];
         const wizardSpellbookNames = persisted.wizardSpellbookByClass?.[className] ?? [];
         const ritualKnownNames = knownNames.filter((name) => this.isRitualSpell(name));
 
@@ -2323,6 +1935,8 @@ export class CharacterDetailPageComponent {
         } else {
             selectedNames = knownNames;
         }
+
+        selectedNames = [...selectedNames, ...grantedSpellNames];
 
         const maxAllowedSpellLevel = this.getMaxSpellLevelForClassLevel(className, char.level);
         const uniqueNames = [...new Set(selectedNames)].filter((name) => {
@@ -2386,16 +2000,25 @@ export class CharacterDetailPageComponent {
         }
 
         const maxAllowedSpellLevel = this.getMaxSpellLevelForClassLevel(char.className, char.level);
+        const persisted = this.persistedBuilderState();
 
-        const catalog = classSpellCatalog[char.className] ?? [];
-        return [...catalog]
+        const catalog = (classSpellCatalog[char.className] ?? [])
             .filter((spell) => spell.level === 0 || spell.level <= maxAllowedSpellLevel)
-            .sort((left, right) => left.level - right.level || left.name.localeCompare(right.name))
             .map((spell) => ({
                 name: spell.name,
                 level: spell.level,
                 source: spell.source
             }));
+
+        const mergedByName = new Map(catalog.map((spell) => [spell.name, spell]));
+        for (const grantedSpell of getTieflingGrantedSpellCatalogForLevel(char.race, char.level, persisted)) {
+            if (!mergedByName.has(grantedSpell.name)) {
+                mergedByName.set(grantedSpell.name, grantedSpell);
+            }
+        }
+
+        return [...mergedByName.values()]
+            .sort((left, right) => left.level - right.level || left.name.localeCompare(right.name));
     });
 
     readonly spellManagerAvailableLevelFilters = computed(() => {
@@ -2412,12 +2035,16 @@ export class CharacterDetailPageComponent {
     });
 
     readonly spellManagerKnownNames = computed(() => {
-        const className = this.character()?.className;
-        if (!className) {
+        const char = this.character();
+        const className = char?.className;
+        const persisted = this.persistedBuilderState();
+        if (!className || !char || !persisted) {
             return new Set<string>();
         }
 
-        return new Set(this.persistedBuilderState()?.classKnownSpellsByClass?.[className] ?? []);
+        const known = this.persistedBuilderState()?.classKnownSpellsByClass?.[className] ?? [];
+        const granted = getTieflingGrantedSpellNamesForLevel(char.race, char.level, persisted);
+        return new Set([...known, ...granted]);
     });
 
     readonly spellManagerPreparedNames = computed(() => {
@@ -2543,7 +2170,7 @@ export class CharacterDetailPageComponent {
     readonly customDefenseEntries = computed(() => {
         const persistedEntries = this.persistedBuilderState()?.defenseEntries ?? [];
         return persistedEntries
-            .map((entry) => this.normalizeDefenseEntry(entry))
+            .map((entry) => normalizeDefenseEntry(entry))
             .filter((entry): entry is PersistedDefenseEntry => entry !== null);
     });
 
@@ -2553,7 +2180,7 @@ export class CharacterDetailPageComponent {
             : this.damageDefenseSubtypeOptions
     );
 
-    readonly defenseSubtypePlaceholder = computed(() => `-- Choose a ${this.defenseTypeLabel(this.defenseDraftType())} --`);
+    readonly defenseSubtypePlaceholder = computed(() => `-- Choose a ${defenseTypeLabel(this.defenseDraftType())} --`);
 
     readonly customDefenseSections = computed(() => {
         const entries = this.customDefenseEntries();
@@ -2565,7 +2192,7 @@ export class CharacterDetailPageComponent {
 
                 return {
                     type,
-                    heading: this.defenseTypeHeading(type),
+                    heading: defenseTypeHeading(type),
                     entries: groupedEntries,
                     summaryText: groupedEntries.map((entry) => `${entry.value}*`).join(', ')
                 };
@@ -2582,7 +2209,7 @@ export class CharacterDetailPageComponent {
         const keys = new Set<PersistedConditionKey>();
 
         for (const value of this.persistedBuilderState()?.activeConditions ?? []) {
-            const normalized = this.normalizeConditionKey(value);
+            const normalized = normalizeConditionKey(value);
             if (normalized) {
                 keys.add(normalized);
             }
@@ -2597,7 +2224,7 @@ export class CharacterDetailPageComponent {
             return optimisticLevel;
         }
 
-        return this.normalizeExhaustionLevel(this.persistedBuilderState()?.exhaustionLevel);
+        return normalizeExhaustionLevel(this.persistedBuilderState()?.exhaustionLevel);
     });
 
     readonly isExhaustionDeath = computed(() => this.exhaustionLevel() >= 6);
@@ -2615,7 +2242,7 @@ export class CharacterDetailPageComponent {
             return [] as string[];
         }
 
-        const persistedEntries = this.customDefenseEntries().map((entry) => this.describeDefenseEntry(entry));
+        const persistedEntries = this.customDefenseEntries().map((entry) => describeDefenseEntry(entry));
         const traitResistances = (char.traits ?? [])
             .filter((trait) => /resistance|resil|immune|vulnerab/i.test(trait))
             .map((trait) => trait.replace(/^[^:]*:\s*/, '').trim())
@@ -3497,7 +3124,7 @@ export class CharacterDetailPageComponent {
             return [];
         }
 
-        const speciesInfo = this.getSpeciesInfo(char.race);
+        const speciesInfo = getSpeciesInfo(char.race, speciesInfoMap);
         const speciesDetails = speciesInfo?.speciesDetails;
         const baseTraits = [...(char.traits ?? [])];
         const persistedChoiceMap = this.persistedBuilderState()?.selectedSpeciesTraitChoices ?? {};
@@ -3535,7 +3162,7 @@ export class CharacterDetailPageComponent {
         }
 
         for (const note of speciesDetails?.traitNotes ?? []) {
-            const detailLines = appendChoiceDetails(note.title, [note.summary, note.details].filter((line) => !!line));
+            const detailLines = appendChoiceDetails(note.title, [note.summary, note.details].filter((line): line is string => Boolean(line)));
             addEntry(note.title, note.summary || note.details || '', detailLines.join('\n'));
         }
 
@@ -4193,7 +3820,7 @@ export class CharacterDetailPageComponent {
                 usedSpellSlotsByLevel: {},
                 limitedUseCounts: {},
                 usedHitDiceCount: nextUsedHitDiceCount,
-                exhaustionLevel: this.normalizeExhaustionLevel(nextExhaustionLevel),
+                exhaustionLevel: normalizeExhaustionLevel(nextExhaustionLevel),
                 deathSaveFailures: 0,
                 deathSaveSuccesses: 0
             };
@@ -4665,7 +4292,7 @@ export class CharacterDetailPageComponent {
         const currentState: PersistedBuilderState = this.persistedBuilderState() ?? {};
         const updatedState: PersistedBuilderState = {
             ...currentState,
-            exhaustionLevel: this.normalizeExhaustionLevel(nextExhaustionLevel)
+            exhaustionLevel: normalizeExhaustionLevel(nextExhaustionLevel)
         };
 
         const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
@@ -5963,791 +5590,172 @@ export class CharacterDetailPageComponent {
         });
     }
 
-    private readonly alignmentDetails: Readonly<Record<string, { description: string; bullets: string[] }>> = {
-        'Lawful Good': {
-            description: 'Lawful good characters combine compassion with duty. They believe mercy, justice, and restraint matter most when they are upheld through honorable action and reliable principles.',
-            bullets: [
-                'Acts with integrity, discipline, and a strong sense of responsibility toward others.',
-                'Favors fair systems, oaths, and institutions when those systems protect the innocent.',
-                'Will often sacrifice comfort or safety to do what is right in a principled way.'
-            ]
-        },
-        'Neutral Good': {
-            description: 'Neutral good characters focus on helping others without being tightly bound to law or rebellion. Their moral compass is guided by kindness, practicality, and conscience.',
-            bullets: [
-                'Puts compassion ahead of ideology or rigid codes.',
-                'Supports rules when they help people, and ignores them when they cause harm.',
-                'Usually seeks the most humane and constructive outcome available.'
-            ]
-        },
-        'Chaotic Good': {
-            description: 'Chaotic good characters value freedom, empathy, and self-expression. They resist oppression and prefer to do good on their own terms rather than through imposed systems.',
-            bullets: [
-                'Distrusts authority that limits liberty or enables cruelty.',
-                'Acts from personal conviction rather than obedience.',
-                'Often protects others by defying unjust expectations, laws, or traditions.'
-            ]
-        },
-        'Lawful Neutral': {
-            description: 'Lawful neutral characters prioritize order, structure, and consistency. They believe systems, discipline, and rules provide stability, even when emotional or moral questions are complicated.',
-            bullets: [
-                'Values hierarchy, routine, contracts, and procedure.',
-                'May choose duty over personal preference or sentiment.',
-                'Can be dependable and fair, but also rigid when flexibility is needed.'
-            ]
-        },
-        'True Neutral': {
-            description: 'True neutral characters tend toward balance, restraint, or simple pragmatism. They avoid extremes and often respond to situations case by case instead of following a fixed creed.',
-            bullets: [
-                'Prefers measured choices over ideological commitments.',
-                'May act as a mediator, observer, or practical survivor.',
-                'Can seem calm and grounded, though sometimes detached.'
-            ]
-        },
-        'Chaotic Neutral': {
-            description: 'Chaotic neutral characters are driven by freedom, impulse, and independence. They resist control and prefer to make choices according to their own instincts and desires.',
-            bullets: [
-                'Protects personal autonomy above conformity or duty.',
-                'Can be spontaneous, unpredictable, and hard to manage.',
-                'May champion freedom sincerely or simply reject restraint.'
-            ]
-        },
-        'Lawful Evil': {
-            description: 'Lawful evil characters use order, hierarchy, and discipline in service of selfish or cruel goals. They are often patient, strategic, and comfortable with systems of control.',
-            bullets: [
-                'Seeks power through structure, enforcement, and leverage.',
-                'Honors rules when they are useful, especially when those rules benefit them.',
-                'Can be coldly reliable, but rarely merciful.'
-            ]
-        },
-        'Neutral Evil': {
-            description: 'Neutral evil characters are motivated by self-interest above all else. They pursue advantage with little concern for fairness, loyalty, or the suffering left behind.',
-            bullets: [
-                'Measures choices by profit, safety, or influence.',
-                'Will cooperate when useful and betray when convenient.',
-                'Often hides ruthlessness behind pragmatism or charm.'
-            ]
-        },
-        'Chaotic Evil': {
-            description: 'Chaotic evil characters embrace destruction, cruelty, or violent selfishness without respect for rules or order. Their desires and impulses override stability, trust, and restraint.',
-            bullets: [
-                'Rejects authority, obligation, and moral restraint.',
-                'Frequently acts through fear, rage, or appetite.',
-                'Creates danger not only for enemies, but often for allies as well.'
-            ]
-        }
+    private readonly backgroundRowHandlers: Readonly<Record<string, (value: string) => void>> = {
+        Name: (value) => this.openBackgroundNameDetail(value),
+        Race: (value) => this.openBackgroundRaceDetail(value),
+        Background: (value) => this.openBackgroundBackgroundDetail(value),
+        'Class & Level': (value) => this.openBackgroundClassLevelDetail(value),
+        Alignment: (value) => this.openBackgroundAlignmentDetail(value),
+        Lifestyle: (value) => this.openBackgroundLifestyleDetail(value),
+        Faith: (value) => this.openBackgroundFaithDetail(value),
+        Experience: (value) => this.openBackgroundExperienceDetail(value),
+        Age: (value) => this.openBackgroundAgeDetail(value),
+        Height: (value) => this.openBackgroundHeightDetail(value),
+        Weight: (value) => this.openBackgroundWeightDetail(value)
     };
-
-    private readonly lifestyleDetails: Readonly<Record<string, { description: string; bullets: string[] }>> = {
-        wretched: {
-            description: 'A wretched lifestyle means almost no shelter, privacy, or security. Survival comes before dignity, and every day is shaped by exposure, hunger, and danger.',
-            bullets: [
-                'Often sleeps outdoors, in alleys, ruins, or whatever temporary refuge can be found.',
-                'Meals are inconsistent and usually poor in quality.',
-                'This level of poverty makes illness, exhaustion, and social vulnerability far more common.'
-            ]
-        },
-        squalid: {
-            description: 'A squalid lifestyle provides a roof of some kind, but conditions remain filthy, unsafe, and degrading. The character lives with discomfort and constant risk.',
-            bullets: [
-                'Lodging is cramped, dirty, and often infested or poorly maintained.',
-                'Food is cheap and unreliable, and sanitation is poor.',
-                'The character is likely familiar with desperate neighborhoods and hard living.'
-            ]
-        },
-        poor: {
-            description: 'A poor lifestyle covers basic needs but little else. The character can keep going day to day, though comfort, quality, and social standing remain limited.',
-            bullets: [
-                'Meals are simple, lodging is crowded, and clothing is practical rather than refined.',
-                'Money is watched carefully, with little margin for luxuries or mistakes.',
-                'This is stable survival, not true security.'
-            ]
-        },
-        modest: {
-            description: 'A modest lifestyle is respectable and sustainable. It provides decent food, reasonable shelter, and enough stability to keep equipment and reputation in order.',
-            bullets: [
-                'The character can afford ordinary lodging and dependable meals.',
-                'This lifestyle avoids obvious hardship without signaling wealth.',
-                'It suits many adventurers between expeditions.'
-            ]
-        },
-        comfortable: {
-            description: 'A comfortable lifestyle means a clean home or good inn room, quality meals, and the ability to maintain gear and appearances without daily anxiety about coin.',
-            bullets: [
-                'Living quarters are private or semi-private, well-kept, and socially respectable.',
-                'Food, clothing, and services are consistently good rather than merely adequate.',
-                'The character has enough means to appear established and competent in most settlements.'
-            ]
-        },
-        wealthy: {
-            description: 'A wealthy lifestyle supports fine lodging, excellent meals, and access to influential spaces. The character lives with ease and visible signs of status.',
-            bullets: [
-                'Can maintain servants, tailored clothing, and premium accommodations.',
-                'Has easier access to elite venues, contacts, and comforts.',
-                'This lifestyle communicates rank, success, or strong patronage.'
-            ]
-        },
-        aristocratic: {
-            description: 'An aristocratic lifestyle reflects the highest level of luxury and prestige. The character is surrounded by servants, ceremony, expensive tastes, and the expectations that come with power.',
-            bullets: [
-                'Lives among estates, noble courts, or elite circles with significant attention to etiquette.',
-                'Enjoys exceptional food, furnishings, fashion, and social access.',
-                'This lifestyle carries obligations, reputation pressure, and political scrutiny as well as comfort.'
-            ]
-        }
-    };
-
-    private readonly lifestyleCosts: Readonly<Record<string, { perDay: string; perMonth: string }>> = {
-        wretched: { perDay: '—', perMonth: '—' },
-        squalid: { perDay: '1 sp/day', perMonth: '3 gp/month' },
-        poor: { perDay: '2 sp/day', perMonth: '6 gp/month' },
-        modest: { perDay: '1 gp/day', perMonth: '30 gp/month' },
-        comfortable: { perDay: '2 gp/day', perMonth: '60 gp/month' },
-        wealthy: { perDay: '4 gp/day', perMonth: '120 gp/month' },
-        aristocratic: { perDay: '10 gp/day (minimum)', perMonth: '300 gp/month (minimum)' }
-    };
-
-    private readonly speciesLoreDetails: Readonly<Record<string, {
-        history: string;
-        adulthood: string;
-        lifespan: string;
-        height: string;
-        weight: string;
-        adulthoodAge: number;
-        elderAge: number;
-        bullets: string[];
-    }>> = {
-            Aasimar: {
-                history: 'Aasimar carry a trace of celestial heritage that often reveals itself through quiet omens, radiant presence, or a sense of destiny that follows them through life.',
-                adulthood: 'Aasimar mature at about the same pace as humans, though many connect adulthood with the first clear sign of their divine calling.',
-                lifespan: 'They often live somewhat longer than humans, with some reaching roughly 160 years.',
-                height: 'Aasimar usually fall within ordinary human height ranges, though their posture and presence often feel striking or luminous.',
-                weight: 'Their builds vary widely, but many appear balanced, healthy, and subtly touched by something otherworldly.',
-                adulthoodAge: 18,
-                elderAge: 90,
-                bullets: [
-                    'Many aasimar feel caught between mortal life and a higher purpose.',
-                    'Their appearance may include faintly radiant eyes, unusual calm, or an unmistakable sense of grace.',
-                    'They are often remembered for presence as much as for physical features.'
-                ]
-            },
-            Dragonborn: {
-                history: 'Dragonborn trace their bloodlines to ancient dragons and often carry a strong sense of pride, honor, and lineage in how they present themselves to the world.',
-                adulthood: 'Dragonborn grow quickly and are usually considered adults by around age 15.',
-                lifespan: 'Most dragonborn live to around 80 years, giving them a shorter but intense sense of legacy.',
-                height: 'Dragonborn are typically tall and imposing, often standing well over 6 feet with powerful, upright frames.',
-                weight: 'They tend toward dense, muscular builds made heavier by strong bone structure, scales, and draconic features.',
-                adulthoodAge: 15,
-                elderAge: 50,
-                bullets: [
-                    'Physical presence matters greatly in many dragonborn cultures.',
-                    'Coloration, horns, and scaled features often visually reflect ancestry and temperament.',
-                    'Their appearance usually reads as martial, proud, and difficult to ignore.'
-                ]
-            },
-            Dwarf: {
-                history: 'Dwarves are shaped by clan, craft, and endurance, with traditions rooted in stone halls, patient labor, and memory that stretches across generations.',
-                adulthood: 'Dwarves are generally considered adults around age 50, after years of work, discipline, and family expectation.',
-                lifespan: 'They often live 350 years or more, giving them a long relationship with ancestry, grudges, and legacy.',
-                height: 'Dwarves are shorter than most humans, commonly between about 4 and 5 feet tall, with compact and formidable posture.',
-                weight: 'They are famously broad, dense, and heavy for their height, with sturdy frames built for labor and battle.',
-                adulthoodAge: 50,
-                elderAge: 220,
-                bullets: [
-                    'A dwarf often appears solid, grounded, and difficult to move either physically or emotionally.',
-                    'Beards, braids, jewelry, and clan marks frequently carry personal and family meaning.',
-                    'Their build suggests resilience more than speed.'
-                ]
-            },
-            Elf: {
-                history: 'Elves are ancient, fey-touched people tied to magic, artistry, and memory. Their cultures are often associated with old forests, refined learning, and a long view of history that makes human kingdoms feel brief by comparison.',
-                adulthood: 'Elves reach physical maturity at roughly the same age as humans, but an elf is not usually regarded as a true adult until around age 100, when experience and identity are considered fully formed.',
-                lifespan: 'Elves commonly live to around 750 years, giving them a very different sense of legacy, patience, grief, and long-term obligation than shorter-lived peoples.',
-                height: 'Elves are typically slender and graceful, ranging from under 5 feet to over 6 feet tall depending on lineage and individual build.',
-                weight: 'Elves usually have lighter, leaner frames than similarly tall humans, emphasizing balance, agility, and a narrow build over bulk.',
-                adulthoodAge: 100,
-                elderAge: 500,
-                bullets: [
-                    'Elven culture often prizes artistry, memory, magic, and natural beauty.',
-                    'Their long lives can make them patient, reserved, nostalgic, or slow to fully trust quick-moving cultures.',
-                    'Many elven traditions balance personal freedom with deep continuity across centuries.'
-                ]
-            },
-            Gnome: {
-                history: 'Gnomes are curious, clever, and inventive folk whose communities often blend whimsy, practical skill, and an intense love of discovery.',
-                adulthood: 'Gnomes mature more slowly than humans and are often considered adults around age 40.',
-                lifespan: 'Many gnomes live from 350 to 500 years, allowing lifetimes of experimentation, craft, and accumulated stories.',
-                height: 'Gnomes are small, usually around 3 to 4 feet tall, with lively expressions and compact frames.',
-                weight: 'They are light compared with most humanoids, though their posture and energy can make them seem larger than they are.',
-                adulthoodAge: 40,
-                elderAge: 250,
-                bullets: [
-                    'Gnomish appearance often reflects personality through bright clothes, tools, keepsakes, and expressive styling.',
-                    'They tend to look alert, quick, and intensely engaged with the world around them.',
-                    'Even older gnomes often carry a spark of restless curiosity.'
-                ]
-            },
-            Goliath: {
-                history: 'Goliaths come from harsh highland traditions shaped by endurance, competition, and the belief that strength should be matched by discipline and self-reliance.',
-                adulthood: 'Goliaths mature at about the same pace as humans, with adulthood usually recognized in the later teenage years.',
-                lifespan: 'They generally live less than a century, and many experience life as something to be met head-on rather than preserved gently.',
-                height: 'Goliaths are notably tall and broad, often towering above other humanoids with long limbs and mountain-hardened frames.',
-                weight: 'They are heavily built, with dense muscle and bone that make them feel as solid as the terrain they come from.',
-                adulthoodAge: 18,
-                elderAge: 60,
-                bullets: [
-                    'Their physical silhouette often reads as athletic, weathered, and powerful.',
-                    'Scars, tattoos, and trophies can serve as records of competition or survival.',
-                    'A goliath presence usually suggests resilience before a word is spoken.'
-                ]
-            },
-            Halfling: {
-                history: 'Halflings are deeply rooted in home, hospitality, and quiet courage, often building lives around comfort, family, and community rather than grandeur.',
-                adulthood: 'Halflings are usually considered adults around age 20.',
-                lifespan: 'Many halflings live to around 150 years, giving them a relaxed but enduring view of life.',
-                height: 'They are typically around 3 feet tall, with quick movements and easy, balanced posture.',
-                weight: 'Halflings are generally light and compact, built for nimbleness rather than reach or raw size.',
-                adulthoodAge: 20,
-                elderAge: 100,
-                bullets: [
-                    'Their appearance often feels approachable, grounded, and quietly confident.',
-                    'Good food, travel wear, and practical personal comforts often show up in halfling style.',
-                    'Small stature rarely translates to small presence.'
-                ]
-            },
-            Human: {
-                history: 'Humans are adaptable, ambitious, and astonishingly varied, building cultures everywhere from remote villages to sprawling cities and frontier outposts.',
-                adulthood: 'Humans are generally considered adults in their late teens or early twenties.',
-                lifespan: 'Most humans live less than a century, which often gives them urgency, drive, and a willingness to change quickly.',
-                height: 'Human height varies enormously, from shorter compact builds to tall, long-limbed frames depending on lineage and region.',
-                weight: 'Human weight is equally varied, with no single typical build beyond broad adaptability.',
-                adulthoodAge: 18,
-                elderAge: 60,
-                bullets: [
-                    'Human appearance is defined more by culture and upbringing than by one common physical mold.',
-                    'They often show their identity through clothing, accents, posture, and personal ambition.',
-                    'Their versatility is as visible socially as it is physically.'
-                ]
-            },
-            Orc: {
-                history: 'Orcs are hardy wanderers and survivors, shaped by demanding environments and traditions that often prize directness, endurance, and decisive action.',
-                adulthood: 'Orcs mature quickly and are often recognized as adults in the early teenage years.',
-                lifespan: 'They tend to live shorter lives than humans, often seldom reaching far beyond 50 years.',
-                height: 'Orcs are usually tall, broad-shouldered, and physically commanding, with a natural look of strength and motion.',
-                weight: 'Their builds tend toward heavy muscle and durable frames suited to hard travel and conflict.',
-                adulthoodAge: 12,
-                elderAge: 35,
-                bullets: [
-                    'An orc often gives the impression of momentum, force, and durability.',
-                    'Tusks, scars, and weathered gear frequently become part of their visual identity.',
-                    'Their appearance commonly reflects life lived close to hardship and action.'
-                ]
-            },
-            Tiefling: {
-                history: 'Tieflings bear the visible or spiritual marks of fiendish legacy, often living at the intersection of fascination, suspicion, and personal reinvention.',
-                adulthood: 'Tieflings generally mature at about the same pace as humans.',
-                lifespan: 'Many live slightly longer than humans, though their lives are often shaped more by social pressure than by age alone.',
-                height: 'Tieflings usually share human-like height ranges, though horns, tails, and striking features can make their silhouettes memorable.',
-                weight: 'Their builds vary like those of humans, with infernal traits adding more distinctiveness than mass.',
-                adulthoodAge: 18,
-                elderAge: 70,
-                bullets: [
-                    'Their appearance can range from subtly uncanny to unmistakably infernal.',
-                    'Horns, tails, unusual skin tones, and luminous eyes often define first impressions.',
-                    'Many tieflings shape their look intentionally as an act of control over how they are seen.'
-                ]
-            },
-            Tabaxi: {
-                history: 'Tabaxi are wandering, story-hungry travelers whose lives are often shaped by curiosity, movement, and a deep appetite for novelty.',
-                adulthood: 'Tabaxi mature at about the same rate as humans, reaching adulthood in the later teenage years.',
-                lifespan: 'They tend to live human-length lives, though their outlook often favors experience over permanence.',
-                height: 'Tabaxi are typically human-sized or a bit taller, with long-limbed, feline frames built for balance and speed.',
-                weight: 'They usually look lean and spring-loaded rather than bulky, with movement that feels graceful and precise.',
-                adulthoodAge: 18,
-                elderAge: 60,
-                bullets: [
-                    'Patterning, fur color, ears, tail, and eye shape make tabaxi visually distinctive at a glance.',
-                    'They often seem poised to move even while standing still.',
-                    'A tabaxi silhouette usually communicates agility before strength.'
-                ]
-            },
-            Shifter: {
-                history: 'Shifters carry bestial heritage that surfaces in instinct, appearance, and bursts of heightened ferocity, often leaving them between worlds rather than fully at home in one.',
-                adulthood: 'Shifters mature at about the same pace as humans, though many become socially independent early.',
-                lifespan: 'They tend to live slightly shorter lives than humans on average, though this varies by community and lifestyle.',
-                height: 'Shifters usually fall within human height ranges, though posture, movement, and features often suggest an animal edge.',
-                weight: 'Their builds are commonly wiry, athletic, and ready for sudden motion rather than ornamental stillness.',
-                adulthoodAge: 18,
-                elderAge: 60,
-                bullets: [
-                    'Hair, eyes, canines, and body language often carry subtle animal markers even before shifting.',
-                    'They frequently look like they are holding energy just under the surface.',
-                    'Different shifter lineages can skew more lithe, rugged, or predatory in appearance.'
-                ]
-            },
-            Goblin: {
-                history: 'Goblins are quick, adaptable survivors whose communities often value cunning, speed, and practical advantage over comfort or permanence.',
-                adulthood: 'Goblins grow up fast and are often considered adults by about age 8.',
-                lifespan: 'They rarely live especially long lives, often topping out around 60 years.',
-                height: 'Goblins are short, usually between about 3 and 4 feet tall, with sharp features and restless body language.',
-                weight: 'They are usually wiry and light, built for squeezing through danger and escaping it just as fast.',
-                adulthoodAge: 8,
-                elderAge: 40,
-                bullets: [
-                    'A goblin often looks alert, crafty, and halfway ready to bolt or pounce.',
-                    'Their presence tends to emphasize speed, expression, and improvisation over size.',
-                    'Gear and clothing frequently look practical, scavenged, or cleverly repurposed.'
-                ]
-            },
-            'Shadar-Kai': {
-                history: 'Shadar-kai are shadow-touched elves shaped by loss, duty, and the austere influence of the Raven Queen, often carrying an air of intensity or distance.',
-                adulthood: 'Like other elves, shadar-kai mature physically at a human pace but are not usually regarded as fully adult until around age 100.',
-                lifespan: 'They share the long elven lifespan, often living for many centuries.',
-                height: 'Shadar-kai are usually slender and graceful like other elves, though their bearing often feels more severe or haunted.',
-                weight: 'They tend toward lean, light frames, with a visual emphasis on precision and endurance rather than softness.',
-                adulthoodAge: 100,
-                elderAge: 500,
-                bullets: [
-                    'Their appearance often carries dark elegance, restraint, and signs of shadowed heritage.',
-                    'Muted colors, stark features, and ritual scars or adornments are common visual cues.',
-                    'They often seem emotionally contained even when physically still.'
-                ]
-            },
-            Minotaur: {
-                history: 'Minotaurs are physically formidable folk often associated with strength, momentum, and proud personal presence, whether in war, travel, or public life.',
-                adulthood: 'Minotaurs mature at roughly the same pace as humans, reaching adulthood in the later teenage years.',
-                lifespan: 'They often live human-length lives, though their cultures may place greater emphasis on deeds than longevity.',
-                height: 'Minotaurs are typically very tall and broad, with powerful shoulders, thick necks, and unmistakable horned silhouettes.',
-                weight: 'They are heavy, muscular, and massively built, with weight that reflects raw physical force and stability.',
-                adulthoodAge: 17,
-                elderAge: 55,
-                bullets: [
-                    'A minotaur usually reads as imposing even in relaxed posture.',
-                    'Horns, stance, and sheer physical width define much of their visual identity.',
-                    'Their appearance often suggests impact, confidence, and presence in close quarters.'
-                ]
-            },
-            'Half-Elf': {
-                history: 'Half-elves often grow up balancing different cultural worlds, carrying both human adaptability and an elven sense of memory, grace, or distance.',
-                adulthood: 'Half-elves mature at about the same pace as humans, though their mixed heritage can shape how adulthood is recognized socially.',
-                lifespan: 'They often live considerably longer than humans, with many reaching around 180 years.',
-                height: 'Half-elves usually stand within human height ranges, often with a graceful carriage or fine-featured look that hints at elven ancestry.',
-                weight: 'Their build varies widely, but many appear balanced and lightly athletic rather than especially heavy.',
-                adulthoodAge: 20,
-                elderAge: 120,
-                bullets: [
-                    'Their appearance often blends familiar humanity with a subtly uncanny refinement.',
-                    'Many half-elves look adaptable in social spaces because they literally move between worlds.',
-                    'Their features can read as elegant without being fragile.'
-                ]
-            },
-            'Half-Orc': {
-                history: 'Half-orcs often grow up negotiating strength, identity, and expectation, carrying both the resilience of orcish blood and the flexibility to move between different communities.',
-                adulthood: 'Half-orcs mature a little faster than humans and are often considered adults in the mid-teens.',
-                lifespan: 'They rarely live as long as humans, often reaching around 75 years at most.',
-                height: 'Half-orcs are usually taller and broader than most humans, with an unmistakably powerful physical presence.',
-                weight: 'They tend to be heavy-boned and muscular, built for impact and endurance.',
-                adulthoodAge: 14,
-                elderAge: 45,
-                bullets: [
-                    'Strength, scars, and force of personality often shape a half-orc first impression.',
-                    'Their appearance can range from rough and intimidating to calm and imposing.',
-                    'Many carry visible signs of hard-earned resilience.'
-                ]
-            }
-        };
-
-    private readonly deityFaithDetails: Readonly<Record<string, {
-        description: string;
-        lineItems: Array<{ value: string; label: string; note?: string }>;
-        bullets: string[];
-    }>> = {
-            ilmater: {
-                description: 'Ilmater, the Crying God or Broken God, is a lawful good deity of endurance, suffering, martyrdom, and perseverance. His faith teaches compassion, mercy, and the duty to bear burdens so that others may suffer less.',
-                lineItems: [
-                    { value: 'Lawful Good', label: 'Divine alignment' },
-                    { value: 'Portfolio', label: 'Endurance, suffering, martyrdom, perseverance' },
-                    { value: 'Life, Twilight', label: 'Associated domains' },
-                    { value: 'Hands bound with red cord', label: 'Holy symbol' }
-                ],
-                bullets: [
-                    'Ilmater is closely associated with compassion, patient endurance, and protection of the oppressed, injured, and poor.',
-                    'In Forgotten Realms history, he stood beside Tyr and Torm as part of the Triad, a powerful alliance of lawful good deities.',
-                    'His clergy are known for relieving suffering, ministering to the weak, and opposing cruelty, torture, and needless pain.'
-                ]
-            }
-        };
-
-    private readonly xpThresholds: ReadonlyArray<[number, number]> = [
-        [2, 300], [3, 900], [4, 2700], [5, 6500], [6, 14000],
-        [7, 23000], [8, 34000], [9, 48000], [10, 64000],
-        [11, 85000], [12, 100000], [13, 120000], [14, 140000],
-        [15, 165000], [16, 195000], [17, 225000], [18, 265000],
-        [19, 305000], [20, 355000]
-    ];
-
-    private getSpeciesInfo(speciesName: string) {
-        const match = Object.entries(speciesInfoMap).find(([key]) => key.toLowerCase() === speciesName.trim().toLowerCase());
-        return match?.[1] ?? null;
-    }
-
-    private getSpeciesLore(speciesName: string) {
-        const normalizedName = speciesName.trim();
-        const match = Object.entries(this.speciesLoreDetails).find(([key]) => key.toLowerCase() === normalizedName.toLowerCase());
-        if (match?.[1]) {
-            return match[1];
-        }
-
-        const speciesInfo = this.getSpeciesInfo(normalizedName);
-        const size = speciesInfo?.speciesDetails?.size?.toLowerCase() ?? '';
-        if (!speciesInfo) {
-            return null;
-        }
-
-        const height = size.includes('small')
-            ? `${normalizedName} is typically shorter and more compact than a human, with proportions shaped by Small size and practical movement.`
-            : size.includes('medium')
-                ? `${normalizedName} usually falls within a human-like height band, though posture, features, and silhouette vary by lineage.`
-                : `${normalizedName} has a more unusual silhouette than most humanoids, often standing out immediately in a crowd.`;
-
-        const weight = size.includes('small')
-            ? 'Build tends toward light, compact frames that emphasize balance, nimbleness, or efficiency over bulk.'
-            : 'Build can range from lean to heavily set depending on heritage, environment, and lifestyle.';
-
-        return {
-            history: speciesInfo.summary ?? `${normalizedName} has its own distinct culture, physical presence, and visual identity.`,
-            adulthood: `${normalizedName} reaches adulthood according to its own community standards, often tied to independence, training, or social role.`,
-            lifespan: `Members of this species follow their own life stages and traditions, though exact lifespan can vary by lineage and setting.`,
-            height,
-            weight,
-            adulthoodAge: 18,
-            elderAge: 60,
-            bullets: speciesInfo.highlights?.slice(0, 3) ?? []
-        };
-    }
-
-    private formatAlignmentValue(value: string): string {
-        return value
-            .trim()
-            .replace(/-/g, ' ')
-            .split(/\s+/)
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-            .join(' ');
-    }
-
-    private describeSpeciesAge(speciesName: string, value: string): DetailDrawerContent {
-        const lore = this.getSpeciesLore(speciesName);
-        const parsedAge = Number.parseInt(value, 10);
-        const stage = lore && Number.isFinite(parsedAge)
-            ? parsedAge < lore.adulthoodAge
-                ? `This character is still young by ${speciesName} standards, with much of adult life still ahead.`
-                : parsedAge < lore.elderAge
-                    ? `This character is in the established adult span typical for ${speciesName}, with identity and reputation likely well formed.`
-                    : `This character is older by ${speciesName} standards and may carry deep memory, experience, or a longer view of the world.`
-            : null;
-
-        return {
-            title: `Age: ${value}`,
-            subtitle: `${speciesName} lifespan`,
-            lineItems: [
-                { label: 'Current recorded age', value }
-            ],
-            description: lore
-                ? `${lore.adulthood} ${lore.lifespan}`
-                : 'Age is interpreted through species culture, maturity expectations, and lifespan norms.',
-            bullets: [
-                stage,
-                ...(lore?.bullets ?? [])
-            ].filter((entry): entry is string => Boolean(entry))
-        };
-    }
-
-    private describeSpeciesHeight(speciesName: string, value: string): DetailDrawerContent {
-        const lore = this.getSpeciesLore(speciesName);
-        return {
-            title: `Height: ${value}`,
-            subtitle: `${speciesName} physique`,
-            lineItems: [
-                { label: 'Current recorded height', value }
-            ],
-            description: lore?.height
-                ?? 'Height helps define silhouette, posture, and first-impression presence in scenes and portraits.',
-            bullets: lore ? [lore.weight, ...lore.bullets.slice(0, 1)] : ['Height and build often influence movement style, presence, and how equipment or clothing are visualized.']
-        };
-    }
-
-    private describeSpeciesWeight(speciesName: string, value: string): DetailDrawerContent {
-        const lore = this.getSpeciesLore(speciesName);
-        return {
-            title: `Weight: ${value}`,
-            subtitle: `${speciesName} build`,
-            lineItems: [
-                { label: 'Current recorded weight', value }
-            ],
-            description: lore?.weight
-                ?? 'Weight reflects frame and build, helping describe how the character carries gear and moves through the world.',
-            bullets: lore ? [lore.height, ...lore.bullets.slice(0, 1)] : ['Weight can inform how the character moves, appears, and is described in armor or travel gear.']
-        };
-    }
 
     openBackgroundRowDetail(label: string, value: string): void {
+        if (!this.character()) {
+            return;
+        }
+
+        if (label === 'Gender' || label === 'Hair' || label === 'Eyes' || label === 'Skin') {
+            this.openBackgroundAppearanceDetail(label, value);
+            return;
+        }
+
+        this.backgroundRowHandlers[label]?.(value);
+    }
+
+    private openBackgroundNameDetail(value: string): void {
         const char = this.character();
         if (!char) {
             return;
         }
 
-        switch (label) {
-            case 'Name': {
-                this.openDetailDrawer({
-                    title: value,
-                    subtitle: 'Character Name',
-                    description: 'This is the identity your character presents to the world and the name allies, rivals, and legends will remember.',
-                    bullets: [
-                        `Class: ${char.className}`,
-                        `Background: ${this.displayBackground()}`,
-                        `Species: ${char.race}`
-                    ]
-                });
-                break;
-            }
-            case 'Race': {
-                const race = this.raceLookup.get(value.toLowerCase());
-                const speciesInfo = this.getSpeciesInfo(value);
-                const speciesLore = this.getSpeciesLore(value);
-                this.openDetailDrawer({
-                    title: value,
-                    subtitle: 'Species',
-                    description: speciesLore?.history ?? speciesInfo?.summary ?? race?.description ?? 'A unique species with its own history, culture, and traits.',
-                    lineItems: [
-                        ...(speciesInfo?.speciesDetails?.coreTraits ?? []).map((item) => ({ value: item.value, label: item.label }))
-                    ],
-                    secondaryHeading: 'Notable species traits',
-                    bullets: [
-                        ...(speciesInfo?.speciesDetails?.traitNotes?.map((item) => `${item.title}: ${item.summary}`)
-                            ?? speciesLore?.bullets
-                            ?? race?.traits
-                            ?? []),
-                        ...(speciesLore
-                            ? [
-                                `Adulthood: ${speciesLore.adulthood}`,
-                                `Lifespan: ${speciesLore.lifespan}`
-                            ]
-                            : [])
-                    ]
-                });
-                break;
-            }
-            case 'Background': {
-                const key = value.trim();
-                const backgroundDetail = backgroundDetailOverrides[key];
-                const description = key === 'Sage'
-                    ? 'You spent years learning the lore of the multiverse, studying manuscripts, scrolls, and expert teachers until deep research became part of your identity.'
-                    : backgroundDetail?.description ?? backgroundDescriptionFallbacks[key] ?? 'A background that shaped who your character was before adventuring.';
-                const skills = backgroundDetail?.skillProficiencies ?? backgroundSkillProficienciesFallbacks[key] ?? 'Not recorded';
-                const tools = backgroundDetail?.toolProficiencies ?? backgroundToolProficienciesFallbacks[key] ?? 'Not recorded';
-                const languages = backgroundDetail?.languages ?? backgroundLanguagesFallbacks[key] ?? 'Not recorded';
-                this.openDetailDrawer({
-                    title: key,
-                    subtitle: 'Background',
-                    description,
-                    lineItems: [
-                        { value: skills, label: 'Skill proficiencies' },
-                        { value: tools, label: 'Tool proficiencies' },
-                        { value: languages, label: 'Languages' }
-                    ],
-                    secondaryHeading: 'Background details',
-                    bullets: key === 'Sage'
-                        ? [
-                            'Researcher: if you do not know a piece of lore, you often know where or from whom it can be learned.',
-                            'Typical specialties include alchemy, astronomy, history, religion, magic theory, and other deep academic fields.',
-                            'Sages are often driven by knowledge, mystery, scholarship, and the preservation of dangerous or valuable truths.'
-                        ]
-                        : (backgroundDetail?.choices ?? []).map((choice) => `${choice.title}: ${choice.description ?? choice.options.slice(0, 3).join(', ')}`)
-                });
-                break;
-            }
-            case 'Class & Level': {
-                const className = char.className;
-                const classKey = Object.keys(classLevelOneFeatures).find((k) => k.toLowerCase() === className.toLowerCase());
-                const levelEntries = classKey ? classLevelOneFeatures[classKey] : undefined;
-                const levelOneFeatures = levelEntries?.find((e) => e.level === 1)?.features ?? [];
-                const classInfo = Object.entries(classInfoMap).find(([key]) => key.toLowerCase() === className.toLowerCase())?.[1] ?? null;
-                const classDetail = Object.entries(classDetailFallbacks).find(([key]) => key.toLowerCase() === className.toLowerCase())?.[1] ?? null;
-                this.openDetailDrawer({
-                    title: className,
-                    subtitle: `Level ${char.level} ${className}`,
-                    description: classDetail?.tagline ?? classInfo?.summary ?? `${className} is a class with distinct combat, exploration, and progression tools.`,
-                    lineItems: [
-                        ...(classDetail?.coreTraits?.slice(0, 4).map((item) => ({ value: item.value, label: item.label })) ?? []),
-                        ...(classInfo ? [{ value: classInfo.source, label: 'Source' }] : [])
-                    ],
-                    secondaryHeading: 'Class profile',
-                    bullets: [
-                        ...(classInfo?.highlights ?? []),
-                        ...(classDetail?.levelOneGains?.slice(0, 3) ?? []),
-                        ...(classDetail?.featureNotes?.slice(0, 3).map((note) => `${note.title}: ${note.summary}`) ?? []),
-                        ...levelOneFeatures.slice(0, 3).map((feature) => `${feature.name}: ${feature.description ?? 'Signature class feature.'}`)
-                    ]
-                });
-                break;
-            }
-            case 'Alignment': {
-                const normalized = this.formatAlignmentValue(value);
-                const detail = this.alignmentDetails[normalized];
-                this.openDetailDrawer({
-                    title: normalized,
-                    subtitle: 'Alignment',
-                    description: detail?.description ?? 'An ethical and moral outlook that guides how this character thinks and acts in the world.',
-                    bullets: detail?.bullets ?? [
-                        'Alignment reflects how a character tends to approach duty, freedom, mercy, selfishness, and restraint.',
-                        'It is a roleplay tool rather than a prison, and can shift as the character changes.',
-                        'Consistent behavior gives the alignment meaning at the table.'
-                    ]
-                });
-                break;
-            }
-            case 'Lifestyle': {
-                const key = value.trim().toLowerCase();
-                const detail = this.lifestyleDetails[key];
-                const cost = this.lifestyleCosts[key];
-                this.openDetailDrawer({
-                    title: value,
-                    subtitle: 'Lifestyle Expense',
-                    description: detail?.description ?? "A chosen lifestyle that determines your character's living standards between adventures.",
-                    lineItems: cost
-                        ? [
-                            { value: cost.perDay, label: 'Typical cost per day' },
-                            { value: cost.perMonth, label: 'Typical cost per 30 days' }
-                        ]
-                        : undefined,
-                    bullets: detail?.bullets ?? [
-                        'Lifestyle affects lodging, meals, comfort, and how respectable your day-to-day living appears.',
-                        'It can change how NPCs perceive your means, manners, and social standing.',
-                        'Many campaigns track lifestyle during downtime or long urban stays.'
-                    ]
-                });
-                break;
-            }
-            case 'Faith': {
-                const normalizedFaith = value.trim().toLowerCase();
-                const detail = this.deityFaithDetails[normalizedFaith];
-                this.openDetailDrawer({
-                    title: value,
-                    subtitle: 'Faith',
-                    description: value && value !== 'Not recorded'
-                        ? detail?.description ?? 'This reflects the deity, philosophy, or spiritual path that influences your character\'s worldview and behavior.'
-                        : 'No faith or spiritual tradition has been recorded for this character yet.',
-                    lineItems: detail?.lineItems,
-                    secondaryHeading: detail ? 'Faith and worship' : undefined,
-                    bullets: detail?.bullets ?? [
-                        'Faith can shape ideals, rituals, oaths, and roleplay choices.',
-                        'It may affect relationships with temples, priests, cults, and divine factions.',
-                        'Some campaigns also tie faith into downtime, omens, or divine favor.'
-                    ]
-                });
-                break;
-            }
-            case 'Experience': {
-                const currentXp = typeof char.experiencePoints === 'number' ? Math.max(0, Math.trunc(char.experiencePoints)) : null;
-                const nextThreshold = currentXp != null ? this.xpThresholds.find(([, xp]) => xp > currentXp) : null;
-                const bullets: string[] = [];
-                if (currentXp != null && nextThreshold) {
-                    const [nextLevel, nextXp] = nextThreshold;
-                    const needed = nextXp - currentXp;
-                    bullets.push(`${needed.toLocaleString()} XP needed to reach level ${nextLevel}.`);
-                    bullets.push(`Next milestone: ${nextXp.toLocaleString()} XP.`);
-                } else if (currentXp != null) {
-                    bullets.push('You have reached the maximum level — no further XP thresholds apply.');
-                }
-                bullets.push('XP is typically awarded at the end of an encounter or session by your DM.');
-                this.openDetailDrawer({
-                    title: 'Experience Points',
-                    subtitle: currentXp != null ? `${currentXp.toLocaleString()} XP` : 'Not recorded',
-                    description: "Experience points track your character's growth and advancement toward the next level.",
-                    bullets
-                });
-                break;
-            }
-            case 'Gender':
-            case 'Hair':
-            case 'Eyes':
-            case 'Skin': {
-                this.openDetailDrawer({
-                    title: `${label}: ${value}`,
-                    subtitle: 'Appearance',
-                    description: `This appearance detail helps define how the character is perceived at a glance and supports more consistent roleplay and scene description.`,
-                    bullets: [
-                        'Use appearance details to anchor introductions, disguises, portraits, and witness descriptions.',
-                        'These traits can help make recurring NPC interactions and party roleplay feel more grounded.',
-                        'Update them as scars, aging, magical changes, or travel wear alter the character over time.'
-                    ]
-                });
-                break;
-            }
-            case 'Age': {
-                this.openDetailDrawer(this.describeSpeciesAge(char.race, value));
-                break;
-            }
-            case 'Height': {
-                this.openDetailDrawer(this.describeSpeciesHeight(char.race, value));
-                break;
-            }
-            case 'Weight': {
-                this.openDetailDrawer(this.describeSpeciesWeight(char.race, value));
-                break;
-            }
-            default:
-                break;
+        this.openDetailDrawer(buildNameDetail(value, char.className, this.displayBackground(), char.race));
+    }
+
+    private openBackgroundRaceDetail(value: string): void {
+        const race = this.raceLookup.get(value.toLowerCase());
+        const speciesInfo = getSpeciesInfo(value, speciesInfoMap);
+        const speciesLore = getSpeciesLore(value, SPECIES_LORE_DETAILS, speciesInfoMap);
+        const description = speciesLore?.history ?? speciesInfo?.summary ?? race?.description ?? 'A unique species with its own history, culture, and traits.';
+        const lineItems = [
+            ...(speciesInfo?.speciesDetails?.coreTraits ?? []).map((item: { value: string; label: string }) => ({ value: item.value, label: item.label }))
+        ];
+        const bullets = [
+            ...(speciesInfo?.speciesDetails?.traitNotes?.map((item: { title: string; summary: string }) => `${item.title}: ${item.summary}`)
+                ?? speciesLore?.bullets
+                ?? race?.traits
+                ?? []),
+            ...(speciesLore
+                ? [
+                    `Adulthood: ${speciesLore.adulthood}`,
+                    `Lifespan: ${speciesLore.lifespan}`
+                ]
+                : [])
+        ];
+        this.openDetailDrawer(buildRaceDetail(value, description, lineItems, bullets));
+    }
+
+    private openBackgroundBackgroundDetail(value: string): void {
+        const key = value.trim();
+        const backgroundDetail = backgroundDetailOverrides[key];
+        const description = key === 'Sage'
+            ? 'You spent years learning the lore of the multiverse, studying manuscripts, scrolls, and expert teachers until deep research became part of your identity.'
+            : backgroundDetail?.description ?? backgroundDescriptionFallbacks[key] ?? 'A background that shaped who your character was before adventuring.';
+        const skills = backgroundDetail?.skillProficiencies ?? backgroundSkillProficienciesFallbacks[key] ?? 'Not recorded';
+        const tools = backgroundDetail?.toolProficiencies ?? backgroundToolProficienciesFallbacks[key] ?? 'Not recorded';
+        const languages = backgroundDetail?.languages ?? backgroundLanguagesFallbacks[key] ?? 'Not recorded';
+        const bullets = key === 'Sage'
+            ? [
+                'Researcher: if you do not know a piece of lore, you often know where or from whom it can be learned.',
+                'Typical specialties include alchemy, astronomy, history, religion, magic theory, and other deep academic fields.',
+                'Sages are often driven by knowledge, mystery, scholarship, and the preservation of dangerous or valuable truths.'
+            ]
+            : (backgroundDetail?.choices ?? []).map((choice) => `${choice.title}: ${choice.description ?? choice.options.slice(0, 3).join(', ')}`);
+        this.openDetailDrawer(buildBackgroundEntryDetail(key, description, skills, tools, languages, bullets));
+    }
+
+    private openBackgroundClassLevelDetail(_value: string): void {
+        const char = this.character();
+        if (!char) {
+            return;
         }
+
+        const className = char.className;
+        const classKey = Object.keys(classLevelOneFeatures).find((k) => k.toLowerCase() === className.toLowerCase());
+        const levelEntries = classKey ? classLevelOneFeatures[classKey] : undefined;
+        const levelOneFeatures = levelEntries?.find((e) => e.level === 1)?.features ?? [];
+        const classInfo = Object.entries(classInfoMap).find(([key]) => key.toLowerCase() === className.toLowerCase())?.[1] ?? null;
+        const classDetail = Object.entries(classDetailFallbacks).find(([key]) => key.toLowerCase() === className.toLowerCase())?.[1] ?? null;
+        const description = classDetail?.tagline ?? classInfo?.summary ?? `${className} is a class with distinct combat, exploration, and progression tools.`;
+        const lineItems = [
+            ...(classDetail?.coreTraits?.slice(0, 4).map((item) => ({ value: item.value, label: item.label })) ?? []),
+            ...(classInfo ? [{ value: classInfo.source, label: 'Source' }] : [])
+        ];
+        const bullets = [
+            ...(classInfo?.highlights ?? []),
+            ...(classDetail?.levelOneGains?.slice(0, 3) ?? []),
+            ...(classDetail?.featureNotes?.slice(0, 3).map((note) => `${note.title}: ${note.summary}`) ?? []),
+            ...levelOneFeatures.slice(0, 3).map((feature) => `${feature.name}: ${feature.description ?? 'Signature class feature.'}`)
+        ];
+        this.openDetailDrawer(buildClassLevelDetail(className, char.level, description, lineItems, bullets));
+    }
+
+    private openBackgroundAlignmentDetail(value: string): void {
+        const normalized = formatAlignmentValue(value);
+        const detail = ALIGNMENT_DETAILS[normalized];
+        this.openDetailDrawer(buildAlignmentDetail(normalized, detail));
+    }
+
+    private openBackgroundLifestyleDetail(value: string): void {
+        const key = value.trim().toLowerCase();
+        const detail = LIFESTYLE_DETAILS[key];
+        const cost = LIFESTYLE_COSTS[key];
+        this.openDetailDrawer(buildLifestyleDetail(value, detail, cost));
+    }
+
+    private openBackgroundFaithDetail(value: string): void {
+        const normalizedFaith = value.trim().toLowerCase();
+        const detail = DEITY_FAITH_DETAILS[normalizedFaith];
+        this.openDetailDrawer(buildFaithDetail(value, detail));
+    }
+
+    private openBackgroundExperienceDetail(_value: string): void {
+        const char = this.character();
+        if (!char) {
+            return;
+        }
+
+        const currentXp = typeof char.experiencePoints === 'number' ? Math.max(0, Math.trunc(char.experiencePoints)) : null;
+        this.openDetailDrawer(buildExperienceDetail(currentXp, XP_THRESHOLDS));
+    }
+
+    private openBackgroundAppearanceDetail(label: string, value: string): void {
+        this.openDetailDrawer(buildAppearanceDetail(label, value));
+    }
+
+    private openBackgroundAgeDetail(value: string): void {
+        const char = this.character();
+        if (!char) {
+            return;
+        }
+
+        this.openDetailDrawer(buildSpeciesAgeDetail(char.race, value, getSpeciesLore(char.race, SPECIES_LORE_DETAILS, speciesInfoMap)));
+    }
+
+    private openBackgroundHeightDetail(value: string): void {
+        const char = this.character();
+        if (!char) {
+            return;
+        }
+
+        this.openDetailDrawer(buildSpeciesHeightDetail(char.race, value, getSpeciesLore(char.race, SPECIES_LORE_DETAILS, speciesInfoMap)));
+    }
+
+    private openBackgroundWeightDetail(value: string): void {
+        const char = this.character();
+        if (!char) {
+            return;
+        }
+
+        this.openDetailDrawer(buildSpeciesWeightDetail(char.race, value, getSpeciesLore(char.race, SPECIES_LORE_DETAILS, speciesInfoMap)));
     }
 
     setSpellFilter(filter: SpellFilter): void {
         this.activeSpellFilter.set(filter);
-    }
-
-    defenseTypeLabel(type: PersistedDefenseType): string {
-        switch (type) {
-            case 'resistance':
-                return 'Resistance';
-            case 'immunity':
-                return 'Immunity';
-            case 'vulnerability':
-                return 'Vulnerability';
-            case 'condition-immunity':
-                return 'Condition Immunity';
-            default:
-                return 'Defense';
-        }
-    }
-
-    defenseTypeHeading(type: PersistedDefenseType): string {
-        switch (type) {
-            case 'resistance':
-                return 'RESISTANCES';
-            case 'immunity':
-                return 'IMMUNITIES';
-            case 'vulnerability':
-                return 'VULNERABILITIES';
-            case 'condition-immunity':
-                return 'CONDITION IMMUNITIES';
-            default:
-                return 'DEFENSES';
-        }
-    }
-
-    defenseTypeIcon(type: PersistedDefenseType): string {
-        switch (type) {
-            case 'resistance':
-                return 'fa-shield-halved';
-            case 'immunity':
-                return 'fa-shield-check';
-            case 'vulnerability':
-                return 'fa-shield-exclamation';
-            case 'condition-immunity':
-                return 'fa-shield-virus';
-            default:
-                return 'fa-shield';
-        }
     }
 
     toggleDefenseCustomize(): void {
@@ -6830,7 +5838,7 @@ export class CharacterDetailPageComponent {
             return;
         }
 
-        this.optimisticExhaustionLevel.set(this.normalizeExhaustionLevel(level));
+        this.optimisticExhaustionLevel.set(normalizeExhaustionLevel(level));
         await this.persistConditionState([...this.activeConditionKeys()], level);
     }
 
@@ -6860,7 +5868,7 @@ export class CharacterDetailPageComponent {
             return;
         }
 
-        const nextEntry = this.normalizeDefenseEntry({
+        const nextEntry = normalizeDefenseEntry({
             type: this.defenseDraftType(),
             value: this.defenseDraftSubtype(),
             note: ''
@@ -6911,64 +5919,6 @@ export class CharacterDetailPageComponent {
         );
 
         await this.persistDefenseEntries(nextEntries);
-    }
-
-    private normalizeDefenseEntry(entry: PersistedDefenseEntry | null | undefined): PersistedDefenseEntry | null {
-        const value = String(entry?.value ?? '').trim();
-        if (!value) {
-            return null;
-        }
-
-        const note = String(entry?.note ?? '').trim();
-
-        switch (entry?.type) {
-            case 'resistance':
-            case 'immunity':
-            case 'vulnerability':
-            case 'condition-immunity':
-                return {
-                    type: entry.type,
-                    value,
-                    note
-                };
-            default:
-                return null;
-        }
-    }
-
-    private describeDefenseEntry(entry: PersistedDefenseEntry): string {
-        return `${this.defenseTypeLabel(entry.type)}: ${entry.value}`;
-    }
-
-    private normalizeConditionKey(value: unknown): PersistedConditionKey | null {
-        switch (String(value ?? '').trim().toLowerCase()) {
-            case 'blinded':
-            case 'charmed':
-            case 'deafened':
-            case 'frightened':
-            case 'grappled':
-            case 'incapacitated':
-            case 'invisible':
-            case 'paralyzed':
-            case 'petrified':
-            case 'poisoned':
-            case 'prone':
-            case 'restrained':
-            case 'stunned':
-            case 'unconscious':
-                return String(value).trim().toLowerCase() as PersistedConditionKey;
-            default:
-                return null;
-        }
-    }
-
-    private normalizeExhaustionLevel(value: unknown): number {
-        const numeric = Math.trunc(Number(value));
-        if (!Number.isFinite(numeric)) {
-            return 0;
-        }
-
-        return Math.min(6, Math.max(0, numeric));
     }
 
     conditionBulletLead(bullet: string): string {
@@ -7049,6 +5999,15 @@ export class CharacterDetailPageComponent {
         return this.spellManagerKnownNames().has(spellName);
     }
 
+    isTieflingLegacyGrantedSpell(spellName: string): boolean {
+        const char = this.character();
+        if (!char) {
+            return false;
+        }
+
+        return getTieflingGrantedSpellNamesForLevel(char.race, char.level, this.persistedBuilderState()).includes(spellName);
+    }
+
     isSpellPrepared(spellName: string): boolean {
         return this.spellManagerPreparedNames().has(spellName);
     }
@@ -7094,6 +6053,10 @@ export class CharacterDetailPageComponent {
     }
 
     async toggleKnownSpell(spellName: string): Promise<void> {
+        if (this.isTieflingLegacyGrantedSpell(spellName)) {
+            return;
+        }
+
         await this.persistSpellSelections((state, className) => {
             const nextKnown = this.toggleNameInList(state.classKnownSpellsByClass?.[className], spellName, className);
 
@@ -9084,6 +8047,22 @@ export class CharacterDetailPageComponent {
     }
 
     private getCustomFeatureDetail(name: string, description: string, category: string, className: string, level?: number): DetailDrawerContent | null {
+        if (name === 'Wild Shape' && className === 'Druid') {
+            const maxUses = Number(this.getClassProgressionValue('Druid', 'Wild Shape', this.character()?.level ?? 1)) || 2;
+            return {
+                title: name,
+                subtitle: 'Druid • PHB-2024, pg. 94',
+                description: getWildShapeDetailText(),
+                actionLines: ['Wild Shape: 1 Bonus Action'],
+                tracker: {
+                    entryId: 'druid-wild-shape',
+                    maxUses,
+                    usedCount: Math.max(0, Math.min(maxUses, this.limitedUseCounts()['druid-wild-shape'] ?? 0)),
+                    resetLabel: 'Long Rest'
+                }
+            };
+        }
+
         if (name === 'Rage' && className === 'Barbarian') {
             this.rageDetailOption.set('activate-rage');
             return {
@@ -9109,150 +8088,25 @@ export class CharacterDetailPageComponent {
             return null;
         }
 
-        const parsed = this.parseFeatureDetailText(description);
+        const parsed = parseFeatureDetailText(description);
         const title = level ? `${level}: ${name}` : name;
         const usedCounts = this.limitedUseCounts();
 
-        if (className === 'Rogue' && name === 'Stroke of Luck') {
-            return {
-                title,
-                subtitle: 'PHB-2024, pg. 131',
-                description: parsed.baseDescription || 'If you fail a D20 Test, you can turn the roll into a 20. Once you use this feature, you can’t use it again until you finish a Short or Long Rest.',
-                actionLines: ['Stroke of Luck: Special'],
-                tracker: {
-                    entryId: 'rogue-stroke-of-luck',
-                    maxUses: 1,
-                    usedCount: Math.max(0, Math.min(1, usedCounts['rogue-stroke-of-luck'] ?? 0)),
-                    resetLabel: 'Short Rest'
-                }
-            };
+        if (className === 'Rogue') {
+            return buildRogueFeatureDetail(name, parsed, usedCounts, title);
         }
 
-        if (className !== 'Barbarian') {
-            return null;
+        if (className === 'Druid') {
+            return buildDruidFeatureDetail(name, parsed, usedCounts, Number(this.getClassProgressionValue('Druid', 'Wild Shape', this.character()?.level ?? 1)) || 2, title);
         }
 
-        switch (name) {
-            case 'Relentless Rage':
-                return { title: name, subtitle: 'PHB-2024, pg. 53', description: parsed.baseDescription };
-            case 'Persistent Rage':
-                return {
-                    title: name,
-                    subtitle: 'PHB-2024, pg. 53',
-                    description: parsed.baseDescription,
-                    actionLines: ['Rage: Regain Expended Uses: 1 Action'],
-                    tracker: {
-                        entryId: 'barbarian-persistent-rage',
-                        maxUses: 1,
-                        usedCount: Math.max(0, Math.min(1, usedCounts['barbarian-persistent-rage'] ?? 0)),
-                        resetLabel: 'Long Rest'
-                    }
-                };
-            case 'Intimidating Presence':
-                return {
-                    title: name,
-                    subtitle: 'PHB-2024, pg. 54',
-                    description: parsed.baseDescription,
-                    actionLines: ['Intimidating Presence: 1 Bonus Action'],
-                    tracker: {
-                        entryId: 'barbarian-intimidating-presence',
-                        maxUses: 1,
-                        usedCount: Math.max(0, Math.min(1, usedCounts['barbarian-intimidating-presence'] ?? 0)),
-                        resetLabel: 'Long Rest'
-                    }
-                };
-            case 'Retaliation':
-                return {
-                    title: name,
-                    subtitle: 'PHB-2024, pg. 54',
-                    description: parsed.baseDescription,
-                    actionLines: ['Retaliation: 1 Reaction']
-                };
-            case 'Instinctive Pounce':
-                return {
-                    title: name,
-                    subtitle: 'PHB-2024, pg. 53',
-                    description: parsed.baseDescription,
-                    actionLines: ['Rage (Instinctive Pounce): 1 Bonus Action']
-                };
-            case 'Frenzy':
-                return { title: name, subtitle: 'PHB-2024, pg. 54', description: parsed.baseDescription };
-            case 'Primal Knowledge':
-                return {
-                    title: name,
-                    subtitle: 'PHB-2024, pg. 52',
-                    description: parsed.baseDescription,
-                    actionLines: [
-                        ...(parsed.chosenValues.length ? parsed.chosenValues : []),
-                        'Rage: Primal Knowledge: Special'
-                    ]
-                };
-            case 'Weapon Mastery': {
-                const selected = parsed.chosenValues[0] ?? '';
-                const masteryMatch = selected.match(/^(.*) \((.*)\)$/);
-                const actionLine = masteryMatch
-                    ? `${masteryMatch[2]} (${masteryMatch[1]}): 1 Action`
-                    : selected ? `${selected}: 1 Action` : '';
-
-                return {
-                    title,
-                    subtitle: 'PHB-2024',
-                    description: parsed.baseDescription,
-                    actionLines: [selected, actionLine].filter((line) => !!line)
-                };
-            }
-            case 'Ability Score Improvement':
-                return {
-                    title,
-                    subtitle: 'PHB-2024, pg. 53',
-                    description: parsed.baseDescription,
-                    actionLines: parsed.chosenValues.length ? parsed.chosenValues : (parsed.extraLines.length ? parsed.extraLines : [])
-                };
-            case 'Epic Boon':
-                return {
-                    title,
-                    subtitle: 'PHB-2024, pg. 53',
-                    description: parsed.baseDescription,
-                    actionLines: parsed.chosenValues.length ? ['Feat', ...parsed.chosenValues] : []
-                };
-            default:
-                return null;
+        if (className === 'Barbarian') {
+            return buildBarbarianFeatureDetail(name, parsed, usedCounts, title, this.character()?.level ?? 1);
         }
+
+        return null;
     }
 
-    private parseFeatureDetailText(description: string): { baseDescription: string; chosenValues: string[]; extraLines: string[] } {
-        const chosenValues: string[] = [];
-        const extraLines: string[] = [];
-        const baseLines: string[] = [];
-
-        for (const rawLine of description.split('\n')) {
-            const line = rawLine.trim();
-            if (!line) {
-                if (baseLines.length > 0 && baseLines[baseLines.length - 1] !== '') {
-                    baseLines.push('');
-                }
-                continue;
-            }
-
-            if (line.startsWith('Chosen:')) {
-                chosenValues.push(line.replace('Chosen:', '').trim());
-                continue;
-            }
-
-            if (line.startsWith('Ability increase:')) {
-                extraLines.push(line);
-                continue;
-            }
-
-            baseLines.push(line);
-        }
-
-        return {
-            baseDescription: baseLines.join('\n').trim(),
-            chosenValues,
-            extraLines
-        };
-    }
 
     onRageDetailOptionChanged(value: string | number): void {
         this.rageDetailOption.set(String(value));
@@ -9306,27 +8160,7 @@ export class CharacterDetailPageComponent {
             return '';
         }
 
-        const damageDice = char.level >= 17 ? '2d10' : '1d10';
-        const effectCount = char.level >= 17 ? 2 : 1;
-        const effectLabel = effectCount === 1 ? 'effect' : 'effects';
-        const lines = [
-            `If you use Reckless Attack, you can forgo Advantage on one Strength-based attack of your choice on your turn. The chosen attack roll must not have Disadvantage. If the chosen attack roll hits, the target takes an extra ${damageDice} damage of the same type dealt by the weapon or Unarmed Strike, and you can cause ${effectCount} Brutal Strike ${effectLabel} of your choice.`,
-            '',
-            '**Forceful Blow.** The target is pushed 15 feet straight away from you. You can then move up to half your Speed straight toward the target without provoking Opportunity Attacks.',
-            '',
-            '**Hamstring Blow.** The target’s Speed is reduced by 15 feet until the start of your next turn. A target can be affected by only one Hamstring Blow at a time—the most recent one.'
-        ];
-
-        if (char.level >= 13) {
-            lines.push(
-                '',
-                '**Staggering Blow.** The target has Disadvantage on the next saving throw it makes, and it can’t make Opportunity Attacks until the start of your next turn.',
-                '',
-                '**Sundering Blow.** Before the start of your next turn, the next attack roll made by another creature against the target gains a +5 bonus to the roll. An attack roll can gain only one Sundering Blow bonus.'
-            );
-        }
-
-        return lines.join('\n');
+        return getBrutalStrikeDetailText(char.level);
     }
 
     getBrutalStrikeActionLines(): string[] {
@@ -9335,17 +8169,7 @@ export class CharacterDetailPageComponent {
             return [];
         }
 
-        const lines = [
-            'Brutal Strike: Forceful Blow: 1 Action',
-            'Brutal Strike: Hamstring Blow: 1 Action'
-        ];
-
-        if (char.level >= 13) {
-            lines.push('Brutal Strike: Staggering Blow: 1 Action');
-            lines.push('Brutal Strike: Sundering Blow: 1 Action');
-        }
-
-        return lines;
+        return getBrutalStrikeActionLines(char.level);
     }
 
     getFeatureInlineActionLines(featureName: string, description: string, level?: number): string[] {
@@ -9354,94 +8178,81 @@ export class CharacterDetailPageComponent {
             return [];
         }
 
-        const parsed = this.parseFeatureDetailText(description);
+        const parsed = parseFeatureDetailText(description);
+
+        if (char.className === 'Druid') {
+            return getDruidFeatureActionLines(featureName, parsed);
+        }
 
         if (char.className === 'Rogue') {
-            switch (featureName) {
-                case 'Cunning Action':
-                    return ['Cunning Action: 1 Bonus Action'];
-                case 'Steady Aim':
-                    return ['Steady Aim: 1 Bonus Action'];
-                case 'Uncanny Dodge':
-                    return ['Uncanny Dodge: 1 Reaction'];
-                case 'Stroke of Luck':
-                    return ['Stroke of Luck: Special'];
-                case 'Ability Score Improvement':
-                    return parsed.chosenValues.length ? parsed.chosenValues : parsed.extraLines;
-                case 'Epic Boon':
-                    return parsed.chosenValues.length ? ['Feat', ...parsed.chosenValues] : [];
-                default:
-                    return [];
+            return getRogueFeatureActionLines(featureName, parsed);
+        }
+
+        if (char.className === 'Barbarian') {
+            return getBarbarianFeatureActionLines(featureName, parsed, char.level);
+        }
+
+        return [];
+    }
+
+    getFeatureInlineTrackers(featureName: string): Array<{ entryId: string; maxUses: number; usedCount: number; resetLabel: string }> {
+        const char = this.character();
+        const usedCounts = this.limitedUseCounts();
+
+        if (char?.className === 'Druid') {
+            const multi = getDruidFeatureInlineTrackers(featureName, usedCounts, Number(this.getClassProgressionValue('Druid', 'Wild Shape', char.level)) || 2);
+            if (multi.length > 0) {
+                return multi;
             }
         }
 
-        if (char.className !== 'Barbarian') {
-            return [];
+        const singleTracker = this.getFeatureInlineTracker(featureName);
+        return singleTracker ? [singleTracker] : [];
+    }
+
+    getFeatureInlineTrackerAt(featureName: string, index: number): { entryId: string; maxUses: number; usedCount: number; resetLabel: string } | null {
+        const trackers = this.getFeatureInlineTrackers(featureName);
+        if (featureName === 'Wild Resurgence' && trackers.length === 1) {
+            return index === 1 ? trackers[0] : null;
         }
 
-        switch (featureName) {
-            case 'Brutal Strike':
-            case 'Improved Brutal Strike':
-                return this.getBrutalStrikeActionLines();
-            case 'Retaliation':
-                return ['Retaliation: 1 Reaction'];
-            case 'Instinctive Pounce':
-                return ['Rage (Instinctive Pounce): 1 Bonus Action'];
-            case 'Persistent Rage':
-                return ['Rage: Regain Expended Uses: 1 Action'];
-            case 'Intimidating Presence':
-                return ['Intimidating Presence: 1 Bonus Action'];
-            case 'Primal Knowledge':
-                return [...parsed.chosenValues, 'Rage: Primal Knowledge: Special'];
-            case 'Weapon Mastery': {
-                const selected = parsed.chosenValues[0] ?? '';
-                const masteryMatch = selected.match(/^(.*) \((.*)\)$/);
-                const actionLine = masteryMatch
-                    ? `${masteryMatch[2]} (${masteryMatch[1]}): 1 Action`
-                    : selected ? `${selected}: 1 Action` : '';
-                return [selected, actionLine].filter((line) => !!line);
-            }
-            case 'Ability Score Improvement':
-                return parsed.chosenValues.length ? parsed.chosenValues : parsed.extraLines;
-            case 'Epic Boon':
-                return parsed.chosenValues.length ? ['Feat', ...parsed.chosenValues] : [];
-            default:
-                return [];
+        if (featureName === 'Archdruid' && trackers.length === 1) {
+            return index === 1 ? trackers[0] : null;
         }
+
+        return index >= 0 && index < trackers.length ? trackers[index] : null;
+    }
+
+    getDetailTrackerAt(detail: DetailDrawerContent, index: number): { entryId: string; maxUses: number; usedCount: number; resetLabel: string } | null {
+        const trackers = detail.trackers ?? [];
+        if (detail.title === 'Wild Resurgence' && trackers.length === 1) {
+            return index === 1 ? trackers[0] : null;
+        }
+
+        if (detail.title === 'Archdruid' && trackers.length === 1) {
+            return index === 1 ? trackers[0] : null;
+        }
+
+        return index >= 0 && index < trackers.length ? trackers[index] : null;
     }
 
     getFeatureInlineTracker(featureName: string): DetailDrawerContent['tracker'] | null {
         const char = this.character();
         const usedCounts = this.limitedUseCounts();
 
-        if (char?.className === 'Rogue' && featureName === 'Stroke of Luck') {
-            return {
-                entryId: 'rogue-stroke-of-luck',
-                maxUses: 1,
-                usedCount: Math.max(0, Math.min(1, usedCounts['rogue-stroke-of-luck'] ?? 0)),
-                resetLabel: 'Short Rest'
-            };
+        if (char?.className === 'Druid') {
+            return getDruidFeatureInlineTracker(
+                featureName,
+                usedCounts,
+                Number(this.getClassProgressionValue('Druid', 'Wild Shape', char.level)) || 2
+            );
         }
 
-        if (featureName === 'Persistent Rage') {
-            return {
-                entryId: 'barbarian-persistent-rage',
-                maxUses: 1,
-                usedCount: Math.max(0, Math.min(1, usedCounts['barbarian-persistent-rage'] ?? 0)),
-                resetLabel: 'Long Rest'
-            };
+        if (char?.className === 'Rogue') {
+            return getRogueFeatureInlineTracker(featureName, usedCounts);
         }
 
-        if (featureName === 'Intimidating Presence') {
-            return {
-                entryId: 'barbarian-intimidating-presence',
-                maxUses: 1,
-                usedCount: Math.max(0, Math.min(1, usedCounts['barbarian-intimidating-presence'] ?? 0)),
-                resetLabel: 'Long Rest'
-            };
-        }
-
-        return null;
+        return getBarbarianFeatureInlineTracker(featureName, usedCounts);
     }
 
     private formatBackstoryRichText(text: string): string {
@@ -9638,7 +8449,7 @@ export class CharacterDetailPageComponent {
         }
 
         const normalizedEntries = entries
-            .map((entry) => this.normalizeDefenseEntry(entry))
+            .map((entry) => normalizeDefenseEntry(entry))
             .filter((entry): entry is PersistedDefenseEntry => entry !== null);
 
         const dedupedEntries = normalizedEntries.filter((entry, index, allEntries) =>
@@ -9676,14 +8487,14 @@ export class CharacterDetailPageComponent {
 
         const uniqueKeys = new Set<PersistedConditionKey>();
         for (const key of activeKeys) {
-            const normalized = this.normalizeConditionKey(key);
+            const normalized = normalizeConditionKey(key);
             if (normalized) {
                 uniqueKeys.add(normalized);
             }
         }
 
         const orderedKeys = CONDITION_KEY_ORDER.filter((key) => uniqueKeys.has(key));
-        const normalizedExhaustionLevel = this.normalizeExhaustionLevel(exhaustionLevel);
+        const normalizedExhaustionLevel = normalizeExhaustionLevel(exhaustionLevel);
         const updatedState: PersistedBuilderState = {
             ...(this.persistedBuilderState() ?? {}),
             activeConditions: orderedKeys,

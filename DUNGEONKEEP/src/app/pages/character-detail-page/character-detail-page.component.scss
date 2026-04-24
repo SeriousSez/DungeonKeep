@@ -2676,7 +2676,7 @@
     top: 16px;
     right: 16px;
     width: min(420px, 92vw);
-    max-height: calc(100vh - 32px);
+    max-height: calc(100vh - 120px);
     border-radius: 14px;
     border: 1px solid var(--panel-border);
     overflow-x: hidden;
@@ -4811,6 +4811,73 @@
     li {
         margin: 4px 0;
     }
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 15px 0;
+        border: 2px solid #8b7355;
+        background-color: transparent;
+        font-size: 14px;
+    }
+
+    th,
+    td {
+        padding: 12px 14px;
+        text-align: left;
+        border: 1px solid #8b7355;
+    }
+
+    th {
+        background-color: rgba(91, 61, 42, 0.3);
+        font-weight: 700;
+        color: var(--text-main);
+        border-bottom: 2px solid #8b7355;
+    }
+
+    tbody tr:nth-child(odd) td {
+        background-color: rgba(91, 61, 42, 0.1);
+    }
+
+    tbody tr:nth-child(even) td {
+        background-color: transparent;
+    }
+
+    td {
+        color: var(--text-main);
+    }
+}
+
+/* innerHTML content does not always receive component scope attrs; force table styling for rendered markdown */
+:host ::ng-deep .detail-drawer-richtext table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 15px 0;
+    border: 2px solid #8b7355;
+    background-color: transparent;
+    font-size: 14px;
+}
+
+:host ::ng-deep .detail-drawer-richtext th,
+:host ::ng-deep .detail-drawer-richtext td {
+    padding: 12px 14px;
+    text-align: left;
+    border: 1px solid #8b7355;
+}
+
+:host ::ng-deep .detail-drawer-richtext th {
+    background-color: rgba(91, 61, 42, 0.3);
+    font-weight: 700;
+    color: var(--text-main);
+    border-bottom: 2px solid #8b7355;
+}
+
+:host ::ng-deep .detail-drawer-richtext tbody tr:nth-child(odd) td {
+    background-color: rgba(91, 61, 42, 0.1);
+}
+
+:host ::ng-deep .detail-drawer-richtext tbody tr:nth-child(even) td {
+    background-color: transparent;
 }
 
 .detail-breakdown-list {

@@ -852,12 +852,11 @@
                         </div>
                         }
 
-                        @if (getFeatureInlineActionLines(feature.name, feature.detailDescription, feature.level).length > 0 || getFeatureInlineTracker(feature.name)) {
+                        @if (getFeatureInlineActionLines(feature.name, feature.detailDescription, feature.level).length > 0 || getFeatureInlineTrackers(feature.name).length > 0) {
                         <div class="limited-use-inline">
-                            @for (actionLine of getFeatureInlineActionLines(feature.name, feature.detailDescription, feature.level); track actionLine) {
+                            @for (actionLine of getFeatureInlineActionLines(feature.name, feature.detailDescription, feature.level); track actionLine; let actionIndex = $index) {
                             <p class="limited-use-activation">{{ actionLine }}</p>
-                            }
-                            @if (getFeatureInlineTracker(feature.name); as tracker) {
+                            @if (getFeatureInlineTrackerAt(feature.name, actionIndex); as tracker) {
                             <div class="limited-use-track">
                                 <div class="limited-use-checkboxes">
                                     @for (boxIndex of getLimitedUseCheckboxIndexes(tracker.maxUses); track boxIndex) {
@@ -869,6 +868,7 @@
                                 </div>
                                 <span class="limited-use-reset">/ {{ tracker.resetLabel }}</span>
                             </div>
+                            }
                             }
                         </div>
                         }
@@ -1372,8 +1372,8 @@
                         {{ isSpellPermanentlyPrepared(spell.name) ? 'Permanent' : (isSpellInSpellbook(spell.name) ? 'In Spellbook' : 'Add to Spellbook') }}
                     </button>
                     } @else {
-                    <button type="button" class="action-filter" [class.active]="isSpellKnown(spell.name)" (click)="toggleKnownSpell(spell.name)">
-                        {{ isSpellKnown(spell.name) ? 'Known' : 'Add Known' }}
+                    <button type="button" class="action-filter" [class.active]="isSpellKnown(spell.name)" [disabled]="isTieflingLegacyGrantedSpell(spell.name)" (click)="toggleKnownSpell(spell.name)">
+                        {{ isTieflingLegacyGrantedSpell(spell.name) ? 'Granted' : (isSpellKnown(spell.name) ? 'Known' : 'Add Known') }}
                     </button>
                     }
 
@@ -2644,10 +2644,23 @@
 
         <div class="detail-drawer-description detail-drawer-richtext" [innerHTML]="renderDetailRichText(detail.description)"></div>
 
-        @if ((detail.actionLines && detail.actionLines.length > 0) || detail.tracker) {
+        @if ((detail.actionLines && detail.actionLines.length > 0) || detail.tracker || (detail.trackers && detail.trackers.length > 0)) {
         <div class="limited-use-inline limited-use-inline--popup">
-            @for (actionLine of detail.actionLines ?? []; track actionLine) {
+            @for (actionLine of detail.actionLines ?? []; track actionLine; let actionIndex = $index) {
             <p class="limited-use-activation">{{ actionLine }}</p>
+            @if (getDetailTrackerAt(detail, actionIndex); as tracker) {
+            <div class="limited-use-track">
+                <div class="limited-use-checkboxes">
+                    @for (boxIndex of getLimitedUseCheckboxIndexes(tracker.maxUses); track boxIndex) {
+                    <label class="limited-use-check">
+                        <input type="checkbox" [checked]="boxIndex < tracker.usedCount" [disabled]="!character()?.canEdit" (change)="onLimitedUseCheckboxChanged(tracker.entryId, boxIndex, $any($event.target).checked)" />
+                        <span></span>
+                    </label>
+                    }
+                </div>
+                <span class="limited-use-reset">/ {{ tracker.resetLabel }}</span>
+            </div>
+            }
             }
             @if (detail.tracker; as tracker) {
             <div class="limited-use-track">

@@ -47,7 +47,15 @@ type WeightUnit = 'kg' | 'lb';
 type CharacterNoteListKey = 'organizations' | 'allies' | 'enemies';
 type NoteSectionKey = CharacterNoteListKey | 'other';
 
+type TieflingLegacyName = 'Abyssal' | 'Chthonic' | 'Infernal';
+
 const equipmentRarityOrder = ['Common', 'Uncommon', 'Rare', 'Very Rare', 'Legendary', 'Artifact', 'Unique', '???'] as const;
+
+const tieflingLegacySpellByLegacy: Readonly<Record<TieflingLegacyName, { cantrip: string; level3: string; level5: string }>> = {
+    Abyssal: { cantrip: 'Poison Spray', level3: 'Ray of Sickness', level5: 'Hold Person' },
+    Chthonic: { cantrip: 'Chill Touch', level3: 'False Life', level5: 'Ray of Enfeeblement' },
+    Infernal: { cantrip: 'Fire Bolt', level3: 'Hellish Rebuke', level5: 'Darkness' }
+};
 
 const weaponMasteryDescriptions: Readonly<Record<string, string>> = {
     Cleave: 'If you hit a creature with a melee attack roll using this weapon, you can make a melee attack roll with it against a second creature within 5 feet of the first and within your reach. On a hit, the second creature takes the weapon’s normal damage, but you don’t add your ability modifier unless that modifier is negative.',
@@ -3956,6 +3964,10 @@ export class NewCharacterStandardPageComponent {
             return '- Choose a Spellcasting Ability -';
         }
 
+        if (traitTitle === 'Fiendish Legacy') {
+            return '- Choose a Fiendish Legacy -';
+        }
+
         return '- Choose an Option -';
     }
 
@@ -3970,7 +3982,9 @@ export class NewCharacterStandardPageComponent {
                         ? ['Drow', 'High Elf', 'Wood Elf']
                         : traitTitle === 'Lineage Spellcasting Ability'
                             ? ['Intelligence', 'Wisdom', 'Charisma']
-                            : [];
+                            : traitTitle === 'Fiendish Legacy'
+                                ? ['Abyssal', 'Chthonic', 'Infernal']
+                                : [];
 
         const selected = this.selectedSpeciesTraitChoices()[traitTitle] ?? [];
 
@@ -3992,6 +4006,33 @@ export class NewCharacterStandardPageComponent {
                 [traitTitle]: compact
             };
         });
+    }
+
+    getSpeciesTraitChoiceSelectionText(traitTitle: string, selectedValue: string): string {
+        const normalizedTrait = traitTitle.trim();
+        const normalizedValue = selectedValue.trim();
+
+        if (!normalizedTrait || !normalizedValue) {
+            return '';
+        }
+
+        if (normalizedTrait !== 'Fiendish Legacy') {
+            return '';
+        }
+
+        if (normalizedValue === 'Abyssal') {
+            return 'Abyssal Legacy: You have Resistance to Poison damage. You know Poison Spray. At level 3, you learn Ray of Sickness. At level 5, you learn Hold Person.';
+        }
+
+        if (normalizedValue === 'Chthonic') {
+            return 'Chthonic Legacy: You have Resistance to Necrotic damage. You know Chill Touch. At level 3, you learn False Life. At level 5, you learn Ray of Enfeeblement.';
+        }
+
+        if (normalizedValue === 'Infernal') {
+            return 'Infernal Legacy: You have Resistance to Fire damage. You know Fire Bolt. At level 3, you learn Hellish Rebuke. At level 5, you learn Darkness.';
+        }
+
+        return '';
     }
 
     toggleTrait(key: string): void {
@@ -5776,12 +5817,14 @@ export class NewCharacterStandardPageComponent {
 
     getKnownLeveledSpellCount(className: string, classLevel: number): number {
         return this.getKnownClassSpells(className, classLevel)
+            .filter((spell) => !this.isSpeciesGrantedKnownSpell(className, spell.name, classLevel))
             .filter((spell) => spell.level > 0)
             .length;
     }
 
     getKnownCantripCount(className: string, classLevel: number): number {
         return this.getKnownClassSpells(className, classLevel)
+            .filter((spell) => !this.isSpeciesGrantedKnownSpell(className, spell.name, classLevel))
             .filter((spell) => spell.level === 0)
             .length;
     }
@@ -5795,9 +5838,20 @@ export class NewCharacterStandardPageComponent {
             const available = this.getAvailableClassSpells(className, classLevel);
             const knownNames = this.classKnownSpellsByClass()[className] ?? [];
             const availableByName = new Map(available.map((spell) => [spell.name, spell]));
-            return knownNames
+            const learnedSpells = knownNames
                 .map((spellName) => availableByName.get(spellName))
                 .filter((spell): spell is ClassSpellOption => !!spell);
+
+            const grantedSpells = this.getSpeciesGrantedKnownSpells(className, classLevel);
+            const mergedByName = new Map<string, ClassSpellOption>();
+            for (const spell of learnedSpells) {
+                mergedByName.set(spell.name, spell);
+            }
+            for (const spell of grantedSpells) {
+                mergedByName.set(spell.name, spell);
+            }
+
+            return [...mergedByName.values()];
         }
 
         return this.getAvailableClassSpells(className, classLevel);
@@ -6213,6 +6267,10 @@ export class NewCharacterStandardPageComponent {
     }
 
     forgetKnownClassSpell(className: string, spellName: string): void {
+        if (this.isSpeciesGrantedKnownSpell(className, spellName, this.multiclassList()[className] ?? this.getPrimaryClassLevel())) {
+            return;
+        }
+
         this.classKnownSpellsByClass.update((current) => {
             const known = current[className] ?? [];
             const nextKnown = known.filter((entry) => entry !== spellName);
@@ -6226,6 +6284,66 @@ export class NewCharacterStandardPageComponent {
                 [className]: nextKnown
             };
         });
+    }
+
+    getSpeciesGrantedKnownSpellCount(className: string, classLevel: number): number {
+        return this.getSpeciesGrantedKnownSpells(className, classLevel).length;
+    }
+
+    isSpeciesGrantedKnownSpell(className: string, spellName: string, classLevel: number): boolean {
+        return this.getSpeciesGrantedKnownSpells(className, classLevel)
+            .some((spell) => spell.name === spellName);
+    }
+
+    private getSpeciesGrantedKnownSpells(className: string, classLevel: number): ClassSpellOption[] {
+        if ((this.selectedSpeciesName() ?? '').trim() !== 'Tiefling') {
+            return [];
+        }
+
+        const selectedLegacy = this.getSelectedTieflingLegacy();
+        if (!selectedLegacy) {
+            return [];
+        }
+
+        const legacySpells = tieflingLegacySpellByLegacy[selectedLegacy];
+        const grantedSpellNames: string[] = [legacySpells.cantrip];
+
+        if (classLevel >= 3) {
+            grantedSpellNames.push(legacySpells.level3);
+        }
+
+        if (classLevel >= 5) {
+            grantedSpellNames.push(legacySpells.level5);
+        }
+
+        const available = this.getAvailableClassSpells(className, classLevel);
+        const availableByName = new Map(available.map((spell) => [spell.name, spell]));
+
+        return grantedSpellNames
+            .map((spellName) => {
+                const existing = availableByName.get(spellName);
+                if (existing) {
+                    return existing;
+                }
+
+                const fallbackSpell: ClassSpellOption = {
+                    name: spellName,
+                    level: spellName === legacySpells.cantrip ? 0 : (spellName === legacySpells.level3 ? 1 : 2),
+                    source: '5E Expanded Rules'
+                };
+
+                return fallbackSpell;
+            })
+            .filter((spell, index, array) => array.findIndex((entry) => entry.name === spell.name) === index);
+    }
+
+    private getSelectedTieflingLegacy(): TieflingLegacyName | null {
+        const selectedLegacy = (this.selectedSpeciesTraitChoices()['Fiendish Legacy']?.[0] ?? '').trim();
+        if (selectedLegacy === 'Abyssal' || selectedLegacy === 'Chthonic' || selectedLegacy === 'Infernal') {
+            return selectedLegacy;
+        }
+
+        return null;
     }
 
     learnClassSpell(className: string, classLevel: number, spellName: string): void {

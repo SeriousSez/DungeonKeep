@@ -431,6 +431,10 @@
                     }
                 </div>
 
+                @if (isKnownOnlyCaster(className) && getSpeciesGrantedKnownSpellCount(className, multiclassList()[className]) > 0) {
+                <p class="spell-limit-note">Species-granted spells are added automatically and do not count toward known spell limits.</p>
+                }
+
                 <input class="search-input" type="search" placeholder="Search spells..." [attr.aria-label]="'Search ' + className + ' spells'" [value]="getSpellSearchTerm(className)" (input)="onSpellSearchChanged(className, $any($event.target).value)" />
                 @if (getSpellSearchTerm(className).trim() && !hasVisibleSpellResultsForPanel(className, multiclassList()[className])) {
                 <p class="spell-empty">No spells match your search in this view.</p>
@@ -481,9 +485,13 @@
                                                     <span>{{ getSpellLevelLabel(spell.level) }}</span>
                                                 </span>
                                             </button>
+                                            @if (isSpeciesGrantedKnownSpell(className, spell.name, multiclassList()[className])) {
+                                            <span class="spell-prepared-badge">Granted</span>
+                                            } @else {
                                             <button type="button" class="spell-action-btn spell-action-btn--remove" (click)="forgetKnownClassSpell(className, spell.name)">
                                                 Remove
                                             </button>
+                                            }
                                         </div>
                                         @if (getSpellDetail(spell.name); as detail) {
                                         <div class="spell-detail-pane" [class.spell-detail-pane--open]="getSelectedSpellForClass(className) === spell.name" [attr.aria-hidden]="getSelectedSpellForClass(className) !== spell.name">
@@ -1666,6 +1674,9 @@
                             <app-dropdown [id]="'species-trait-' + trait.title + '-' + choiceIndex" [value]="getSpeciesTraitChoiceValue(trait.title, choiceIndex)" [options]="getSpeciesTraitChoiceOptions(trait.title, choiceIndex)" [placeholder]="getSpeciesTraitChoicePlaceholder(trait.title)"
                                 [searchable]="getSpeciesTraitChoiceOptions(trait.title, choiceIndex).length > 10" size="wide" (changed)="onSpeciesTraitChoiceChanged(trait.title, choiceIndex, $event)">
                             </app-dropdown>
+                            @if (getSpeciesTraitChoiceSelectionText(trait.title, getSpeciesTraitChoiceValue(trait.title, choiceIndex)); as selectedChoiceText) {
+                            <p class="muted trait-choice-selection-text">{{ selectedChoiceText }}</p>
+                            }
                             }
                         </div>
                         }
