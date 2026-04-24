@@ -1565,12 +1565,17 @@ export class CharacterDetailPageComponent {
             return null;
         }
 
+        const savedScores = char.abilityScores;
+        if (savedScores) {
+            return savedScores;
+        }
+
         const persistedScores = this.getPersistedAbilityScores(this.persistedBuilderState());
         if (persistedScores) {
             return persistedScores;
         }
 
-        return char.abilityScores ?? {
+        return {
             strength: 10,
             dexterity: 10,
             constitution: 10,
@@ -3735,7 +3740,7 @@ export class CharacterDetailPageComponent {
 
     private getPersistedFeatureSelections(state: PersistedBuilderState | null, className: string, level: number, featureName: string): string[] {
         const selections = state?.classFeatureSelections ?? {};
-        const keyedSelections = selections[this.getPersistedFeatureSelectionKey(className, level, featureName)] ?? selections[featureName] ?? [];
+        const keyedSelections = selections[this.getPersistedFeatureSelectionKey(className, level, featureName)] ?? [];
         return Array.isArray(keyedSelections)
             ? keyedSelections.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
             : [];
@@ -3744,7 +3749,7 @@ export class CharacterDetailPageComponent {
     private getPersistedAbilityScoreImprovementSummary(state: PersistedBuilderState | null, className: string, level: number, featureName: string): string {
         const choices = state?.abilityScoreImprovementChoices ?? {};
         const selectionKey = this.getPersistedFeatureSelectionKey(className, level, featureName);
-        const choice = choices[selectionKey] ?? choices[featureName];
+        const choice = choices[selectionKey];
 
         if (!choice) {
             return '';
@@ -3764,7 +3769,7 @@ export class CharacterDetailPageComponent {
     private getPersistedFeatFollowUpSummary(state: PersistedBuilderState | null, className: string, level: number, featureName: string): string[] {
         const followUps = state?.featFollowUpChoices ?? {};
         const selectionKey = this.getPersistedFeatureSelectionKey(className, level, featureName);
-        const followUp = followUps[selectionKey] ?? followUps[featureName];
+        const followUp = followUps[selectionKey];
         if (!followUp) {
             return [];
         }

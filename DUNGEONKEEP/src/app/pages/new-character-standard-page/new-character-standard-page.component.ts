@@ -7945,6 +7945,10 @@ export class NewCharacterStandardPageComponent {
             const persistedFeatureSelections = this.normalizePersistedFeatureSelections(restoredClassLevels, persisted.classFeatureSelections ?? {});
             this.classFeatureSelections.set({
                 ...inferredFeatureSelections,
+                // Spread raw persisted first so dynamically-resolved features (subclass,
+                // ASI, Epic Boon) whose raw data has no 'choices' keep their saved values.
+                ...(persisted.classFeatureSelections ?? {}),
+                // Then override with normalized values for features present in raw data.
                 ...persistedFeatureSelections
             });
             this.abilityScoreImprovementChoices.set(persisted.abilityScoreImprovementChoices ?? {});
