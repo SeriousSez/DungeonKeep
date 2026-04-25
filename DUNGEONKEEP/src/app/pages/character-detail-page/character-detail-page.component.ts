@@ -138,7 +138,15 @@ import type {
     styleUrl: './character-detail-page.component.scss',
     host: {
         '[attr.data-detail-background]': 'detailBackgroundTheme()',
-        '[style.--character-page-custom-bg]': 'detailBackgroundCssValue()'
+        '[style.--character-page-custom-bg]': 'detailBackgroundCssValue()',
+        '[style.--detail-custom-panel-surface]': 'detailSectionPanelCssValue()',
+        '[style.--detail-custom-card-surface]': 'detailSectionCardCssValue()',
+        '[style.--detail-custom-text-color]': 'detailTextCssValue()',
+        '[style.--detail-custom-border-color]': 'detailBorderCssValue()',
+        '[attr.data-detail-panel-custom]': 'detailSectionPanelColor() ? "true" : null',
+        '[attr.data-detail-card-custom]': 'detailSectionCardColor() ? "true" : null',
+        '[attr.data-detail-text-custom]': 'detailTextColor() ? "true" : null',
+        '[attr.data-detail-border-custom]': 'detailBorderColor() ? "true" : null'
     }
 })
 export class CharacterDetailPageComponent {
@@ -443,6 +451,7 @@ export class CharacterDetailPageComponent {
     readonly portraitOriginalImageUrl = signal('');
     readonly detailBackgroundCachedImageUrl = signal('');
     readonly headerManageOpen = signal(false);
+    readonly detailColorsExpanded = signal(false);
     readonly activeRestPopup = signal<RestPopupKind | null>(null);
     readonly isApplyingRest = signal(false);
     readonly restPopupError = signal('');
@@ -780,6 +789,7 @@ export class CharacterDetailPageComponent {
 
         if (!target.closest('.header-manage-menu')) {
             this.headerManageOpen.set(false);
+            this.detailColorsExpanded.set(false);
         }
 
         if (this.activeRestPopup() && !target.closest('.rest-popup') && !target.closest('.header-rest-actions')) {
@@ -799,6 +809,7 @@ export class CharacterDetailPageComponent {
         this.defenseManagerOpen.set(false);
         this.conditionsManagerOpen.set(false);
         this.headerManageOpen.set(false);
+        this.detailColorsExpanded.set(false);
         this.activeRestPopup.set(null);
     }
 
@@ -1238,6 +1249,34 @@ export class CharacterDetailPageComponent {
         const imageUrl = this.detailBackgroundImageUrl();
         return imageUrl ? `url("${imageUrl.replace(/"/g, '\\"')}")` : 'none';
     });
+    readonly detailSectionPanelColor = computed(() =>
+        this.normalizeDetailSectionColor(this.persistedBuilderState()?.detailSectionPanelColor)
+    );
+    readonly detailSectionCardColor = computed(() =>
+        this.normalizeDetailSectionColor(this.persistedBuilderState()?.detailSectionCardColor)
+    );
+    readonly detailTextColor = computed(() =>
+        this.normalizeDetailSectionColor(this.persistedBuilderState()?.detailTextColor)
+    );
+    readonly detailBorderColor = computed(() =>
+        this.normalizeDetailSectionColor(this.persistedBuilderState()?.detailBorderColor)
+    );
+    readonly detailSectionPanelAlpha = computed(() =>
+        this.normalizeDetailAlpha(this.persistedBuilderState()?.detailSectionPanelAlpha)
+    );
+    readonly detailSectionCardAlpha = computed(() =>
+        this.normalizeDetailAlpha(this.persistedBuilderState()?.detailSectionCardAlpha)
+    );
+    readonly detailTextAlpha = computed(() =>
+        this.normalizeDetailAlpha(this.persistedBuilderState()?.detailTextAlpha)
+    );
+    readonly detailBorderAlpha = computed(() =>
+        this.normalizeDetailAlpha(this.persistedBuilderState()?.detailBorderAlpha)
+    );
+    readonly detailSectionPanelCssValue = computed(() => this.composeDetailColorValue(this.detailSectionPanelColor(), this.detailSectionPanelAlpha()));
+    readonly detailSectionCardCssValue = computed(() => this.composeDetailColorValue(this.detailSectionCardColor(), this.detailSectionCardAlpha()));
+    readonly detailTextCssValue = computed(() => this.composeDetailColorValue(this.detailTextColor(), this.detailTextAlpha()));
+    readonly detailBorderCssValue = computed(() => this.composeDetailColorValue(this.detailBorderColor(), this.detailBorderAlpha()));
 
     readonly partyCurrency = computed<PersistedCurrencyState>(() => {
         const campaign = this.currentCampaign();
@@ -1272,11 +1311,20 @@ export class CharacterDetailPageComponent {
 
     readonly toggleHeaderManageMenu = (event?: Event) => {
         event?.stopPropagation();
-        this.headerManageOpen.update((open) => !open);
+        const nextOpen = !this.headerManageOpen();
+        this.headerManageOpen.set(nextOpen);
+        if (!nextOpen) {
+            this.detailColorsExpanded.set(false);
+        }
     };
 
     readonly closeHeaderManageMenu = () => {
         this.headerManageOpen.set(false);
+        this.detailColorsExpanded.set(false);
+    };
+
+    readonly toggleDetailColorsExpanded = () => {
+        this.detailColorsExpanded.update((expanded) => !expanded);
     };
 
     readonly onDetailBackgroundThemeChanged = async (value: string | number) => {
@@ -1406,6 +1454,103 @@ export class CharacterDetailPageComponent {
         });
 
         this.cdr.detectChanges();
+    };
+
+    readonly onDetailSectionPanelColorChanged = async (event: Event) => {
+        const input = event.target as HTMLInputElement | null;
+        const nextColor = this.normalizeDetailSectionColor(input?.value ?? '');
+        if (nextColor === this.detailSectionPanelColor()) {
+            return;
+        }
+
+        await this.persistDetailSectionColors({ detailSectionPanelColor: nextColor || null });
+    };
+
+    readonly onDetailSectionCardColorChanged = async (event: Event) => {
+        const input = event.target as HTMLInputElement | null;
+        const nextColor = this.normalizeDetailSectionColor(input?.value ?? '');
+        if (nextColor === this.detailSectionCardColor()) {
+            return;
+        }
+
+        await this.persistDetailSectionColors({ detailSectionCardColor: nextColor || null });
+    };
+
+    readonly resetDetailSectionColors = async () => {
+        if (!this.detailSectionPanelColor() && !this.detailSectionCardColor() && !this.detailTextColor() && !this.detailBorderColor()) {
+            return;
+        }
+
+        await this.persistDetailSectionColors({
+            detailSectionPanelColor: null,
+            detailSectionCardColor: null,
+            detailTextColor: null,
+            detailBorderColor: null,
+            detailSectionPanelAlpha: null,
+            detailSectionCardAlpha: null,
+            detailTextAlpha: null,
+            detailBorderAlpha: null
+        });
+    };
+
+    readonly onDetailTextColorChanged = async (event: Event) => {
+        const input = event.target as HTMLInputElement | null;
+        const nextColor = this.normalizeDetailSectionColor(input?.value ?? '');
+        if (nextColor === this.detailTextColor()) {
+            return;
+        }
+
+        await this.persistDetailSectionColors({ detailTextColor: nextColor || null });
+    };
+
+    readonly onDetailBorderColorChanged = async (event: Event) => {
+        const input = event.target as HTMLInputElement | null;
+        const nextColor = this.normalizeDetailSectionColor(input?.value ?? '');
+        if (nextColor === this.detailBorderColor()) {
+            return;
+        }
+
+        await this.persistDetailSectionColors({ detailBorderColor: nextColor || null });
+    };
+
+    readonly onDetailSectionPanelAlphaChanged = async (event: Event) => {
+        const input = event.target as HTMLInputElement | null;
+        const nextAlpha = this.parseDetailAlphaPercent(input?.value ?? '100');
+        if (nextAlpha === this.detailSectionPanelAlpha()) {
+            return;
+        }
+
+        await this.persistDetailSectionColors({ detailSectionPanelAlpha: nextAlpha });
+    };
+
+    readonly onDetailSectionCardAlphaChanged = async (event: Event) => {
+        const input = event.target as HTMLInputElement | null;
+        const nextAlpha = this.parseDetailAlphaPercent(input?.value ?? '100');
+        if (nextAlpha === this.detailSectionCardAlpha()) {
+            return;
+        }
+
+        await this.persistDetailSectionColors({ detailSectionCardAlpha: nextAlpha });
+    };
+
+    readonly onDetailTextAlphaChanged = async (event: Event) => {
+        const input = event.target as HTMLInputElement | null;
+        const nextAlpha = this.parseDetailAlphaPercent(input?.value ?? '100');
+        if (nextAlpha === this.detailTextAlpha()) {
+            return;
+        }
+
+        await this.persistDetailSectionColors({ detailTextAlpha: nextAlpha });
+    };
+
+    readonly onDetailBorderAlphaChanged = async (event: Event) => {
+        const input = event.target as HTMLInputElement | null;
+        const nextAlpha = this.parseDetailAlphaPercent(input?.value ?? '100');
+        if (nextAlpha === this.detailBorderAlpha()) {
+            return;
+        }
+
+        await this.persistDetailSectionColors({ detailBorderAlpha: nextAlpha });
     };
 
     readonly openPortraitModal = () => {
@@ -3646,6 +3791,7 @@ export class CharacterDetailPageComponent {
         this.conditionsManagerOpen.set(false);
         this.activeExtrasStatEntry.set(null);
         this.headerManageOpen.set(false);
+        this.detailColorsExpanded.set(false);
         this.resetShortRestPopup();
         this.activeRestPopup.set('short');
     }
@@ -3667,6 +3813,7 @@ export class CharacterDetailPageComponent {
         this.conditionsManagerOpen.set(false);
         this.activeExtrasStatEntry.set(null);
         this.headerManageOpen.set(false);
+        this.detailColorsExpanded.set(false);
         this.resetLongRestPopup();
         this.activeRestPopup.set('long');
     }
@@ -4594,6 +4741,111 @@ export class CharacterDetailPageComponent {
             return globalThis.localStorage?.getItem(`dungeonkeep-detail-background:${characterId}`)?.trim() ?? '';
         } catch {
             return '';
+        }
+    }
+
+    private async persistDetailSectionColors(update: {
+        detailSectionPanelColor?: string | null;
+        detailSectionCardColor?: string | null;
+        detailTextColor?: string | null;
+        detailBorderColor?: string | null;
+        detailSectionPanelAlpha?: number | null;
+        detailSectionCardAlpha?: number | null;
+        detailTextAlpha?: number | null;
+        detailBorderAlpha?: number | null;
+    }): Promise<void> {
+        const char = this.character();
+        if (!char || !char.canEdit) {
+            return;
+        }
+
+        const currentState: PersistedBuilderState = this.persistedBuilderState() ?? {};
+        const updatedState: PersistedBuilderState = { ...currentState };
+
+        if (Object.prototype.hasOwnProperty.call(update, 'detailSectionPanelColor')) {
+            if (update.detailSectionPanelColor) {
+                updatedState.detailSectionPanelColor = update.detailSectionPanelColor;
+            } else {
+                delete updatedState.detailSectionPanelColor;
+            }
+        }
+
+        if (Object.prototype.hasOwnProperty.call(update, 'detailSectionCardColor')) {
+            if (update.detailSectionCardColor) {
+                updatedState.detailSectionCardColor = update.detailSectionCardColor;
+            } else {
+                delete updatedState.detailSectionCardColor;
+            }
+        }
+
+        if (Object.prototype.hasOwnProperty.call(update, 'detailTextColor')) {
+            if (update.detailTextColor) {
+                updatedState.detailTextColor = update.detailTextColor;
+            } else {
+                delete updatedState.detailTextColor;
+            }
+        }
+
+        if (Object.prototype.hasOwnProperty.call(update, 'detailBorderColor')) {
+            if (update.detailBorderColor) {
+                updatedState.detailBorderColor = update.detailBorderColor;
+            } else {
+                delete updatedState.detailBorderColor;
+            }
+        }
+
+        if (Object.prototype.hasOwnProperty.call(update, 'detailSectionPanelAlpha')) {
+            if (typeof update.detailSectionPanelAlpha === 'number' && Number.isFinite(update.detailSectionPanelAlpha)) {
+                updatedState.detailSectionPanelAlpha = this.normalizeDetailAlpha(update.detailSectionPanelAlpha);
+            } else {
+                delete updatedState.detailSectionPanelAlpha;
+            }
+        }
+
+        if (Object.prototype.hasOwnProperty.call(update, 'detailSectionCardAlpha')) {
+            if (typeof update.detailSectionCardAlpha === 'number' && Number.isFinite(update.detailSectionCardAlpha)) {
+                updatedState.detailSectionCardAlpha = this.normalizeDetailAlpha(update.detailSectionCardAlpha);
+            } else {
+                delete updatedState.detailSectionCardAlpha;
+            }
+        }
+
+        if (Object.prototype.hasOwnProperty.call(update, 'detailTextAlpha')) {
+            if (typeof update.detailTextAlpha === 'number' && Number.isFinite(update.detailTextAlpha)) {
+                updatedState.detailTextAlpha = this.normalizeDetailAlpha(update.detailTextAlpha);
+            } else {
+                delete updatedState.detailTextAlpha;
+            }
+        }
+
+        if (Object.prototype.hasOwnProperty.call(update, 'detailBorderAlpha')) {
+            if (typeof update.detailBorderAlpha === 'number' && Number.isFinite(update.detailBorderAlpha)) {
+                updatedState.detailBorderAlpha = this.normalizeDetailAlpha(update.detailBorderAlpha);
+            } else {
+                delete updatedState.detailBorderAlpha;
+            }
+        }
+
+        const updatedNotes = this.createPersistedNotesString(char.notes ?? '', updatedState);
+
+        try {
+            await this.store.updateCharacter(this.characterId, {
+                name: char.name,
+                playerName: char.playerName,
+                race: char.race,
+                className: char.className,
+                role: char.role,
+                level: char.level,
+                background: char.background,
+                notes: updatedNotes,
+                campaignId: char.campaignId,
+                hitPoints: char.hitPoints,
+                maxHitPoints: char.maxHitPoints,
+                image: char.image,
+                detailBackgroundImageUrl: char.detailBackgroundImageUrl
+            });
+        } finally {
+            this.cdr.detectChanges();
         }
     }
 
@@ -7863,6 +8115,76 @@ export class CharacterDetailPageComponent {
             default:
                 return 'parchment';
         }
+    }
+
+    private normalizeDetailSectionColor(value: string | null | undefined): string {
+        const normalized = (value ?? '').trim().toLowerCase();
+        if (!normalized) {
+            return '';
+        }
+
+        const shortHexMatch = normalized.match(/^#([0-9a-f]{3})$/i);
+        if (shortHexMatch) {
+            const [r, g, b] = shortHexMatch[1].split('');
+            return `#${r}${r}${g}${g}${b}${b}`;
+        }
+
+        return /^#([0-9a-f]{6})$/i.test(normalized) ? normalized : '';
+    }
+
+    private normalizeDetailAlpha(value: number | null | undefined): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return 1;
+        }
+
+        if (value <= 0) {
+            return 0;
+        }
+
+        if (value >= 1) {
+            return 1;
+        }
+
+        return Math.round(value * 100) / 100;
+    }
+
+    private parseDetailAlphaPercent(value: string): number {
+        const parsed = Number.parseFloat(value);
+        if (!Number.isFinite(parsed)) {
+            return 1;
+        }
+
+        return this.normalizeDetailAlpha(parsed / 100);
+    }
+
+    private composeDetailColorValue(hexColor: string, alpha: number): string | null {
+        if (!hexColor) {
+            return null;
+        }
+
+        if (alpha >= 1) {
+            return hexColor;
+        }
+
+        const rgb = this.hexToRgb(hexColor);
+        if (!rgb) {
+            return hexColor;
+        }
+
+        return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+    }
+
+    private hexToRgb(value: string): { r: number; g: number; b: number } | null {
+        const match = value.match(/^#([0-9a-f]{6})$/i);
+        if (!match) {
+            return null;
+        }
+
+        return {
+            r: Number.parseInt(match[1].slice(0, 2), 16),
+            g: Number.parseInt(match[1].slice(2, 4), 16),
+            b: Number.parseInt(match[1].slice(4, 6), 16)
+        };
     }
 
     private sanitizeLanguageList(values: string[]): string[] {

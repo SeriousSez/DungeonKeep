@@ -136,6 +136,54 @@
                             </div>
 
                             <div class="header-theme-controls">
+                                <button type="button" class="theme-collapse-toggle" [attr.aria-expanded]="detailColorsExpanded()" (click)="toggleDetailColorsExpanded()">
+                                    <span class="theme-control-label">Section Colors</span>
+                                    <span class="theme-collapse-state">{{ detailColorsExpanded() ? 'Hide' : 'Customize' }}</span>
+                                </button>
+                                @if (detailColorsExpanded()) {
+                                <div class="theme-color-grid">
+                                    <label class="theme-color-field">
+                                        <span>Panels</span>
+                                        <input type="color" [value]="detailSectionPanelColor() || '#f2ebde'" (input)="onDetailSectionPanelColorChanged($event)" aria-label="Section panel color" />
+                                        <div class="theme-alpha-field">
+                                            <span class="theme-alpha-label">Opacity</span>
+                                            <input type="range" min="0" max="100" step="1" [value]="detailSectionPanelAlpha() * 100" (input)="onDetailSectionPanelAlphaChanged($event)" aria-label="Section panel opacity" />
+                                            <span class="theme-alpha-value">{{ (detailSectionPanelAlpha() * 100).toFixed(0) }}%</span>
+                                        </div>
+                                    </label>
+                                    <label class="theme-color-field">
+                                        <span>Cards</span>
+                                        <input type="color" [value]="detailSectionCardColor() || '#f8f3e9'" (input)="onDetailSectionCardColorChanged($event)" aria-label="Section card color" />
+                                        <div class="theme-alpha-field">
+                                            <span class="theme-alpha-label">Opacity</span>
+                                            <input type="range" min="0" max="100" step="1" [value]="detailSectionCardAlpha() * 100" (input)="onDetailSectionCardAlphaChanged($event)" aria-label="Section card opacity" />
+                                            <span class="theme-alpha-value">{{ (detailSectionCardAlpha() * 100).toFixed(0) }}%</span>
+                                        </div>
+                                    </label>
+                                    <label class="theme-color-field">
+                                        <span>Text</span>
+                                        <input type="color" [value]="detailTextColor() || '#2f2a22'" (input)="onDetailTextColorChanged($event)" aria-label="Section text color" />
+                                        <div class="theme-alpha-field">
+                                            <span class="theme-alpha-label">Opacity</span>
+                                            <input type="range" min="0" max="100" step="1" [value]="detailTextAlpha() * 100" (input)="onDetailTextAlphaChanged($event)" aria-label="Section text opacity" />
+                                            <span class="theme-alpha-value">{{ (detailTextAlpha() * 100).toFixed(0) }}%</span>
+                                        </div>
+                                    </label>
+                                    <label class="theme-color-field">
+                                        <span>Borders</span>
+                                        <input type="color" [value]="detailBorderColor() || '#cbbba3'" (input)="onDetailBorderColorChanged($event)" aria-label="Section border color" />
+                                        <div class="theme-alpha-field">
+                                            <span class="theme-alpha-label">Opacity</span>
+                                            <input type="range" min="0" max="100" step="1" [value]="detailBorderAlpha() * 100" (input)="onDetailBorderAlphaChanged($event)" aria-label="Section border opacity" />
+                                            <span class="theme-alpha-value">{{ (detailBorderAlpha() * 100).toFixed(0) }}%</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                <button type="button" class="remove-btn" [disabled]="!detailSectionPanelColor() && !detailSectionCardColor() && !detailTextColor() && !detailBorderColor()" (click)="resetDetailSectionColors()">Reset section colors</button>
+                                }
+                            </div>
+
+                            <div class="header-theme-controls">
                                 <span class="theme-control-label">Campaign</span>
                             </div>
 

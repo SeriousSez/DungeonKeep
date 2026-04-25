@@ -225,6 +225,26 @@
     border-color: var(--detail-theme-border);
 }
 
+:host([data-detail-panel-custom='true']) :is(.header-content, .panel) {
+    background: var(--detail-custom-panel-surface);
+}
+
+:host([data-detail-card-custom='true']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row) {
+    background: var(--detail-custom-card-surface);
+}
+
+:host([data-detail-border-custom='true']) :is(.header-content, .panel) {
+    border-color: var(--detail-custom-border-color);
+}
+
+:host([data-detail-border-custom='true']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece) {
+    border-color: color-mix(in srgb, var(--detail-custom-border-color) 52%, var(--panel-border));
+}
+
+:host([data-detail-text-custom='true']) :is(.header-content, .panel, .header-content p, .section-title, .subsection-title, .summary-label, .summary-value, .summary-mod, .summary-meta, .save-label, .save-value, .skill-name, .skill-ability, .skill-mod, .passive-row, .training-block .label, .training-block p, .notes-block, .mini-list li, .traits-list li, .actions-head, .actions-row, .combat-tab, .action-filter, .action-chip, .spell-chip, .slot-pill, .theme-control-label, .theme-color-field, .assign-btn, .remove-btn, .header-rest-button, .edit-character-btn, .status-pill, .campaign-link, .header-subclass) {
+    color: var(--detail-custom-text-color);
+}
+
 .page-shell :is(button, a, input, .panel, .summary-item, .save-card, .skill-row, .training-block, .info-row, .passive-row, .action-filter, .combat-tab, .action-chip, .spell-chip, .slot-pill, .inventory-row, .container-header, .detail-trigger-row, .detail-trigger-card) {
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
 }
@@ -539,6 +559,75 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--text-soft);
+}
+
+.theme-collapse-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 34px;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    background: var(--surface-raised);
+    padding: 6px 10px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.theme-collapse-state {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--text-soft);
+}
+
+.theme-color-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+}
+
+.theme-color-field {
+    display: grid;
+    gap: 4px;
+    font-size: 0.76rem;
+    color: var(--text-soft);
+}
+
+.theme-color-field input[type='color'] {
+    width: 100%;
+    min-height: 32px;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    background: var(--surface-raised);
+    padding: 2px;
+    cursor: pointer;
+}
+
+.theme-alpha-field {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+}
+
+.theme-alpha-label {
+    font-size: 0.7rem;
+    color: var(--text-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.theme-alpha-field input[type='range'] {
+    width: 100%;
+}
+
+.theme-alpha-value {
+    font-size: 0.74rem;
+    color: var(--text-soft);
+    min-width: 2.8rem;
+    text-align: right;
 }
 
 .header-status-row {

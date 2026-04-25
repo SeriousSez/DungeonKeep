@@ -113,6 +113,14 @@ export interface PersistedBuilderState {
     exhaustionLevel?: number;
     detailBackgroundTheme?: DetailBackgroundTheme;
     detailBackgroundImageUrl?: string;
+    detailSectionPanelColor?: string;
+    detailSectionCardColor?: string;
+    detailTextColor?: string;
+    detailBorderColor?: string;
+    detailSectionPanelAlpha?: number;
+    detailSectionCardAlpha?: number;
+    detailTextAlpha?: number;
+    detailBorderAlpha?: number;
 }
 
 export interface CombatRow {
