@@ -2428,21 +2428,25 @@ export class CharacterDetailPageComponent {
         }
 
         const fromState = this.getTrainingFromSelections(this.persistedBuilderState());
+        const fromPremade = this.getTrainingFromPremade(this.getPremadeCharacter(char));
+        const fromClassTraits = this.getTrainingFromCoreTraits(char.className);
 
-        if (fromState.armor.length === 0 && fromState.weapons.length === 0 && fromState.tools.length === 0) {
-            return this.getTrainingFromCoreTraits(char.className);
-        }
-
-        return fromState;
+        return {
+            armor: this.selectTrainingCategory(fromState.armor, fromPremade.armor, fromClassTraits.armor),
+            weapons: this.selectTrainingCategory(fromState.weapons, fromPremade.weapons, fromClassTraits.weapons),
+            tools: this.selectTrainingCategory(fromState.tools, fromPremade.tools, fromClassTraits.tools)
+        };
     });
 
     readonly languageList = computed(() => {
         const char = this.character();
         const persisted = this.persistedBuilderState();
+        const premade = this.getPremadeCharacter(char);
         const selected = [
             ...(char?.languages ?? []),
             ...(persisted?.selectedLanguages ?? []),
             ...(persisted?.selectedSpeciesLanguages ?? []),
+            ...(premade?.languages ?? []),
             ...(this.raceInfo()?.languages ?? [])
         ];
 
@@ -5581,15 +5585,33 @@ export class CharacterDetailPageComponent {
             return true;
         }
 
+        const hasLightTraining = values.some((entry) =>
+            entry.includes('light armor')
+            || (/\blight\b/.test(entry) && /\barmor\b/.test(entry))
+            || this.getArmorCategory(entry) === 'light'
+        );
+
+        const hasMediumTraining = values.some((entry) =>
+            entry.includes('medium armor')
+            || (/\bmedium\b/.test(entry) && /\barmor\b/.test(entry))
+            || this.getArmorCategory(entry) === 'medium'
+        );
+
+        const hasHeavyTraining = values.some((entry) =>
+            entry.includes('heavy armor')
+            || (/\bheavy\b/.test(entry) && /\barmor\b/.test(entry))
+            || this.getArmorCategory(entry) === 'heavy'
+        );
+
         if (category === 'light') {
-            return values.some((entry) => entry.includes('light armor'));
+            return hasLightTraining || hasMediumTraining || hasHeavyTraining;
         }
 
         if (category === 'medium') {
-            return values.some((entry) => entry.includes('medium armor') || entry.includes('heavy armor'));
+            return hasMediumTraining || hasHeavyTraining;
         }
 
-        return values.some((entry) => entry.includes('heavy armor'));
+        return hasHeavyTraining;
     }
 
     private getArmorDisadvantageReasonForSkill(skillKey: string, abilityAbbr: string): string | null {
@@ -8064,6 +8086,80 @@ export class CharacterDetailPageComponent {
             weapons: [...weapons],
             tools: [...tools]
         };
+    }
+
+    private getTrainingFromPremade(premade: PremadeCharacter | null): { armor: string[]; weapons: string[]; tools: string[] } {
+        if (!premade) {
+            return { armor: [], weapons: [], tools: [] };
+        }
+
+        const armor = new Set<string>();
+        const weapons = new Set<string>();
+        const tools = new Set<string>();
+
+        const addByValue = (raw: string) => {
+            const value = raw.trim();
+            if (!value) {
+                return;
+            }
+
+            if (/armor|shield/i.test(value)) {
+                armor.add(value);
+            }
+
+            if (/weapon|bow|crossbow|sword|axe|mace|spear|dagger|pistol|musket|firearm/i.test(value)) {
+                weapons.add(value);
+            }
+
+            if (/tool|kit|instrument|thieves'/i.test(value)) {
+                tools.add(value);
+            }
+        };
+
+        for (const entry of premade.inventoryEntries ?? []) {
+            const category = entry.category?.trim().toLowerCase() ?? '';
+            const name = entry.name?.trim() ?? '';
+
+            if (!name) {
+                continue;
+            }
+
+            if (category.includes('armor') || /shield/i.test(name)) {
+                armor.add(name);
+            }
+
+            if (category.includes('weapon') || category.includes('firearm')) {
+                weapons.add(name);
+            }
+
+            if (category.includes('tool')) {
+                tools.add(name);
+            }
+
+            addByValue(name);
+        }
+
+        for (const item of premade.equipment ?? []) {
+            addByValue(item);
+        }
+
+        return {
+            armor: [...armor],
+            weapons: [...weapons],
+            tools: [...tools]
+        };
+    }
+
+    private selectTrainingCategory(primary: readonly string[], secondary: readonly string[], fallback: readonly string[]): string[] {
+        if (primary.length > 0) {
+            return [...primary];
+        }
+
+        if (secondary.length > 0) {
+            return [...secondary];
+        }
+
+        return [...fallback];
     }
 
     private parsePhysicalCharacteristics(input: string): {
