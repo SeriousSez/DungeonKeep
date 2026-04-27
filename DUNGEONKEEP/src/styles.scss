@@ -70,27 +70,21 @@ body.character-detail-page-active[data-character-page-theme='parchment'] {
 }
 
 body.character-detail-page-active[data-character-page-theme='forest'] {
-    background:
-        linear-gradient(rgba(30, 54, 36, 0.48), rgba(30, 54, 36, 0.48)),
-        url('/assets/images/theme/forest.png');
+    background: url('/assets/images/theme/forest.png');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
 }
 
 body.character-detail-page-active[data-character-page-theme='ember'] {
-    background:
-        linear-gradient(rgba(78, 38, 26, 0.44), rgba(78, 38, 26, 0.44)),
-        url('/assets/images/theme/ember.png');
+    background: url('/assets/images/theme/ember.png');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
 }
 
 body.character-detail-page-active[data-character-page-theme='moonlit'] {
-    background:
-        linear-gradient(rgba(28, 40, 74, 0.44), rgba(28, 40, 74, 0.44)),
-        url('/assets/images/theme/moonlit.png');
+    background: url('/assets/images/theme/moonlit.png');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
