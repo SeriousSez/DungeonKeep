@@ -70,11 +70,6 @@ public sealed class CharactersController(ICharacterService characterService, IAu
     [HttpPost]
     public async Task<ActionResult<CharacterDto>> Create([FromBody] CreateCharacterRequest request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.ClassName))
-        {
-            return BadRequest("Character name and class are required.");
-        }
-
         var user = await GetAuthenticatedUserAsync(cancellationToken);
         if (user is null)
         {
@@ -99,11 +94,6 @@ public sealed class CharactersController(ICharacterService characterService, IAu
     [HttpPut("{characterId:guid}")]
     public async Task<ActionResult<CharacterDto>> Update(Guid characterId, [FromBody] UpdateCharacterRequest request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.ClassName))
-        {
-            return BadRequest("Character name and class are required.");
-        }
-
         var user = await GetAuthenticatedUserAsync(cancellationToken);
         if (user is null)
         {
