@@ -17,6 +17,33 @@
 
     <p class="key-state ok">Server-backed chat enabled.</p>
 
+    @if (hasSavedThreads() && !activeThreadId()) {
+    <div class="thread-list" aria-label="Saved chat history">
+        @for (thread of visibleThreads(); track thread.id) {
+        <article class="thread-item" [class.is-active]="thread.id === activeThreadId()">
+            <button type="button" class="thread-open-btn" (click)="openThread(thread.id)">
+                <span class="thread-title">{{ thread.title }}</span>
+                <span class="thread-time">{{ formatThreadTime(thread.updatedAtEpochMs) }}</span>
+            </button>
+            <div class="thread-item-actions">
+                <button type="button" class="thread-archive-btn" aria-label="Archive chat" (click)="archiveThread(thread.id, $event)">
+                    <i class="fa-duotone fa-thin fa-box-archive"></i>
+                </button>
+            </div>
+        </article>
+        }
+    </div>
+    }
+
+    @if (activeThreadId()) {
+    <div class="active-thread-header" aria-label="Active chat header">
+        <button type="button" class="thread-back-btn" aria-label="Back to saved chats" (click)="openEmptyThread()">
+            <i class="fa-duotone fa-thin fa-arrow-left"></i>
+        </button>
+        <p class="active-thread-title">{{ activeThreadTitle() }}</p>
+    </div>
+    }
+
     <div class="messages" #messagesContainer>
         @for (message of messages(); track $index) {
         <article class="message" [class.user]="message.role === 'user'" [class.assistant]="message.role === 'assistant'">

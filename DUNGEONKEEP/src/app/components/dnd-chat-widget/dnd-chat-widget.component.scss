@@ -43,10 +43,10 @@
     right: 0;
     bottom: 72px;
     width: min(404px, calc(100vw - 24px));
-    max-height: min(72vh, 760px);
+    max-height: min(72vh, 1000px);
     padding: 14px;
-    display: grid;
-    grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+    display: flex;
+    flex-direction: column;
     gap: 12px;
 }
 
@@ -112,6 +112,146 @@
     &.ok {
         color: var(--color-primary);
     }
+}
+
+.active-thread-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    padding: 2px 0;
+}
+
+.thread-back-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid color-mix(in srgb, var(--pill-border) 85%, var(--color-border-strong));
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 88%, transparent);
+    color: var(--text-main);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &:hover {
+        border-color: color-mix(in srgb, var(--accent-primary) 58%, var(--panel-border));
+        background: color-mix(in srgb, var(--accent-primary) 14%, var(--surface-raised-solid));
+    }
+}
+
+.active-thread-title {
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.thread-open-btn {
+    min-height: 30px;
+    padding: 0 9px;
+    font-size: 0.74rem;
+    border-radius: 10px;
+    color: var(--text-main);
+    font: inherit;
+    cursor: pointer;
+    border: 0;
+    background: transparent;
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+}
+
+.thread-list {
+    display: grid;
+    gap: 7px;
+    max-height: 140px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.thread-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0;
+    align-items: center;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 84%, var(--color-border-strong));
+    border-radius: 10px;
+    padding: 4px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 90%, transparent);
+    transition: border-color 120ms ease, background 120ms ease;
+
+    &:hover,
+    &:focus-within {
+        border-color: color-mix(in srgb, var(--accent-primary) 58%, var(--panel-border));
+        background: color-mix(in srgb, var(--accent-primary) 14%, var(--surface-raised-solid));
+    }
+
+    &.is-active {
+        border-color: color-mix(in srgb, var(--accent-primary) 62%, var(--panel-border));
+    }
+}
+
+.thread-open-btn {
+    display: grid;
+    gap: 2px;
+    text-align: left;
+    padding: 7px 8px;
+}
+
+.thread-item-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-right: 3px;
+}
+
+.thread-archive-btn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid color-mix(in srgb, var(--pill-border) 84%, var(--color-border-strong));
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 88%, transparent);
+    color: var(--text-soft);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(4px);
+    transition: opacity 120ms ease, transform 120ms ease, border-color 120ms ease, color 120ms ease;
+
+    &:hover,
+    &:focus-visible {
+        border-color: color-mix(in srgb, var(--accent-primary) 58%, var(--panel-border));
+        color: var(--text-main);
+    }
+}
+
+.thread-item:hover .thread-archive-btn,
+.thread-item:focus-within .thread-archive-btn {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+}
+
+.thread-title {
+    font-size: 0.78rem;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.thread-time {
+    font-size: 0.68rem;
+    color: var(--text-soft);
 }
 
 .messages {

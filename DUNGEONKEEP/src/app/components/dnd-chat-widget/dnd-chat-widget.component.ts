@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, effect, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { Component, HostListener, computed, effect, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { marked } from 'marked';
 import { Router } from '@angular/router';
@@ -30,6 +30,19 @@ interface ChatMessage {
     role: 'user' | 'assistant';
     content: string;
 }
+
+interface ChatThread {
+    id: string;
+    title: string;
+    createdAtEpochMs: number;
+    updatedAtEpochMs: number;
+    messages: ChatMessage[];
+}
+
+const CHAT_THREAD_STORAGE_KEY = 'dungeonkeep.dnd-chat.threads.v1';
+const MAX_STORED_THREADS = 24;
+const MAX_MESSAGES_PER_THREAD = 120;
+const DEFAULT_ASSISTANT_GREETING = 'Ask me anything about D&D 5e rules, classes, spells, or mechanics.';
 
 interface ChatPersistedInventoryEntry {
     name: string;
@@ -69,6 +82,8 @@ export class DndChatWidgetComponent {
     private readonly store = inject(DungeonStoreService);
     private readonly messagesContainer = viewChild<ElementRef<HTMLDivElement>>('messagesContainer');
 
+    readonly threads = signal<ChatThread[]>([]);
+    readonly activeThreadId = signal('');
     readonly isOpen = signal(false);
     readonly isLoading = signal(false);
     readonly draft = signal('');
@@ -76,11 +91,37 @@ export class DndChatWidgetComponent {
     readonly messages = signal<ChatMessage[]>([
         {
             role: 'assistant',
-            content: 'Ask me anything about D&D 5e rules, classes, spells, or mechanics.'
+            content: DEFAULT_ASSISTANT_GREETING
         }
     ]);
 
+    readonly visibleThreads = computed(() => {
+        return this.threads()
+            .filter((thread) => thread.messages.some((message) => message.role === 'user'))
+            .sort((left, right) => right.updatedAtEpochMs - left.updatedAtEpochMs);
+    });
+
+    readonly activeThread = computed(() => {
+        const activeId = this.activeThreadId();
+        return this.threads().find((thread) => thread.id === activeId) ?? null;
+    });
+
+    readonly hasSavedThreads = computed(() => {
+        return this.visibleThreads().length > 0;
+    });
+
+    readonly activeThreadTitle = computed(() => {
+        return this.activeThread()?.title || 'New chat';
+    });
+
     constructor() {
+        const loadedThreads = this.loadThreadsFromStorage();
+        if (loadedThreads.length > 0) {
+            this.threads.set(loadedThreads);
+        }
+
+        this.openEmptyThread();
+
         effect(() => {
             const isOpen = this.isOpen();
             const messageCount = this.messages().length;
@@ -93,6 +134,23 @@ export class DndChatWidgetComponent {
             void messageCount;
             void isLoading;
             this.scheduleScrollToBottom();
+        });
+
+        effect(() => {
+            const activeThreadId = this.activeThreadId();
+            const messages = this.messages();
+            if (!activeThreadId) {
+                return;
+            }
+
+            this.patchThread(activeThreadId, {
+                messages: this.trimMessages(messages),
+                title: this.buildThreadTitle(messages)
+            });
+        });
+
+        effect(() => {
+            this.saveThreadsToStorage(this.threads());
         });
     }
 
@@ -153,6 +211,10 @@ export class DndChatWidgetComponent {
             .map((entry) => ({ role: entry.role, content: entry.content }));
 
         this.messages.update((current) => [...current, { role: 'user', content: prompt }]);
+        if (!this.activeThreadId()) {
+            this.createThreadFromMessages(this.messages());
+        }
+
         this.draft.set('');
         this.isLoading.set(true);
         this.error.set('');
@@ -170,6 +232,47 @@ export class DndChatWidgetComponent {
         } finally {
             this.isLoading.set(false);
         }
+    }
+
+    openEmptyThread(): void {
+        this.activeThreadId.set('');
+        this.messages.set([{ role: 'assistant', content: DEFAULT_ASSISTANT_GREETING }]);
+        this.draft.set('');
+        this.error.set('');
+    }
+
+    openThread(threadId: string): void {
+        const thread = this.threads().find((entry) => entry.id === threadId);
+        if (!thread) {
+            return;
+        }
+
+        this.activeThreadId.set(thread.id);
+        this.messages.set([...thread.messages]);
+        this.error.set('');
+    }
+
+    archiveActiveThread(): void {
+        const active = this.activeThread();
+        if (!active) {
+            return;
+        }
+
+        this.archiveThreadById(active.id);
+    }
+
+    archiveThread(threadId: string, event: Event): void {
+        event.stopPropagation();
+        this.archiveThreadById(threadId);
+    }
+
+    formatThreadTime(epochMs: number): string {
+        const date = new Date(epochMs);
+        const now = new Date();
+        const sameDay = date.toDateString() === now.toDateString();
+        return sameDay
+            ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : date.toLocaleDateString();
     }
 
     private buildPageContext(): ApiDndChatPageContext | undefined {
@@ -850,5 +953,177 @@ export class DndChatWidgetComponent {
                 });
             });
         });
+    }
+
+    private createThreadFromMessages(messages: ChatMessage[]): void {
+        const now = Date.now();
+        const threadId = this.createThreadId();
+        const threadMessages = this.trimMessages(messages);
+        const created: ChatThread = {
+            id: threadId,
+            title: this.buildThreadTitle(threadMessages),
+            createdAtEpochMs: now,
+            updatedAtEpochMs: now,
+            messages: threadMessages
+        };
+
+        this.threads.update((existing) => this.normalizeThreadOrder([created, ...existing]));
+        this.activeThreadId.set(threadId);
+    }
+
+    private archiveThreadById(threadId: string): void {
+        let remainingThreads: ChatThread[] = [];
+        this.threads.update((existing) => {
+            remainingThreads = existing.filter((thread) => thread.id !== threadId);
+            return remainingThreads;
+        });
+
+        if (this.activeThreadId() !== threadId) {
+            return;
+        }
+
+        const next = remainingThreads[0];
+        if (next) {
+            this.openThread(next.id);
+            return;
+        }
+
+        this.openEmptyThread();
+    }
+
+    private patchThread(threadId: string, patch: Partial<Pick<ChatThread, 'title' | 'messages'>>): void {
+        const now = Date.now();
+        this.threads.update((existing) =>
+            this.normalizeThreadOrder(
+                existing.map((thread) => {
+                    if (thread.id !== threadId) {
+                        return thread;
+                    }
+
+                    return {
+                        ...thread,
+                        ...patch,
+                        messages: patch.messages ? this.trimMessages(patch.messages) : thread.messages,
+                        title: patch.title?.trim() || thread.title,
+                        updatedAtEpochMs: now
+                    };
+                })
+            )
+        );
+    }
+
+    private normalizeThreadOrder(threads: ChatThread[]): ChatThread[] {
+        const normalized = threads
+            .map((thread) => ({
+                ...thread,
+                title: thread.title.trim() || 'New chat',
+                messages: this.trimMessages(thread.messages),
+                updatedAtEpochMs: Number.isFinite(thread.updatedAtEpochMs) ? thread.updatedAtEpochMs : Date.now(),
+                createdAtEpochMs: Number.isFinite(thread.createdAtEpochMs) ? thread.createdAtEpochMs : Date.now()
+            }))
+            .sort((left, right) => right.updatedAtEpochMs - left.updatedAtEpochMs);
+
+        return normalized.slice(0, MAX_STORED_THREADS);
+    }
+
+    private trimMessages(messages: unknown[]): ChatMessage[] {
+        const sanitized: ChatMessage[] = messages
+            .map((entry) => {
+                const candidate = (entry ?? {}) as { role?: unknown; content?: unknown };
+                const role: ChatMessage['role'] = candidate.role === 'assistant' ? 'assistant' : 'user';
+                const content = String(candidate.content ?? '').trim();
+                return { role, content };
+            })
+            .filter((entry) => entry.content.length > 0);
+
+        if (sanitized.length === 0) {
+            return [{ role: 'assistant', content: DEFAULT_ASSISTANT_GREETING }];
+        }
+
+        return sanitized.slice(-MAX_MESSAGES_PER_THREAD);
+    }
+
+    private buildThreadTitle(messages: ChatMessage[]): string {
+        const firstUser = messages.find((entry) => entry.role === 'user');
+        if (!firstUser?.content) {
+            return 'New chat';
+        }
+
+        const normalized = firstUser.content.replace(/\s+/g, ' ').trim();
+        if (normalized.length <= 42) {
+            return normalized;
+        }
+
+        return `${normalized.slice(0, 41).trim()}…`;
+    }
+
+    private createThreadId(): string {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            return crypto.randomUUID();
+        }
+
+        return `thread-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+
+    private loadThreadsFromStorage(): ChatThread[] {
+        if (typeof localStorage === 'undefined') {
+            return [];
+        }
+
+        try {
+            const raw = localStorage.getItem(CHAT_THREAD_STORAGE_KEY);
+            if (!raw) {
+                return [];
+            }
+
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) {
+                return [];
+            }
+
+            const restored: ChatThread[] = [];
+            for (const candidate of parsed) {
+                if (!candidate || typeof candidate !== 'object') {
+                    continue;
+                }
+
+                const id = typeof candidate.id === 'string' ? candidate.id.trim() : '';
+                const title = typeof candidate.title === 'string' ? candidate.title.trim() : '';
+                const createdAtEpochMs = Number((candidate as { createdAtEpochMs?: unknown }).createdAtEpochMs);
+                const updatedAtEpochMs = Number((candidate as { updatedAtEpochMs?: unknown }).updatedAtEpochMs);
+                const storedMessages = (candidate as { messages?: unknown[] }).messages;
+                const messages: ChatMessage[] = Array.isArray(storedMessages)
+                    ? this.trimMessages(storedMessages)
+                    : [{ role: 'assistant', content: DEFAULT_ASSISTANT_GREETING }];
+
+                if (!id) {
+                    continue;
+                }
+
+                restored.push({
+                    id,
+                    title: title || this.buildThreadTitle(messages),
+                    createdAtEpochMs: Number.isFinite(createdAtEpochMs) ? createdAtEpochMs : Date.now(),
+                    updatedAtEpochMs: Number.isFinite(updatedAtEpochMs) ? updatedAtEpochMs : Date.now(),
+                    messages
+                });
+            }
+
+            return this.normalizeThreadOrder(restored);
+        } catch {
+            return [];
+        }
+    }
+
+    private saveThreadsToStorage(threads: ChatThread[]): void {
+        if (typeof localStorage === 'undefined') {
+            return;
+        }
+
+        try {
+            localStorage.setItem(CHAT_THREAD_STORAGE_KEY, JSON.stringify(threads));
+        } catch {
+            // Ignore persistence failures (quota/private mode) and keep chat usable in-memory.
+        }
     }
 }
