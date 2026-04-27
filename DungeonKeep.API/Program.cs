@@ -4,6 +4,7 @@ using DungeonKeep.ApplicationService.Extensions;
 using DungeonKeep.Infrastructure.Configuration;
 using DungeonKeep.Infrastructure.Extensions;
 using DungeonKeep.Infrastructure.Persistence;
+using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 
@@ -37,6 +38,7 @@ builder.Services.AddDungeonKeepInfrastructure(builder.Configuration);
 builder.Services.AddDungeonKeepApplication();
 
 builder.Services.AddControllers();
+builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSignalR();
