@@ -3,6 +3,7 @@ import { inject, Injectable, signal } from '@angular/core';
 
 import { clearSessionToken, clearSessionUser, loadSessionToken, loadSessionUser, saveSessionToken, saveSessionUser } from '../data/local-storage';
 import { ApiAuthSessionDto, ApiAuthUserDto, DungeonApiService } from './dungeon-api.service';
+import { extractApiError } from './extract-api-error';
 
 @Injectable({ providedIn: 'root' })
 export class SessionService {
@@ -22,7 +23,7 @@ export class SessionService {
             this.initialized.set(true);
             return { ok: true, email: result.email, message: result.message };
         } catch (error) {
-            return { ok: false, error: this.readApiError(error, 'Unable to create account with those details.') };
+            return { ok: false, error: extractApiError(error, 'Unable to create account with those details.') };
         }
     }
 
@@ -31,7 +32,7 @@ export class SessionService {
             const result = await this.api.activateAccount({ email, code });
             return { ok: true, email: result.email, message: result.message };
         } catch (error) {
-            return { ok: false, error: this.readApiError(error, 'Unable to activate this account right now.') };
+            return { ok: false, error: extractApiError(error, 'Unable to activate this account right now.') };
         }
     }
 
@@ -40,7 +41,7 @@ export class SessionService {
             const result = await this.api.resendActivationCode({ email });
             return { ok: true, email: result.email, message: result.message };
         } catch (error) {
-            return { ok: false, error: this.readApiError(error, 'Unable to resend the activation code right now.') };
+            return { ok: false, error: extractApiError(error, 'Unable to resend the activation code right now.') };
         }
     }
 
@@ -51,7 +52,7 @@ export class SessionService {
             this.initialized.set(true);
             return { ok: true };
         } catch (error) {
-            const apiError = this.readApiError(error, 'Email or password was invalid.');
+            const apiError = extractApiError(error, 'Email or password was invalid.');
             return {
                 ok: false,
                 activationRequired: this.isActivationRequiredError(error, apiError),
@@ -75,7 +76,7 @@ export class SessionService {
             saveSessionUser(updated);
             return { ok: true };
         } catch (error) {
-            return { ok: false, error: this.readApiError(error, 'Could not update profile.') };
+            return { ok: false, error: extractApiError(error, 'Could not update profile.') };
         }
     }
 
@@ -84,7 +85,7 @@ export class SessionService {
             await this.api.changePassword(currentPassword, newPassword);
             return { ok: true };
         } catch (error) {
-            return { ok: false, error: this.readApiError(error, 'Could not change password.') };
+            return { ok: false, error: extractApiError(error, 'Could not change password.') };
         }
     }
 
@@ -115,22 +116,6 @@ export class SessionService {
         saveSessionUser(session.user);
         this.token.set(session.token);
         this.currentUser.set(session.user);
-    }
-
-    private readApiError(error: unknown, fallback: string): string {
-        if (error instanceof HttpErrorResponse) {
-            if (typeof error.error === 'string' && error.error.trim()) {
-                return error.error.trim();
-            }
-
-            if (error.error && typeof error.error === 'object') {
-                const detail = 'detail' in error.error && typeof error.error.detail === 'string' ? error.error.detail : '';
-                const title = 'title' in error.error && typeof error.error.title === 'string' ? error.error.title : '';
-                return detail || title || fallback;
-            }
-        }
-
-        return fallback;
     }
 
     private isActivationRequiredError(error: unknown, message: string): boolean {

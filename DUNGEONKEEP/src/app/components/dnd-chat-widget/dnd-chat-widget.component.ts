@@ -23,6 +23,7 @@ import {
     ApiDndChatSessionContext,
     DungeonApiService
 } from '../../state/dungeon-api.service';
+import { extractApiError } from '../../state/extract-api-error';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
 interface ChatMessage {
@@ -165,8 +166,7 @@ export class DndChatWidgetComponent {
             const text = payload.reply?.trim() || 'No response text returned.';
             this.messages.update((current) => [...current, { role: 'assistant', content: text }]);
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unknown error while calling OpenAI.';
-            this.error.set(message);
+            this.error.set(extractApiError(error, 'Unknown error while calling OpenAI.'));
         } finally {
             this.isLoading.set(false);
         }

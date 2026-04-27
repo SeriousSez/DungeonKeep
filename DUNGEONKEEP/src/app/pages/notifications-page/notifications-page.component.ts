@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { extractApiError } from '../../state/extract-api-error';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterModule } from '@angular/router';
 import { ApiNotificationDto, DungeonApiService } from '../../state/dungeon-api.service';
@@ -21,6 +22,7 @@ const NOTIFICATION_ICONS: Record<string, string> = {
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NotificationsPageComponent implements OnInit {
+    readonly error = signal('');
     private readonly api = inject(DungeonApiService);
     private readonly cdr = inject(ChangeDetectorRef);
     readonly destroyRef = inject(DestroyRef);
@@ -47,8 +49,9 @@ export class NotificationsPageComponent implements OnInit {
         try {
             const data = await this.api.getNotifications();
             this.notifications.set(data);
-        } catch {
-            // silent — empty state shown
+            this.error.set('');
+        } catch (error) {
+            this.error.set(extractApiError(error, 'Could not load notifications.'));
         } finally {
             this.loading.set(false);
             this.cdr.detectChanges();

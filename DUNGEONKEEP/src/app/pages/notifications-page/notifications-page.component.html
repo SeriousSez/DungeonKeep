@@ -16,7 +16,13 @@
     </section>
 
     <section class="notifications-panel panel">
-        @if (notifications().length === 0) {
+        @if (error()) {
+        <div class="error-state">
+            <i class="fa-duotone fa-thin fa-circle-exclamation error-icon"></i>
+            <h2>Could not load notifications</h2>
+            <p>{{ error() }}</p>
+        </div>
+        } @else if (notifications().length === 0) {
         <div class="empty-state">
             <i class="fa-duotone fa-thin fa-bell empty-icon"></i>
             <h2>All caught up</h2>

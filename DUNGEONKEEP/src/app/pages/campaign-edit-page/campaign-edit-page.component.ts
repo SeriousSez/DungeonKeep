@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { CreationStudioComponent } from '../../components/creation-studio/creation-studio.component';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
+import { extractApiError } from '../../state/extract-api-error';
 import type { CampaignDraft } from '../../models/dungeon.models';
 
 @Component({
@@ -89,14 +90,14 @@ export class CampaignEditPageComponent {
         try {
             const updated = await this.store.updateCampaign(id, draft);
             if (!updated) {
-                this.updateError.set('Could not update campaign. Please try again.');
+                this.updateError.set(this.store.lastError() || 'Could not update campaign. Please try again.');
                 this.cdr.detectChanges();
                 return;
             }
 
             await this.router.navigate(['/campaigns', id]);
         } catch (error) {
-            this.updateError.set('An error occurred while updating the campaign.');
+            this.updateError.set(extractApiError(error, 'An error occurred while updating the campaign.'));
             this.cdr.detectChanges();
         }
     }

@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { extractApiError } from './extract-api-error';
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 
 import { CampaignNpc } from '../models/campaign-npc.models';
@@ -9,6 +10,7 @@ import { SessionService } from './session.service';
 
 @Injectable({ providedIn: 'root' })
 export class DungeonStoreService {
+    readonly lastError = signal('');
     private readonly latestTokenMoveRequestSequence = new Map<string, number>();
     private readonly latestKnownTokenMoveRevision = new Map<string, number>();
 
@@ -22,8 +24,9 @@ export class DungeonStoreService {
                     partyCharacterIds: campaign.partyCharacterIds.filter((id) => id !== characterId)
                 }))
             );
-        } catch {
-            // Optionally handle error (e.g., show notice)
+            this.lastError.set('');
+        } catch (error) {
+            this.lastError.set(extractApiError(error, 'Could not delete character.'));
         }
     }
     private static readonly UNASSIGNED_CAMPAIGN_ID = '00000000-0000-0000-0000-000000000000';
@@ -564,8 +567,10 @@ export class DungeonStoreService {
         try {
             const updated = await this.api.removeCampaignNpc(campaignId, name);
             this.replaceCampaignFromApi(campaignId, updated);
+            this.lastError.set('');
             return true;
-        } catch {
+        } catch (error) {
+            this.lastError.set(extractApiError(error, 'Could not remove NPC.'));
             return false;
         }
     }
@@ -578,12 +583,13 @@ export class DungeonStoreService {
         try {
             const updated = await this.api.saveCampaignNpc(campaignId, this.mapCampaignNpcToApi(npc));
             this.replaceCampaignFromApi(campaignId, updated);
+            this.lastError.set('');
             return true;
         } catch (error) {
             if (error instanceof HttpErrorResponse && error.status === 404) {
                 return await this.syncCampaignNpcNameFallback(campaignId, npc);
             }
-
+            this.lastError.set(extractApiError(error, 'Could not save NPC.'));
             return false;
         }
     }
@@ -596,6 +602,7 @@ export class DungeonStoreService {
         try {
             const updated = await this.api.deleteCampaignNpc(campaignId, npcId);
             this.replaceCampaignFromApi(campaignId, updated);
+            this.lastError.set('');
             return true;
         } catch (error) {
             if (error instanceof HttpErrorResponse && error.status === 404) {
@@ -604,10 +611,9 @@ export class DungeonStoreService {
                 if (!npc) {
                     return false;
                 }
-
                 return await this.removeCampaignNpc(campaignId, npc.name);
             }
-
+            this.lastError.set(extractApiError(error, 'Could not delete NPC.'));
             return false;
         }
     }
@@ -620,8 +626,10 @@ export class DungeonStoreService {
         try {
             const updated = await this.api.addCampaignLoot(campaignId, name);
             this.replaceCampaignFromApi(campaignId, updated);
+            this.lastError.set('');
             return true;
-        } catch {
+        } catch (error) {
+            this.lastError.set(extractApiError(error, 'Could not add loot.'));
             return false;
         }
     }
@@ -634,8 +642,10 @@ export class DungeonStoreService {
         try {
             const updated = await this.api.removeCampaignLoot(campaignId, name);
             this.replaceCampaignFromApi(campaignId, updated);
+            this.lastError.set('');
             return true;
-        } catch {
+        } catch (error) {
+            this.lastError.set(extractApiError(error, 'Could not remove loot.'));
             return false;
         }
     }
@@ -883,9 +893,11 @@ export class DungeonStoreService {
             this.campaigns.update((campaigns) =>
                 campaigns.map((c) => (c.id === campaignId ? campaign : c))
             );
+            this.lastError.set('');
 
             return campaign;
-        } catch {
+        } catch (error) {
+            this.lastError.set(extractApiError(error, 'Could not update campaign.'));
             return null;
         }
     }
