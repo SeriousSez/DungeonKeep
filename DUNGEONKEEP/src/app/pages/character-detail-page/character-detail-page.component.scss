@@ -212,56 +212,81 @@
     border-color: var(--detail-theme-border);
 }
 
-:host([data-detail-background='forest']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
-:host([data-detail-background='ember']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
-:host([data-detail-background='moonlit']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
-:host([data-detail-background='storm']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
-:host([data-detail-background='urban']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
-:host([data-detail-background='dunes']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
-:host([data-detail-background='tundra']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
-:host([data-detail-background='coastal']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
-:host([data-detail-background='underground']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row) {
+:host([data-detail-background='forest']) :is(.summary-item, .passive-row, .info-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
+:host([data-detail-background='ember']) :is(.summary-item, .passive-row, .info-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
+:host([data-detail-background='moonlit']) :is(.summary-item, .passive-row, .info-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
+:host([data-detail-background='storm']) :is(.summary-item, .passive-row, .info-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
+:host([data-detail-background='urban']) :is(.summary-item, .passive-row, .info-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
+:host([data-detail-background='dunes']) :is(.summary-item, .passive-row, .info-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
+:host([data-detail-background='tundra']) :is(.summary-item, .passive-row, .info-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
+:host([data-detail-background='coastal']) :is(.summary-item, .passive-row, .info-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row),
+:host([data-detail-background='underground']) :is(.summary-item, .passive-row, .info-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece, .actions-head, .actions-row) {
     background: var(--detail-card-surface);
     border-color: var(--detail-theme-border);
 }
 
-/* Preserve proficiency and expertise styling on themed backgrounds */
-:host([data-detail-background='forest']) .skill-row.detail-trigger-row.proficient,
-:host([data-detail-background='ember']) .skill-row.detail-trigger-row.proficient,
-:host([data-detail-background='moonlit']) .skill-row.detail-trigger-row.proficient,
-:host([data-detail-background='storm']) .skill-row.detail-trigger-row.proficient,
-:host([data-detail-background='urban']) .skill-row.detail-trigger-row.proficient,
-:host([data-detail-background='dunes']) .skill-row.detail-trigger-row.proficient,
-:host([data-detail-background='tundra']) .skill-row.detail-trigger-row.proficient,
-:host([data-detail-background='coastal']) .skill-row.detail-trigger-row.proficient,
-:host([data-detail-background='underground']) .skill-row.detail-trigger-row.proficient {
+:host([data-detail-background='forest']) .save-card,
+:host([data-detail-background='ember']) .save-card,
+:host([data-detail-background='moonlit']) .save-card,
+:host([data-detail-background='storm']) .save-card,
+:host([data-detail-background='urban']) .save-card,
+:host([data-detail-background='dunes']) .save-card,
+:host([data-detail-background='tundra']) .save-card,
+:host([data-detail-background='coastal']) .save-card,
+:host([data-detail-background='underground']) .save-card {
+    background: var(--detail-card-surface);
+    border-color: var(--detail-theme-border);
+}
+
+:host([data-detail-background='forest']) .save-card.proficient,
+:host([data-detail-background='ember']) .save-card.proficient,
+:host([data-detail-background='moonlit']) .save-card.proficient,
+:host([data-detail-background='storm']) .save-card.proficient,
+:host([data-detail-background='urban']) .save-card.proficient,
+:host([data-detail-background='dunes']) .save-card.proficient,
+:host([data-detail-background='tundra']) .save-card.proficient,
+:host([data-detail-background='coastal']) .save-card.proficient,
+:host([data-detail-background='underground']) .save-card.proficient {
+    border-color: var(--accent-primary);
+    background: color-mix(in srgb, var(--accent-primary) 8%, var(--detail-card-surface));
+}
+
+:host([data-detail-background='forest']) .skill-row,
+:host([data-detail-background='ember']) .skill-row,
+:host([data-detail-background='moonlit']) .skill-row,
+:host([data-detail-background='storm']) .skill-row,
+:host([data-detail-background='urban']) .skill-row,
+:host([data-detail-background='dunes']) .skill-row,
+:host([data-detail-background='tundra']) .skill-row,
+:host([data-detail-background='coastal']) .skill-row,
+:host([data-detail-background='underground']) .skill-row {
+    background: var(--detail-card-surface);
+    border-color: var(--detail-theme-border);
+}
+
+:host([data-detail-background='forest']) .skill-row.proficient,
+:host([data-detail-background='ember']) .skill-row.proficient,
+:host([data-detail-background='moonlit']) .skill-row.proficient,
+:host([data-detail-background='storm']) .skill-row.proficient,
+:host([data-detail-background='urban']) .skill-row.proficient,
+:host([data-detail-background='dunes']) .skill-row.proficient,
+:host([data-detail-background='tundra']) .skill-row.proficient,
+:host([data-detail-background='coastal']) .skill-row.proficient,
+:host([data-detail-background='underground']) .skill-row.proficient {
     border-color: var(--accent-primary);
 }
 
-:host([data-detail-background='forest']) .skill-row.detail-trigger-row.expertise,
-:host([data-detail-background='ember']) .skill-row.detail-trigger-row.expertise,
-:host([data-detail-background='moonlit']) .skill-row.detail-trigger-row.expertise,
-:host([data-detail-background='storm']) .skill-row.detail-trigger-row.expertise,
-:host([data-detail-background='urban']) .skill-row.detail-trigger-row.expertise,
-:host([data-detail-background='dunes']) .skill-row.detail-trigger-row.expertise,
-:host([data-detail-background='tundra']) .skill-row.detail-trigger-row.expertise,
-:host([data-detail-background='coastal']) .skill-row.detail-trigger-row.expertise,
-:host([data-detail-background='underground']) .skill-row.detail-trigger-row.expertise {
+:host([data-detail-background='forest']) .skill-row.expertise,
+:host([data-detail-background='ember']) .skill-row.expertise,
+:host([data-detail-background='moonlit']) .skill-row.expertise,
+:host([data-detail-background='storm']) .skill-row.expertise,
+:host([data-detail-background='urban']) .skill-row.expertise,
+:host([data-detail-background='dunes']) .skill-row.expertise,
+:host([data-detail-background='tundra']) .skill-row.expertise,
+:host([data-detail-background='coastal']) .skill-row.expertise,
+:host([data-detail-background='underground']) .skill-row.expertise {
     border-color: color-mix(in srgb, var(--accent-primary) 78%, #111827);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-primary) 32%, transparent);
-}
-
-:host([data-detail-background='forest']) .save-card.detail-trigger-row.proficient,
-:host([data-detail-background='ember']) .save-card.detail-trigger-row.proficient,
-:host([data-detail-background='moonlit']) .save-card.detail-trigger-row.proficient,
-:host([data-detail-background='storm']) .save-card.detail-trigger-row.proficient,
-:host([data-detail-background='urban']) .save-card.detail-trigger-row.proficient,
-:host([data-detail-background='dunes']) .save-card.detail-trigger-row.proficient,
-:host([data-detail-background='tundra']) .save-card.detail-trigger-row.proficient,
-:host([data-detail-background='coastal']) .save-card.detail-trigger-row.proficient,
-:host([data-detail-background='underground']) .save-card.detail-trigger-row.proficient {
-    border-color: var(--accent-primary);
-    background: color-mix(in srgb, var(--accent-primary) 8%, var(--surface-raised));
 }
 
 :host([data-detail-panel-custom='true']) :is(.header-content, .panel) {
@@ -278,6 +303,16 @@
 
 :host([data-detail-border-custom='true']) :is(.summary-item, .save-card, .passive-row, .info-row, .skill-row, .training-block, .notes-block, .mini-list li, .traits-list li, .slot-pill, .action-chip, .spell-chip, .inventory-row, .container-item, .death-save-panel, .currency-piece) {
     border-color: color-mix(in srgb, var(--detail-custom-border-color) 52%, var(--panel-border));
+}
+
+:host([data-detail-border-custom='true']) .skill-row.proficient,
+:host([data-detail-border-custom='true']) .save-card.proficient {
+    border-color: var(--accent-primary);
+}
+
+:host([data-detail-border-custom='true']) .skill-row.expertise {
+    border-color: color-mix(in srgb, var(--accent-primary) 78%, #111827);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-primary) 32%, transparent);
 }
 
 :host([data-detail-text-custom='true']) :is(.header-content, .panel, .header-content p, .section-title, .subsection-title, .summary-label, .summary-value, .summary-mod, .summary-meta, .save-label, .save-value, .skill-name, .skill-ability, .skill-mod, .passive-row, .training-block .label, .training-block p, .notes-block, .mini-list li, .traits-list li, .actions-head, .actions-row, .combat-tab, .action-filter, .action-chip, .spell-chip, .slot-pill, .theme-control-label, .theme-color-field, .assign-btn, .remove-btn, .header-rest-button, .edit-character-btn, .status-pill, .campaign-link, .header-subclass) {

@@ -4908,8 +4908,8 @@ export class CharacterDetailPageComponent {
             return Promise.reject(new Error('Choose an image file for the portrait.'));
         }
 
-        if (file.size > 8 * 1024 * 1024) {
-            return Promise.reject(new Error('Choose an image smaller than 8 MB.'));
+        if (file.size > 20 * 1024 * 1024) {
+            return Promise.reject(new Error('Image must be under 20 MB. For best performance, images under 8 MB are recommended.'));
         }
 
         return new Promise((resolve, reject) => {
