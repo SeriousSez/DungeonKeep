@@ -1052,7 +1052,14 @@
             <div class="proficiencies-grid">
                 <div class="proficiency-card">
                     <h4>Skill Proficiencies</h4>
-                    <p>{{ details.skillProficiencies }}</p>
+                    <div class="skills-list">
+                        @for (skill of backgroundSkillProficiencies(); track $index) {
+                        <span class="skill-badge proficient">{{ skill }}</span>
+                        }
+                        @empty {
+                        <p style="margin: 0; font-size: 0.9rem; color: var(--text-muted);">{{ selectedBackgroundDetail()?.skillProficiencies }}</p>
+                        }
+                    </div>
                 </div>
                 <div class="proficiency-card">
                     <h4>Tool Proficiencies</h4>

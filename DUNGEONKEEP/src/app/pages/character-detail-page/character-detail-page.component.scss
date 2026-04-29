@@ -225,6 +225,45 @@
     border-color: var(--detail-theme-border);
 }
 
+/* Preserve proficiency and expertise styling on themed backgrounds */
+:host([data-detail-background='forest']) .skill-row.detail-trigger-row.proficient,
+:host([data-detail-background='ember']) .skill-row.detail-trigger-row.proficient,
+:host([data-detail-background='moonlit']) .skill-row.detail-trigger-row.proficient,
+:host([data-detail-background='storm']) .skill-row.detail-trigger-row.proficient,
+:host([data-detail-background='urban']) .skill-row.detail-trigger-row.proficient,
+:host([data-detail-background='dunes']) .skill-row.detail-trigger-row.proficient,
+:host([data-detail-background='tundra']) .skill-row.detail-trigger-row.proficient,
+:host([data-detail-background='coastal']) .skill-row.detail-trigger-row.proficient,
+:host([data-detail-background='underground']) .skill-row.detail-trigger-row.proficient {
+    border-color: var(--accent-primary);
+}
+
+:host([data-detail-background='forest']) .skill-row.detail-trigger-row.expertise,
+:host([data-detail-background='ember']) .skill-row.detail-trigger-row.expertise,
+:host([data-detail-background='moonlit']) .skill-row.detail-trigger-row.expertise,
+:host([data-detail-background='storm']) .skill-row.detail-trigger-row.expertise,
+:host([data-detail-background='urban']) .skill-row.detail-trigger-row.expertise,
+:host([data-detail-background='dunes']) .skill-row.detail-trigger-row.expertise,
+:host([data-detail-background='tundra']) .skill-row.detail-trigger-row.expertise,
+:host([data-detail-background='coastal']) .skill-row.detail-trigger-row.expertise,
+:host([data-detail-background='underground']) .skill-row.detail-trigger-row.expertise {
+    border-color: color-mix(in srgb, var(--accent-primary) 78%, #111827);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-primary) 32%, transparent);
+}
+
+:host([data-detail-background='forest']) .save-card.detail-trigger-row.proficient,
+:host([data-detail-background='ember']) .save-card.detail-trigger-row.proficient,
+:host([data-detail-background='moonlit']) .save-card.detail-trigger-row.proficient,
+:host([data-detail-background='storm']) .save-card.detail-trigger-row.proficient,
+:host([data-detail-background='urban']) .save-card.detail-trigger-row.proficient,
+:host([data-detail-background='dunes']) .save-card.detail-trigger-row.proficient,
+:host([data-detail-background='tundra']) .save-card.detail-trigger-row.proficient,
+:host([data-detail-background='coastal']) .save-card.detail-trigger-row.proficient,
+:host([data-detail-background='underground']) .save-card.detail-trigger-row.proficient {
+    border-color: var(--accent-primary);
+    background: color-mix(in srgb, var(--accent-primary) 8%, var(--surface-raised));
+}
+
 :host([data-detail-panel-custom='true']) :is(.header-content, .panel) {
     background: var(--detail-custom-panel-surface);
 }

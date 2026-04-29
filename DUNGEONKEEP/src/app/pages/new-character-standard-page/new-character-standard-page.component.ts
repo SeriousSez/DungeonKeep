@@ -3822,6 +3822,17 @@ export class NewCharacterStandardPageComponent {
         };
     });
 
+    readonly backgroundSkillProficiencies = computed(() => {
+        const detail = this.selectedBackgroundDetail();
+        if (!detail) {
+            return [];
+        }
+        return detail.skillProficiencies
+            .split(',')
+            .map((skill) => skill.trim())
+            .filter((skill) => skill.length > 0 && skill !== 'See source entry');
+    });
+
     readonly pointBuySpent = computed(() => {
         if (this.selectedAbilityMethod() !== 'point-buy') {
             return 0;
