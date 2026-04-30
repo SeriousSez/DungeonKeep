@@ -1,0 +1,162 @@
+<main class="monster-detail-page">
+    @if (monster(); as monster) {
+    <section class="panel monster-page-shell">
+        <header class="monster-strip">
+            <div class="monster-strip-icon" aria-hidden="true">
+                <i class="fa-duotone fa-thin fa-dragon"></i>
+            </div>
+
+            <div class="monster-strip-copy">
+                <p class="monster-strip-kicker">Custom Bestiary</p>
+                <h1>{{ monster.name }}</h1>
+                <p>{{ subtitle() }}</p>
+            </div>
+
+            <div class="monster-strip-actions">
+                <a class="secondary-link-btn" routerLink="/monsters">Back to Library</a>
+                <button type="button" class="secondary-link-btn" (click)="toggleAddToSession()">
+                    <i class="fa-duotone fa-thin fa-calendar-plus" aria-hidden="true"></i>
+                    Add to Session
+                </button>
+                <button type="button" class="secondary-link-btn" (click)="duplicateMonster()">
+                    <i class="fa-duotone fa-thin fa-copy" aria-hidden="true"></i>
+                    Duplicate
+                </button>
+                <a class="primary-link-btn" [routerLink]="['/monsters', monster.id, 'edit']">
+                    <i class="fa-duotone fa-thin fa-pen" aria-hidden="true"></i>
+                    Edit
+                </a>
+            </div>
+        </header>
+
+        @if (addToSessionOpen()) {
+        <div class="add-to-session-panel">
+            <p class="add-to-session-heading">
+                <i class="fa-duotone fa-thin fa-calendar-plus" aria-hidden="true"></i>
+                Choose a session to add <strong>{{ monster.name }}</strong> to:
+            </p>
+            @if (!store.initialized()) {
+            <p class="add-to-session-empty">Loading campaigns…</p>
+            } @else if (campaignsWithSessions().length === 0) {
+            <p class="add-to-session-empty">No campaigns with sessions found. Create a session first.</p>
+            } @else {
+            @for (campaign of campaignsWithSessions(); track campaign.id) {
+            <div class="add-to-session-campaign">
+                <p class="add-to-session-campaign-name">{{ campaign.name }}</p>
+                <ul class="add-to-session-sessions">
+                    @for (session of campaign.sessions; track session.id) {
+                    <li>
+                        <button type="button" class="add-to-session-btn" (click)="addMonsterToSession(campaign.id, session.id, session.title)">
+                            <span class="session-title">{{ session.title || 'Untitled Session' }}</span>
+                            <span class="session-meta">{{ session.date || 'No date' }}</span>
+                        </button>
+                    </li>
+                    }
+                </ul>
+            </div>
+            }
+            }
+        </div>
+        }
+
+        @if (addToSessionMessage()) {
+        <div class="add-to-session-notice">
+            <i class="fa-duotone fa-thin fa-check-circle" aria-hidden="true"></i>
+            {{ addToSessionMessage() }}
+        </div>
+        }
+
+        <div class="monster-sheet-body">
+            <div class="monster-tags-row">
+                <span class="monster-tags-label">PROFILE:</span>
+                @for (tag of profileTags(); track tag) {
+                <span class="monster-tag">{{ tag }}</span>
+                }
+            </div>
+
+            <hr class="sheet-divider" />
+
+            <section class="monster-facts-grid">
+                <article class="monster-fact-card">
+                    <span class="monster-fact-label">Armor Class</span>
+                    <strong>{{ armorClassText() }}</strong>
+                </article>
+                <article class="monster-fact-card">
+                    <span class="monster-fact-label">Hit Points</span>
+                    <strong>{{ hitPointsText() }}</strong>
+                </article>
+                <article class="monster-fact-card">
+                    <span class="monster-fact-label">Speed</span>
+                    <strong>{{ speedText() }}</strong>
+                </article>
+                <article class="monster-fact-card">
+                    <span class="monster-fact-label">Challenge</span>
+                    <strong>{{ monster.challengeRating || '—' }}</strong>
+                </article>
+            </section>
+
+            <hr class="sheet-divider" />
+
+            <section class="monster-abilities-grid">
+                @for (ability of abilityRows(); track ability.label) {
+                <article class="monster-ability-card">
+                    <span class="monster-ability-label">{{ ability.label }}</span>
+                    <strong>{{ scoreText(ability.value) }}</strong>
+                    <span>{{ modifierText(ability.value) }}</span>
+                </article>
+                }
+            </section>
+
+            @if (supplementalDetails().length > 0) {
+            <hr class="sheet-divider" />
+
+            <dl class="monster-details-list monster-details-list-extended">
+                @for (detail of supplementalDetails(); track detail.label) {
+                <div>
+                    <dt>{{ detail.label }}:</dt>
+                    <dd>{{ detail.value }}</dd>
+                </div>
+                }
+            </dl>
+            }
+
+            @if (monster.notes) {
+            <hr class="sheet-divider" />
+
+            <p class="monster-notes-body">{{ monster.notes }}</p>
+            }
+
+            @if (textSections().length > 0) {
+            <hr class="sheet-divider" />
+
+            <div class="monster-text-sections">
+                @for (section of textSections(); track trackTextSection($index, section)) {
+                <section class="monster-text-section">
+                    <h2>{{ section.heading }}</h2>
+                    <div class="monster-text-entry-list">
+                        @for (entry of section.entries; track entry.title + entry.text) {
+                        <article class="monster-text-entry panel">
+                            <p>
+                                @if (entry.title) {
+                                <strong><em>{{ entry.title }}. </em></strong>
+                                }
+                                <span [innerHTML]="formatEntryText(entry.text)"></span>
+                            </p>
+                        </article>
+                        }
+                    </div>
+                </section>
+                }
+            </div>
+            }
+        </div>
+    </section>
+    } @else {
+    <section class="panel monster-missing-state">
+        <p class="eyebrow">Custom Bestiary</p>
+        <h1>Monster not found</h1>
+        <p>This monster could not be found in your library.</p>
+        <a class="secondary-link-btn" routerLink="/monsters">Back to Library</a>
+    </section>
+    }
+</main>

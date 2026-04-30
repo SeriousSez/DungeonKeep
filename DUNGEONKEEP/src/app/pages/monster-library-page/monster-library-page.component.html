@@ -74,7 +74,7 @@
     } @else {
     <section class="monster-grid">
         @for (monster of filteredMonsters(); track monster.id) {
-        <article class="monster-card panel">
+        <article class="monster-card panel" [routerLink]="['/monsters', monster.id]" role="link" tabindex="0" (keydown.enter)="navigateToMonster(monster)" (keydown.space)="navigateToMonster(monster); $event.preventDefault()">
             <div class="monster-card-header">
                 <div class="monster-card-icon" aria-hidden="true">
                     <i class="fa-duotone fa-thin fa-dragon"></i>
@@ -114,7 +114,7 @@
             <p class="monster-card-notes">{{ monster.notes }}</p>
             }
 
-            <div class="monster-card-actions">
+            <div class="monster-card-actions" (click)="$event.stopPropagation()">
                 <button type="button" class="ghost-btn ghost-btn--sm" (click)="editMonster(monster)">
                     <i class="fa-duotone fa-thin fa-pen" aria-hidden="true"></i>
                     Edit

@@ -199,7 +199,6 @@
     border: 1px solid var(--panel-border);
     border-radius: 24px;
     background: var(--panel-bg);
-    overflow: hidden;
 }
 
 .editor-section summary {
@@ -210,6 +209,8 @@
     padding: 18px 20px;
     cursor: pointer;
     list-style: none;
+    border-radius: 24px 24px 0 0;
+    overflow: hidden;
 }
 
 .editor-section summary::-webkit-details-marker {
@@ -406,6 +407,100 @@ textarea {
 
 .inline-input-row input {
     flex: 1;
+}
+
+.monster-picker-row {
+    margin-bottom: 16px;
+}
+
+.monster-picker-wrap {
+    position: relative;
+    max-width: 640px;
+    width: 100%;
+}
+
+.monster-picker-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 0 14px;
+
+    i {
+        color: var(--color-text);
+        opacity: 0.45;
+        flex-shrink: 0;
+    }
+}
+
+.monster-picker-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 10px 0;
+    font-size: 0.9rem;
+    color: var(--color-text);
+    outline: none;
+
+    &::placeholder {
+        opacity: 0.5;
+    }
+}
+
+.monster-picker-results {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--color-surface-solid);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+    z-index: 200;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.monster-picker-result {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    cursor: pointer;
+    transition: background 80ms;
+
+    &:hover {
+        background: var(--color-surface-alt);
+    }
+
+    .result-name {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--color-text);
+        flex: 1;
+    }
+
+    .result-meta {
+        font-size: 0.78rem;
+        color: var(--color-text);
+        opacity: 0.55;
+    }
+
+    .result-badge {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        background: var(--color-primary);
+        color: #fff;
+        border-radius: 4px;
+        padding: 1px 6px;
+    }
 }
 
 .table-shell {

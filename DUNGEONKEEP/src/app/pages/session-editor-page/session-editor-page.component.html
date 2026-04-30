@@ -367,12 +367,33 @@
                         <p class="eyebrow">Monsters</p>
                         <h2>Monster Table</h2>
                     </div>
-                    <button type="button" class="ghost-button summary-action" (click)="$event.preventDefault(); addMonster()">Add Monster</button>
+                    <button type="button" class="ghost-button summary-action" (click)="$event.preventDefault(); addMonster()">Add Blank</button>
                 </summary>
 
                 <div class="section-body">
+                    <div class="monster-picker-row">
+                        <div class="monster-picker-wrap">
+                            <div class="monster-picker-input-wrap">
+                                <i class="fa-duotone fa-thin fa-magnifying-glass" aria-hidden="true"></i>
+                                <input type="text" class="monster-picker-input" placeholder="Search monsters &amp; custom library to add…" [value]="monsterPickerQuery()" (input)="updateMonsterPickerQuery($any($event.target).value)" (blur)="closeMonsterPicker()" autocomplete="off" />
+                            </div>
+                            @if (monsterPickerOpen() && monsterPickerResults().length > 0) {
+                            <ul class="monster-picker-results" role="listbox">
+                                @for (result of monsterPickerResults(); track result.name) {
+                                <li role="option" class="monster-picker-result" (mousedown)="addMonsterFromPicker(result.name)">
+                                    <span class="result-name">{{ result.name }}</span>
+                                    <span class="result-meta">{{ result.subtitle }}</span>
+                                    @if (result.source === 'custom') {
+                                    <span class="result-badge">Custom</span>
+                                    }
+                                </li>
+                                }
+                            </ul>
+                            }
+                        </div>
+                    </div>
                     @if (monstersArray.length === 0) {
-                    <p class="empty-state">No monsters added yet.</p>
+                    <p class="empty-state">No monsters added yet. Search above or add a blank row.</p>
                     } @else {
                     <div class="table-shell">
                         <table class="editor-table">

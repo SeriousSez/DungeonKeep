@@ -77,6 +77,10 @@ export class MonsterLibraryPageComponent {
         void this.router.navigate(['/monsters', monster.id, 'edit']);
     }
 
+    navigateToMonster(monster: CustomMonster): void {
+        void this.router.navigate(['/monsters', monster.id]);
+    }
+
     duplicateMonster(monster: CustomMonster): void {
         const namesInUse = this.monsters().map((m) => m.name);
         const copy = duplicateCustomMonster(monster, namesInUse);

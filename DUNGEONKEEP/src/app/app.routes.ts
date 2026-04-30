@@ -39,6 +39,7 @@ import { RulesSpellDetailPage } from './pages/rules-spell-detail-page/rules-spel
 import { RulesMonsterDetailPage } from './pages/rules-monster-detail-page/rules-monster-detail-page';
 import { MonsterLibraryPageComponent } from './pages/monster-library-page/monster-library-page.component';
 import { MonsterEditorPageComponent } from './pages/monster-editor-page/monster-editor-page.component';
+import { MonsterDetailPageComponent } from './pages/monster-detail-page/monster-detail-page.component';
 import { NotificationsPageComponent } from './pages/notifications-page/notifications-page.component';
 import { MessagesPageComponent } from './pages/messages-page/messages-page.component';
 import { AccountSettingsPageComponent } from './pages/account-settings-page/account-settings-page.component';
@@ -278,6 +279,11 @@ export const routes: Routes = [
         path: 'monsters/new',
         component: MonsterEditorPageComponent,
         data: { title: 'New Custom Monster', breadcrumb: 'New Monster', parentCrumbs: [{ label: 'Monster Library', url: '/monsters' }] }
+    },
+    {
+        path: 'monsters/:monsterId',
+        component: MonsterDetailPageComponent,
+        data: { title: 'Monster', breadcrumb: 'Monster', parentCrumbs: [{ label: 'Monster Library', url: '/monsters' }] }
     },
     {
         path: 'monsters/:monsterId/edit',

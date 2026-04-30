@@ -17,6 +17,9 @@ import { marked } from 'marked';
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
 import { MultiSelectDropdownComponent, type MultiSelectOptionGroup } from '../../components/multi-select-dropdown/multi-select-dropdown.component';
 import { monsterCatalog } from '../../data/monster-catalog.generated';
+import { loadMonsterLibrary } from '../../data/monster-library.storage';
+import { sanitizeCustomMonster } from '../../data/monster-library.helpers';
+import { CustomMonster } from '../../models/monster-reference.models';
 import { SESSION_EDITOR_SAMPLE_DRAFT } from '../../data/session-editor.mock';
 import {
     persistStoredSessionEditorDraft,
@@ -192,6 +195,8 @@ export class SessionEditorPageComponent {
     readonly markdownPreview = signal('');
     readonly pendingDelete = signal<PendingDelete | null>(null);
     readonly detailsLoadRequested = signal(false);
+    readonly monsterPickerQuery = signal('');
+    readonly monsterPickerOpen = signal(false);
 
     readonly threatOptions: DropdownOption[] = [
         { value: '', label: 'Auto', description: 'Infer threat from the session summary and notes when saving.' },
@@ -228,6 +233,34 @@ export class SessionEditorPageComponent {
         return npcNames.length > 0
             ? [{ label: 'Campaign NPCs', options: npcNames }]
             : [];
+    });
+
+    readonly monsterPickerResults = computed<Array<{ name: string; subtitle: string; source: 'catalog' | 'custom' }>>(() => {
+        const query = this.monsterPickerQuery().trim().toLowerCase();
+        if (!query) {
+            return [];
+        }
+
+        const catalogResults = monsterCatalog
+            .filter((m) => m.name.toLowerCase().includes(query))
+            .slice(0, 8)
+            .map((m) => ({
+                name: m.name,
+                subtitle: [m.creatureType, m.challengeRating ? `CR ${m.challengeRating}` : ''].filter(Boolean).join(' · '),
+                source: 'catalog' as const
+            }));
+
+        const customLibrary = (loadMonsterLibrary() ?? []).map((m) => sanitizeCustomMonster(m));
+        const customResults = customLibrary
+            .filter((m) => m.name.toLowerCase().includes(query))
+            .slice(0, 4)
+            .map((m) => ({
+                name: m.name,
+                subtitle: [m.creatureType, m.challengeRating ? `CR ${m.challengeRating}` : '', 'Custom'].filter(Boolean).join(' · '),
+                source: 'custom' as const
+            }));
+
+        return [...customResults, ...catalogResults].slice(0, 10);
     });
 
     readonly generationMonsterGroups = computed<MultiSelectOptionGroup[]>(() => {
@@ -623,6 +656,51 @@ export class SessionEditorPageComponent {
 
     addMonster(): void {
         this.monstersArray.push(this.createMonsterForm());
+    }
+
+    updateMonsterPickerQuery(value: string): void {
+        this.monsterPickerQuery.set(value);
+        this.monsterPickerOpen.set(value.trim().length > 0);
+    }
+
+    closeMonsterPicker(): void {
+        this.monsterPickerOpen.set(false);
+        this.monsterPickerQuery.set('');
+    }
+
+    addMonsterFromPicker(name: string): void {
+        const query = name.toLowerCase();
+        const customLibrary = (loadMonsterLibrary() ?? []).map((m) => sanitizeCustomMonster(m));
+        const custom = customLibrary.find((m) => m.name.toLowerCase() === query);
+
+        if (custom) {
+            this.monstersArray.push(this.createMonsterForm({
+                id: this.generateId('monster'),
+                name: custom.name,
+                type: custom.creatureType,
+                challengeRating: custom.challengeRating ? `CR ${custom.challengeRating}` : '',
+                hp: custom.hitPoints ?? 0,
+                keyAbilities: custom.traits.slice(0, 2).map((t) => t.title).join(', '),
+                notes: custom.notes || ''
+            }));
+            this.closeMonsterPicker();
+            return;
+        }
+
+        const catalog = monsterCatalog.find((m) => m.name.toLowerCase() === query);
+        if (catalog) {
+            this.monstersArray.push(this.createMonsterForm({
+                id: this.generateId('monster'),
+                name: catalog.name,
+                type: catalog.creatureType,
+                challengeRating: catalog.challengeRating ? `CR ${catalog.challengeRating}` : '',
+                hp: catalog.hitPoints ?? 0,
+                keyAbilities: catalog.traits.slice(0, 2).map((t) => t.title).join(', '),
+                notes: ''
+            }));
+        }
+
+        this.closeMonsterPicker();
     }
 
     addLocation(): void {
