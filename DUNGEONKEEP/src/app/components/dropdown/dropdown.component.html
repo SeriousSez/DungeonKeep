@@ -1,23 +1,37 @@
 <div [class]="'app-dropdown-menu ' + (size() === 'wide' ? 'app-dropdown--wide' : (size() === 'narrow' ? 'app-dropdown--narrow' : 'app-dropdown--compact')) + (isOpen() ? ' app-dropdown-menu--open' : '') + (opensUpward() ? ' app-dropdown-menu--up' : '') + (panelAlignment() === 'end' ? ' app-dropdown-menu--align-end' : ' app-dropdown-menu--align-start')"
     [style.min-width.px]="minWidth() ?? null">
+    @if (combobox()) {
+    <div class="app-dropdown app-dropdown-trigger app-dropdown-combobox-wrap">
+        <input #comboboxInput type="text" class="app-dropdown-combobox-input" [attr.id]="id()" [attr.aria-label]="ariaLabel()" [attr.aria-expanded]="isOpen()" [attr.disabled]="disabled() || null" [value]="isOpen() ? searchTerm() : triggerLabel()" [placeholder]="placeholder()" autocomplete="off"
+            spellcheck="false" (focus)="onComboboxFocus()" (input)="onComboboxInput($any($event.target).value)" (blur)="onComboboxBlur()" (keydown.enter)="onComboboxEnter(); $event.preventDefault()" (keydown.escape)="isOpen.set(false); searchTerm.set('')" />
+        <i class="fa-duotone fa-thin fa-chevron-down app-dropdown-combobox-icon" aria-hidden="true"></i>
+    </div>
+    } @else {
     <button type="button" [attr.id]="id()" [attr.aria-label]="ariaLabel()" [attr.aria-expanded]="isOpen()" [disabled]="disabled()" class="app-dropdown app-dropdown-trigger" [style.min-height.px]="triggerMinHeight() ?? null" (click)="toggleOpen()">
         <span>{{ triggerLabel() }}</span>
         <i class="fa-duotone fa-thin fa-chevron-down" aria-hidden="true"></i>
     </button>
+    }
 
     @if (showSelectedDescription() && selectedDescription()) {
     <p class="app-dropdown-selected-description">{{ selectedDescription() }}</p>
     }
 
     @if (isOpen()) {
-    <div class="app-dropdown-panel" [style.max-height.px]="panelMaxHeight()" [style.min-width.px]="getPanelMinWidth()" [style.max-width.px]="getPanelMaxWidth()" role="listbox">
-        @if (searchable()) {
-        <input #searchInput type="text" class="app-dropdown-search" [value]="searchTerm()" [placeholder]="searchPlaceholder()" autocomplete="off" autocapitalize="none" spellcheck="false" (input)="onSearchInput($any($event.target).value)" />
+    <div class="app-dropdown-panel" [style.max-height.px]="panelMaxHeight()" [style.min-width.px]="getPanelMinWidth()" [style.max-width.px]="getPanelMaxWidth()" role="listbox" (mousedown)="combobox() ? $event.preventDefault() : null">
+        @if (searchable() || (freeText() && !combobox())) {
+        <input #searchInput type="text" class="app-dropdown-search" [value]="searchTerm()" [placeholder]="freeText() ? 'Search or type a custom name...' : searchPlaceholder()" autocomplete="off" autocapitalize="none" spellcheck="false" (input)="onSearchInput($any($event.target).value)"
+            (keydown.enter)="freeText() ? onFreeTextPicked() : null" />
         }
         <div class="app-dropdown-options" [style.max-height.px]="getOptionsMaxHeight()">
-            @if (filteredOptions().length === 0) {
+            @if (filteredOptions().length === 0 && !showFreeTextOption()) {
             <p class="app-dropdown-empty">No matches found.</p>
             } @else {
+            @if (showFreeTextOption()) {
+            <button type="button" role="option" class="app-dropdown-option app-dropdown-option--free-text" (click)="onFreeTextPicked()">
+                <div><span>Use "{{ searchTerm() }}"</span></div>
+            </button>
+            }
             @for (grouped of groupedFilteredOptions(); track grouped.label) {
             @if (showGroupHeaders()) {
             <p class="app-dropdown-group">{{ grouped.label }}</p>

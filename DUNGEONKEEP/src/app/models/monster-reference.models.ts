@@ -54,3 +54,12 @@ export interface MonsterCatalogEntry {
     reactions: MonsterTextSectionEntry[];
     legendaryActions: MonsterTextSectionEntry[];
 }
+
+export interface CustomMonster extends Omit<MonsterCatalogEntry, 'id' | 'slug'> {
+    id: string;
+    slug: string;
+    isCustom: true;
+    updatedAt: string;
+    templateSlug: string;
+    notes: string;
+}

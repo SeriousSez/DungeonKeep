@@ -1,0 +1,404 @@
+<div class="editor-layout">
+    <!-- Sidebar: Template Picker (when new) -->
+    @if (!isEditMode()) {
+    <aside class="template-sidebar panel">
+        <div class="template-sidebar-header">
+            <h3>Template</h3>
+            @if (draft().templateSlug) {
+            <button type="button" class="ghost-btn ghost-btn--sm ghost-btn--danger" (click)="clearTemplate()">
+                <i class="fa-duotone fa-thin fa-times" aria-hidden="true"></i>
+                Clear
+            </button>
+            } @else {
+            <button type="button" class="ghost-btn ghost-btn--sm" (click)="openTemplatePicker()">
+                <i class="fa-duotone fa-thin fa-magnifying-glass" aria-hidden="true"></i>
+                Browse
+            </button>
+            }
+        </div>
+
+        @if (draft().templateSlug) {
+        <div class="template-active">
+            <i class="fa-duotone fa-thin fa-check-circle template-icon" aria-hidden="true"></i>
+            <span>Cloned from <strong>{{ draft().name }}</strong></span>
+        </div>
+        } @else {
+        <p class="template-hint">Start from an official monster, or leave blank to build from scratch.</p>
+        <div class="template-search-wrap">
+            <i class="fa-duotone fa-thin fa-magnifying-glass" aria-hidden="true"></i>
+            <input type="search" class="template-search" placeholder="Search catalog..." [value]="templateSearch()" (input)="templateSearch.set($any($event.target).value)" aria-label="Search monster catalog" />
+        </div>
+        <ul class="template-results" role="listbox" aria-label="Template options">
+            @for (entry of templateResults(); track entry.slug) {
+            <li class="template-result" role="option" tabindex="0" (click)="applyTemplate(entry)" (keydown.enter)="applyTemplate(entry)">
+                <span class="template-result-name">{{ entry.name }}</span>
+                <span class="template-result-meta">CR {{ entry.challengeRating }} · {{ entry.creatureCategory }}</span>
+            </li>
+            }
+        </ul>
+        }
+    </aside>
+    }
+
+    <!-- Main form -->
+    <main class="editor-main">
+        <div class="editor-breadcrumb">
+            <a routerLink="/monsters" class="back-link">← Monster Library</a>
+        </div>
+
+        <div class="editor-title-bar panel">
+            <h1>{{ pageTitle() }}</h1>
+        </div>
+
+        @if (saveError()) {
+        <div class="editor-error-banner" role="alert">
+            <i class="fa-duotone fa-thin fa-circle-exclamation" aria-hidden="true"></i>
+            {{ saveError() }}
+        </div>
+        }
+
+        <!-- Identity -->
+        <section class="editor-section panel">
+            <h2 class="section-title">
+                <i class="fa-duotone fa-thin fa-id-card" aria-hidden="true"></i>
+                Identity
+            </h2>
+
+            <div class="form-grid form-grid--cols-2">
+                <div class="form-field form-field--wide">
+                    <label for="monster-name">Name <span class="required">*</span></label>
+                    <input id="monster-name" type="text" class="form-input" [ngModel]="draft().name" (ngModelChange)="updateField('name', $event)" placeholder="Monster name" autocomplete="off" />
+                </div>
+
+                <div class="form-field">
+                    <label>Size</label>
+                    <app-dropdown [value]="draft().size" [options]="sizeOptions" [minWidth]="140" (changed)="updateField('size', $event)"></app-dropdown>
+                </div>
+
+                <div class="form-field">
+                    <label>Creature Category</label>
+                    <app-dropdown [value]="draft().creatureCategory" [options]="categoryOptions" [minWidth]="160" (changed)="updateField('creatureCategory', $event)"></app-dropdown>
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-type">Creature Type</label>
+                    <input id="monster-type" type="text" class="form-input" [ngModel]="draft().creatureType" (ngModelChange)="updateField('creatureType', $event)" placeholder="e.g. Humanoid (any race)" />
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-cr">Challenge Rating</label>
+                    <input id="monster-cr" type="text" class="form-input" [ngModel]="draft().challengeRating" (ngModelChange)="updateField('challengeRating', $event)" placeholder="e.g. 5 or 1/2" />
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-xp">XP</label>
+                    <input id="monster-xp" type="text" class="form-input" [ngModel]="draft().challengeXp" (ngModelChange)="updateField('challengeXp', $event)" placeholder="e.g. 1,800" />
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-alignment">Alignment</label>
+                    <input id="monster-alignment" type="text" class="form-input" [ngModel]="draft().alignment" (ngModelChange)="updateField('alignment', $event)" placeholder="e.g. Chaotic Evil" />
+                </div>
+
+                <div class="form-field form-field--checkbox">
+                    <label class="checkbox-label">
+                        <input type="checkbox" [ngModel]="draft().legendary" (ngModelChange)="updateField('legendary', $event)" />
+                        <span>Legendary Creature</span>
+                    </label>
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-source">Source Label</label>
+                    <input id="monster-source" type="text" class="form-input" [ngModel]="draft().sourceLabel" (ngModelChange)="updateField('sourceLabel', $event)" placeholder="e.g. Custom, Homebrew" />
+                </div>
+            </div>
+        </section>
+
+        <!-- Combat -->
+        <section class="editor-section panel">
+            <h2 class="section-title">
+                <i class="fa-duotone fa-thin fa-shield-halved" aria-hidden="true"></i>
+                Combat
+            </h2>
+
+            <div class="form-grid form-grid--cols-3">
+                <div class="form-field">
+                    <label for="monster-ac">Armor Class</label>
+                    <input id="monster-ac" type="number" class="form-input" [ngModel]="draft().armorClass" (ngModelChange)="updateNumericField('armorClass', $event)" placeholder="—" min="0" />
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-hp">Hit Points</label>
+                    <input id="monster-hp" type="number" class="form-input" [ngModel]="draft().hitPoints" (ngModelChange)="updateNumericField('hitPoints', $event)" placeholder="—" min="0" />
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-speed">Speed</label>
+                    <input id="monster-speed" type="text" class="form-input" [ngModel]="draft().speed" (ngModelChange)="updateField('speed', $event)" placeholder="e.g. 30 ft., fly 60 ft." />
+                </div>
+            </div>
+        </section>
+
+        <!-- Ability Scores -->
+        <section class="editor-section panel">
+            <h2 class="section-title">
+                <i class="fa-duotone fa-thin fa-dice-d20" aria-hidden="true"></i>
+                Ability Scores
+            </h2>
+
+            <div class="ability-scores-grid">
+                <div class="ability-score-field">
+                    <label for="ability-str">STR</label>
+                    <input id="ability-str" type="number" class="form-input ability-input" [ngModel]="draft().abilityScores.strength" (ngModelChange)="updateAbilityScore('strength', $event)" min="1" max="30" placeholder="—" />
+                    @if (draft().abilityScores.strength != null) {
+                    <span class="ability-modifier">{{ modifierText(draft().abilityScores.strength) }}</span>
+                    }
+                </div>
+
+                <div class="ability-score-field">
+                    <label for="ability-dex">DEX</label>
+                    <input id="ability-dex" type="number" class="form-input ability-input" [ngModel]="draft().abilityScores.dexterity" (ngModelChange)="updateAbilityScore('dexterity', $event)" min="1" max="30" placeholder="—" />
+                    @if (draft().abilityScores.dexterity != null) {
+                    <span class="ability-modifier">{{ modifierText(draft().abilityScores.dexterity) }}</span>
+                    }
+                </div>
+
+                <div class="ability-score-field">
+                    <label for="ability-con">CON</label>
+                    <input id="ability-con" type="number" class="form-input ability-input" [ngModel]="draft().abilityScores.constitution" (ngModelChange)="updateAbilityScore('constitution', $event)" min="1" max="30" placeholder="—" />
+                    @if (draft().abilityScores.constitution != null) {
+                    <span class="ability-modifier">{{ modifierText(draft().abilityScores.constitution) }}</span>
+                    }
+                </div>
+
+                <div class="ability-score-field">
+                    <label for="ability-int">INT</label>
+                    <input id="ability-int" type="number" class="form-input ability-input" [ngModel]="draft().abilityScores.intelligence" (ngModelChange)="updateAbilityScore('intelligence', $event)" min="1" max="30" placeholder="—" />
+                    @if (draft().abilityScores.intelligence != null) {
+                    <span class="ability-modifier">{{ modifierText(draft().abilityScores.intelligence) }}</span>
+                    }
+                </div>
+
+                <div class="ability-score-field">
+                    <label for="ability-wis">WIS</label>
+                    <input id="ability-wis" type="number" class="form-input ability-input" [ngModel]="draft().abilityScores.wisdom" (ngModelChange)="updateAbilityScore('wisdom', $event)" min="1" max="30" placeholder="—" />
+                    @if (draft().abilityScores.wisdom != null) {
+                    <span class="ability-modifier">{{ modifierText(draft().abilityScores.wisdom) }}</span>
+                    }
+                </div>
+
+                <div class="ability-score-field">
+                    <label for="ability-cha">CHA</label>
+                    <input id="ability-cha" type="number" class="form-input ability-input" [ngModel]="draft().abilityScores.charisma" (ngModelChange)="updateAbilityScore('charisma', $event)" min="1" max="30" placeholder="—" />
+                    @if (draft().abilityScores.charisma != null) {
+                    <span class="ability-modifier">{{ modifierText(draft().abilityScores.charisma) }}</span>
+                    }
+                </div>
+            </div>
+        </section>
+
+        <!-- Special -->
+        <section class="editor-section panel">
+            <h2 class="section-title">
+                <i class="fa-duotone fa-thin fa-sparkles" aria-hidden="true"></i>
+                Proficiencies &amp; Specials
+            </h2>
+
+            <div class="form-grid form-grid--cols-2">
+                <div class="form-field">
+                    <label for="monster-saves">Saving Throws</label>
+                    <input id="monster-saves" type="text" class="form-input" [ngModel]="draft().savingThrows" (ngModelChange)="updateField('savingThrows', $event)" placeholder="e.g. Dex +5, Wis +3" />
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-skills">Skills</label>
+                    <input id="monster-skills" type="text" class="form-input" [ngModel]="draft().skills" (ngModelChange)="updateField('skills', $event)" placeholder="e.g. Perception +5, Stealth +8" />
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-dmg-vuln">Damage Vulnerabilities</label>
+                    <input id="monster-dmg-vuln" type="text" class="form-input" [ngModel]="draft().damageVulnerabilities" (ngModelChange)="updateField('damageVulnerabilities', $event)" placeholder="e.g. Fire" />
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-dmg-res">Damage Resistances</label>
+                    <input id="monster-dmg-res" type="text" class="form-input" [ngModel]="draft().damageResistances" (ngModelChange)="updateField('damageResistances', $event)" placeholder="e.g. Bludgeoning, Piercing" />
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-dmg-imm">Damage Immunities</label>
+                    <input id="monster-dmg-imm" type="text" class="form-input" [ngModel]="draft().damageImmunities" (ngModelChange)="updateField('damageImmunities', $event)" placeholder="e.g. Poison, Psychic" />
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-cond-imm">Condition Immunities</label>
+                    <input id="monster-cond-imm" type="text" class="form-input" [ngModel]="draft().conditionImmunities" (ngModelChange)="updateField('conditionImmunities', $event)" placeholder="e.g. Charmed, Frightened" />
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-senses">Senses</label>
+                    <input id="monster-senses" type="text" class="form-input" [ngModel]="draft().senses" (ngModelChange)="updateField('senses', $event)" placeholder="e.g. Darkvision 60 ft., passive Perception 15" />
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-languages">Languages</label>
+                    <input id="monster-languages" type="text" class="form-input" [ngModel]="draft().languages" (ngModelChange)="updateField('languages', $event)" placeholder="e.g. Common, Abyssal" />
+                </div>
+            </div>
+        </section>
+
+        <!-- Traits -->
+        <section class="editor-section panel">
+            <div class="section-title-row">
+                <h2 class="section-title">
+                    <i class="fa-duotone fa-thin fa-star" aria-hidden="true"></i>
+                    Traits
+                </h2>
+                <button type="button" class="ghost-btn ghost-btn--sm" (click)="addSection('traits')">
+                    <i class="fa-duotone fa-thin fa-plus" aria-hidden="true"></i>
+                    Add Trait
+                </button>
+            </div>
+
+            @if (draft().traits.length === 0) {
+            <p class="section-empty-hint">No traits defined.</p>
+            }
+
+            @for (entry of draft().traits; track trackEntry($index)) {
+            <div class="text-entry">
+                <div class="text-entry-header">
+                    <app-dropdown class="text-entry-dropdown" [combobox]="true" [value]="entry.title" [options]="getSectionOptions('traits')" placeholder="Trait name" size="wide" (changed)="updateSectionTitle('traits', $index, $event + '')"></app-dropdown>
+                    <div class="text-entry-move">
+                        <button type="button" class="ghost-btn ghost-btn--sm" [disabled]="$index === 0" (click)="moveSectionUp('traits', $index)" aria-label="Move up">↑</button>
+                        <button type="button" class="ghost-btn ghost-btn--sm" [disabled]="$index === draft().traits.length - 1" (click)="moveSectionDown('traits', $index)" aria-label="Move down">↓</button>
+                    </div>
+                    <button type="button" class="ghost-btn ghost-btn--sm ghost-btn--danger" (click)="removeSection('traits', $index)" aria-label="Remove trait">
+                        <i class="fa-duotone fa-thin fa-trash" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <textarea class="form-textarea" [ngModel]="entry.text" (ngModelChange)="updateSectionText('traits', $index, $event)" placeholder="Description..." rows="3"></textarea>
+            </div>
+            }
+        </section>
+
+        <!-- Actions -->
+        <section class="editor-section panel">
+            <div class="section-title-row">
+                <h2 class="section-title">
+                    <i class="fa-duotone fa-thin fa-sword" aria-hidden="true"></i>
+                    Actions
+                </h2>
+                <button type="button" class="ghost-btn ghost-btn--sm" (click)="addSection('actions')">
+                    <i class="fa-duotone fa-thin fa-plus" aria-hidden="true"></i>
+                    Add Action
+                </button>
+            </div>
+
+            @if (draft().actions.length === 0) {
+            <p class="section-empty-hint">No actions defined.</p>
+            }
+
+            @for (entry of draft().actions; track trackEntry($index)) {
+            <div class="text-entry">
+                <div class="text-entry-header">
+                    <app-dropdown class="text-entry-dropdown" [combobox]="true" [value]="entry.title" [options]="getSectionOptions('actions')" placeholder="Action name" size="wide" (changed)="updateSectionTitle('actions', $index, $event + '')"></app-dropdown>
+                    <div class="text-entry-move">
+                        <button type="button" class="ghost-btn ghost-btn--sm" [disabled]="$index === 0" (click)="moveSectionUp('actions', $index)" aria-label="Move up">↑</button>
+                        <button type="button" class="ghost-btn ghost-btn--sm" [disabled]="$index === draft().actions.length - 1" (click)="moveSectionDown('actions', $index)" aria-label="Move down">↓</button>
+                    </div>
+                    <button type="button" class="ghost-btn ghost-btn--sm ghost-btn--danger" (click)="removeSection('actions', $index)" aria-label="Remove action">
+                        <i class="fa-duotone fa-thin fa-trash" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <textarea class="form-textarea" [ngModel]="entry.text" (ngModelChange)="updateSectionText('actions', $index, $event)" placeholder="Description..." rows="3"></textarea>
+            </div>
+            }
+        </section>
+
+        <!-- Reactions -->
+        <section class="editor-section panel">
+            <div class="section-title-row">
+                <h2 class="section-title">
+                    <i class="fa-duotone fa-thin fa-bolt" aria-hidden="true"></i>
+                    Reactions
+                </h2>
+                <button type="button" class="ghost-btn ghost-btn--sm" (click)="addSection('reactions')">
+                    <i class="fa-duotone fa-thin fa-plus" aria-hidden="true"></i>
+                    Add Reaction
+                </button>
+            </div>
+
+            @if (draft().reactions.length === 0) {
+            <p class="section-empty-hint">No reactions defined.</p>
+            }
+
+            @for (entry of draft().reactions; track trackEntry($index)) {
+            <div class="text-entry">
+                <div class="text-entry-header">
+                    <app-dropdown class="text-entry-dropdown" [combobox]="true" [value]="entry.title" [options]="getSectionOptions('reactions')" placeholder="Reaction name" size="wide" (changed)="updateSectionTitle('reactions', $index, $event + '')"></app-dropdown>
+                    <div class="text-entry-move">
+                        <button type="button" class="ghost-btn ghost-btn--sm" [disabled]="$index === 0" (click)="moveSectionUp('reactions', $index)" aria-label="Move up">↑</button>
+                        <button type="button" class="ghost-btn ghost-btn--sm" [disabled]="$index === draft().reactions.length - 1" (click)="moveSectionDown('reactions', $index)" aria-label="Move down">↓</button>
+                    </div>
+                    <button type="button" class="ghost-btn ghost-btn--sm ghost-btn--danger" (click)="removeSection('reactions', $index)" aria-label="Remove reaction">
+                        <i class="fa-duotone fa-thin fa-trash" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <textarea class="form-textarea" [ngModel]="entry.text" (ngModelChange)="updateSectionText('reactions', $index, $event)" placeholder="Description..." rows="3"></textarea>
+            </div>
+            }
+        </section>
+
+        <!-- Legendary Actions -->
+        <section class="editor-section panel">
+            <div class="section-title-row">
+                <h2 class="section-title">
+                    <i class="fa-duotone fa-thin fa-crown" aria-hidden="true"></i>
+                    Legendary Actions
+                </h2>
+                <button type="button" class="ghost-btn ghost-btn--sm" (click)="addSection('legendaryActions')">
+                    <i class="fa-duotone fa-thin fa-plus" aria-hidden="true"></i>
+                    Add
+                </button>
+            </div>
+
+            @if (draft().legendaryActions.length === 0) {
+            <p class="section-empty-hint">No legendary actions defined.</p>
+            }
+
+            @for (entry of draft().legendaryActions; track trackEntry($index)) {
+            <div class="text-entry">
+                <div class="text-entry-header">
+                    <app-dropdown class="text-entry-dropdown" [combobox]="true" [value]="entry.title" [options]="getSectionOptions('legendaryActions')" placeholder="Legendary action name" size="wide" (changed)="updateSectionTitle('legendaryActions', $index, $event + '')"></app-dropdown>
+                    <div class="text-entry-move">
+                        <button type="button" class="ghost-btn ghost-btn--sm" [disabled]="$index === 0" (click)="moveSectionUp('legendaryActions', $index)" aria-label="Move up">↑</button>
+                        <button type="button" class="ghost-btn ghost-btn--sm" [disabled]="$index === draft().legendaryActions.length - 1" (click)="moveSectionDown('legendaryActions', $index)" aria-label="Move down">↓</button>
+                    </div>
+                    <button type="button" class="ghost-btn ghost-btn--sm ghost-btn--danger" (click)="removeSection('legendaryActions', $index)" aria-label="Remove legendary action">
+                        <i class="fa-duotone fa-thin fa-trash" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <textarea class="form-textarea" [ngModel]="entry.text" (ngModelChange)="updateSectionText('legendaryActions', $index, $event)" placeholder="Description..." rows="3"></textarea>
+            </div>
+            }
+        </section>
+
+        <!-- Notes -->
+        <section class="editor-section panel">
+            <h2 class="section-title">
+                <i class="fa-duotone fa-thin fa-note-sticky" aria-hidden="true"></i>
+                Notes
+            </h2>
+            <textarea id="monster-notes" class="form-textarea" [ngModel]="draft().notes" (ngModelChange)="updateField('notes', $event)" placeholder="Personal notes, encounter ideas, lore..." rows="4"></textarea>
+        </section>
+
+        <!-- Footer actions -->
+        <div class="editor-footer">
+            <button type="button" class="ghost-btn" (click)="cancel()">Cancel</button>
+            <button type="button" class="primary-btn" [class.is-loading]="isSaving()" [disabled]="isSaving()" (click)="save()">
+                <i class="fa-duotone fa-thin fa-floppy-disk" aria-hidden="true"></i>
+                {{ saveLabel() }}
+            </button>
+        </div>
+    </main>
+</div>

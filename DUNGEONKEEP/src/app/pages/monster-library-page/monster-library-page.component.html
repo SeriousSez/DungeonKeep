@@ -1,0 +1,138 @@
+<main class="page-stack">
+    <a routerLink="/dashboard" class="back-link">← Back to Dashboard</a>
+
+    <section class="library-header panel">
+        <div class="library-header-copy">
+            <p class="eyebrow">Custom Bestiary</p>
+            <h1>Monster Library</h1>
+            <p>Build custom monsters from scratch or use an official stat block as a starting point. Your library is saved locally.</p>
+        </div>
+
+        <div class="library-header-stats">
+            <div class="library-stat">
+                <strong>{{ totalCount() }}</strong>
+                <span>Monsters</span>
+            </div>
+            <div class="library-stat">
+                <strong>{{ legendaryCount() }}</strong>
+                <span>Legendary</span>
+            </div>
+            <div class="library-stat">
+                <strong>{{ uniqueTypeCount() }}</strong>
+                <span>Types</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="library-toolbar">
+        <div class="library-search-wrap">
+            <i class="fa-duotone fa-thin fa-magnifying-glass search-icon" aria-hidden="true"></i>
+            <input type="search" class="library-search" placeholder="Search monsters..." [value]="searchTerm()" (input)="updateSearchTerm($any($event.target).value)" aria-label="Search monsters" />
+        </div>
+
+        <app-dropdown ariaLabel="Filter by type" [value]="selectedType()" [options]="typeOptions" [minWidth]="160" (changed)="updateSelectedType($event)"></app-dropdown>
+
+        <div class="library-actions">
+            <a routerLink="/rules/monsters" class="ghost-btn">
+                <i class="fa-duotone fa-thin fa-book-open" aria-hidden="true"></i>
+                Browse Catalog
+            </a>
+            <a routerLink="/monsters/new" class="primary-btn">
+                <i class="fa-duotone fa-thin fa-circle-plus" aria-hidden="true"></i>
+                New Monster
+            </a>
+        </div>
+    </section>
+
+    @if (!store.initialized()) {
+    <section class="skeleton-grid" aria-hidden="true">
+        @for (card of [1, 2, 3, 4, 5, 6]; track card) {
+        <article class="monster-card-skeleton">
+            <div class="skeleton-line skeleton-title"></div>
+            <div class="skeleton-line skeleton-sub"></div>
+            <div class="skeleton-line skeleton-sub short"></div>
+        </article>
+        }
+    </section>
+    } @else if (monsters().length === 0) {
+    <section class="library-empty-state panel">
+        <div class="empty-state-icon">
+            <i class="fa-duotone fa-thin fa-dragon" aria-hidden="true"></i>
+        </div>
+        <h2>Your bestiary is empty</h2>
+        <p>Create a monster from scratch or clone an existing one from the official catalog as a starting point.</p>
+        <div class="empty-state-actions">
+            <a routerLink="/monsters/new" class="primary-btn">New Monster</a>
+            <a routerLink="/rules/monsters" class="ghost-btn">Browse Official Catalog</a>
+        </div>
+    </section>
+    } @else if (filteredMonsters().length === 0) {
+    <section class="library-empty-state panel">
+        <p>No monsters match your search. Try adjusting the filters.</p>
+        <button type="button" class="ghost-btn" (click)="updateSearchTerm(''); updateSelectedType('All')">Clear Filters</button>
+    </section>
+    } @else {
+    <section class="monster-grid">
+        @for (monster of filteredMonsters(); track monster.id) {
+        <article class="monster-card panel">
+            <div class="monster-card-header">
+                <div class="monster-card-icon" aria-hidden="true">
+                    <i class="fa-duotone fa-thin fa-dragon"></i>
+                </div>
+                <div class="monster-card-identity">
+                    <h3 class="monster-card-name">{{ monster.name || 'Unnamed Monster' }}</h3>
+                    <p class="monster-card-type">{{ monster.size }} {{ monster.creatureType }}</p>
+                </div>
+                @if (monster.legendary) {
+                <span class="legendary-badge">Legendary</span>
+                }
+            </div>
+
+            <div class="monster-card-stats">
+                <div class="monster-stat-chip">
+                    <span class="stat-chip-label">{{ crLabel(monster.challengeRating) }}</span>
+                </div>
+                @if (monster.armorClass != null) {
+                <div class="monster-stat-chip">
+                    <span class="stat-chip-label">AC {{ monster.armorClass }}</span>
+                </div>
+                }
+                @if (monster.hitPoints != null) {
+                <div class="monster-stat-chip">
+                    <span class="stat-chip-label">{{ monster.hitPoints }} HP</span>
+                </div>
+                }
+                @if (monster.templateSlug) {
+                <div class="monster-stat-chip template-chip">
+                    <i class="fa-duotone fa-thin fa-copy" aria-hidden="true"></i>
+                    <span class="stat-chip-label">Based on template</span>
+                </div>
+                }
+            </div>
+
+            @if (monster.notes) {
+            <p class="monster-card-notes">{{ monster.notes }}</p>
+            }
+
+            <div class="monster-card-actions">
+                <button type="button" class="ghost-btn ghost-btn--sm" (click)="editMonster(monster)">
+                    <i class="fa-duotone fa-thin fa-pen" aria-hidden="true"></i>
+                    Edit
+                </button>
+                <button type="button" class="ghost-btn ghost-btn--sm" (click)="duplicateMonster(monster)">
+                    <i class="fa-duotone fa-thin fa-copy" aria-hidden="true"></i>
+                    Duplicate
+                </button>
+                <button type="button" class="ghost-btn ghost-btn--sm ghost-btn--danger" (click)="requestDelete(monster)">
+                    <i class="fa-duotone fa-thin fa-trash" aria-hidden="true"></i>
+                    Delete
+                </button>
+            </div>
+        </article>
+        }
+    </section>
+    }
+</main>
+
+<app-confirm-modal [open]="deleteCandidate() !== null" title="Delete Monster?" [message]="deleteCandidate() ? 'Permanently delete ' + (deleteCandidate()!.name || 'this monster') + '? This cannot be undone.' : 'Delete monster?'" confirmText="Delete" cancelText="Cancel" (confirmed)="confirmDelete()"
+    (cancelled)="cancelDelete()"></app-confirm-modal>

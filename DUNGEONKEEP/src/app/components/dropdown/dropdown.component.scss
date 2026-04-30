@@ -75,6 +75,55 @@
     color: var(--text-muted);
 }
 
+/* Combobox trigger — looks like the regular trigger but wraps a text input */
+.app-dropdown-combobox-wrap {
+    cursor: text;
+
+    &:hover:not(:has(input:disabled)) {
+        border-color: var(--accent-primary);
+        background: color-mix(in srgb, var(--surface-raised) 90%, var(--accent-primary) 10%);
+    }
+
+    &:focus-within {
+        outline: none;
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+    }
+}
+
+.app-dropdown-combobox-input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-main);
+    font: inherit;
+    cursor: text;
+    padding: 0;
+
+    &::placeholder {
+        color: var(--text-muted);
+        opacity: 1;
+    }
+
+    &:disabled {
+        cursor: not-allowed;
+    }
+}
+
+.app-dropdown-combobox-icon {
+    flex-shrink: 0;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    pointer-events: none;
+    transition: transform 0.15s ease;
+}
+
+.app-dropdown-menu--open .app-dropdown-combobox-icon {
+    transform: rotate(180deg);
+}
+
 .app-dropdown-panel {
     position: absolute;
     top: calc(100% + 6px);
@@ -209,6 +258,13 @@
     margin: 6px 4px;
     font-size: 0.85rem;
     color: var(--text-muted);
+}
+
+.app-dropdown-option--free-text {
+    font-style: italic;
+    opacity: 0.85;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 2px;
 }
 
 .app-dropdown-group {

@@ -37,6 +37,8 @@ import { RulesFeatsDetailPage } from './pages/rules-feats-detail-page/rules-feat
 import { RulesSpellsPage } from './pages/rules-spells-page/rules-spells-page';
 import { RulesSpellDetailPage } from './pages/rules-spell-detail-page/rules-spell-detail-page';
 import { RulesMonsterDetailPage } from './pages/rules-monster-detail-page/rules-monster-detail-page';
+import { MonsterLibraryPageComponent } from './pages/monster-library-page/monster-library-page.component';
+import { MonsterEditorPageComponent } from './pages/monster-editor-page/monster-editor-page.component';
 import { NotificationsPageComponent } from './pages/notifications-page/notifications-page.component';
 import { MessagesPageComponent } from './pages/messages-page/messages-page.component';
 import { AccountSettingsPageComponent } from './pages/account-settings-page/account-settings-page.component';
@@ -266,6 +268,21 @@ export const routes: Routes = [
         path: 'npcs',
         component: NpcLibraryPageComponent,
         data: { title: 'NPC Library', breadcrumb: 'NPC Library' }
+    },
+    {
+        path: 'monsters',
+        component: MonsterLibraryPageComponent,
+        data: { title: 'Monster Library', breadcrumb: 'Monster Library' }
+    },
+    {
+        path: 'monsters/new',
+        component: MonsterEditorPageComponent,
+        data: { title: 'New Custom Monster', breadcrumb: 'New Monster', parentCrumbs: [{ label: 'Monster Library', url: '/monsters' }] }
+    },
+    {
+        path: 'monsters/:monsterId/edit',
+        component: MonsterEditorPageComponent,
+        data: { title: 'Edit Monster', breadcrumb: 'Edit Monster', parentCrumbs: [{ label: 'Monster Library', url: '/monsters' }] }
     },
     {
         path: 'tables',

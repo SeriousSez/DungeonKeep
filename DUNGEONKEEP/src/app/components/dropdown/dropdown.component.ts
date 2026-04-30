@@ -30,6 +30,7 @@ export class DropdownComponent {
         this.onDocumentPointerDown(event);
     };
     private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+    private readonly comboboxInputRef = viewChild<ElementRef<HTMLInputElement>>('comboboxInput');
 
     readonly id = input<string>('');
     readonly ariaLabel = input<string>('');
@@ -48,6 +49,8 @@ export class DropdownComponent {
     readonly disabled = input<boolean>(false);
     readonly searchable = input<boolean>(false);
     readonly searchPlaceholder = input<string>('Search options...');
+    readonly freeText = input<boolean>(false);
+    readonly combobox = input<boolean>(false);
     readonly changed = output<string | number>();
 
     readonly isOpen = signal(false);
@@ -69,7 +72,28 @@ export class DropdownComponent {
 
     readonly triggerLabel = computed(() => {
         const selected = this.options().find((option) => String(option.value) === String(this.value()));
-        return selected?.label ?? this.placeholder() ?? '';
+        if (selected) {
+            return selected.label;
+        }
+
+        if (this.freeText() && this.value() !== '' && this.value() != null) {
+            return String(this.value());
+        }
+
+        return this.placeholder() ?? '';
+    });
+
+    readonly showFreeTextOption = computed(() => {
+        if (!this.freeText() && !this.combobox()) {
+            return false;
+        }
+
+        const term = this.searchTerm().trim();
+        if (!term) {
+            return false;
+        }
+
+        return !this.filteredOptions().some((o) => o.label.toLowerCase() === term.toLowerCase());
     });
 
     readonly selectedDescription = computed(() => {
@@ -160,7 +184,7 @@ export class DropdownComponent {
                 updatePanelPosition();
                 view.requestAnimationFrame(updatePanelPosition);
 
-                if (this.searchable()) {
+                if (this.searchable() || (this.freeText() && !this.combobox())) {
                     this.searchInput()?.nativeElement.focus();
                 }
             });
@@ -189,7 +213,7 @@ export class DropdownComponent {
 
     getOptionsMaxHeight(): number {
         // Reserve vertical space for panel padding/border and optional search input.
-        const panelChromeHeight = this.searchable() ? 58 : 18;
+        const panelChromeHeight = (this.searchable() || this.freeText()) ? 58 : 18;
         return Math.max(96, this.panelMaxHeight() - panelChromeHeight);
     }
 
@@ -244,6 +268,59 @@ export class DropdownComponent {
         this.changed.emit(value);
         this.isOpen.set(false);
         this.searchTerm.set('');
+    }
+
+    onFreeTextPicked(): void {
+        const term = this.searchTerm().trim();
+        if (term) {
+            this.changed.emit(term);
+        }
+
+        this.isOpen.set(false);
+        this.searchTerm.set('');
+    }
+
+    onComboboxFocus(): void {
+        this.searchTerm.set(String(this.value() ?? ''));
+        if (!this.isOpen()) {
+            this.isOpen.set(true);
+            this.requestCloseChat();
+        }
+    }
+
+    onComboboxInput(value: string): void {
+        this.searchTerm.set(value);
+        if (!this.isOpen()) {
+            this.isOpen.set(true);
+            this.requestCloseChat();
+        }
+    }
+
+    onComboboxBlur(): void {
+        if (!this.isOpen()) {
+            return;
+        }
+
+        const typed = this.searchTerm().trim();
+        if (typed) {
+            this.changed.emit(typed);
+        }
+
+        this.isOpen.set(false);
+        this.searchTerm.set('');
+    }
+
+    onComboboxEnter(): void {
+        if (!this.isOpen()) {
+            return;
+        }
+
+        const first = this.filteredOptions()[0];
+        if (first) {
+            this.onOptionPicked(first.value);
+        } else {
+            this.onFreeTextPicked();
+        }
     }
 
     @HostListener('document:dungeonkeep-close-popups')

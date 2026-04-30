@@ -14,6 +14,7 @@
 
             <div class="monster-strip-actions">
                 <a class="secondary-link-btn" routerLink="/rules/monsters">Back to Monsters</a>
+                <a class="secondary-link-btn" [routerLink]="['/monsters/new']" [queryParams]="{ template: monster.slug }">Use as Template</a>
                 @if (monster.sourceUrl) {
                 <a class="primary-link-btn" [href]="monster.sourceUrl" target="_blank" rel="noopener noreferrer">Open Full Stat Block</a>
                 }
