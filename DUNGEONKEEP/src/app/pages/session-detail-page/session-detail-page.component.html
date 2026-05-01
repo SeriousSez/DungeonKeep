@@ -299,8 +299,7 @@
                         </div>
                         } @else if (lootAssignmentOptions().length > 0) {
                         <div class="detail-actions loot-assignment-row">
-                            <app-dropdown class="loot-assignment-dropdown" [value]="lootAssignmentTarget(loot.id)" [options]="lootAssignmentOptions()" [placeholder]="'Choose character'" size="wide" appearance="chip" [panelMinWidth]="240"
-                                [showSelectedDescription]="false" [triggerMinHeight]="46"
+                            <app-dropdown class="loot-assignment-dropdown" [value]="lootAssignmentTarget(loot.id)" [options]="lootAssignmentOptions()" [placeholder]="'Choose character'" size="wide" appearance="chip" [panelMinWidth]="240" [showSelectedDescription]="false" [triggerMinHeight]="46"
                                 (changed)="setLootAssignmentTarget(loot.id, $event)"></app-dropdown>
                             <button type="button" class="ghost-button detail-action-button" [disabled]="!loot.name.trim() || !lootAssignmentTarget(loot.id) || isAssigningSessionLoot(loot.id)" (click)="assignSessionLootToCharacter(loot)">
                                 {{ isAssigningSessionLoot(loot.id) ? 'Assigning...' : 'Assign to Character' }}
