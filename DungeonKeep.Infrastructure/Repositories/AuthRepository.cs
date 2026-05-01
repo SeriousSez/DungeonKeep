@@ -130,10 +130,16 @@ public sealed class AuthRepository(DungeonKeepDbContext dbContext) : IAuthReposi
 
         try
         {
+            EnsureColumnExists("AppUsers", "IsEmailVerified", "INTEGER NOT NULL DEFAULT 0", "TINYINT(1) NOT NULL DEFAULT 0");
+            EnsureColumnExists("AppUsers", "ActivationCodeHash", "TEXT NOT NULL DEFAULT ''", "TEXT NOT NULL");
+            EnsureColumnExists("AppUsers", "ActivationCodeExpiresAtUtc", "TEXT NULL", "DATETIME(6) NULL");
+
             EnsureColumnExists("AppUsers", "NpcLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
             EnsureColumnExists("AppUsers", "CustomTableLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
             EnsureColumnExists("AppUsers", "MonsterLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
             EnsureColumnExists("AppUsers", "MonsterReferenceJson", "TEXT NOT NULL DEFAULT '[]'");
+
+            EnsureLegacyUsersCanSignIn();
             userSchemaEnsured = true;
         }
         catch
@@ -144,7 +150,24 @@ public sealed class AuthRepository(DungeonKeepDbContext dbContext) : IAuthReposi
         return true;
     }
 
-    private void EnsureColumnExists(string tableName, string columnName, string columnDefinition)
+    private void EnsureColumnExists(string tableName, string columnName, string sqliteColumnDefinition, string? mySqlColumnDefinition = null)
+    {
+        var providerName = dbContext.Database.ProviderName ?? string.Empty;
+
+        if (providerName.Contains("Sqlite", StringComparison.OrdinalIgnoreCase))
+        {
+            EnsureSqliteColumnExists(tableName, columnName, sqliteColumnDefinition);
+            return;
+        }
+
+        if (providerName.Contains("MySql", StringComparison.OrdinalIgnoreCase))
+        {
+            EnsureMySqlColumnExists(tableName, columnName, mySqlColumnDefinition ?? sqliteColumnDefinition);
+            return;
+        }
+    }
+
+    private void EnsureSqliteColumnExists(string tableName, string columnName, string columnDefinition)
     {
         using var connection = dbContext.Database.GetDbConnection();
         if (connection.State != System.Data.ConnectionState.Open)
@@ -160,5 +183,43 @@ public sealed class AuthRepository(DungeonKeepDbContext dbContext) : IAuthReposi
         }
 
         dbContext.Database.ExecuteSqlRaw("ALTER TABLE \"" + tableName + "\" ADD COLUMN \"" + columnName + "\" " + columnDefinition + ";");
+    }
+
+    private void EnsureMySqlColumnExists(string tableName, string columnName, string columnDefinition)
+    {
+        using var connection = dbContext.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            connection.Open();
+        }
+
+        using var existsCommand = connection.CreateCommand();
+        existsCommand.CommandText = $"SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{tableName}' AND COLUMN_NAME = '{columnName}' LIMIT 1;";
+        if (existsCommand.ExecuteScalar() is not null)
+        {
+            return;
+        }
+
+        dbContext.Database.ExecuteSqlRaw("ALTER TABLE `" + tableName + "` ADD COLUMN `" + columnName + "` " + columnDefinition + ";");
+    }
+
+    private void EnsureLegacyUsersCanSignIn()
+    {
+        var providerName = dbContext.Database.ProviderName ?? string.Empty;
+
+        if (providerName.Contains("Sqlite", StringComparison.OrdinalIgnoreCase))
+        {
+            dbContext.Database.ExecuteSqlRaw(
+                "UPDATE \"AppUsers\" SET \"IsEmailVerified\" = 1 WHERE \"IsEmailVerified\" = 0 AND (\"ActivationCodeHash\" IS NULL OR \"ActivationCodeHash\" = '') AND \"ActivationCodeExpiresAtUtc\" IS NULL;"
+            );
+            return;
+        }
+
+        if (providerName.Contains("MySql", StringComparison.OrdinalIgnoreCase))
+        {
+            dbContext.Database.ExecuteSqlRaw(
+                "UPDATE `AppUsers` SET `IsEmailVerified` = 1 WHERE `IsEmailVerified` = 0 AND (`ActivationCodeHash` IS NULL OR `ActivationCodeHash` = '') AND `ActivationCodeExpiresAtUtc` IS NULL;"
+            );
+        }
     }
 }
