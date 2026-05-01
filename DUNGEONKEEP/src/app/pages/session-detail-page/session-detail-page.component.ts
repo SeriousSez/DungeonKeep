@@ -6,13 +6,14 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { marked } from 'marked';
 
 import { CampaignNpcPreviewModalComponent } from '../../components/campaign-npc-preview-modal/campaign-npc-preview-modal.component';
+import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
 import { MonsterStatBlockModalComponent } from '../../components/monster-stat-block-modal/monster-stat-block-modal.component';
 import { createDefaultNpc, mergeCampaignNpcSources, sanitizeNpc, touchNpc } from '../../data/campaign-npc.helpers';
 import { loadCampaignNpcDrafts, saveCampaignNpcDrafts } from '../../data/campaign-npc.storage';
 import { monsterCatalog } from '../../data/monster-catalog.generated';
 import { readStoredSessionEditorDraft } from '../../data/session-editor.storage';
 import { CampaignNpc } from '../../models/campaign-npc.models';
-import { SessionPrep, ThreatLevel } from '../../models/dungeon.models';
+import { Character, SessionPrep, ThreatLevel } from '../../models/dungeon.models';
 import { MonsterCatalogEntry } from '../../models/monster-reference.models';
 import { SessionEditorDraft, SessionMonster, SessionNpc } from '../../models/session-editor.models';
 import { ApiGenerateNpcDraftResponse, DungeonApiService } from '../../state/dungeon-api.service';
@@ -50,8 +51,31 @@ interface SessionDetailView {
     nextSessionHooks: SessionEditorDraft['nextSessionHooks'];
 }
 
+interface SessionPersistedInventoryEntry {
+    name: string;
+    category: string;
+    quantity: number;
+    notes?: string;
+    isContainer?: boolean;
+    containedItems?: SessionPersistedInventoryEntry[];
+    equipped?: boolean;
+}
+
+interface SessionPersistedBuilderState {
+    inventoryEntries?: SessionPersistedInventoryEntry[];
+    [key: string]: unknown;
+}
+
+interface SessionLootAssignment {
+    characterId: string;
+    itemName: string;
+    itemCategory: string;
+    quantity: number;
+}
+
 const monsterCatalogByLookupKey = new Map<string, MonsterCatalogEntry>();
 const monsterLookupStopWords = new Set(['the', 'a', 'an', 'of', 'and']);
+const SESSION_LOOT_ASSIGNMENT_STORAGE_PREFIX = 'dungeonkeep.session-loot-assignment';
 
 for (const entry of monsterCatalog) {
     for (const key of buildMonsterLookupKeys(entry.name)) {
@@ -64,12 +88,15 @@ for (const entry of monsterCatalog) {
 @Component({
     selector: 'app-session-detail-page',
     standalone: true,
-    imports: [CommonModule, RouterLink, MonsterStatBlockModalComponent, CampaignNpcPreviewModalComponent],
+    imports: [CommonModule, RouterLink, DropdownComponent, MonsterStatBlockModalComponent, CampaignNpcPreviewModalComponent],
     templateUrl: './session-detail-page.component.html',
     styleUrl: './session-detail-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SessionDetailPageComponent {
+    private readonly builderStateStartTag = '[DK_BUILDER_STATE_START]';
+    private readonly builderStateEndTag = '[DK_BUILDER_STATE_END]';
+
     private readonly store = inject(DungeonStoreService);
     private readonly api = inject(DungeonApiService);
     private readonly route = inject(ActivatedRoute);
@@ -90,6 +117,11 @@ export class SessionDetailPageComponent {
     readonly activeCampaignNpc = signal<CampaignNpc | null>(null);
     readonly npcDraftVersion = signal(0);
     readonly activeNpcCreationName = signal('');
+    readonly activeLootAddId = signal('');
+    readonly activeLootAssignId = signal('');
+    readonly activeLootRemoveId = signal('');
+    readonly lootAssignmentTargets = signal<Record<string, string>>({});
+    readonly lootAssignments = signal<Record<string, SessionLootAssignment>>({});
     readonly selectedSection = signal('all');
 
     readonly campaignNpcLookup = computed(() =>
@@ -107,6 +139,26 @@ export class SessionDetailPageComponent {
 
     readonly currentCampaign = computed(() =>
         this.store.campaigns().find((campaign) => campaign.id === this.campaignId()) ?? null
+    );
+    readonly partyCharacters = computed<Character[]>(() => {
+        const campaign = this.currentCampaign();
+        if (!campaign) {
+            return [];
+        }
+
+        const byId = new Map(this.store.characters().map((character) => [character.id, character]));
+        return campaign.partyCharacterIds
+            .map((characterId) => byId.get(characterId))
+            .filter((character): character is Character => Boolean(character));
+    });
+    readonly lootAssignmentOptions = computed<DropdownOption[]>(() =>
+        this.partyCharacters()
+            .filter((character) => character.status !== 'Inactive')
+            .map((character) => ({
+                value: character.id,
+                label: character.name,
+                description: `${character.className} ${character.level}`
+            }))
     );
     readonly sessionSummary = computed(() =>
         this.currentCampaign()?.sessions.find((session) => session.id === this.sessionId()) ?? null
@@ -235,6 +287,11 @@ export class SessionDetailPageComponent {
                 this.interactionError.set('');
                 this.activeMonster.set(null);
                 this.activeCampaignNpc.set(null);
+                this.activeLootAddId.set('');
+                this.activeLootAssignId.set('');
+                this.activeLootRemoveId.set('');
+                this.lootAssignmentTargets.set({});
+                this.lootAssignments.set(readStoredSessionLootAssignments(campaignId, params.get('sessionId') ?? ''));
                 this.selectedSection.set('all');
                 this.cdr.detectChanges();
             });
@@ -313,6 +370,58 @@ export class SessionDetailPageComponent {
 
     isCreatingCampaignNpc(name: string): boolean {
         return normalizeLookupValue(this.activeNpcCreationName()) === normalizeLookupValue(name);
+    }
+
+    isAddingCampaignLoot(lootId: string): boolean {
+        return this.activeLootAddId() === lootId;
+    }
+
+    isAssigningSessionLoot(lootId: string): boolean {
+        return this.activeLootAssignId() === lootId;
+    }
+
+    isRemovingSessionLoot(lootId: string): boolean {
+        return this.activeLootRemoveId() === lootId;
+    }
+
+    hasLootAssignment(lootId: string): boolean {
+        return Boolean(this.lootAssignments()[lootId]);
+    }
+
+    assignedLootCharacterLabel(lootId: string): string {
+        const assignment = this.lootAssignments()[lootId];
+        if (!assignment) {
+            return '';
+        }
+
+        const assignedCharacter = this.store.characters().find((character) => character.id === assignment.characterId) ?? null;
+        if (!assignedCharacter) {
+            return 'Assigned';
+        }
+
+        return `Assigned to ${assignedCharacter.name}`;
+    }
+
+    lootAssignmentTarget(lootId: string): string {
+        const options = this.lootAssignmentOptions();
+        if (options.length === 0) {
+            return '';
+        }
+
+        const explicitSelection = this.lootAssignmentTargets()[lootId];
+        if (explicitSelection && options.some((option) => String(option.value) === explicitSelection)) {
+            return explicitSelection;
+        }
+
+        return String(options[0].value);
+    }
+
+    setLootAssignmentTarget(lootId: string, value: string | number): void {
+        const nextValue = String(value ?? '').trim();
+        this.lootAssignmentTargets.update((current) => ({
+            ...current,
+            [lootId]: nextValue
+        }));
     }
 
     resolveStoredCampaignNpc(name: string): CampaignNpc | null {
@@ -419,6 +528,175 @@ export class SessionDetailPageComponent {
             await this.router.navigate(['/campaigns', campaignId, 'npcs', savedNpc.id]);
         } finally {
             this.activeNpcCreationName.set('');
+            this.cdr.detectChanges();
+        }
+    }
+
+    async addSessionLootToCampaign(lootEntry: SessionEditorDraft['loot'][number]): Promise<void> {
+        const campaignId = this.campaignId();
+        const trimmedName = lootEntry.name.trim();
+        const quantity = Number.isFinite(lootEntry.quantity) ? Math.max(1, Math.floor(lootEntry.quantity)) : 1;
+
+        if (!campaignId || !trimmedName || !this.canEdit()) {
+            return;
+        }
+
+        if (this.isAddingCampaignLoot(lootEntry.id)) {
+            return;
+        }
+
+        this.interactionMessage.set('');
+        this.interactionError.set('');
+        this.activeLootAddId.set(lootEntry.id);
+        this.cdr.detectChanges();
+
+        try {
+            let addedCount = 0;
+
+            for (let index = 0; index < quantity; index += 1) {
+                const added = await this.store.addCampaignLoot(campaignId, trimmedName);
+                if (!added) {
+                    break;
+                }
+
+                addedCount += 1;
+            }
+
+            if (addedCount === quantity) {
+                this.interactionMessage.set(quantity === 1
+                    ? `${trimmedName} added to campaign loot log.`
+                    : `Added ${quantity} x ${trimmedName} to campaign loot log.`);
+                return;
+            }
+
+            if (addedCount > 0) {
+                const remaining = quantity - addedCount;
+                const remainingLabel = remaining === 1 ? 'entry' : 'entries';
+
+                this.interactionMessage.set(`Added ${addedCount} x ${trimmedName} to campaign loot log.`);
+                this.interactionError.set(`Could not add ${remaining} remaining ${remainingLabel}.`);
+                return;
+            }
+
+            this.interactionError.set(this.store.lastError() || `Could not add ${trimmedName} to campaign loot log.`);
+        } finally {
+            this.activeLootAddId.set('');
+            this.cdr.detectChanges();
+        }
+    }
+
+    async assignSessionLootToCharacter(lootEntry: SessionEditorDraft['loot'][number]): Promise<void> {
+        const selectedCharacterId = this.lootAssignmentTarget(lootEntry.id);
+        const selectedCharacter = this.partyCharacters().find((character) => character.id === selectedCharacterId) ?? null;
+        const trimmedName = lootEntry.name.trim();
+        const category = lootEntry.type.trim() || 'Session Loot';
+        const quantity = Number.isFinite(lootEntry.quantity) ? Math.max(1, Math.floor(lootEntry.quantity)) : 1;
+        const notes = lootEntry.notes.trim() || undefined;
+
+        if (!this.canEdit() || !selectedCharacter || !trimmedName) {
+            return;
+        }
+
+        if (this.hasLootAssignment(lootEntry.id)) {
+            return;
+        }
+
+        if (this.isAssigningSessionLoot(lootEntry.id)) {
+            return;
+        }
+
+        this.interactionMessage.set('');
+        this.interactionError.set('');
+        this.activeLootAssignId.set(lootEntry.id);
+        this.cdr.detectChanges();
+
+        try {
+            const parsed = this.parsePersistedNotes(selectedCharacter.notes ?? '');
+            const nextState: SessionPersistedBuilderState = {
+                ...parsed.state,
+                inventoryEntries: this.mergeInventoryEntry(parsed.state.inventoryEntries ?? [], {
+                    name: trimmedName,
+                    category,
+                    quantity,
+                    notes,
+                    isContainer: false,
+                    containedItems: []
+                })
+            };
+            const updatedNotes = this.createPersistedNotesString(selectedCharacter.notes ?? '', nextState);
+
+            const updated = await this.persistCharacterNotes(selectedCharacter, updatedNotes);
+            if (!updated) {
+                this.interactionError.set(`Could not assign ${trimmedName} to ${selectedCharacter.name}.`);
+                return;
+            }
+
+            this.lootAssignments.update((current) => ({
+                ...current,
+                [lootEntry.id]: {
+                    characterId: selectedCharacter.id,
+                    itemName: trimmedName,
+                    itemCategory: category,
+                    quantity
+                }
+            }));
+            this.persistSessionLootAssignments();
+
+            this.interactionMessage.set(quantity === 1
+                ? `${trimmedName} assigned to ${selectedCharacter.name}.`
+                : `${quantity} x ${trimmedName} assigned to ${selectedCharacter.name}.`);
+        } finally {
+            this.activeLootAssignId.set('');
+            this.cdr.detectChanges();
+        }
+    }
+
+    async removeSessionLootAssignment(lootEntry: SessionEditorDraft['loot'][number]): Promise<void> {
+        const assignment = this.lootAssignments()[lootEntry.id];
+        if (!assignment) {
+            return;
+        }
+
+        if (this.isRemovingSessionLoot(lootEntry.id)) {
+            return;
+        }
+
+        const assignedCharacter = this.store.characters().find((character) => character.id === assignment.characterId) ?? null;
+        if (!assignedCharacter) {
+            this.clearLootAssignment(lootEntry.id);
+            this.interactionError.set('The assigned character is no longer available. Assignment was cleared.');
+            this.cdr.detectChanges();
+            return;
+        }
+
+        this.interactionMessage.set('');
+        this.interactionError.set('');
+        this.activeLootRemoveId.set(lootEntry.id);
+        this.cdr.detectChanges();
+
+        try {
+            const parsed = this.parsePersistedNotes(assignedCharacter.notes ?? '');
+            const nextState: SessionPersistedBuilderState = {
+                ...parsed.state,
+                inventoryEntries: this.removeInventoryEntry(
+                    parsed.state.inventoryEntries ?? [],
+                    assignment.itemName,
+                    assignment.itemCategory,
+                    assignment.quantity
+                )
+            };
+            const updatedNotes = this.createPersistedNotesString(assignedCharacter.notes ?? '', nextState);
+
+            const updated = await this.persistCharacterNotes(assignedCharacter, updatedNotes);
+            if (!updated) {
+                this.interactionError.set(`Could not remove assigned loot from ${assignedCharacter.name}.`);
+                return;
+            }
+
+            this.clearLootAssignment(lootEntry.id);
+            this.interactionMessage.set(`Removed assigned loot from ${assignedCharacter.name}.`);
+        } finally {
+            this.activeLootRemoveId.set('');
             this.cdr.detectChanges();
         }
     }
@@ -725,6 +1003,224 @@ export class SessionDetailPageComponent {
 
         return fallback;
     }
+
+    private parsePersistedNotes(notes: string): { cleanedNotes: string; state: SessionPersistedBuilderState } {
+        const startIndex = notes.indexOf(this.builderStateStartTag);
+        if (startIndex === -1) {
+            return {
+                cleanedNotes: notes.trim(),
+                state: {}
+            };
+        }
+
+        const endIndex = notes.indexOf(this.builderStateEndTag, startIndex + this.builderStateStartTag.length);
+        if (endIndex === -1) {
+            return {
+                cleanedNotes: notes.trim(),
+                state: {}
+            };
+        }
+
+        const cleanedNotes = notes.slice(0, startIndex).trim();
+        const rawState = notes.slice(startIndex + this.builderStateStartTag.length, endIndex).trim();
+        if (!rawState) {
+            return {
+                cleanedNotes,
+                state: {}
+            };
+        }
+
+        try {
+            const parsed = JSON.parse(rawState) as SessionPersistedBuilderState | null;
+            return {
+                cleanedNotes,
+                state: parsed && typeof parsed === 'object' ? parsed : {}
+            };
+        } catch {
+            return {
+                cleanedNotes,
+                state: {}
+            };
+        }
+    }
+
+    private createPersistedNotesString(originalNotes: string, state: SessionPersistedBuilderState): string {
+        const cleanedNotes = this.parsePersistedNotes(originalNotes).cleanedNotes;
+        const serializedState = JSON.stringify(state);
+        return `${cleanedNotes}\n\n${this.builderStateStartTag}${serializedState}${this.builderStateEndTag}`.trim();
+    }
+
+    private mergeInventoryEntry(
+        entries: SessionPersistedInventoryEntry[],
+        incoming: SessionPersistedInventoryEntry
+    ): SessionPersistedInventoryEntry[] {
+        const normalizedIncomingName = incoming.name.trim().toLowerCase();
+        const normalizedIncomingCategory = incoming.category.trim().toLowerCase();
+        const quantityToAdd = Math.max(1, Math.trunc(Number(incoming.quantity) || 1));
+
+        if (!normalizedIncomingName || !normalizedIncomingCategory) {
+            return [...entries];
+        }
+
+        const existingIndex = entries.findIndex((entry) =>
+            entry.name.trim().toLowerCase() === normalizedIncomingName
+            && entry.category.trim().toLowerCase() === normalizedIncomingCategory
+            && !entry.isContainer
+        );
+
+        if (existingIndex === -1) {
+            return [
+                ...entries,
+                {
+                    ...incoming,
+                    name: incoming.name.trim(),
+                    category: incoming.category.trim(),
+                    quantity: quantityToAdd
+                }
+            ];
+        }
+
+        return entries.map((entry, index) => {
+            if (index !== existingIndex) {
+                return entry;
+            }
+
+            return {
+                ...entry,
+                quantity: Math.max(1, Math.trunc(Number(entry.quantity) || 1)) + quantityToAdd,
+                notes: entry.notes?.trim() || incoming.notes
+            };
+        });
+    }
+
+    private removeInventoryEntry(
+        entries: SessionPersistedInventoryEntry[],
+        itemName: string,
+        itemCategory: string,
+        quantityToRemove: number
+    ): SessionPersistedInventoryEntry[] {
+        const normalizedName = itemName.trim().toLowerCase();
+        const normalizedCategory = itemCategory.trim().toLowerCase();
+        const requestedRemoval = Math.max(1, Math.trunc(Number(quantityToRemove) || 1));
+
+        if (!normalizedName || !normalizedCategory || entries.length === 0) {
+            return [...entries];
+        }
+
+        let remainingToRemove = requestedRemoval;
+        const nextEntries: SessionPersistedInventoryEntry[] = [];
+
+        for (const entry of entries) {
+            const entryName = entry.name.trim().toLowerCase();
+            const entryCategory = entry.category.trim().toLowerCase();
+            const entryQuantity = Math.max(1, Math.trunc(Number(entry.quantity) || 1));
+            const isMatchingEntry = !entry.isContainer && entryName === normalizedName && entryCategory === normalizedCategory;
+
+            if (!isMatchingEntry || remainingToRemove <= 0) {
+                nextEntries.push(entry);
+                continue;
+            }
+
+            if (entryQuantity <= remainingToRemove) {
+                remainingToRemove -= entryQuantity;
+                continue;
+            }
+
+            nextEntries.push({
+                ...entry,
+                quantity: entryQuantity - remainingToRemove
+            });
+            remainingToRemove = 0;
+        }
+
+        return nextEntries;
+    }
+
+    private async persistCharacterNotes(character: Character, notes: string): Promise<boolean> {
+        const updatedCharacter = await this.store.updateCharacter(character.id, {
+            name: character.name,
+            playerName: character.playerName,
+            race: character.race,
+            className: character.className,
+            role: character.role,
+            level: character.level,
+            background: character.background,
+            notes,
+            campaignId: character.campaignId,
+            campaignIds: character.campaignIds,
+            abilityScores: character.abilityScores,
+            skills: character.skills,
+            armorClass: character.armorClass,
+            hitPoints: character.hitPoints,
+            maxHitPoints: character.maxHitPoints,
+            deathSaveFailures: character.deathSaveFailures,
+            deathSaveSuccesses: character.deathSaveSuccesses,
+            alignment: character.alignment,
+            faith: character.faith,
+            lifestyle: character.lifestyle,
+            classFeatures: character.classFeatures,
+            speciesTraits: character.speciesTraits,
+            languages: character.languages,
+            personalityTraits: character.personalityTraits,
+            ideals: character.ideals,
+            bonds: character.bonds,
+            flaws: character.flaws,
+            equipment: character.equipment,
+            spells: character.spells,
+            experiencePoints: character.experiencePoints,
+            image: character.image,
+            detailBackgroundImageUrl: character.detailBackgroundImageUrl
+        });
+
+        return updatedCharacter !== null;
+    }
+
+    private clearLootAssignment(lootId: string): void {
+        this.lootAssignments.update((current) => {
+            if (!current[lootId]) {
+                return current;
+            }
+
+            const { [lootId]: _removedAssignment, ...remaining } = current;
+            return remaining;
+        });
+        this.persistSessionLootAssignments();
+    }
+
+    private persistSessionLootAssignments(): void {
+        persistStoredSessionLootAssignments(this.campaignId(), this.sessionId(), this.lootAssignments());
+    }
+}
+
+function buildSessionLootAssignmentStorageKey(campaignId: string, sessionId: string): string {
+    return `${SESSION_LOOT_ASSIGNMENT_STORAGE_PREFIX}.${campaignId}.${sessionId}`;
+}
+
+function readStoredSessionLootAssignments(campaignId: string, sessionId: string): Record<string, SessionLootAssignment> {
+    if (typeof window === 'undefined' || typeof window.localStorage === 'undefined' || !campaignId || !sessionId) {
+        return {};
+    }
+
+    const raw = window.localStorage.getItem(buildSessionLootAssignmentStorageKey(campaignId, sessionId));
+    if (!raw) {
+        return {};
+    }
+
+    try {
+        const parsed = JSON.parse(raw) as Record<string, SessionLootAssignment>;
+        return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+        window.localStorage.removeItem(buildSessionLootAssignmentStorageKey(campaignId, sessionId));
+        return {};
+    }
+}
+
+function persistStoredSessionLootAssignments(campaignId: string, sessionId: string, assignments: Record<string, SessionLootAssignment>): void {
+    if (typeof window === 'undefined' || typeof window.localStorage === 'undefined' || !campaignId || !sessionId) {
+        return;
+    }
+
+    window.localStorage.setItem(buildSessionLootAssignmentStorageKey(campaignId, sessionId), JSON.stringify(assignments));
 }
 
 function buildNpcShortDescription(sessionNpc: SessionNpc): string {

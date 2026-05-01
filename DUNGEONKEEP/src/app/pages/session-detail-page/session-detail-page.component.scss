@@ -252,6 +252,15 @@
     min-height: 38px;
 }
 
+.loot-assignment-row {
+    align-items: stretch;
+}
+
+.loot-assignment-dropdown {
+    min-width: 220px;
+    flex: 1 1 240px;
+}
+
 .monster-quick-stats {
     display: flex;
     flex-wrap: wrap;

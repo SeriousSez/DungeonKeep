@@ -284,6 +284,30 @@
                         @if (loot.notes) {
                         <p><strong>Notes:</strong> {{ loot.notes }}</p>
                         }
+                        @if (canEdit()) {
+                        <div class="detail-actions">
+                            <button type="button" class="ghost-button detail-action-button" [disabled]="!loot.name.trim() || isAddingCampaignLoot(loot.id)" (click)="addSessionLootToCampaign(loot)">
+                                {{ isAddingCampaignLoot(loot.id) ? 'Adding...' : 'Add to Campaign Loot' }}
+                            </button>
+                        </div>
+                        @if (hasLootAssignment(loot.id)) {
+                        <div class="detail-actions loot-assignment-row">
+                            <span class="detail-inline-status">{{ assignedLootCharacterLabel(loot.id) }}</span>
+                            <button type="button" class="ghost-button detail-action-button" [disabled]="isRemovingSessionLoot(loot.id)" (click)="removeSessionLootAssignment(loot)">
+                                {{ isRemovingSessionLoot(loot.id) ? 'Removing...' : 'Remove Assignment' }}
+                            </button>
+                        </div>
+                        } @else if (lootAssignmentOptions().length > 0) {
+                        <div class="detail-actions loot-assignment-row">
+                            <app-dropdown class="loot-assignment-dropdown" [value]="lootAssignmentTarget(loot.id)" [options]="lootAssignmentOptions()" [placeholder]="'Choose character'" size="wide" appearance="chip" [panelMinWidth]="240"
+                                [showSelectedDescription]="false" [triggerMinHeight]="46"
+                                (changed)="setLootAssignmentTarget(loot.id, $event)"></app-dropdown>
+                            <button type="button" class="ghost-button detail-action-button" [disabled]="!loot.name.trim() || !lootAssignmentTarget(loot.id) || isAssigningSessionLoot(loot.id)" (click)="assignSessionLootToCharacter(loot)">
+                                {{ isAssigningSessionLoot(loot.id) ? 'Assigning...' : 'Assign to Character' }}
+                            </button>
+                        </div>
+                        }
+                        }
                     </article>
                     }
                 </div>
