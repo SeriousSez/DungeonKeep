@@ -200,9 +200,14 @@
                     </div>
                     <div class="member-pill-group">
                         <span class="session-threat-pill">{{ session.threat }}</span>
+                        @if (campaign.currentUserRole === 'Owner') {
+                        <span class="visibility-pill" [class.visibility-pill--hidden]="!session.isRevealedToPlayers">{{ session.isRevealedToPlayers ? 'Revealed' : 'Hidden' }}</span>
+                        }
                         <a type="button" class="ghost-button" [routerLink]="['/campaigns', campaign.id, 'sessions', session.id]" (click)="$event.stopPropagation()">View</a>
                         @if (campaign.currentUserRole === 'Owner') {
                         <a type="button" class="ghost-button" [routerLink]="['/campaigns', campaign.id, 'sessions', session.id, 'edit']" (click)="$event.stopPropagation()">Edit</a>
+                        <button type="button" class="ghost-button" [class.is-loading]="isTogglingSessionId() === session.id" [disabled]="isTogglingSessionId() === session.id" (click)="$event.stopPropagation(); toggleSessionVisibility(session.id, !session.isRevealedToPlayers)">{{
+                            session.isRevealedToPlayers ? 'Hide' : 'Reveal' }}</button>
                         <button type="button" class="ghost-button" [class.is-loading]="isDeletingSession()" [disabled]="isDeletingSession()" (click)="$event.stopPropagation(); deleteSession(session.id)">Delete</button>
                         }
                     </div>
@@ -513,6 +518,8 @@
 
                     @if (campaign.currentUserRole === 'Owner') {
                     <div class="thread-actions">
+                        <span class="visibility-pill" [class.visibility-pill--hidden]="!note.isRevealedToPlayers">{{ note.isRevealedToPlayers ? 'Revealed' : 'Hidden' }}</span>
+                        <button type="button" class="ghost-button" [class.is-loading]="isTogglingNoteId() === note.id" [disabled]="isTogglingNoteId() === note.id" (click)="toggleWorldNoteVisibility(note.id, !note.isRevealedToPlayers)">{{ note.isRevealedToPlayers ? 'Hide' : 'Reveal' }}</button>
                         <button type="button" class="ghost-button" (click)="openEditWorldNoteForm(note)">Edit</button>
                         <button type="button" class="ghost-button" [class.is-loading]="isDeletingNoteId() === note.id" [disabled]="isDeletingNoteId() === note.id" (click)="deleteWorldNote(note.id)">Delete</button>
                     </div>

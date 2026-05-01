@@ -49,7 +49,9 @@
             </div>
 
             <div class="header-actions">
+                @if (canEdit()) {
                 <span class="detail-pill">{{ session.threat }}</span>
+                }
                 @if (hasRichDraft()) {
                 <span class="detail-pill detail-pill-accent">Draft Loaded</span>
                 }
@@ -77,10 +79,10 @@
     </nav>
     }
 
-    @if (!hasRichDraft()) {
+    @if (!hasRichDraft() && canEdit()) {
     <section class="panel status-panel summary-panel">
         <h2>Summary-only view</h2>
-        <p>This session has a synced campaign summary, but no locally saved detailed draft on this device yet. Open the editor to add scene flow, notes, and encounter prep.</p>
+        <p>No detailed draft saved for this session yet. Open the editor to add scene flow, notes, and encounter prep.</p>
     </section>
     }
 
@@ -290,20 +292,50 @@
                                 {{ isAddingCampaignLoot(loot.id) ? 'Adding...' : 'Add to Campaign Loot' }}
                             </button>
                         </div>
-                        @if (hasLootAssignment(loot.id)) {
-                        <div class="detail-actions loot-assignment-row">
-                            <span class="detail-inline-status">{{ assignedLootCharacterLabel(loot.id) }}</span>
-                            <button type="button" class="ghost-button detail-action-button" [disabled]="isRemovingSessionLoot(loot.id)" (click)="removeSessionLootAssignment(loot)">
-                                {{ isRemovingSessionLoot(loot.id) ? 'Removing...' : 'Remove Assignment' }}
-                            </button>
-                        </div>
-                        } @else if (lootAssignmentOptions().length > 0) {
+                        @if (lootAssignmentOptions().length > 0 && lootHasSingleQuantity(loot)) {
                         <div class="detail-actions loot-assignment-row">
                             <app-dropdown class="loot-assignment-dropdown" [value]="lootAssignmentTarget(loot.id)" [options]="lootAssignmentOptions()" [placeholder]="'Choose character'" size="wide" appearance="chip" [panelMinWidth]="240" [showSelectedDescription]="false" [triggerMinHeight]="46"
                                 (changed)="setLootAssignmentTarget(loot.id, $event)"></app-dropdown>
-                            <button type="button" class="ghost-button detail-action-button" [disabled]="!loot.name.trim() || !lootAssignmentTarget(loot.id) || isAssigningSessionLoot(loot.id)" (click)="assignSessionLootToCharacter(loot)">
+                            <button type="button" class="ghost-button detail-action-button" [disabled]="!loot.name.trim() || !lootAssignmentTarget(loot.id) || !lootCanAssignMore(loot) || isAssigningSessionLoot(loot.id)" (click)="assignSessionLootToCharacter(loot)">
                                 {{ isAssigningSessionLoot(loot.id) ? 'Assigning...' : 'Assign to Character' }}
                             </button>
+                        </div>
+                        }
+                        @if (lootAssignmentOptions().length > 0 && !lootHasSingleQuantity(loot)) {
+                        <div class="detail-actions loot-assignment-row">
+                            <app-dropdown class="loot-assignment-dropdown" [value]="lootAssignmentTarget(loot.id)" [options]="lootAssignmentOptions()" [placeholder]="'Choose character'" size="wide" appearance="chip" [panelMinWidth]="240" [showSelectedDescription]="false" [triggerMinHeight]="46"
+                                (changed)="setLootAssignmentTarget(loot.id, $event)"></app-dropdown>
+                            <input class="loot-assignment-amount" type="number" min="1" [max]="lootAssignmentRemaining(loot)" [value]="lootAssignmentAmountValue(loot)" [disabled]="!lootCanAssignMore(loot) || isAssigningSessionLoot(loot.id)"
+                                (input)="setLootAssignmentAmount(loot.id, $any($event.target).value)" />
+                            <button type="button" class="ghost-button detail-action-button" [disabled]="!loot.name.trim() || !lootAssignmentTarget(loot.id) || !lootCanAssignMore(loot) || isAssigningSessionLoot(loot.id)" (click)="assignSelectedSessionLootAmount(loot)">
+                                {{ isAssigningSessionLoot(loot.id) ? 'Assigning...' : 'Assign Amount' }}
+                            </button>
+                            <button type="button" class="ghost-button detail-action-button" [disabled]="!loot.name.trim() || !lootAssignmentTarget(loot.id) || !lootCanAssignMore(loot) || isAssigningSessionLoot(loot.id)" (click)="assignAllRemainingSessionLootToCharacter(loot)">
+                                {{ isAssigningSessionLoot(loot.id) ? 'Assigning...' : 'Assign All' }}
+                            </button>
+                            <span class="detail-inline-status detail-inline-status-muted">{{ lootAssignedSummaryLabel(loot) }}</span>
+                        </div>
+                        }
+                        @if (hasLootAssignment(loot.id) && lootHasSingleQuantity(loot)) {
+                        <div class="detail-actions loot-assignment-row">
+                            <span class="detail-inline-status">{{ singleQuantityAssignedLabel(loot.id) }}</span>
+                            @for (assignment of lootAssignmentRows(loot.id); track assignment.characterId) {
+                            <button type="button" class="ghost-button detail-action-button" [disabled]="isRemovingSessionLoot(loot.id)" (click)="removeSessionLootAssignment(loot, assignment.characterId)">
+                                {{ isRemovingSessionLoot(loot.id) ? 'Removing...' : 'Remove Assignment' }}
+                            </button>
+                            }
+                        </div>
+                        }
+                        @if (hasLootAssignment(loot.id) && !lootHasSingleQuantity(loot)) {
+                        <div class="loot-assignment-list">
+                            @for (assignment of lootAssignmentRows(loot.id); track assignment.characterId) {
+                            <div class="detail-actions loot-assignment-row loot-assignment-row--assigned">
+                                <span class="detail-inline-status">{{ assignment.label }} · x{{ assignment.quantity }}</span>
+                                <button type="button" class="ghost-button detail-action-button" [disabled]="isRemovingSessionLoot(loot.id)" (click)="removeSessionLootAssignment(loot, assignment.characterId)">
+                                    {{ isRemovingSessionLoot(loot.id) ? 'Removing...' : 'Remove 1' }}
+                                </button>
+                            </div>
+                            }
                         </div>
                         }
                         }

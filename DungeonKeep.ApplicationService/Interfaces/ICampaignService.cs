@@ -25,6 +25,8 @@ public interface ICampaignService
     Task<CampaignDto?> AddWorldNoteAsync(Guid campaignId, CreateCampaignWorldNoteRequest request, Guid userId, CancellationToken cancellationToken = default);
     Task<CampaignDto?> UpdateWorldNoteAsync(Guid campaignId, Guid noteId, UpdateCampaignWorldNoteRequest request, Guid userId, CancellationToken cancellationToken = default);
     Task<CampaignDto?> DeleteWorldNoteAsync(Guid campaignId, DeleteCampaignWorldNoteRequest request, Guid userId, CancellationToken cancellationToken = default);
+    Task<CampaignDto?> SetSessionVisibilityAsync(Guid campaignId, Guid sessionId, bool isRevealedToPlayers, Guid userId, CancellationToken cancellationToken = default);
+    Task<CampaignDto?> SetWorldNoteVisibilityAsync(Guid campaignId, Guid noteId, bool isRevealedToPlayers, Guid userId, CancellationToken cancellationToken = default);
     Task<CampaignDto?> UpdateMapAsync(Guid campaignId, UpdateCampaignMapRequest request, Guid userId, CancellationToken cancellationToken = default);
     Task<CampaignMapTokenMoveResultDto?> MoveMapTokenAsync(Guid campaignId, Guid tokenId, MoveCampaignMapTokenRequest request, Guid userId, CancellationToken cancellationToken = default);
     Task<CampaignMapVisionUpdatedDto?> UpdateMapVisionAsync(Guid campaignId, UpdateCampaignMapVisionRequest request, Guid userId, CancellationToken cancellationToken = default);

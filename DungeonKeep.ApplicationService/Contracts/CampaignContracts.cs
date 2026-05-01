@@ -115,7 +115,8 @@ public sealed record CampaignSessionDto(
     string Date,
     string Location,
     string Objective,
-    string Threat
+    string Threat,
+    bool IsRevealedToPlayers = false
 );
 
 public sealed record CampaignThreadDto(
@@ -128,7 +129,8 @@ public sealed record CampaignWorldNoteDto(
     Guid Id,
     string Title,
     string Category,
-    string Content
+    string Content,
+    bool IsRevealedToPlayers = false
 );
 
 public sealed record CampaignMapDto(
@@ -341,6 +343,8 @@ public sealed record CreateCampaignLootRequest(string Name);
 public sealed record RemoveCampaignLootRequest(string Name);
 public sealed record CreateCampaignWorldNoteRequest(string Title, string Category, string Content);
 public sealed record UpdateCampaignWorldNoteRequest(string Title, string Category, string Content);
+public sealed record SetSessionVisibilityRequest(bool IsRevealedToPlayers);
+public sealed record SetWorldNoteVisibilityRequest(bool IsRevealedToPlayers);
 public sealed record DeleteCampaignWorldNoteRequest(Guid NoteId);
 public sealed record UpdateCampaignMapRequest(CampaignMapDto? Map, CampaignMapLibraryDto? Library);
 public sealed record MoveCampaignMapTokenRequest(Guid MapId, double X, double Y, long MoveRevision, CampaignMapVisionMemoryDto? VisionMemory);

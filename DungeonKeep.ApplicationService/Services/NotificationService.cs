@@ -1,6 +1,7 @@
 using System.Text.Json;
 using DungeonKeep.ApplicationService.Contracts;
 using DungeonKeep.ApplicationService.Interfaces;
+using DungeonKeep.Domain.Entities;
 
 namespace DungeonKeep.ApplicationService.Services;
 
@@ -40,5 +41,13 @@ public sealed class NotificationService(INotificationRepository notificationRepo
         var notification = await notificationRepository.GetByIdAsync(notificationId, cancellationToken);
         if (notification is null || notification.UserId != userId) return;
         await notificationRepository.DismissAsync(notificationId, cancellationToken);
+    }
+
+    public async Task AddNotificationsAsync(IEnumerable<UserNotification> notifications, CancellationToken cancellationToken = default)
+    {
+        foreach (var notification in notifications)
+        {
+            await notificationRepository.AddAsync(notification, cancellationToken);
+        }
     }
 }

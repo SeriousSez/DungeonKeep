@@ -48,6 +48,7 @@ export interface SessionPrep {
     location: string;
     objective: string;
     threat: ThreatLevel;
+    isRevealedToPlayers: boolean;
 }
 
 export interface CampaignMember {
@@ -69,6 +70,7 @@ export interface CampaignWorldNote {
     title: string;
     category: CampaignWorldNoteCategory;
     content: string;
+    isRevealedToPlayers: boolean;
 }
 
 export interface CampaignMapPoint {

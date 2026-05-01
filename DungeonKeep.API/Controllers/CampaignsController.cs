@@ -1,6 +1,7 @@
 using DungeonKeep.API.Hubs;
 using DungeonKeep.ApplicationService.Contracts;
 using DungeonKeep.ApplicationService.Interfaces;
+using DungeonKeep.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -15,7 +16,7 @@ namespace DungeonKeep.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public sealed class CampaignsController(ICampaignService campaignService, ICharacterService characterService, IAuthService authService, IHttpClientFactory httpClientFactory, IConfiguration configuration, IHubContext<CampaignHub> campaignHub, ILogger<CampaignsController> logger) : ControllerBase
+public sealed class CampaignsController(ICampaignService campaignService, ICharacterService characterService, IAuthService authService, IHttpClientFactory httpClientFactory, IConfiguration configuration, IHubContext<CampaignHub> campaignHub, IHubContext<UserHub> userHub, INotificationService notificationService, ILogger<CampaignsController> logger) : ControllerBase
 {
     private const string DefaultModel = "gpt-4.1-mini";
     private const string DefaultResponsesUrl = "https://api.openai.com/v1/responses";
@@ -226,6 +227,57 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         {
             var updated = await campaignService.UpdateSessionAsync(campaignId, sessionId, request, user.Id, cancellationToken);
             return updated is null ? NotFound("Campaign or session was not found.") : Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
+    [HttpPatch("{campaignId:guid}/sessions/{sessionId:guid}/visibility")]
+    public async Task<ActionResult<CampaignDto>> SetSessionVisibility(Guid campaignId, Guid sessionId, [FromBody] SetSessionVisibilityRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null) return Unauthorized();
+
+        try
+        {
+            var updated = await campaignService.SetSessionVisibilityAsync(campaignId, sessionId, request.IsRevealedToPlayers, user.Id, cancellationToken);
+            if (updated is null) return NotFound();
+
+            // Send notifications to non-owner campaign members when revealing
+            if (request.IsRevealedToPlayers)
+            {
+                var revealedSession = updated.Sessions.FirstOrDefault(s => s.Id == sessionId);
+                if (revealedSession is not null)
+                {
+                    var memberNotifications = updated.Members
+                        .Where(m => m.Role != "Owner" && m.UserId.HasValue)
+                        .Select(m => new UserNotification
+                        {
+                            Id = Guid.NewGuid(),
+                            UserId = m.UserId!.Value,
+                            Type = "SessionRevealed",
+                            Title = "Session Revealed",
+                            Body = $"\"{revealedSession.Title}\" has been revealed in {updated.Name}.",
+                            Link = $"/campaigns/{campaignId}/sessions/{sessionId}",
+                            MetadataJson = System.Text.Json.JsonSerializer.Serialize(new { campaignId = campaignId.ToString(), sessionId = sessionId.ToString() })
+                        })
+                        .ToList();
+
+                    if (memberNotifications.Count > 0)
+                    {
+                        await notificationService.AddNotificationsAsync(memberNotifications, cancellationToken);
+
+                        foreach (var notification in memberNotifications)
+                        {
+                            await userHub.Clients.Group($"user-{notification.UserId}").SendAsync("NewNotificationReceived", cancellationToken: cancellationToken);
+                        }
+                    }
+                }
+            }
+
+            return Ok(updated);
         }
         catch (UnauthorizedAccessException)
         {
@@ -1032,6 +1084,57 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         {
             var updated = await campaignService.UpdateWorldNoteAsync(campaignId, noteId, request, user.Id, cancellationToken);
             return updated is null ? NotFound("Campaign or world note was not found.") : Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
+    [HttpPatch("{campaignId:guid}/world-notes/{noteId:guid}/visibility")]
+    public async Task<ActionResult<CampaignDto>> SetWorldNoteVisibility(Guid campaignId, Guid noteId, [FromBody] SetWorldNoteVisibilityRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null) return Unauthorized();
+
+        try
+        {
+            var updated = await campaignService.SetWorldNoteVisibilityAsync(campaignId, noteId, request.IsRevealedToPlayers, user.Id, cancellationToken);
+            if (updated is null) return NotFound();
+
+            // Send notifications to non-owner campaign members when revealing
+            if (request.IsRevealedToPlayers)
+            {
+                var revealedNote = updated.WorldNotes.FirstOrDefault(n => n.Id == noteId);
+                if (revealedNote is not null)
+                {
+                    var memberNotifications = updated.Members
+                        .Where(m => m.Role != "Owner" && m.UserId.HasValue)
+                        .Select(m => new UserNotification
+                        {
+                            Id = Guid.NewGuid(),
+                            UserId = m.UserId!.Value,
+                            Type = "WorldNoteRevealed",
+                            Title = "World Note Revealed",
+                            Body = $"\"{revealedNote.Title}\" has been revealed in {updated.Name}.",
+                            Link = $"/campaigns/{campaignId}/notes",
+                            MetadataJson = System.Text.Json.JsonSerializer.Serialize(new { campaignId = campaignId.ToString(), noteId = noteId.ToString() })
+                        })
+                        .ToList();
+
+                    if (memberNotifications.Count > 0)
+                    {
+                        await notificationService.AddNotificationsAsync(memberNotifications, cancellationToken);
+
+                        foreach (var notification in memberNotifications)
+                        {
+                            await userHub.Clients.Group($"user-{notification.UserId}").SendAsync("NewNotificationReceived", cancellationToken: cancellationToken);
+                        }
+                    }
+                }
+            }
+
+            return Ok(updated);
         }
         catch (UnauthorizedAccessException)
         {

@@ -413,6 +413,25 @@ public sealed class CampaignService(
         return updated is null ? null : MapCampaign(updated, userId);
     }
 
+    public async Task<CampaignDto?> SetSessionVisibilityAsync(Guid campaignId, Guid sessionId, bool isRevealedToPlayers, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
+        if (campaign is null || sessionId == Guid.Empty) return null;
+
+        var updated = await campaignRepository.SetSessionVisibilityAsync(campaignId, sessionId, isRevealedToPlayers, cancellationToken);
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
+    public async Task<CampaignDto?> SetWorldNoteVisibilityAsync(Guid campaignId, Guid noteId, bool isRevealedToPlayers, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
+        if (campaign is null || noteId == Guid.Empty) return null;
+
+        var updated = await campaignRepository.SetWorldNoteVisibilityAsync(campaignId, noteId, isRevealedToPlayers, cancellationToken);
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
+
     public async Task<CampaignDto?> UpdateMapAsync(Guid campaignId, UpdateCampaignMapRequest request, Guid userId, CancellationToken cancellationToken = default)
     {
         var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
@@ -1075,6 +1094,12 @@ public sealed class CampaignService(
                 .DistinctBy(map => map.Id)
                 .ToList();
 
+        var isOwner = string.Equals(currentUserRole, "Owner", StringComparison.OrdinalIgnoreCase);
+        var allSessions = ParseSessions(campaign.SessionsJson);
+        var visibleSessions = isOwner ? allSessions : allSessions.Where(s => s.IsRevealedToPlayers).ToList();
+        var allWorldNotes = ParseWorldNotes(campaign.WorldNotesJson);
+        var visibleWorldNotes = isOwner ? allWorldNotes : allWorldNotes.Where(n => n.IsRevealedToPlayers).ToList();
+
         return new CampaignDto(
             campaign.Id,
             campaign.Name,
@@ -1087,12 +1112,12 @@ public sealed class CampaignService(
             campaign.Summary,
             campaign.CreatedAtUtc,
             campaign.CharacterAssignments.Count,
-            ParseSessions(campaign.SessionsJson),
+            visibleSessions,
             ParseNamedItems(campaign.NpcsJson),
             ParseCampaignNpcs(campaign.CampaignNpcsJson),
             ParseNamedItems(campaign.LootJson),
             ParseOpenThreads(campaign.OpenThreadsJson),
-            ParseWorldNotes(campaign.WorldNotesJson),
+            visibleWorldNotes,
             new CampaignMapDto(activeMap.Background, activeMap.BackgroundImageUrl, activeMap.GridColumns, activeMap.GridRows, activeMap.GridColor, activeMap.GridOffsetX, activeMap.GridOffsetY, activeMap.Strokes, activeMap.Walls, activeMap.Icons, activeMap.Tokens, activeMap.Decorations, activeMap.Labels, activeMap.Layers, activeMap.VisionMemory, activeMap.VisionEnabled, activeMap.MembersCanViewAnytime),
             visibleMaps,
             activeMap.Id,
@@ -1195,7 +1220,8 @@ public sealed class CampaignService(
                         session.Date.Trim(),
                         session.Location.Trim(),
                         session.Objective.Trim(),
-                        NormalizeThreat(session.Threat)))
+                        NormalizeThreat(session.Threat),
+                        session.IsRevealedToPlayers))
                     .ToList();
             }
         }
@@ -1305,7 +1331,8 @@ public sealed class CampaignService(
                         note.Id == Guid.Empty ? Guid.NewGuid() : note.Id,
                         note.Title.Trim(),
                         NormalizeWorldNoteCategory(note.Category),
-                        note.Content.Trim()))
+                        note.Content.Trim(),
+                        note.IsRevealedToPlayers))
                     .ToList();
             }
         }
@@ -1385,7 +1412,8 @@ public sealed class CampaignService(
             session.Date.Trim(),
             session.Location.Trim(),
             session.Objective.Trim(),
-            NormalizeThreat(session.Threat))));
+            NormalizeThreat(session.Threat),
+            session.IsRevealedToPlayers)));
     }
 
     private static string SerializeWorldNotes(IEnumerable<CampaignWorldNoteDto> notes)
@@ -1396,7 +1424,8 @@ public sealed class CampaignService(
                 note.Id == Guid.Empty ? Guid.NewGuid() : note.Id,
                 note.Title.Trim(),
                 NormalizeWorldNoteCategory(note.Category),
-                note.Content.Trim())));
+                note.Content.Trim(),
+                note.IsRevealedToPlayers)));
     }
 
     private static string SerializeCampaignMapLibrary(CampaignMapLibraryDto library)

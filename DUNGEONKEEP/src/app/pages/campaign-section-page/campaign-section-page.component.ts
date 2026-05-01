@@ -104,6 +104,8 @@ export class CampaignSectionPageComponent {
     readonly inviteEmail = signal('');
     readonly sectionFeedback = signal('');
     readonly isDeletingSession = signal(false);
+    readonly isTogglingSessionId = signal<string | null>(null);
+    readonly isTogglingNoteId = signal<string | null>(null);
     readonly isAddingLoot = signal(false);
     readonly isInviting = signal(false);
     readonly isSavingNote = signal(false);
@@ -969,6 +971,33 @@ export class CampaignSectionPageComponent {
             this.cdr.detectChanges();
         }
     }
+
+    async toggleSessionVisibility(sessionId: string, reveal: boolean): Promise<void> {
+        const campaign = this.selectedCampaign();
+        if (!campaign || campaign.currentUserRole !== 'Owner') return;
+
+        this.isTogglingSessionId.set(sessionId);
+        try {
+            await this.store.setSessionVisibility(campaign.id, sessionId, reveal);
+        } finally {
+            this.isTogglingSessionId.set(null);
+            this.cdr.detectChanges();
+        }
+    }
+
+    async toggleWorldNoteVisibility(noteId: string, reveal: boolean): Promise<void> {
+        const campaign = this.selectedCampaign();
+        if (!campaign || campaign.currentUserRole !== 'Owner') return;
+
+        this.isTogglingNoteId.set(noteId);
+        try {
+            await this.store.setWorldNoteVisibility(campaign.id, noteId, reveal);
+        } finally {
+            this.isTogglingNoteId.set(null);
+            this.cdr.detectChanges();
+        }
+    }
+
 
     submitThread(): void {
         const text = this.newThreadText().trim();

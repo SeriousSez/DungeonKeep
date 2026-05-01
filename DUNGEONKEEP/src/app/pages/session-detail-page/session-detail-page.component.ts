@@ -67,10 +67,12 @@ interface SessionPersistedBuilderState {
 }
 
 interface SessionLootAssignment {
-    characterId: string;
     itemName: string;
     itemCategory: string;
-    quantity: number;
+    allocations: Array<{
+        characterId: string;
+        quantity: number;
+    }>;
 }
 
 const monsterCatalogByLookupKey = new Map<string, MonsterCatalogEntry>();
@@ -121,6 +123,7 @@ export class SessionDetailPageComponent {
     readonly activeLootAssignId = signal('');
     readonly activeLootRemoveId = signal('');
     readonly lootAssignmentTargets = signal<Record<string, string>>({});
+    readonly lootAssignmentAmounts = signal<Record<string, string>>({});
     readonly lootAssignments = signal<Record<string, SessionLootAssignment>>({});
     readonly selectedSection = signal('all');
 
@@ -181,15 +184,20 @@ export class SessionDetailPageComponent {
             return [];
         }
 
-        return [
+        const facts: SessionDetailFact[] = [
             { label: 'Session', value: `#${detail.sessionNumber}` },
             { label: 'Date', value: detail.date || 'TBD' },
             { label: 'Location', value: detail.inGameLocation || 'Unrecorded' },
             { label: 'Length', value: detail.estimatedLength || 'Flexible' },
-            { label: 'Threat', value: detail.threat },
-            { label: 'Threat Source', value: detail.threatWasSetManually ? 'Manual selection' : 'Auto derived' },
-            { label: 'Source', value: this.hasRichDraft() ? 'Local draft + campaign summary' : 'Campaign summary only' }
         ];
+        if (this.canEdit()) {
+            facts.push(
+                { label: 'Threat', value: detail.threat },
+                { label: 'Threat Source', value: detail.threatWasSetManually ? 'Manual selection' : 'Auto derived' },
+                { label: 'Source', value: this.hasRichDraft() ? 'Local draft + campaign summary' : 'Campaign summary only' }
+            );
+        }
+        return facts;
     });
     readonly sectionOptions = computed<SessionSectionLink[]>(() => {
         const detail = this.sessionDetail();
@@ -291,6 +299,7 @@ export class SessionDetailPageComponent {
                 this.activeLootAssignId.set('');
                 this.activeLootRemoveId.set('');
                 this.lootAssignmentTargets.set({});
+                this.lootAssignmentAmounts.set({});
                 this.lootAssignments.set(readStoredSessionLootAssignments(campaignId, params.get('sessionId') ?? ''));
                 this.selectedSection.set('all');
                 this.cdr.detectChanges();
@@ -385,21 +394,103 @@ export class SessionDetailPageComponent {
     }
 
     hasLootAssignment(lootId: string): boolean {
-        return Boolean(this.lootAssignments()[lootId]);
+        return this.lootAssignmentTotal(lootId) > 0;
     }
 
-    assignedLootCharacterLabel(lootId: string): string {
+    lootAssignmentTotal(lootId: string): number {
         const assignment = this.lootAssignments()[lootId];
         if (!assignment) {
-            return '';
+            return 0;
         }
 
-        const assignedCharacter = this.store.characters().find((character) => character.id === assignment.characterId) ?? null;
-        if (!assignedCharacter) {
+        return assignment.allocations.reduce((total, allocation) => total + Math.max(0, Math.trunc(allocation.quantity || 0)), 0);
+    }
+
+    lootAssignmentRemaining(lootEntry: SessionEditorDraft['loot'][number]): number {
+        const totalQuantity = Number.isFinite(lootEntry.quantity) ? Math.max(1, Math.floor(lootEntry.quantity)) : 1;
+        return Math.max(0, totalQuantity - this.lootAssignmentTotal(lootEntry.id));
+    }
+
+    lootCanAssignMore(lootEntry: SessionEditorDraft['loot'][number]): boolean {
+        return this.lootAssignmentRemaining(lootEntry) > 0;
+    }
+
+    lootHasSingleQuantity(lootEntry: SessionEditorDraft['loot'][number]): boolean {
+        const totalQuantity = Number.isFinite(lootEntry.quantity) ? Math.max(1, Math.floor(lootEntry.quantity)) : 1;
+        return totalQuantity === 1;
+    }
+
+    lootAssignmentAmountValue(lootEntry: SessionEditorDraft['loot'][number]): string {
+        const remaining = this.lootAssignmentRemaining(lootEntry);
+        const draft = this.lootAssignmentAmounts()[lootEntry.id];
+        if (!draft || !draft.trim()) {
+            return remaining > 0 ? '1' : '0';
+        }
+
+        const parsed = Math.trunc(Number(draft));
+        if (!Number.isFinite(parsed)) {
+            return remaining > 0 ? '1' : '0';
+        }
+
+        if (remaining <= 0) {
+            return '0';
+        }
+
+        return String(Math.max(1, Math.min(remaining, parsed)));
+    }
+
+    setLootAssignmentAmount(lootId: string, value: string): void {
+        this.lootAssignmentAmounts.update((current) => ({
+            ...current,
+            [lootId]: value
+        }));
+    }
+
+    async assignSelectedSessionLootAmount(lootEntry: SessionEditorDraft['loot'][number]): Promise<void> {
+        const amount = Math.trunc(Number(this.lootAssignmentAmountValue(lootEntry)));
+        await this.assignSessionLootQuantityToCharacter(lootEntry, amount);
+    }
+
+    lootAssignmentRows(lootId: string): Array<{ characterId: string; label: string; quantity: number }> {
+        const assignment = this.lootAssignments()[lootId];
+        if (!assignment) {
+            return [];
+        }
+
+        return assignment.allocations
+            .map((allocation) => {
+                const character = this.store.characters().find((item) => item.id === allocation.characterId) ?? null;
+
+                return {
+                    characterId: allocation.characterId,
+                    label: character?.name ?? 'Unknown character',
+                    quantity: Math.max(0, Math.trunc(allocation.quantity || 0))
+                };
+            })
+            .filter((row) => row.quantity > 0);
+    }
+
+    lootAssignedSummaryLabel(lootEntry: SessionEditorDraft['loot'][number]): string {
+        const totalAssigned = this.lootAssignmentTotal(lootEntry.id);
+        if (totalAssigned <= 0) {
+            return 'Not assigned';
+        }
+
+        const totalQuantity = Number.isFinite(lootEntry.quantity) ? Math.max(1, Math.floor(lootEntry.quantity)) : 1;
+        const remaining = Math.max(0, totalQuantity - totalAssigned);
+        const assignedLabel = totalAssigned === 1 ? '1 assigned' : `${totalAssigned} assigned`;
+        const remainingLabel = remaining === 1 ? '1 remaining' : `${remaining} remaining`;
+
+        return `${assignedLabel} · ${remainingLabel}`;
+    }
+
+    singleQuantityAssignedLabel(lootId: string): string {
+        const rows = this.lootAssignmentRows(lootId);
+        if (rows.length === 0) {
             return 'Assigned';
         }
 
-        return `Assigned to ${assignedCharacter.name}`;
+        return `Assigned to ${rows[0].label}`;
     }
 
     lootAssignmentTarget(lootId: string): string {
@@ -586,18 +677,36 @@ export class SessionDetailPageComponent {
     }
 
     async assignSessionLootToCharacter(lootEntry: SessionEditorDraft['loot'][number]): Promise<void> {
+        await this.assignSessionLootQuantityToCharacter(lootEntry, 1);
+    }
+
+    async assignAllRemainingSessionLootToCharacter(lootEntry: SessionEditorDraft['loot'][number]): Promise<void> {
+        await this.assignSessionLootQuantityToCharacter(lootEntry, this.lootAssignmentRemaining(lootEntry));
+    }
+
+    private async assignSessionLootQuantityToCharacter(
+        lootEntry: SessionEditorDraft['loot'][number],
+        requestedQuantity: number
+    ): Promise<void> {
         const selectedCharacterId = this.lootAssignmentTarget(lootEntry.id);
         const selectedCharacter = this.partyCharacters().find((character) => character.id === selectedCharacterId) ?? null;
         const trimmedName = lootEntry.name.trim();
         const category = lootEntry.type.trim() || 'Session Loot';
-        const quantity = Number.isFinite(lootEntry.quantity) ? Math.max(1, Math.floor(lootEntry.quantity)) : 1;
         const notes = lootEntry.notes.trim() || undefined;
+        const remaining = this.lootAssignmentRemaining(lootEntry);
+        const quantityToAssign = Math.max(0, Math.min(remaining, Math.trunc(requestedQuantity || 0)));
 
         if (!this.canEdit() || !selectedCharacter || !trimmedName) {
             return;
         }
 
-        if (this.hasLootAssignment(lootEntry.id)) {
+        if (quantityToAssign <= 0) {
+            this.interactionError.set('All copies of this loot item are already assigned.');
+            return;
+        }
+
+        if (!this.lootCanAssignMore(lootEntry)) {
+            this.interactionError.set('All copies of this loot item are already assigned.');
             return;
         }
 
@@ -617,7 +726,7 @@ export class SessionDetailPageComponent {
                 inventoryEntries: this.mergeInventoryEntry(parsed.state.inventoryEntries ?? [], {
                     name: trimmedName,
                     category,
-                    quantity,
+                    quantity: quantityToAssign,
                     notes,
                     isContainer: false,
                     containedItems: []
@@ -631,29 +740,52 @@ export class SessionDetailPageComponent {
                 return;
             }
 
-            this.lootAssignments.update((current) => ({
-                ...current,
-                [lootEntry.id]: {
-                    characterId: selectedCharacter.id,
-                    itemName: trimmedName,
-                    itemCategory: category,
-                    quantity
+            this.lootAssignments.update((current) => {
+                const existing = current[lootEntry.id];
+                const nextAllocations = existing?.allocations?.map((allocation) => ({ ...allocation })) ?? [];
+                const matchingIndex = nextAllocations.findIndex((allocation) => allocation.characterId === selectedCharacter.id);
+
+                if (matchingIndex === -1) {
+                    nextAllocations.push({
+                        characterId: selectedCharacter.id,
+                        quantity: quantityToAssign
+                    });
+                } else {
+                    nextAllocations[matchingIndex] = {
+                        ...nextAllocations[matchingIndex],
+                        quantity: Math.max(0, Math.trunc(nextAllocations[matchingIndex].quantity || 0)) + quantityToAssign
+                    };
                 }
-            }));
+
+                return {
+                    ...current,
+                    [lootEntry.id]: {
+                        itemName: trimmedName,
+                        itemCategory: category,
+                        allocations: nextAllocations
+                    }
+                };
+            });
             this.persistSessionLootAssignments();
 
-            this.interactionMessage.set(quantity === 1
-                ? `${trimmedName} assigned to ${selectedCharacter.name}.`
-                : `${quantity} x ${trimmedName} assigned to ${selectedCharacter.name}.`);
+            const updatedRemaining = this.lootAssignmentRemaining(lootEntry);
+            this.interactionMessage.set(quantityToAssign === 1
+                ? `${trimmedName} assigned to ${selectedCharacter.name}. ${updatedRemaining} remaining.`
+                : `${quantityToAssign} x ${trimmedName} assigned to ${selectedCharacter.name}. ${updatedRemaining} remaining.`);
         } finally {
             this.activeLootAssignId.set('');
             this.cdr.detectChanges();
         }
     }
 
-    async removeSessionLootAssignment(lootEntry: SessionEditorDraft['loot'][number]): Promise<void> {
+    async removeSessionLootAssignment(lootEntry: SessionEditorDraft['loot'][number], characterId: string): Promise<void> {
         const assignment = this.lootAssignments()[lootEntry.id];
         if (!assignment) {
+            return;
+        }
+
+        const targetAllocation = assignment.allocations.find((allocation) => allocation.characterId === characterId);
+        if (!targetAllocation || targetAllocation.quantity <= 0) {
             return;
         }
 
@@ -661,9 +793,9 @@ export class SessionDetailPageComponent {
             return;
         }
 
-        const assignedCharacter = this.store.characters().find((character) => character.id === assignment.characterId) ?? null;
+        const assignedCharacter = this.store.characters().find((character) => character.id === characterId) ?? null;
         if (!assignedCharacter) {
-            this.clearLootAssignment(lootEntry.id);
+            this.removeLootAllocation(lootEntry.id, characterId, 1);
             this.interactionError.set('The assigned character is no longer available. Assignment was cleared.');
             this.cdr.detectChanges();
             return;
@@ -682,7 +814,7 @@ export class SessionDetailPageComponent {
                     parsed.state.inventoryEntries ?? [],
                     assignment.itemName,
                     assignment.itemCategory,
-                    assignment.quantity
+                    1
                 )
             };
             const updatedNotes = this.createPersistedNotesString(assignedCharacter.notes ?? '', nextState);
@@ -693,8 +825,8 @@ export class SessionDetailPageComponent {
                 return;
             }
 
-            this.clearLootAssignment(lootEntry.id);
-            this.interactionMessage.set(`Removed assigned loot from ${assignedCharacter.name}.`);
+            this.removeLootAllocation(lootEntry.id, characterId, 1);
+            this.interactionMessage.set(`Removed one assigned ${assignment.itemName} from ${assignedCharacter.name}.`);
         } finally {
             this.activeLootRemoveId.set('');
             this.cdr.detectChanges();
@@ -1187,6 +1319,45 @@ export class SessionDetailPageComponent {
         this.persistSessionLootAssignments();
     }
 
+    private removeLootAllocation(lootId: string, characterId: string, quantityToRemove: number): void {
+        const safeQuantity = Math.max(1, Math.trunc(quantityToRemove || 1));
+
+        this.lootAssignments.update((current) => {
+            const assignment = current[lootId];
+            if (!assignment) {
+                return current;
+            }
+
+            const nextAllocations = assignment.allocations
+                .map((allocation) => {
+                    if (allocation.characterId !== characterId) {
+                        return allocation;
+                    }
+
+                    return {
+                        ...allocation,
+                        quantity: Math.max(0, Math.trunc(allocation.quantity || 0) - safeQuantity)
+                    };
+                })
+                .filter((allocation) => allocation.quantity > 0);
+
+            if (nextAllocations.length === 0) {
+                const { [lootId]: _removedAssignment, ...remaining } = current;
+                return remaining;
+            }
+
+            return {
+                ...current,
+                [lootId]: {
+                    ...assignment,
+                    allocations: nextAllocations
+                }
+            };
+        });
+
+        this.persistSessionLootAssignments();
+    }
+
     private persistSessionLootAssignments(): void {
         persistStoredSessionLootAssignments(this.campaignId(), this.sessionId(), this.lootAssignments());
     }
@@ -1207,8 +1378,64 @@ function readStoredSessionLootAssignments(campaignId: string, sessionId: string)
     }
 
     try {
-        const parsed = JSON.parse(raw) as Record<string, SessionLootAssignment>;
-        return parsed && typeof parsed === 'object' ? parsed : {};
+        const parsed = JSON.parse(raw) as Record<string, SessionLootAssignment | { characterId: string; itemName: string; itemCategory: string; quantity: number }>;
+        if (!parsed || typeof parsed !== 'object') {
+            return {};
+        }
+
+        const normalized: Record<string, SessionLootAssignment> = {};
+
+        for (const [lootId, value] of Object.entries(parsed)) {
+            if (!value || typeof value !== 'object') {
+                continue;
+            }
+
+            const itemName = 'itemName' in value && typeof value.itemName === 'string' ? value.itemName : '';
+            const itemCategory = 'itemCategory' in value && typeof value.itemCategory === 'string' ? value.itemCategory : '';
+            if (!itemName.trim() || !itemCategory.trim()) {
+                continue;
+            }
+
+            if ('allocations' in value && Array.isArray(value.allocations)) {
+                const allocations = value.allocations
+                    .filter((allocation) => allocation && typeof allocation.characterId === 'string')
+                    .map((allocation) => ({
+                        characterId: allocation.characterId,
+                        quantity: Math.max(0, Math.trunc(Number(allocation.quantity) || 0))
+                    }))
+                    .filter((allocation) => allocation.quantity > 0);
+
+                if (allocations.length > 0) {
+                    normalized[lootId] = {
+                        itemName,
+                        itemCategory,
+                        allocations
+                    };
+                }
+
+                continue;
+            }
+
+            if ('characterId' in value && typeof value.characterId === 'string') {
+                const quantity = Math.max(0, Math.trunc(Number(value.quantity) || 0));
+                if (!value.characterId || quantity <= 0) {
+                    continue;
+                }
+
+                normalized[lootId] = {
+                    itemName,
+                    itemCategory,
+                    allocations: [
+                        {
+                            characterId: value.characterId,
+                            quantity
+                        }
+                    ]
+                };
+            }
+        }
+
+        return normalized;
     } catch {
         window.localStorage.removeItem(buildSessionLootAssignmentStorageKey(campaignId, sessionId));
         return {};

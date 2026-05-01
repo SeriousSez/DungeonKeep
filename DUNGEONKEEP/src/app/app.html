@@ -178,5 +178,22 @@
     <router-outlet />
 </main>
 
+@if (isLiveNotificationVisible() && liveNotification(); as notification) {
+<aside class="live-notification-toast" role="status" aria-live="polite" aria-atomic="true">
+    <button class="live-notification-toast__card" type="button" (click)="openLiveNotification()">
+        <span class="live-notification-toast__icon" aria-hidden="true">
+            <i class="fa-duotone fa-thin" [class]="'fa-' + iconForLiveNotification(notification.type)"></i>
+        </span>
+        <span class="live-notification-toast__content">
+            <span class="live-notification-toast__title">{{ notification.title }}</span>
+            <span class="live-notification-toast__body">{{ notification.body }}</span>
+        </span>
+    </button>
+    <button class="live-notification-toast__dismiss" type="button" (click)="$event.stopPropagation(); closeLiveNotificationToast()" [attr.aria-label]="notification.title">
+        <i class="fa-duotone fa-thin fa-xmark"></i>
+    </button>
+</aside>
+}
+
 <app-dnd-chat-widget />
 }

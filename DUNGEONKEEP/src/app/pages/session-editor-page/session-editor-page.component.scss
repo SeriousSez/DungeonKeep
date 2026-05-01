@@ -44,6 +44,7 @@
 .page-stack {
     display: grid;
     gap: 24px;
+    padding-bottom: 28px;
 }
 
 .panel {
@@ -260,6 +261,12 @@
 .field-error {
     color: #a33a2a;
     font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.field-tip {
+    color: var(--text-muted);
+    font-size: 0.6rem;
     font-weight: 600;
 }
 

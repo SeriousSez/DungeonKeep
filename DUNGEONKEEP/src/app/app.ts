@@ -1,15 +1,27 @@
 import { CommonModule, DOCUMENT } from '@angular/common';
-import { Component, computed, effect, HostListener, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectorRef, Component, DestroyRef, computed, effect, HostListener, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { DungeonStoreService } from './state/dungeon-store.service';
 import { BreadcrumbComponent } from './components/breadcrumb/breadcrumb.component';
 import { DndChatWidgetComponent } from './components/dnd-chat-widget/dnd-chat-widget.component';
 import { CampaignRealtimeService } from './state/campaign-realtime.service';
+import { ApiNotificationDto, DungeonApiService } from './state/dungeon-api.service';
 import { SessionService } from './state/session.service';
 import { ThemeService } from './state/theme.service';
 import { CompactModeService } from './state/compact-mode.service';
 import { NotificationBadgeService } from './state/notification-badge.service';
+import { UserHubService } from './state/user-hub.service';
 import { rulesBrowseLinks, rulesResourceLinks } from './data/rules-links';
+
+const LIVE_NOTIFICATION_ICONS: Record<string, string> = {
+  CampaignInvite: 'scroll',
+  CharacterApproved: 'user-check',
+  SessionScheduled: 'calendar',
+  NewMessage: 'message-dots',
+  SessionRevealed: 'scroll-quill',
+  WorldNoteRevealed: 'book-open'
+};
 
 @Component({
   selector: 'app-root',
@@ -22,19 +34,28 @@ export class App {
   readonly store = inject(DungeonStoreService);
   readonly session = inject(SessionService);
   private readonly campaignRealtime = inject(CampaignRealtimeService);
+  private readonly api = inject(DungeonApiService);
+  private readonly userHub = inject(UserHubService);
   private readonly theme = inject(ThemeService);
   private readonly compactMode = inject(CompactModeService);
   readonly notificationBadge = inject(NotificationBadgeService);
   private readonly document = inject(DOCUMENT);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly router = inject(Router);
   readonly mobileNavOpen = signal(false);
   readonly openDropdown = signal<string | null>(null);
   readonly userMenuOpen = signal(false);
+  readonly liveNotification = signal<ApiNotificationDto | null>(null);
+  readonly isLiveNotificationVisible = signal(false);
   readonly currentUser = computed(() => this.session.currentUser());
   readonly isInitialized = computed(() => this.session.initialized());
   readonly rulesBrowseLinks = rulesBrowseLinks;
   readonly rulesResourceLinks = rulesResourceLinks;
+  readonly iconForLiveNotification = (type: string) => LIVE_NOTIFICATION_ICONS[type] ?? 'bell';
   private previousUserId: string | null = null;
+  private readonly seenNotificationIds = new Set<string>();
+  private toastDismissTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     effect(() => {
@@ -69,6 +90,123 @@ export class App {
 
       this.previousUserId = userId;
     });
+
+    effect(() => {
+      const userId = this.currentUser()?.id ?? '';
+      void this.hydrateSeenNotifications(userId);
+    });
+
+    this.userHub.newNotificationReceived$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => void this.showIncomingNotificationToast());
+  }
+
+  private async hydrateSeenNotifications(userId: string): Promise<void> {
+    this.clearToastTimer();
+    this.liveNotification.set(null);
+    this.isLiveNotificationVisible.set(false);
+    this.seenNotificationIds.clear();
+
+    if (!userId) {
+      this.cdr.detectChanges();
+      return;
+    }
+
+    try {
+      const notifications = await this.api.getNotifications();
+      for (const notification of notifications) {
+        if (!notification.isRead) {
+          this.seenNotificationIds.add(notification.id);
+        }
+      }
+    } catch {
+      // Ignore hydration failures and continue with live events.
+    } finally {
+      this.cdr.detectChanges();
+    }
+  }
+
+  private async showIncomingNotificationToast(): Promise<void> {
+    if (!this.currentUser()) {
+      return;
+    }
+
+    try {
+      const notifications = await this.api.getNotifications();
+      const incoming = notifications.find(notification => !notification.isRead && !this.seenNotificationIds.has(notification.id));
+      if (!incoming) {
+        return;
+      }
+
+      this.seenNotificationIds.add(incoming.id);
+      this.liveNotification.set(incoming);
+      this.isLiveNotificationVisible.set(true);
+      this.playNotificationSound();
+      this.startToastDismissTimer();
+    } catch {
+      // Ignore toast fetch failures.
+    } finally {
+      this.cdr.detectChanges();
+    }
+  }
+
+  private playNotificationSound(): void {
+    try {
+      const audio = new Audio('assets/sounds/notification.mp3');
+      audio.volume = 0.6;
+      void audio.play();
+    } catch {
+      // Ignore audio failures (e.g. browser autoplay policy).
+    }
+  }
+
+  private startToastDismissTimer(): void {
+    this.clearToastTimer();
+    this.toastDismissTimer = setTimeout(() => {
+      this.liveNotification.set(null);
+      this.isLiveNotificationVisible.set(false);
+      this.cdr.detectChanges();
+    }, 8000);
+  }
+
+  private clearToastTimer(): void {
+    if (!this.toastDismissTimer) {
+      return;
+    }
+
+    clearTimeout(this.toastDismissTimer);
+    this.toastDismissTimer = null;
+  }
+
+  closeLiveNotificationToast(): void {
+    this.clearToastTimer();
+    this.liveNotification.set(null);
+    this.isLiveNotificationVisible.set(false);
+  }
+
+  async openLiveNotification(): Promise<void> {
+    const notification = this.liveNotification();
+    if (!notification) {
+      return;
+    }
+
+    this.closeLiveNotificationToast();
+
+    if (!notification.isRead) {
+      try {
+        await this.api.markNotificationRead(notification.id);
+        this.notificationBadge.decrement();
+      } catch {
+        // Ignore mark-read failures and still navigate.
+      }
+    }
+
+    if (notification.link) {
+      await this.router.navigateByUrl(notification.link);
+      return;
+    }
+
+    await this.router.navigateByUrl('/notifications');
   }
 
   private getCurrentUrl(): string {
@@ -146,6 +284,7 @@ export class App {
   }
 
   logout(): void {
+    this.closeLiveNotificationToast();
     this.cleanupDetachedModalHosts();
     this.session.logout();
     this.closeMobileNav();

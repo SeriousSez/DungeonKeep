@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { extractApiError } from '../../state/extract-api-error';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { ApiNotificationDto, DungeonApiService } from '../../state/dungeon-api.service';
 import { UserHubService } from '../../state/user-hub.service';
 import { NotificationBadgeService } from '../../state/notification-badge.service';
@@ -11,6 +11,8 @@ const NOTIFICATION_ICONS: Record<string, string> = {
     CharacterApproved: 'user-check',
     SessionScheduled: 'calendar',
     NewMessage: 'message-dots',
+    SessionRevealed: 'scroll-quill',
+    WorldNoteRevealed: 'book-open',
 };
 
 @Component({
@@ -26,6 +28,7 @@ export class NotificationsPageComponent implements OnInit {
     private readonly api = inject(DungeonApiService);
     private readonly cdr = inject(ChangeDetectorRef);
     readonly destroyRef = inject(DestroyRef);
+    private readonly router = inject(Router);
     private readonly userHub = inject(UserHubService);
     private readonly badge = inject(NotificationBadgeService);
 
@@ -137,6 +140,11 @@ export class NotificationsPageComponent implements OnInit {
         }
     }
 
+    async navigateToNotification(notif: ApiNotificationDto): Promise<void> {
+        if (!notif.link) return;
+        await this.markRead(notif.id);
+        this.router.navigateByUrl(notif.link);
+    }
     formatDate(isoString: string): string {
         const date = new Date(isoString);
         const now = new Date();

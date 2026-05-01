@@ -75,6 +75,7 @@ export interface ApiCampaignSessionDto {
     location: string;
     objective: string;
     threat: 'Low' | 'Moderate' | 'High' | 'Deadly';
+    isRevealedToPlayers: boolean;
 }
 
 export interface ApiCampaignNpcRelationshipDto {
@@ -99,6 +100,7 @@ export interface ApiCampaignWorldNoteDto {
     title: string;
     category: 'Backstory' | 'Organization' | 'Ally' | 'Enemy' | 'Location' | 'Lore' | 'Custom';
     content: string;
+    isRevealedToPlayers: boolean;
 }
 
 export interface ApiCampaignMapDto {
@@ -1003,6 +1005,14 @@ export class DungeonApiService {
 
     async deleteCampaignWorldNote(campaignId: string, noteId: string): Promise<ApiCampaignDto> {
         return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/world-notes/${noteId}/delete`, {}));
+    }
+
+    async setSessionVisibility(campaignId: string, sessionId: string, isRevealedToPlayers: boolean): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.patch<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/sessions/${sessionId}/visibility`, { isRevealedToPlayers }));
+    }
+
+    async setWorldNoteVisibility(campaignId: string, noteId: string, isRevealedToPlayers: boolean): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.patch<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/world-notes/${noteId}/visibility`, { isRevealedToPlayers }));
     }
 
     async updateCampaignMap(campaignId: string, payload: ApiCampaignMapLibraryDto): Promise<ApiCampaignDto> {

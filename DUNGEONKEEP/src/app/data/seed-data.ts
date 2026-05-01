@@ -25,7 +25,8 @@ export const seedCampaigns: Campaign[] = [
                 date: '2026-03-29',
                 location: 'Redglass Keep',
                 objective: 'Win the trust of the regent and identify the court saboteur.',
-                threat: 'Moderate'
+                threat: 'Moderate',
+                isRevealedToPlayers: false
             },
             {
                 id: 'embers-2',
@@ -33,7 +34,8 @@ export const seedCampaigns: Campaign[] = [
                 date: '2026-04-12',
                 location: 'The Cinder Vault',
                 objective: 'Seal the breach before the ash wyrmlings hatch.',
-                threat: 'Deadly'
+                threat: 'Deadly',
+                isRevealedToPlayers: false
             }
         ],
         openThreads: [
@@ -53,13 +55,15 @@ export const seedCampaigns: Campaign[] = [
                 id: 'note-embers-1',
                 title: 'Ash Oath of House Veyr',
                 category: 'Backstory',
-                content: 'The royal house survived the dragon siege by swearing a hidden ash oath to the furnace spirit below Redglass Keep. Only the regent, the ember cathedral, and a vanished court historian know the exact terms.'
+                content: 'The royal house survived the dragon siege by swearing a hidden ash oath to the furnace spirit below Redglass Keep. Only the regent, the ember cathedral, and a vanished court historian know the exact terms.',
+                isRevealedToPlayers: false
             },
             {
                 id: 'note-embers-2',
                 title: 'Soot Market Brokers',
                 category: 'Organization',
-                content: 'Independent soot brokers trade in salvage, rumors, and warded relic fragments. Rook acts as the least loyal but most informed fixer among them.'
+                content: 'Independent soot brokers trade in salvage, rumors, and warded relic fragments. Rook acts as the least loyal but most informed fixer among them.',
+                isRevealedToPlayers: false
             }
         ],
         map: {
@@ -175,7 +179,8 @@ export const seedCampaigns: Campaign[] = [
                 date: '2026-04-05',
                 location: 'Harbor of Saint Vey',
                 objective: 'Outbid the ghost cartel for the ledger key.',
-                threat: 'High'
+                threat: 'High',
+                isRevealedToPlayers: false
             }
         ],
         openThreads: [
@@ -195,7 +200,8 @@ export const seedCampaigns: Campaign[] = [
                 id: 'note-moonwake-1',
                 title: 'The Ledger Choir',
                 category: 'Enemy',
-                content: 'A circle of ghost accountants sings altered debts into storm-soaked ledgers. Their rewritten records can shift inheritance, titles, and civic authority overnight.'
+                content: 'A circle of ghost accountants sings altered debts into storm-soaked ledgers. Their rewritten records can shift inheritance, titles, and civic authority overnight.',
+                isRevealedToPlayers: false
             }
         ],
         map: {
@@ -312,7 +318,8 @@ export const seedCampaigns: Campaign[] = [
                 date: '2026-04-18',
                 location: 'Bramble Market',
                 objective: 'Rescue the missing pie judge from a bargain circle.',
-                threat: 'Low'
+                threat: 'Low',
+                isRevealedToPlayers: false
             }
         ],
         openThreads: [
@@ -327,7 +334,8 @@ export const seedCampaigns: Campaign[] = [
                 id: 'note-wild-1',
                 title: 'Rootmaze Bargains',
                 category: 'Lore',
-                content: 'The underworld below the orchards trades in memories, festival songs, and unfinished promises. Anything offered there returns changed.'
+                content: 'The underworld below the orchards trades in memories, festival songs, and unfinished promises. Anything offered there returns changed.',
+                isRevealedToPlayers: false
             }
         ],
         map: {

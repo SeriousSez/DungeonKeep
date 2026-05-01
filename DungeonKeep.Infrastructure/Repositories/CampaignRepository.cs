@@ -287,6 +287,27 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         return await GetByIdAsync(campaignId, cancellationToken);
     }
 
+    public async Task<Campaign?> SetSessionVisibilityAsync(Guid campaignId, Guid sessionId, bool isRevealedToPlayers, CancellationToken cancellationToken = default)
+    {
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        if (campaign is null) return null;
+
+        var sessions = ParseSessions(campaign.SessionsJson);
+        var updated = false;
+        for (var i = 0; i < sessions.Count; i++)
+        {
+            if (sessions[i].Id != sessionId) continue;
+            sessions[i] = sessions[i] with { IsRevealedToPlayers = isRevealedToPlayers };
+            updated = true;
+            break;
+        }
+        if (!updated) return null;
+
+        campaign.SessionsJson = JsonSerializer.Serialize(sessions); 
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return await GetByIdAsync(campaignId, cancellationToken);
+    }
+
     public async Task<Campaign?> AddNpcAsync(Guid campaignId, string name, CancellationToken cancellationToken = default)
     {
         return await UpdateNamedCollectionAsync(campaignId, collection =>
@@ -597,6 +618,27 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         }
 
         campaign.WorldNotesJson = JsonSerializer.Serialize(updatedNotes);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return await GetByIdAsync(campaignId, cancellationToken);
+    }
+
+    public async Task<Campaign?> SetWorldNoteVisibilityAsync(Guid campaignId, Guid noteId, bool isRevealedToPlayers, CancellationToken cancellationToken = default)
+    {
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        if (campaign is null) return null;
+
+        var notes = ParseWorldNotes(campaign.WorldNotesJson);
+        var updated = false;
+        for (var i = 0; i < notes.Count; i++)
+        {
+            if (notes[i].Id != noteId) continue;
+            notes[i] = notes[i] with { IsRevealedToPlayers = isRevealedToPlayers };
+            updated = true;
+            break;
+        }
+        if (!updated) return null;
+
+        campaign.WorldNotesJson = JsonSerializer.Serialize(notes);
         await dbContext.SaveChangesAsync(cancellationToken);
         return await GetByIdAsync(campaignId, cancellationToken);
     }
@@ -1022,7 +1064,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                     note.Id == Guid.Empty ? Guid.NewGuid() : note.Id,
                     note.Title.Trim(),
                     NormalizeWorldNoteCategory(note.Category),
-                    note.Content.Trim()))
+                    note.Content.Trim(),
+                    note.IsRevealedToPlayers))
                 .ToList();
         }
         catch
@@ -1290,7 +1333,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                     session.Date.Trim(),
                     session.Location.Trim(),
                     session.Objective.Trim(),
-                    NormalizeThreat(session.Threat)))
+                    NormalizeThreat(session.Threat),
+                    session.IsRevealedToPlayers))
                 .ToList();
         }
         catch
@@ -1703,6 +1747,6 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
     }
 
     private sealed record PersistedCampaignThread(Guid Id, string Text, string Visibility);
-    private sealed record PersistedCampaignWorldNote(Guid Id, string Title, string Category, string Content);
-    private sealed record PersistedCampaignSession(Guid Id, string Title, string Date, string Location, string Objective, string Threat);
+    private sealed record PersistedCampaignWorldNote(Guid Id, string Title, string Category, string Content, bool IsRevealedToPlayers = false);
+    private sealed record PersistedCampaignSession(Guid Id, string Title, string Date, string Location, string Objective, string Threat, bool IsRevealedToPlayers = false);
 }

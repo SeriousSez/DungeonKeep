@@ -5,6 +5,7 @@
 .page-stack {
     display: grid;
     gap: 24px;
+    padding-bottom: 28px;
 }
 
 .panel {
@@ -256,9 +257,30 @@
     align-items: stretch;
 }
 
+.loot-assignment-row--assigned {
+    margin-top: 0;
+}
+
 .loot-assignment-dropdown {
     min-width: 220px;
     flex: 1 1 240px;
+}
+
+.loot-assignment-amount {
+    width: 92px;
+    min-height: 42px;
+    padding: 0 10px;
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--surface-raised) 94%, transparent);
+    color: var(--text-main);
+    font: inherit;
+}
+
+.loot-assignment-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 8px;
 }
 
 .monster-quick-stats {

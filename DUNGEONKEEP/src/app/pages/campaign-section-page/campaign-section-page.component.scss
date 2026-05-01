@@ -372,7 +372,8 @@
 .role-badge,
 .session-threat-pill,
 .member-status-pill,
-.thread-visibility-pill {
+.thread-visibility-pill,
+.visibility-pill {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -385,6 +386,13 @@
     font-size: 0.82rem;
     font-weight: 600;
     white-space: nowrap;
+}
+
+.visibility-pill--hidden {
+    background: color-mix(in srgb, var(--surface-raised) 60%, transparent 40%);
+    color: var(--text-muted, var(--text-main));
+    border-style: dashed;
+    opacity: 0.75;
 }
 
 .session-card-header,

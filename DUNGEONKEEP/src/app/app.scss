@@ -600,6 +600,106 @@
     padding: 0 clamp(8px, 2vw, 20px);
 }
 
+// ── Live notification toast ──────────────────────────────────────────────────
+.live-notification-toast {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    width: min(390px, calc(100vw - 20px));
+    z-index: 22000;
+    display: block;
+    border-radius: 14px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(18px);
+    animation: liveToastIn 180ms ease-out;
+}
+
+.live-notification-toast__card {
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    align-items: start;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    padding: 12px 44px 12px 12px;
+    cursor: pointer;
+}
+
+.live-notification-toast__card:hover {
+    background: color-mix(in srgb, var(--surface-raised) 62%, transparent);
+}
+
+.live-notification-toast__icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-primary);
+    border: 1px solid var(--pill-border);
+    background: color-mix(in srgb, var(--pill-bg) 86%, var(--accent-primary) 14%);
+    flex-shrink: 0;
+}
+
+.live-notification-toast__content {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.live-notification-toast__title {
+    color: var(--text-main);
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.live-notification-toast__body {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.42;
+}
+
+.live-notification-toast__dismiss {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-soft);
+    cursor: pointer;
+}
+
+.live-notification-toast__dismiss:hover {
+    border-color: var(--pill-border);
+    background: color-mix(in srgb, var(--surface-raised) 60%, transparent);
+    color: var(--text-main);
+}
+
+@keyframes liveToastIn {
+    from {
+        opacity: 0;
+        transform: translate3d(0, -8px, 0);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
 // ── Breadcrumb host ───────────────────────────────────────────────────────────
 :host ::ng-deep app-breadcrumb {
     display: block;
@@ -751,6 +851,13 @@
 
     .shell {
         padding: 0 4px;
+    }
+
+    .live-notification-toast {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        width: auto;
     }
 }
 

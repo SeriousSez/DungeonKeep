@@ -716,6 +716,34 @@ export class DungeonStoreService {
         }
     }
 
+    async setSessionVisibility(campaignId: string, sessionId: string, isRevealedToPlayers: boolean): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
+        try {
+            const updated = await this.api.setSessionVisibility(campaignId, sessionId, isRevealedToPlayers);
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async setWorldNoteVisibility(campaignId: string, noteId: string, isRevealedToPlayers: boolean): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
+        try {
+            const updated = await this.api.setWorldNoteVisibility(campaignId, noteId, isRevealedToPlayers);
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     async updateCampaignMap(campaignId: string, payload: { activeMapId: string; maps: CampaignMapBoard[] }): Promise<boolean> {
         if (!this.canManageCampaignContent(campaignId)) {
             return false;
@@ -1233,7 +1261,8 @@ export class DungeonStoreService {
                 date: session.date,
                 location: session.location,
                 objective: session.objective,
-                threat: session.threat
+                threat: session.threat,
+                isRevealedToPlayers: session.isRevealedToPlayers ?? false
             })),
             openThreads: (campaign.openThreads ?? []).map((thread) => ({
                 id: thread.id,
@@ -1244,7 +1273,8 @@ export class DungeonStoreService {
                 id: note.id,
                 title: note.title,
                 category: this.normalizeWorldNoteCategory(note.category),
-                content: note.content
+                content: note.content,
+                isRevealedToPlayers: note.isRevealedToPlayers ?? false
             })),
             map: this.mapCampaignMapFromApi(activeMap),
             maps,
