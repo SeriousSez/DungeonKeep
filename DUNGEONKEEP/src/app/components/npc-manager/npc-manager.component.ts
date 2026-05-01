@@ -1,13 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { ApiGenerateNpcDraftResponse, DungeonApiService } from '../../state/dungeon-api.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 import { cloneNpcForCampaign, createDefaultNpc, duplicateNpc, filterAndSortNpcs, hasNpcNameConflict, mergeCampaignNpcSources, sanitizeNpc, touchNpc } from '../../data/campaign-npc.helpers';
-import { clearCampaignNpcDrafts, clearNpcLibrary, loadCampaignNpcDrafts, loadNpcLibrary, saveCampaignNpcDrafts, saveNpcLibrary } from '../../data/campaign-npc.storage';
 import { CampaignNpc, NpcFilters, NpcSortField } from '../../models/campaign-npc.models';
 import { DropdownOption } from '../dropdown/dropdown.component';
 import { MultiSelectOptionGroup } from '../multi-select-dropdown/multi-select-dropdown.component';
@@ -81,7 +80,7 @@ export class NpcManagerComponent {
         const usage = new Map<string, Set<string>>();
 
         for (const campaign of this.store.campaigns()) {
-            const mergedDrafts = mergeCampaignNpcSources(campaign.npcs, campaign.campaignNpcs ?? [], loadCampaignNpcDrafts(campaign.id) ?? []);
+            const mergedDrafts = mergeCampaignNpcSources(campaign.npcs, campaign.campaignNpcs ?? [], []);
 
             for (const npc of mergedDrafts) {
                 const normalizedName = this.normalizeNpcName(npc.name);
@@ -143,7 +142,7 @@ export class NpcManagerComponent {
 
     constructor() {
         effect(() => {
-            const storedLibrary = (loadNpcLibrary() ?? []).map((npc) => sanitizeNpc(npc));
+            const storedLibrary = (this.store.userNpcLibrary() ?? []).map((npc) => sanitizeNpc(npc as CampaignNpc));
             this.libraryNpcs.set(storedLibrary);
         });
 
@@ -155,7 +154,7 @@ export class NpcManagerComponent {
             if (libraryMode) {
                 const library = [...this.libraryNpcs()];
                 this.allNpcs.set(library);
-                const selectedNpcId = this.selectedNpcId();
+                const selectedNpcId = untracked(() => this.selectedNpcId());
                 if (!selectedNpcId || !library.some((npc) => npc.id === selectedNpcId)) {
                     this.selectedNpcId.set(library[0]?.id ?? null);
                 }
@@ -170,20 +169,11 @@ export class NpcManagerComponent {
             }
 
             const campaign = this.store.campaigns().find((entry) => entry.id === campaignId) ?? null;
-            const stored = loadCampaignNpcDrafts(campaignId) ?? [];
-            const merged = mergeCampaignNpcSources(names, campaign?.campaignNpcs ?? [], stored);
-
-            // Persist immediately if any NPCs were newly created from legacy names.
-            // Without this, each effect re-run regenerates random UUIDs for legacy NPCs,
-            // causing selectedNpcId to never match and looping indefinitely.
-            const storedIds = new Set(stored.map((s) => s.id));
-            if (merged.some((npc) => !storedIds.has(npc.id))) {
-                saveCampaignNpcDrafts(campaignId, merged);
-            }
+            const merged = mergeCampaignNpcSources(names, campaign?.campaignNpcs ?? [], []);
 
             this.allNpcs.set(merged);
 
-            const selectedNpcId = this.selectedNpcId();
+            const selectedNpcId = untracked(() => this.selectedNpcId());
             if (!selectedNpcId || !merged.some((npc) => npc.id === selectedNpcId)) {
                 this.selectedNpcId.set(merged[0]?.id ?? null);
             }
@@ -200,7 +190,7 @@ export class NpcManagerComponent {
         }
 
         if (this.listOnly() && !this.libraryMode() && this.campaignId()) {
-            void this.router.navigate(['/campaigns', this.campaignId(), 'npcs', npcId]);
+            void this.router.navigate(['/campaigns', this.campaignId(), 'npcs', this.toRouteNpcId(npcId)]);
             return;
         }
 
@@ -217,7 +207,7 @@ export class NpcManagerComponent {
         }
 
         if (this.listOnly() && !this.libraryMode() && this.campaignId()) {
-            void this.router.navigate(['/campaigns', this.campaignId(), 'npcs', npcId, 'edit']);
+            void this.router.navigate(['/campaigns', this.campaignId(), 'npcs', this.toRouteNpcId(npcId), 'edit']);
             return;
         }
 
@@ -447,7 +437,11 @@ export class NpcManagerComponent {
             return;
         }
 
-        const syncSucceeded = await this.store.deleteCampaignNpc(this.campaignId(), candidate.id);
+        const campaign = this.store.campaigns().find((entry) => entry.id === this.campaignId()) ?? null;
+        const isPersisted = campaign?.campaignNpcs?.some((n) => n.name.trim().toLowerCase() === candidate.name.trim().toLowerCase()) ?? false;
+        const syncSucceeded = isPersisted
+            ? await this.store.deleteCampaignNpc(this.campaignId(), candidate.id)
+            : await this.store.removeCampaignNpc(this.campaignId(), candidate.name);
         this.feedback.set(syncSucceeded
             ? 'NPC removed.'
             : 'NPC removed locally, but the campaign NPC could not be synced.');
@@ -473,7 +467,7 @@ export class NpcManagerComponent {
     resetLocalDrafts(): void {
         this.npcGenerationError.set('');
         if (this.libraryMode()) {
-            clearNpcLibrary();
+            void this.store.saveUserNpcLibrary([]);
             this.libraryNpcs.set([]);
             this.allNpcs.set([]);
             this.selectedNpcId.set(null);
@@ -481,7 +475,6 @@ export class NpcManagerComponent {
             return;
         }
 
-        clearCampaignNpcDrafts(this.campaignId());
         const campaign = this.store.campaigns().find((entry) => entry.id === this.campaignId()) ?? null;
         const merged = mergeCampaignNpcSources(this.npcNames(), campaign?.campaignNpcs ?? [], []);
         this.allNpcs.set(merged);
@@ -614,20 +607,23 @@ export class NpcManagerComponent {
         this.selectedNpcId.set(selectedNpcId);
         if (this.libraryMode()) {
             this.persistLibraryState(npcs);
-        } else {
-            saveCampaignNpcDrafts(this.campaignId(), npcs);
         }
         this.lastAutosavedAt.set(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     }
 
     private persistLibraryState(npcs: CampaignNpc[]): void {
         this.libraryNpcs.set(npcs);
-        saveNpcLibrary(npcs);
+        void this.store.saveUserNpcLibrary(npcs);
         this.lastAutosavedAt.set(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     }
 
     private uniqueValues(values: readonly string[]): string[] {
         return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean))).sort((left, right) => left.localeCompare(right));
+    }
+
+    private toRouteNpcId(id: string): string {
+        if (id.startsWith('npc-')) return id.slice('npc-'.length);
+        return id;
     }
 
     private normalizeNpcName(name: string): string {

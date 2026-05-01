@@ -5,7 +5,7 @@ import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { CampaignNpc } from '../models/campaign-npc.models';
 import { raceMap } from '../data/races';
 import { AbilityScores, Campaign, CampaignDraft, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecorationType, CampaignMapIconType, CampaignMapLabelStyle, CampaignMapLabelTone, CampaignMapToken, CampaignThreadVisibility, CampaignWorldNoteCategory, Character, CharacterDraft, CharacterStatus, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS, SkillProficiencies, ThreatLevel } from '../models/dungeon.models';
-import { ApiCampaignDto, ApiCampaignMapBoardDto, ApiCampaignMapDecorationDto, ApiCampaignMapDto, ApiCampaignMapLabelDto, ApiCampaignMapLabelStyleDto, ApiCampaignMapLibraryDto, ApiCampaignMapTokenDto, ApiCampaignMapTokenMovedDto, ApiCampaignMapVisionMemoryDto, ApiCampaignMapVisionUpdatedDto, ApiCampaignNpcDto, ApiCampaignSummaryDto, ApiCampaignWorldNoteDto, ApiCharacterDto, DungeonApiService } from './dungeon-api.service';
+import { ApiCampaignDto, ApiCampaignMapBoardDto, ApiCampaignMapDecorationDto, ApiCampaignMapDto, ApiCampaignMapLabelDto, ApiCampaignMapLabelStyleDto, ApiCampaignMapLibraryDto, ApiCampaignMapTokenDto, ApiCampaignMapTokenMovedDto, ApiCampaignMapVisionMemoryDto, ApiCampaignMapVisionUpdatedDto, ApiCampaignNpcDto, ApiCampaignSummaryDto, ApiCampaignWorldNoteDto, ApiCharacterDto, DungeonApiService, UserLibrariesDto } from './dungeon-api.service';
 import { SessionService } from './session.service';
 
 @Injectable({ providedIn: 'root' })
@@ -36,6 +36,10 @@ export class DungeonStoreService {
     readonly title = signal('DungeonKeep');
     readonly campaigns = signal<Campaign[]>([]);
     readonly characters = signal<Character[]>([]);
+    readonly userNpcLibrary = signal<unknown[]>([]);
+    readonly userCustomTableLibrary = signal<unknown[]>([]);
+    readonly userMonsterLibrary = signal<unknown[]>([]);
+    readonly userMonsterReference = signal<unknown[]>([]);
     readonly selectedCampaignId = signal('');
     readonly initialized = signal(false);
     readonly isHydrating = signal(false);
@@ -531,6 +535,74 @@ export class DungeonStoreService {
         }
     }
 
+    async saveSessionDetails(campaignId: string, sessionId: string, payload: { detailsJson: string | null; lootAssignmentsJson: string | null }): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
+        try {
+            const updated = await this.api.saveSessionDetails(campaignId, sessionId, payload);
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async saveCampaignCustomTables(campaignId: string, tables: unknown[]): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
+        try {
+            const updated = await this.api.saveCampaignCustomTables(campaignId, JSON.stringify(Array.isArray(tables) ? tables : []));
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async saveUserNpcLibrary(items: unknown[]): Promise<boolean> {
+        try {
+            const libraries = await this.api.saveUserNpcLibrary(JSON.stringify(Array.isArray(items) ? items : []));
+            this.applyUserLibraries(libraries);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async saveUserCustomTableLibrary(items: unknown[]): Promise<boolean> {
+        try {
+            const libraries = await this.api.saveUserCustomTableLibrary(JSON.stringify(Array.isArray(items) ? items : []));
+            this.applyUserLibraries(libraries);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async saveUserMonsterLibrary(items: unknown[]): Promise<boolean> {
+        try {
+            const libraries = await this.api.saveUserMonsterLibrary(JSON.stringify(Array.isArray(items) ? items : []));
+            this.applyUserLibraries(libraries);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async saveUserMonsterReference(items: unknown[]): Promise<boolean> {
+        try {
+            const libraries = await this.api.saveUserMonsterReference(JSON.stringify(Array.isArray(items) ? items : []));
+            this.applyUserLibraries(libraries);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     async deleteCampaignSession(campaignId: string, sessionId: string): Promise<boolean> {
         if (!this.canManageCampaignContent(campaignId)) {
             return false;
@@ -618,13 +690,13 @@ export class DungeonStoreService {
         }
     }
 
-    async addCampaignLoot(campaignId: string, name: string): Promise<boolean> {
+    async addCampaignLoot(campaignId: string, name: string, sessionId?: string | null): Promise<boolean> {
         if (!this.canManageCampaignContent(campaignId)) {
             return false;
         }
 
         try {
-            const updated = await this.api.addCampaignLoot(campaignId, name);
+            const updated = await this.api.addCampaignLoot(campaignId, name, sessionId);
             this.replaceCampaignFromApi(campaignId, updated);
             this.lastError.set('');
             return true;
@@ -1120,10 +1192,13 @@ export class DungeonStoreService {
         this.initialized.set(false);
 
         try {
-            const [campaignDtos, accessibleCharacterDtos] = await Promise.all([
+            const [campaignDtos, accessibleCharacterDtos, libraries] = await Promise.all([
                 this.api.getCampaignSummaries(),
-                this.api.getAccessibleCharacters()
+                this.api.getAccessibleCharacters(),
+                this.api.getUserLibraries()
             ]);
+
+            this.applyUserLibraries(libraries);
 
             const characterMap = new Map<string, Character>();
             const characterLookup = new Map<string, ApiCharacterDto[]>();
@@ -1262,7 +1337,9 @@ export class DungeonStoreService {
                 location: session.location,
                 objective: session.objective,
                 threat: session.threat,
-                isRevealedToPlayers: session.isRevealedToPlayers ?? false
+                isRevealedToPlayers: session.isRevealedToPlayers ?? false,
+                detailsJson: session.detailsJson ?? null,
+                lootAssignmentsJson: session.lootAssignmentsJson ?? null
             })),
             openThreads: (campaign.openThreads ?? []).map((thread) => ({
                 id: thread.id,
@@ -1279,7 +1356,11 @@ export class DungeonStoreService {
             map: this.mapCampaignMapFromApi(activeMap),
             maps,
             activeMapId: activeMap.id,
-            loot: [...(campaign.loot ?? [])],
+            loot: (campaign.loot ?? []).map((item) =>
+                typeof item === 'string'
+                    ? { name: item as string, sessionId: null }
+                    : { name: (item as { name: string; sessionId?: string | null }).name, sessionId: (item as { name: string; sessionId?: string | null }).sessionId ?? null }
+            ),
             npcs: [...(campaign.npcs ?? [])],
             campaignNpcs: (campaign.campaignNpcs ?? []).map((npc) => this.mapCampaignNpcFromApi(npc)),
             currentUserRole: campaign.currentUserRole ?? 'Member',
@@ -1289,7 +1370,8 @@ export class DungeonStoreService {
                 displayName: member.displayName,
                 role: member.role,
                 status: member.status
-            }))
+            })),
+            customTablesJson: campaign.customTablesJson ?? '[]'
         };
     }
 
@@ -1394,13 +1476,20 @@ export class DungeonStoreService {
     private mapCampaignNpcToApi(npc: CampaignNpc): ApiCampaignNpcDto {
         return {
             ...npc,
+            id: this.toNpcApiId(npc.id),
             relationships: npc.relationships.map((relationship) => ({
-                id: relationship.id,
-                targetNpcId: relationship.targetNpcId,
+                id: this.toNpcApiId(relationship.id),
+                targetNpcId: this.toNpcApiId(relationship.targetNpcId),
                 relationshipType: relationship.relationshipType,
                 description: relationship.description
             }))
         };
+    }
+
+    private toNpcApiId(id: string): string {
+        if (id.startsWith('npc-rel-')) return id.slice('npc-rel-'.length);
+        if (id.startsWith('npc-')) return id.slice('npc-'.length);
+        return id;
     }
 
     private async syncCampaignNpcNameFallback(campaignId: string, npc: CampaignNpc): Promise<boolean> {
@@ -2947,7 +3036,31 @@ export class DungeonStoreService {
         this.latestKnownTokenMoveRevision.clear();
         this.campaigns.set([]);
         this.characters.set([]);
+        this.userNpcLibrary.set([]);
+        this.userCustomTableLibrary.set([]);
+        this.userMonsterLibrary.set([]);
+        this.userMonsterReference.set([]);
         this.selectedCampaignId.set('');
+    }
+
+    private applyUserLibraries(libraries: UserLibrariesDto): void {
+        this.userNpcLibrary.set(this.parseJsonArray(libraries.npcLibraryJson));
+        this.userCustomTableLibrary.set(this.parseJsonArray(libraries.customTableLibraryJson));
+        this.userMonsterLibrary.set(this.parseJsonArray(libraries.monsterLibraryJson));
+        this.userMonsterReference.set(this.parseJsonArray(libraries.monsterReferenceJson));
+    }
+
+    private parseJsonArray(json: string): unknown[] {
+        if (!json?.trim()) {
+            return [];
+        }
+
+        try {
+            const parsed = JSON.parse(json);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
     }
 
     private canManageCampaignContent(campaignId: string): boolean {

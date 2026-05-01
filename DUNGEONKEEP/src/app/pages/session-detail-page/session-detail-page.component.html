@@ -86,18 +86,6 @@
     </section>
     }
 
-    @if (interactionMessage()) {
-    <section class="panel status-panel success-panel">
-        <p>{{ interactionMessage() }}</p>
-    </section>
-    }
-
-    @if (interactionError()) {
-    <section class="panel status-panel error-panel">
-        <p>{{ interactionError() }}</p>
-    </section>
-    }
-
     <div class="content-grid">
         @if (isSectionVisible('session-notes')) {
         <section id="session-notes" class="panel notes-panel section-anchor-target">

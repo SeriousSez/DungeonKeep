@@ -28,6 +28,10 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
             entity.Property(user => user.ActivationCodeHash).HasMaxLength(256).IsRequired();
             entity.Property(user => user.ActivationCodeExpiresAtUtc);
             entity.Property(user => user.CreatedAtUtc).IsRequired();
+            entity.Property(user => user.NpcLibraryJson).HasColumnType("longtext").IsRequired();
+            entity.Property(user => user.CustomTableLibraryJson).HasColumnType("longtext").IsRequired();
+            entity.Property(user => user.MonsterLibraryJson).HasColumnType("longtext").IsRequired();
+            entity.Property(user => user.MonsterReferenceJson).HasColumnType("longtext").IsRequired();
 
             entity.HasIndex(user => user.Email).IsUnique();
         });
@@ -65,6 +69,7 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
             entity.Property(c => c.OpenThreadsJson).HasColumnType("longtext").IsRequired();
             entity.Property(c => c.WorldNotesJson).HasColumnType("longtext").IsRequired();
             entity.Property(c => c.CampaignMapJson).HasColumnType("longtext").IsRequired();
+            entity.Property(c => c.CustomTablesJson).HasColumnType("longtext").IsRequired();
             entity.Property(c => c.CreatedAtUtc).IsRequired();
 
             entity.HasMany(c => c.Characters)

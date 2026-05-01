@@ -178,7 +178,7 @@
                 </div>
                 <span class="count-badge">{{ campaign.loot.length }}</span>
             </div>
-            <p>{{ campaign.loot.length > 0 ? campaign.loot.slice(0, 2).join(' • ') : 'Keep treasure, leverage, clues, and recovered artifacts on the loot page.' }}</p>
+            <p>{{ campaign.loot.length > 0 ? lootPreview(campaign.loot) : 'Keep treasure, leverage, clues, and recovered artifacts on the loot page.' }}</p>
         </a>
 
         <a class="panel workspace-preview-card" [routerLink]="['/campaigns', campaign.id, 'threads']">

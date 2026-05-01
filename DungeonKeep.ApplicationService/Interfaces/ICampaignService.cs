@@ -37,4 +37,6 @@ public interface ICampaignService
     Task<CampaignDto?> RemoveMemberAsync(Guid campaignId, RemoveCampaignMemberRequest request, Guid userId, CancellationToken cancellationToken = default);
     Task LeaveAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default);
+    Task<CampaignDto?> SaveSessionDetailsAsync(Guid campaignId, Guid sessionId, SaveSessionDetailsRequest request, Guid userId, CancellationToken cancellationToken = default);
+    Task<CampaignDto?> SaveCustomTablesAsync(Guid campaignId, SaveCustomTablesRequest request, Guid userId, CancellationToken cancellationToken = default);
 }

@@ -3,7 +3,6 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, si
 import { Router } from '@angular/router';
 
 import { createCustomTableId, nextImportedCustomTableTitle, normalizeCustomTableTitle, sanitizeCustomTable } from '../../data/campaign-custom-table.helpers';
-import { clearCampaignCustomTables, clearCustomTableLibrary, loadCampaignCustomTables, loadCustomTableLibrary, saveCampaignCustomTables, saveCustomTableLibrary } from '../../data/campaign-custom-table.storage';
 import { CampaignCustomTable } from '../../models/campaign-custom-table.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
@@ -37,7 +36,7 @@ export class CustomTableManagerComponent {
 
     constructor() {
         effect(() => {
-            const libraryTables = (loadCustomTableLibrary() ?? []).map((table) => sanitizeCustomTable(table));
+            const libraryTables = (this.store.userCustomTableLibrary() ?? []).map((table) => sanitizeCustomTable(table as CampaignCustomTable));
             this.libraryTables.set(libraryTables);
 
             if (this.libraryMode()) {
@@ -46,9 +45,8 @@ export class CustomTableManagerComponent {
             }
 
             const campaignId = this.campaignId();
-            const campaignTables = campaignId
-                ? (loadCampaignCustomTables(campaignId) ?? []).map((table) => sanitizeCustomTable(table))
-                : [];
+            const campaign = this.store.campaigns().find((entry) => entry.id === campaignId) ?? null;
+            const campaignTables = this.parseTables(campaign?.customTablesJson ?? '[]');
 
             this.allTables.set(campaignTables);
         });
@@ -115,7 +113,7 @@ export class CustomTableManagerComponent {
             : [candidate, ...currentLibrary];
 
         this.libraryTables.set(nextLibrary);
-        saveCustomTableLibrary(nextLibrary);
+        void this.store.saveUserCustomTableLibrary(nextLibrary);
         this.feedback.set('Table saved to the reusable library.');
     }
 
@@ -130,7 +128,8 @@ export class CustomTableManagerComponent {
             return;
         }
 
-        const currentTables = (loadCampaignCustomTables(targetCampaignId) ?? []).map((table) => sanitizeCustomTable(table));
+        const targetCampaign = this.store.campaigns().find((campaign) => campaign.id === targetCampaignId) ?? null;
+        const currentTables = this.parseTables(targetCampaign?.customTablesJson ?? '[]');
         const imported = sanitizeCustomTable({
             ...source,
             id: createCustomTableId(),
@@ -138,7 +137,7 @@ export class CustomTableManagerComponent {
         });
 
         const nextTables = [imported, ...currentTables];
-        saveCampaignCustomTables(targetCampaignId, nextTables);
+        void this.store.saveCampaignCustomTables(targetCampaignId, nextTables);
         this.feedback.set(`Library table imported into ${this.importTargetCampaign()?.name ?? 'the campaign'}.`);
     }
 
@@ -161,11 +160,11 @@ export class CustomTableManagerComponent {
         if (this.libraryMode()) {
             this.allTables.set(nextTables);
             this.libraryTables.set(nextTables);
-            saveCustomTableLibrary(nextTables);
+            void this.store.saveUserCustomTableLibrary(nextTables);
             this.feedback.set('Table removed from the reusable library.');
         } else {
             this.allTables.set(nextTables);
-            saveCampaignCustomTables(this.campaignId(), nextTables);
+            void this.store.saveCampaignCustomTables(this.campaignId(), nextTables);
             this.feedback.set('Table removed from the campaign.');
         }
 
@@ -178,7 +177,7 @@ export class CustomTableManagerComponent {
         }
 
         if (this.libraryMode()) {
-            clearCustomTableLibrary();
+            void this.store.saveUserCustomTableLibrary([]);
             this.allTables.set([]);
             this.libraryTables.set([]);
             this.feedback.set('Table library cleared.');
@@ -190,8 +189,21 @@ export class CustomTableManagerComponent {
             return;
         }
 
-        clearCampaignCustomTables(campaignId);
+        void this.store.saveCampaignCustomTables(campaignId, []);
         this.allTables.set([]);
         this.feedback.set('Campaign tables cleared.');
+    }
+
+    private parseTables(json: string): CampaignCustomTable[] {
+        if (!json?.trim()) {
+            return [];
+        }
+
+        try {
+            const parsed = JSON.parse(json) as CampaignCustomTable[];
+            return Array.isArray(parsed) ? parsed.map((table) => sanitizeCustomTable(table)) : [];
+        } catch {
+            return [];
+        }
     }
 }

@@ -345,4 +345,50 @@ public sealed class AuthService(IAuthRepository authRepository, IAccountActivati
         user.PasswordHash = HashPassword(request.NewPassword);
         await authRepository.UpdateUserAsync(user, cancellationToken);
     }
+
+    public async Task<UserLibrariesDto> GetUserLibrariesAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await authRepository.GetUserByIdAsync(userId, cancellationToken)
+            ?? throw new InvalidOperationException("User not found.");
+
+        return MapLibraries(user);
+    }
+
+    public async Task<UserLibrariesDto> SaveUserNpcLibraryAsync(Guid userId, string json, CancellationToken cancellationToken = default)
+    {
+        var user = await authRepository.UpdateUserLibraryAsync(userId, nameof(AppUser.NpcLibraryJson), json, cancellationToken)
+            ?? throw new InvalidOperationException("User not found.");
+        return MapLibraries(user);
+    }
+
+    public async Task<UserLibrariesDto> SaveUserCustomTableLibraryAsync(Guid userId, string json, CancellationToken cancellationToken = default)
+    {
+        var user = await authRepository.UpdateUserLibraryAsync(userId, nameof(AppUser.CustomTableLibraryJson), json, cancellationToken)
+            ?? throw new InvalidOperationException("User not found.");
+        return MapLibraries(user);
+    }
+
+    public async Task<UserLibrariesDto> SaveUserMonsterLibraryAsync(Guid userId, string json, CancellationToken cancellationToken = default)
+    {
+        var user = await authRepository.UpdateUserLibraryAsync(userId, nameof(AppUser.MonsterLibraryJson), json, cancellationToken)
+            ?? throw new InvalidOperationException("User not found.");
+        return MapLibraries(user);
+    }
+
+    public async Task<UserLibrariesDto> SaveUserMonsterReferenceAsync(Guid userId, string json, CancellationToken cancellationToken = default)
+    {
+        var user = await authRepository.UpdateUserLibraryAsync(userId, nameof(AppUser.MonsterReferenceJson), json, cancellationToken)
+            ?? throw new InvalidOperationException("User not found.");
+        return MapLibraries(user);
+    }
+
+    private static UserLibrariesDto MapLibraries(AppUser user)
+    {
+        return new UserLibrariesDto(
+            string.IsNullOrWhiteSpace(user.NpcLibraryJson) ? "[]" : user.NpcLibraryJson,
+            string.IsNullOrWhiteSpace(user.CustomTableLibraryJson) ? "[]" : user.CustomTableLibraryJson,
+            string.IsNullOrWhiteSpace(user.MonsterLibraryJson) ? "[]" : user.MonsterLibraryJson,
+            string.IsNullOrWhiteSpace(user.MonsterReferenceJson) ? "[]" : user.MonsterReferenceJson
+        );
+    }
 }

@@ -213,6 +213,30 @@ public sealed class CampaignService(
         return updated is null ? null : MapCampaign(updated, userId);
     }
 
+    public async Task<CampaignDto?> SaveSessionDetailsAsync(Guid campaignId, Guid sessionId, SaveSessionDetailsRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
+        if (campaign is null || sessionId == Guid.Empty)
+        {
+            return null;
+        }
+
+        var updated = await campaignRepository.SaveSessionDetailsAsync(campaignId, sessionId, request.DetailsJson, request.LootAssignmentsJson, cancellationToken);
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
+    public async Task<CampaignDto?> SaveCustomTablesAsync(Guid campaignId, SaveCustomTablesRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var updated = await campaignRepository.SaveCustomTablesAsync(campaignId, request.TablesJson, cancellationToken);
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
     public async Task<CampaignDto?> AddNpcAsync(Guid campaignId, CreateCampaignNpcRequest request, Guid userId, CancellationToken cancellationToken = default)
     {
         var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
@@ -270,7 +294,7 @@ public sealed class CampaignService(
             return null;
         }
 
-        var updated = await campaignRepository.AddLootAsync(campaignId, request.Name.Trim(), cancellationToken);
+        var updated = await campaignRepository.AddLootAsync(campaignId, request.Name.Trim(), request.SessionId, cancellationToken);
         return updated is null ? null : MapCampaign(updated, userId);
     }
 
@@ -1115,7 +1139,7 @@ public sealed class CampaignService(
             visibleSessions,
             ParseNamedItems(campaign.NpcsJson),
             ParseCampaignNpcs(campaign.CampaignNpcsJson),
-            ParseNamedItems(campaign.LootJson),
+            ParseLootItems(campaign.LootJson),
             ParseOpenThreads(campaign.OpenThreadsJson),
             visibleWorldNotes,
             new CampaignMapDto(activeMap.Background, activeMap.BackgroundImageUrl, activeMap.GridColumns, activeMap.GridRows, activeMap.GridColor, activeMap.GridOffsetX, activeMap.GridOffsetY, activeMap.Strokes, activeMap.Walls, activeMap.Icons, activeMap.Tokens, activeMap.Decorations, activeMap.Labels, activeMap.Layers, activeMap.VisionMemory, activeMap.VisionEnabled, activeMap.MembersCanViewAnytime),
@@ -1133,7 +1157,8 @@ public sealed class CampaignService(
                     member.Role,
                     member.Status
                 ))
-                .ToList()
+                .ToList(),
+            campaign.CustomTablesJson
         );
     }
 
@@ -1221,7 +1246,9 @@ public sealed class CampaignService(
                         session.Location.Trim(),
                         session.Objective.Trim(),
                         NormalizeThreat(session.Threat),
-                        session.IsRevealedToPlayers))
+                        session.IsRevealedToPlayers,
+                        session.DetailsJson,
+                        session.LootAssignmentsJson))
                     .ToList();
             }
         }
@@ -1230,6 +1257,55 @@ public sealed class CampaignService(
         }
 
         return DefaultSessions;
+    }
+
+    private static IReadOnlyList<CampaignLootItemDto> ParseLootItems(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return [];
+        }
+
+        try
+        {
+            // Support both legacy string[] format and new object[] format
+            using var doc = JsonDocument.Parse(json);
+            var result = new List<CampaignLootItemDto>();
+            foreach (var element in doc.RootElement.EnumerateArray())
+            {
+                if (element.ValueKind == JsonValueKind.String)
+                {
+                    var name = element.GetString();
+                    if (!string.IsNullOrWhiteSpace(name))
+                    {
+                        result.Add(new CampaignLootItemDto(name.Trim(), null));
+                    }
+                }
+                else if (element.ValueKind == JsonValueKind.Object)
+                {
+                    var name = element.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
+                    Guid? sessionId = null;
+                    if (element.TryGetProperty("sessionId", out var sidProp) && sidProp.ValueKind != JsonValueKind.Null)
+                    {
+                        if (Guid.TryParse(sidProp.GetString(), out var parsed))
+                        {
+                            sessionId = parsed;
+                        }
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(name))
+                    {
+                        result.Add(new CampaignLootItemDto(name!.Trim(), sessionId));
+                    }
+                }
+            }
+
+            return result;
+        }
+        catch
+        {
+            return [];
+        }
     }
 
     private static IReadOnlyList<string> ParseNamedItems(string json)
@@ -1413,7 +1489,9 @@ public sealed class CampaignService(
             session.Location.Trim(),
             session.Objective.Trim(),
             NormalizeThreat(session.Threat),
-            session.IsRevealedToPlayers)));
+            session.IsRevealedToPlayers,
+            session.DetailsJson,
+            session.LootAssignmentsJson)));
     }
 
     private static string SerializeWorldNotes(IEnumerable<CampaignWorldNoteDto> notes)

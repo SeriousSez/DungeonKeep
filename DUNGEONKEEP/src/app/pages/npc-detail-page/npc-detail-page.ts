@@ -202,7 +202,11 @@ export class NpcDetailPage {
       const stored = loadCampaignNpcDrafts(campaignId) ?? [];
       const merged = mergeCampaignNpcSources(campaign.npcs, campaign.campaignNpcs ?? [], stored);
       this.allNpcs.set(merged);
-      this.npc.set(merged.find((entry) => entry.id === npcId) ?? null);
+      this.npc.set(
+        merged.find((entry) => entry.id === npcId) ??
+        merged.find((entry) => entry.id === 'npc-' + npcId) ??
+        null
+      );
 
       if (!this.npc()) {
         this.loadError.set('The requested NPC record could not be found in this campaign.');

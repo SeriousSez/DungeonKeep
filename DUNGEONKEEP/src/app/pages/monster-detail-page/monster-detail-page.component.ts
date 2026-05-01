@@ -4,9 +4,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { CustomMonster, MonsterTextSectionEntry } from '../../models/monster-reference.models';
-import { loadMonsterLibrary, saveMonsterLibrary } from '../../data/monster-library.storage';
 import { duplicateCustomMonster, sanitizeCustomMonster } from '../../data/monster-library.helpers';
-import { readStoredSessionEditorDraft, persistStoredSessionEditorDraft } from '../../data/session-editor.storage';
+import { SessionEditorDraft } from '../../models/session-editor.models';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
 @Component({
@@ -100,8 +99,8 @@ export class MonsterDetailPageComponent {
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe((params) => {
                 const id = (params.get('monsterId') ?? '').trim();
-                const library = loadMonsterLibrary() ?? [];
-                const found = library.find((m) => m.id === id);
+                const library = this.store.userMonsterLibrary() ?? [];
+                const found = (library as CustomMonster[]).find((m) => m.id === id);
                 this.monster.set(found ? sanitizeCustomMonster(found) : null);
                 this.cdr.detectChanges();
             });
@@ -180,12 +179,15 @@ export class MonsterDetailPageComponent {
             return;
         }
 
-        const library = loadMonsterLibrary() ?? [];
+        const library = (this.store.userMonsterLibrary() ?? []) as CustomMonster[];
         const namesInUse = library.map((m) => m.name);
         const copy = duplicateCustomMonster(monster, namesInUse);
         const next = [copy, ...library];
-        saveMonsterLibrary(next);
-        void this.router.navigate(['/monsters', copy.id]);
+        void this.store.saveUserMonsterLibrary(next).then((saved) => {
+            if (saved) {
+                void this.router.navigate(['/monsters', copy.id]);
+            }
+        });
     }
 
     toggleAddToSession(): void {
@@ -194,13 +196,16 @@ export class MonsterDetailPageComponent {
         this.cdr.detectChanges();
     }
 
-    addMonsterToSession(campaignId: string, sessionId: string, sessionTitle: string): void {
+    async addMonsterToSession(campaignId: string, sessionId: string, sessionTitle: string): Promise<void> {
         const monster = this.monster();
         if (!monster) {
             return;
         }
 
-        const draft = readStoredSessionEditorDraft(campaignId, sessionId) ?? {
+        const campaign = this.store.campaigns().find((entry) => entry.id === campaignId) ?? null;
+        const session = campaign?.sessions.find((entry) => entry.id === sessionId) ?? null;
+
+        const draft = this.parseDraft(session?.detailsJson) ?? {
             id: sessionId,
             title: sessionTitle,
             shortDescription: '',
@@ -238,7 +243,10 @@ export class MonsterDetailPageComponent {
                     notes: monster.notes || ''
                 }
             ];
-            persistStoredSessionEditorDraft(campaignId, sessionId, draft);
+            await this.store.saveSessionDetails(campaignId, sessionId, {
+                detailsJson: JSON.stringify(draft),
+                lootAssignmentsJson: session?.lootAssignmentsJson ?? null
+            });
         }
 
         this.addToSessionMessage.set(
@@ -257,5 +265,18 @@ export class MonsterDetailPageComponent {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    }
+
+    private parseDraft(detailsJson: string | null | undefined): SessionEditorDraft | null {
+        if (!detailsJson?.trim()) {
+            return null;
+        }
+
+        try {
+            const parsed = JSON.parse(detailsJson) as SessionEditorDraft;
+            return parsed && typeof parsed === 'object' ? parsed : null;
+        } catch {
+            return null;
+        }
     }
 }

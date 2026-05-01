@@ -11,4 +11,9 @@ public interface IAuthService
     Task<AuthenticatedUser?> GetAuthenticatedUserByTokenAsync(string token, CancellationToken cancellationToken = default);
     Task<AuthUserDto> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken cancellationToken = default);
     Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken cancellationToken = default);
+    Task<UserLibrariesDto> GetUserLibrariesAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<UserLibrariesDto> SaveUserNpcLibraryAsync(Guid userId, string json, CancellationToken cancellationToken = default);
+    Task<UserLibrariesDto> SaveUserCustomTableLibraryAsync(Guid userId, string json, CancellationToken cancellationToken = default);
+    Task<UserLibrariesDto> SaveUserMonsterLibraryAsync(Guid userId, string json, CancellationToken cancellationToken = default);
+    Task<UserLibrariesDto> SaveUserMonsterReferenceAsync(Guid userId, string json, CancellationToken cancellationToken = default);
 }

@@ -199,4 +199,8 @@ export class CampaignDetailPageComponent {
         this.store.archiveThread(threadId);
         this.closeAddThreadModal();
     }
+
+    lootPreview(loot: Array<{ name: string }>): string {
+        return loot.slice(0, 2).map((item) => item.name).join(' • ');
+    }
 }

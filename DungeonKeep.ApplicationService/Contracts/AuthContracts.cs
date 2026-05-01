@@ -49,6 +49,18 @@ public sealed record UpdateProfileRequest(string DisplayName, string Email);
 
 public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 
+public sealed record UserLibrariesDto(
+    string NpcLibraryJson,
+    string CustomTableLibraryJson,
+    string MonsterLibraryJson,
+    string MonsterReferenceJson
+);
+
+public sealed record SaveUserNpcLibraryRequest(string Json);
+public sealed record SaveUserCustomTableLibraryRequest(string Json);
+public sealed record SaveUserMonsterLibraryRequest(string Json);
+public sealed record SaveUserMonsterReferenceRequest(string Json);
+
 public sealed record AccountActivationEmail(
     string RecipientEmail,
     string RecipientDisplayName,

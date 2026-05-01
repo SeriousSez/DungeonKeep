@@ -17,15 +17,9 @@ import { marked } from 'marked';
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
 import { MultiSelectDropdownComponent, type MultiSelectOptionGroup } from '../../components/multi-select-dropdown/multi-select-dropdown.component';
 import { monsterCatalog } from '../../data/monster-catalog.generated';
-import { loadMonsterLibrary } from '../../data/monster-library.storage';
 import { sanitizeCustomMonster } from '../../data/monster-library.helpers';
 import { CustomMonster } from '../../models/monster-reference.models';
 import { SESSION_EDITOR_SAMPLE_DRAFT } from '../../data/session-editor.mock';
-import {
-    persistStoredSessionEditorDraft,
-    readStoredSessionEditorDraft,
-    removeStoredSessionEditorDraft
-} from '../../data/session-editor.storage';
 import { MonsterCatalogEntry } from '../../models/monster-reference.models';
 import { ThreatLevel } from '../../models/dungeon.models';
 import {
@@ -250,7 +244,7 @@ export class SessionEditorPageComponent {
                 source: 'catalog' as const
             }));
 
-        const customLibrary = (loadMonsterLibrary() ?? []).map((m) => sanitizeCustomMonster(m));
+        const customLibrary = (this.store.userMonsterLibrary() ?? []).map((m) => sanitizeCustomMonster(m as CustomMonster));
         const customResults = customLibrary
             .filter((m) => m.name.toLowerCase().includes(query))
             .slice(0, 4)
@@ -561,7 +555,6 @@ export class SessionEditorPageComponent {
         }
 
         const draft = this.toDraft();
-        persistStoredSessionEditorDraft(this.campaignId(), this.sessionId() ?? draft.id, draft);
 
         const campaignId = this.campaignId();
         if (!campaignId) {
@@ -596,13 +589,17 @@ export class SessionEditorPageComponent {
             return;
         }
 
-        const syncedSessionId = this.findPersistedSessionId(sessionSummary);
+        const syncedSessionId = this.sessionId() ?? this.findPersistedSessionId(sessionSummary);
         if (syncedSessionId && !this.sessionId()) {
-            persistStoredSessionEditorDraft(campaignId, syncedSessionId, { ...draft, id: syncedSessionId });
-            removeStoredSessionEditorDraft(campaignId, 'new');
-            removeStoredSessionEditorDraft(campaignId, draft.id);
             this.sessionId.set(syncedSessionId);
             await this.router.navigate(['/campaigns', campaignId, 'sessions', syncedSessionId, 'edit'], { replaceUrl: true });
+        }
+
+        if (syncedSessionId) {
+            await this.store.saveSessionDetails(campaignId, syncedSessionId, {
+                detailsJson: JSON.stringify({ ...draft, id: syncedSessionId }),
+                lootAssignmentsJson: null
+            });
         }
 
         this.saveMessage.set('Session plan saved.');
@@ -670,7 +667,7 @@ export class SessionEditorPageComponent {
 
     addMonsterFromPicker(name: string): void {
         const query = name.toLowerCase();
-        const customLibrary = (loadMonsterLibrary() ?? []).map((m) => sanitizeCustomMonster(m));
+        const customLibrary = (this.store.userMonsterLibrary() ?? []).map((m) => sanitizeCustomMonster(m as CustomMonster));
         const custom = customLibrary.find((m) => m.name.toLowerCase() === query);
 
         if (custom) {
@@ -788,8 +785,6 @@ export class SessionEditorPageComponent {
         const sessionId = this.sessionId();
 
         if (!sessionId) {
-            removeStoredSessionEditorDraft(campaignId, 'new');
-
             const freshDraft = this.createDraftFromCampaign(campaign, campaignId, null);
             this.patchDraft(freshDraft);
             this.initialized.set(true);
@@ -797,7 +792,8 @@ export class SessionEditorPageComponent {
             return;
         }
 
-        const persistedDraft = readStoredSessionEditorDraft(campaignId, sessionId ?? 'new');
+        const existingSession = campaign?.sessions.find((session) => session.id === sessionId);
+        const persistedDraft = this.parsePersistedDraft(existingSession?.detailsJson ?? null);
         if (persistedDraft) {
             this.patchDraft(persistedDraft);
             this.initialized.set(true);
@@ -1037,8 +1033,32 @@ export class SessionEditorPageComponent {
 
     private autosaveDraft(): void {
         const draft = this.toDraft();
-        persistStoredSessionEditorDraft(this.campaignId(), this.sessionId() ?? 'new', draft);
+        const campaignId = this.campaignId();
+        const sessionId = this.sessionId();
+        if (campaignId && sessionId) {
+            void this.store.saveSessionDetails(campaignId, sessionId, {
+                detailsJson: JSON.stringify(draft),
+                lootAssignmentsJson: null
+            });
+        }
         this.lastAutosavedAt.set(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    }
+
+    private parsePersistedDraft(detailsJson: string | null | undefined): SessionEditorDraft | null {
+        if (!detailsJson?.trim()) {
+            return null;
+        }
+
+        try {
+            const parsed = JSON.parse(detailsJson) as SessionEditorDraft;
+            if (!parsed || typeof parsed !== 'object') {
+                return null;
+            }
+
+            return parsed;
+        } catch {
+            return null;
+        }
     }
 
     private updateMarkdownPreview(value: string): void {

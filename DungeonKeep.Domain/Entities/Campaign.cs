@@ -18,6 +18,7 @@ public sealed class Campaign
     public string OpenThreadsJson { get; set; } = "[]";
     public string WorldNotesJson { get; set; } = "[]";
     public string CampaignMapJson { get; set; } = "{}";
+    public string CustomTablesJson { get; set; } = "[]";
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public List<Character> Characters { get; set; } = [];

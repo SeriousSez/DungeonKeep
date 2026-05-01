@@ -151,7 +151,7 @@ export const seedCampaigns: Campaign[] = [
             }
         ],
         activeMapId: 'map-board-crown-of-embers',
-        loot: ['Glasssteel buckler', 'Map to the Cinder Vault', 'Three sealed phoenix feathers'],
+        loot: [{ name: 'Glasssteel buckler' }, { name: 'Map to the Cinder Vault' }, { name: 'Three sealed phoenix feathers' }],
         campaignNpcs: [],
         npcs: ['Regent Maelis', 'Brother Tovin', 'Rook the soot broker']
     },
@@ -289,7 +289,7 @@ export const seedCampaigns: Campaign[] = [
             }
         ],
         activeMapId: 'map-board-moonwake-ledger',
-        loot: ['Whisper-shell compass', 'Stormglass vial'],
+        loot: [{ name: 'Whisper-shell compass' }, { name: 'Stormglass vial' }],
         campaignNpcs: [],
         npcs: ['Captain Nereza', 'Ledger-Keeper Sol', 'The Lantern Magistrate']
     },
@@ -423,7 +423,7 @@ export const seedCampaigns: Campaign[] = [
             }
         ],
         activeMapId: 'map-board-wild-below',
-        loot: ['Honeyed iron key'],
+        loot: [{ name: 'Honeyed iron key' }],
         npcs: ['Mayor Fen', 'Pip the pie judge', 'The Moss Matron']
     }
 ];

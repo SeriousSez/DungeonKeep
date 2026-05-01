@@ -46,6 +46,71 @@ public sealed class AccountController(IAuthService authService) : ControllerBase
         }
     }
 
+    [HttpGet("libraries")]
+    public async Task<ActionResult<UserLibrariesDto>> GetLibraries(CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var libraries = await authService.GetUserLibrariesAsync(user.Id, cancellationToken);
+        return Ok(libraries);
+    }
+
+    [HttpPut("npc-library")]
+    public async Task<ActionResult<UserLibrariesDto>> SaveNpcLibrary([FromBody] SaveUserNpcLibraryRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var libraries = await authService.SaveUserNpcLibraryAsync(user.Id, request.Json, cancellationToken);
+        return Ok(libraries);
+    }
+
+    [HttpPut("custom-table-library")]
+    public async Task<ActionResult<UserLibrariesDto>> SaveCustomTableLibrary([FromBody] SaveUserCustomTableLibraryRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var libraries = await authService.SaveUserCustomTableLibraryAsync(user.Id, request.Json, cancellationToken);
+        return Ok(libraries);
+    }
+
+    [HttpPut("monster-library")]
+    public async Task<ActionResult<UserLibrariesDto>> SaveMonsterLibrary([FromBody] SaveUserMonsterLibraryRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var libraries = await authService.SaveUserMonsterLibraryAsync(user.Id, request.Json, cancellationToken);
+        return Ok(libraries);
+    }
+
+    [HttpPut("monster-reference")]
+    public async Task<ActionResult<UserLibrariesDto>> SaveMonsterReference([FromBody] SaveUserMonsterReferenceRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var libraries = await authService.SaveUserMonsterReferenceAsync(user.Id, request.Json, cancellationToken);
+        return Ok(libraries);
+    }
+
     private async Task<AuthenticatedUser?> GetAuthenticatedUserAsync(CancellationToken cancellationToken)
     {
         var authorization = Request.Headers.Authorization.ToString();

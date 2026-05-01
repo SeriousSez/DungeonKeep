@@ -51,14 +51,15 @@ public sealed record CampaignDto(
     IReadOnlyList<CampaignSessionDto> Sessions,
     IReadOnlyList<string> Npcs,
     IReadOnlyList<CampaignNpcDto> CampaignNpcs,
-    IReadOnlyList<string> Loot,
+    IReadOnlyList<CampaignLootItemDto> Loot,
     IReadOnlyList<CampaignThreadDto> OpenThreads,
     IReadOnlyList<CampaignWorldNoteDto> WorldNotes,
     CampaignMapDto Map,
     IReadOnlyList<CampaignMapBoardDto> Maps,
     Guid ActiveMapId,
     string CurrentUserRole,
-    IReadOnlyList<CampaignMemberDto> Members
+    IReadOnlyList<CampaignMemberDto> Members,
+    string CustomTablesJson = "[]"
 );
 
 public sealed record CampaignNpcDto(
@@ -116,7 +117,14 @@ public sealed record CampaignSessionDto(
     string Location,
     string Objective,
     string Threat,
-    bool IsRevealedToPlayers = false
+    bool IsRevealedToPlayers = false,
+    string? DetailsJson = null,
+    string? LootAssignmentsJson = null
+);
+
+public sealed record CampaignLootItemDto(
+    string Name,
+    Guid? SessionId
 );
 
 public sealed record CampaignThreadDto(
@@ -336,10 +344,11 @@ public sealed record InviteCampaignMemberRequest(string Email);
 public sealed record RemoveCampaignMemberRequest(Guid UserId);
 public sealed record CreateCampaignSessionRequest(string Title, string Date, string Location, string Objective, string Threat);
 public sealed record UpdateCampaignSessionRequest(string Title, string Date, string Location, string Objective, string Threat);
+public sealed record SaveSessionDetailsRequest(string? DetailsJson, string? LootAssignmentsJson);
 public sealed record CreateCampaignNpcRequest(string Name);
 public sealed record RemoveCampaignNpcRequest(string Name);
 public sealed record SaveCampaignNpcRequest(CampaignNpcDto Npc);
-public sealed record CreateCampaignLootRequest(string Name);
+public sealed record CreateCampaignLootRequest(string Name, Guid? SessionId = null);
 public sealed record RemoveCampaignLootRequest(string Name);
 public sealed record CreateCampaignWorldNoteRequest(string Title, string Category, string Content);
 public sealed record UpdateCampaignWorldNoteRequest(string Title, string Category, string Content);
@@ -350,6 +359,7 @@ public sealed record UpdateCampaignMapRequest(CampaignMapDto? Map, CampaignMapLi
 public sealed record MoveCampaignMapTokenRequest(Guid MapId, double X, double Y, long MoveRevision, CampaignMapVisionMemoryDto? VisionMemory);
 public sealed record ResetCampaignMapVisionRequest(Guid MapId, string? Key);
 public sealed record UpdateCampaignMapVisionRequest(Guid MapId, CampaignMapVisionMemoryDto Memory);
+public sealed record SaveCustomTablesRequest(string TablesJson);
 
 public sealed record CampaignInvitationEmail(
     Guid CampaignId,

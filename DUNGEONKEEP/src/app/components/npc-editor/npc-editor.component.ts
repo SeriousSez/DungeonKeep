@@ -798,26 +798,14 @@ export class NpcEditorComponent {
     }
 
     private readStoredPortraitOriginalImageUrl(npcId: string): string {
-        try {
-            return globalThis.localStorage?.getItem(`dungeonkeep-npc-portrait-original:${npcId}`)?.trim() ?? '';
-        } catch {
-            return '';
-        }
+        void npcId;
+        return '';
     }
 
     private storePortraitOriginalImageUrl(npcId: string, imageUrl: string): void {
         const trimmed = imageUrl.trim();
         this.portraitOriginalImageUrl.set(trimmed);
-
-        try {
-            if (!trimmed) {
-                globalThis.localStorage?.removeItem(`dungeonkeep-npc-portrait-original:${npcId}`);
-            } else {
-                globalThis.localStorage?.setItem(`dungeonkeep-npc-portrait-original:${npcId}`, trimmed);
-            }
-        } catch {
-            // Ignore browser storage failures and fall back to in-memory state.
-        }
+        void npcId;
     }
 
     private replaceStringArray(array: StringListControl, values: readonly string[]): void {

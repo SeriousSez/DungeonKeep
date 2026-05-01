@@ -9,9 +9,7 @@ import { CampaignNpcPreviewModalComponent } from '../../components/campaign-npc-
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
 import { MonsterStatBlockModalComponent } from '../../components/monster-stat-block-modal/monster-stat-block-modal.component';
 import { createDefaultNpc, mergeCampaignNpcSources, sanitizeNpc, touchNpc } from '../../data/campaign-npc.helpers';
-import { loadCampaignNpcDrafts, saveCampaignNpcDrafts } from '../../data/campaign-npc.storage';
 import { monsterCatalog } from '../../data/monster-catalog.generated';
-import { readStoredSessionEditorDraft } from '../../data/session-editor.storage';
 import { CampaignNpc } from '../../models/campaign-npc.models';
 import { Character, SessionPrep, ThreatLevel } from '../../models/dungeon.models';
 import { MonsterCatalogEntry } from '../../models/monster-reference.models';
@@ -77,7 +75,6 @@ interface SessionLootAssignment {
 
 const monsterCatalogByLookupKey = new Map<string, MonsterCatalogEntry>();
 const monsterLookupStopWords = new Set(['the', 'a', 'an', 'of', 'and']);
-const SESSION_LOOT_ASSIGNMENT_STORAGE_PREFIX = 'dungeonkeep.session-loot-assignment';
 
 for (const entry of monsterCatalog) {
     for (const key of buildMonsterLookupKeys(entry.name)) {
@@ -131,10 +128,8 @@ export class SessionDetailPageComponent {
         new Set((this.currentCampaign()?.npcs ?? []).map((name) => normalizeLookupValue(name)))
     );
     readonly storedCampaignNpcDraftMap = computed(() => {
-        this.npcDraftVersion();
-
         return new Map(
-            mergeCampaignNpcSources(this.currentCampaign()?.npcs ?? [], this.currentCampaign()?.campaignNpcs ?? [], loadCampaignNpcDrafts(this.campaignId()) ?? [])
+            mergeCampaignNpcSources(this.currentCampaign()?.npcs ?? [], this.currentCampaign()?.campaignNpcs ?? [], [])
                 .map((npc) => sanitizeNpc(npc))
                 .map((npc) => [normalizeLookupValue(npc.name), npc] as const)
         );
@@ -300,7 +295,7 @@ export class SessionDetailPageComponent {
                 this.activeLootRemoveId.set('');
                 this.lootAssignmentTargets.set({});
                 this.lootAssignmentAmounts.set({});
-                this.lootAssignments.set(readStoredSessionLootAssignments(campaignId, params.get('sessionId') ?? ''));
+                this.lootAssignments.set({});
                 this.selectedSection.set('all');
                 this.cdr.detectChanges();
             });
@@ -351,8 +346,9 @@ export class SessionDetailPageComponent {
                 return;
             }
 
-            const draft = readStoredSessionEditorDraft(campaignId, sessionId);
+            const draft = this.parseSessionDraft(summary?.detailsJson ?? null);
             this.storedDraft.set(draft);
+            this.lootAssignments.set(this.parseLootAssignments(summary?.lootAssignmentsJson ?? null));
 
             if (!summary && !draft) {
                 this.loadError.set('The requested session could not be found in this campaign.');
@@ -553,7 +549,7 @@ export class SessionDetailPageComponent {
             return;
         }
 
-        void this.router.navigate(['/campaigns', this.campaignId(), 'npcs', npc.id]);
+        void this.router.navigate(['/campaigns', this.campaignId(), 'npcs', this.toRouteNpcId(npc.id)]);
     }
 
     editStoredCampaignNpc(name: string): void {
@@ -562,7 +558,7 @@ export class SessionDetailPageComponent {
             return;
         }
 
-        void this.router.navigate(['/campaigns', this.campaignId(), 'npcs', npc.id, 'edit']);
+        void this.router.navigate(['/campaigns', this.campaignId(), 'npcs', this.toRouteNpcId(npc.id), 'edit']);
     }
 
     async addNpcToCampaign(sessionNpc: SessionNpc): Promise<void> {
@@ -584,7 +580,6 @@ export class SessionDetailPageComponent {
         try {
             const existingDraft = this.storedCampaignNpcDraftMap().get(normalizeLookupValue(trimmedName)) ?? null;
             if (existingDraft) {
-                await this.router.navigate(['/campaigns', campaignId, 'npcs', existingDraft.id]);
                 return;
             }
 
@@ -594,37 +589,32 @@ export class SessionDetailPageComponent {
                 const generated = await this.api.generateNpcDraft(this.buildNpcGenerationRequest(sessionNpc));
                 draft = this.mergeGeneratedNpcDraft(draft, generated);
             } catch (error) {
-                this.interactionMessage.set(`Created ${trimmedName} from the session notes. AI enrichment was unavailable, so some fields may still need editing.`);
-                this.interactionError.set('');
-                const detail = this.readApiError(error, '');
-                if (detail) {
-                    this.interactionMessage.set(`Created ${trimmedName} from the session notes. AI enrichment was unavailable: ${detail}`);
-                }
+                void error;
             }
 
             const savedNpc = this.persistCampaignNpcDraft(draft);
-            let syncMessage = '';
 
             const synced = await this.store.saveCampaignNpc(campaignId, savedNpc);
             if (!synced) {
-                syncMessage = ' The full NPC draft was saved locally, but the campaign NPC could not be synced.';
+                this.interactionError.set('The full NPC draft was saved locally, but the campaign NPC could not be synced.');
             }
-
-            if (!this.interactionMessage()) {
-                this.interactionMessage.set(`${savedNpc.name} is now a full campaign NPC.${syncMessage}`);
-            } else if (syncMessage) {
-                this.interactionMessage.set(`${this.interactionMessage()}${syncMessage}`);
-            }
-
-            await this.router.navigate(['/campaigns', campaignId, 'npcs', savedNpc.id]);
         } finally {
             this.activeNpcCreationName.set('');
             this.cdr.detectChanges();
         }
     }
 
+    private toRouteNpcId(id: string): string {
+        if (id.startsWith('npc-')) {
+            return id.slice('npc-'.length);
+        }
+
+        return id;
+    }
+
     async addSessionLootToCampaign(lootEntry: SessionEditorDraft['loot'][number]): Promise<void> {
         const campaignId = this.campaignId();
+        const sessionId = this.sessionId();
         const trimmedName = lootEntry.name.trim();
         const quantity = Number.isFinite(lootEntry.quantity) ? Math.max(1, Math.floor(lootEntry.quantity)) : 1;
 
@@ -645,7 +635,7 @@ export class SessionDetailPageComponent {
             let addedCount = 0;
 
             for (let index = 0; index < quantity; index += 1) {
-                const added = await this.store.addCampaignLoot(campaignId, trimmedName);
+                const added = await this.store.addCampaignLoot(campaignId, trimmedName, sessionId);
                 if (!added) {
                     break;
                 }
@@ -1108,14 +1098,6 @@ export class SessionDetailPageComponent {
     }
 
     private persistCampaignNpcDraft(npc: CampaignNpc): CampaignNpc {
-        const campaignId = this.campaignId();
-        const currentDrafts = (loadCampaignNpcDrafts(campaignId) ?? []).map((draft) => sanitizeNpc(draft));
-        const existingIndex = currentDrafts.findIndex((entry) => entry.id === npc.id || normalizeLookupValue(entry.name) === normalizeLookupValue(npc.name));
-        const nextDrafts = existingIndex >= 0
-            ? currentDrafts.map((entry, index) => index === existingIndex ? npc : entry)
-            : [npc, ...currentDrafts];
-
-        saveCampaignNpcDrafts(campaignId, nextDrafts);
         this.npcDraftVersion.update((value) => value + 1);
         return npc;
     }
@@ -1359,95 +1341,44 @@ export class SessionDetailPageComponent {
     }
 
     private persistSessionLootAssignments(): void {
-        persistStoredSessionLootAssignments(this.campaignId(), this.sessionId(), this.lootAssignments());
-    }
-}
+        const campaignId = this.campaignId();
+        const sessionId = this.sessionId();
+        const detailsJson = this.storedDraft() ? JSON.stringify(this.storedDraft()) : (this.sessionSummary()?.detailsJson ?? null);
+        if (!campaignId || !sessionId) {
+            return;
+        }
 
-function buildSessionLootAssignmentStorageKey(campaignId: string, sessionId: string): string {
-    return `${SESSION_LOOT_ASSIGNMENT_STORAGE_PREFIX}.${campaignId}.${sessionId}`;
-}
-
-function readStoredSessionLootAssignments(campaignId: string, sessionId: string): Record<string, SessionLootAssignment> {
-    if (typeof window === 'undefined' || typeof window.localStorage === 'undefined' || !campaignId || !sessionId) {
-        return {};
-    }
-
-    const raw = window.localStorage.getItem(buildSessionLootAssignmentStorageKey(campaignId, sessionId));
-    if (!raw) {
-        return {};
+        void this.store.saveSessionDetails(campaignId, sessionId, {
+            detailsJson,
+            lootAssignmentsJson: JSON.stringify(this.lootAssignments())
+        });
     }
 
-    try {
-        const parsed = JSON.parse(raw) as Record<string, SessionLootAssignment | { characterId: string; itemName: string; itemCategory: string; quantity: number }>;
-        if (!parsed || typeof parsed !== 'object') {
+    private parseSessionDraft(detailsJson: string | null | undefined): SessionEditorDraft | null {
+        if (!detailsJson?.trim()) {
+            return null;
+        }
+
+        try {
+            const parsed = JSON.parse(detailsJson) as SessionEditorDraft;
+            return parsed && typeof parsed === 'object' ? parsed : null;
+        } catch {
+            return null;
+        }
+    }
+
+    private parseLootAssignments(lootAssignmentsJson: string | null | undefined): Record<string, SessionLootAssignment> {
+        if (!lootAssignmentsJson?.trim()) {
             return {};
         }
 
-        const normalized: Record<string, SessionLootAssignment> = {};
-
-        for (const [lootId, value] of Object.entries(parsed)) {
-            if (!value || typeof value !== 'object') {
-                continue;
-            }
-
-            const itemName = 'itemName' in value && typeof value.itemName === 'string' ? value.itemName : '';
-            const itemCategory = 'itemCategory' in value && typeof value.itemCategory === 'string' ? value.itemCategory : '';
-            if (!itemName.trim() || !itemCategory.trim()) {
-                continue;
-            }
-
-            if ('allocations' in value && Array.isArray(value.allocations)) {
-                const allocations = value.allocations
-                    .filter((allocation) => allocation && typeof allocation.characterId === 'string')
-                    .map((allocation) => ({
-                        characterId: allocation.characterId,
-                        quantity: Math.max(0, Math.trunc(Number(allocation.quantity) || 0))
-                    }))
-                    .filter((allocation) => allocation.quantity > 0);
-
-                if (allocations.length > 0) {
-                    normalized[lootId] = {
-                        itemName,
-                        itemCategory,
-                        allocations
-                    };
-                }
-
-                continue;
-            }
-
-            if ('characterId' in value && typeof value.characterId === 'string') {
-                const quantity = Math.max(0, Math.trunc(Number(value.quantity) || 0));
-                if (!value.characterId || quantity <= 0) {
-                    continue;
-                }
-
-                normalized[lootId] = {
-                    itemName,
-                    itemCategory,
-                    allocations: [
-                        {
-                            characterId: value.characterId,
-                            quantity
-                        }
-                    ]
-                };
-            }
+        try {
+            const parsed = JSON.parse(lootAssignmentsJson) as Record<string, SessionLootAssignment>;
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch {
+            return {};
         }
-
-        return normalized;
-    } catch {
-        window.localStorage.removeItem(buildSessionLootAssignmentStorageKey(campaignId, sessionId));
-        return {};
     }
-}
-
-function persistStoredSessionLootAssignments(campaignId: string, sessionId: string, assignments: Record<string, SessionLootAssignment>): void {
-    if (typeof window === 'undefined' || typeof window.localStorage === 'undefined' || !campaignId || !sessionId) {
-        return;
-    }
-
-    window.localStorage.setItem(buildSessionLootAssignmentStorageKey(campaignId, sessionId), JSON.stringify(assignments));
 }
 
 function buildNpcShortDescription(sessionNpc: SessionNpc): string {

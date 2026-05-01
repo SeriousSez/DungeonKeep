@@ -165,6 +165,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             EnsureColumnExists(dbContext, "Campaigns", "Hook", "TEXT NOT NULL DEFAULT ''");
             EnsureColumnExists(dbContext, "Campaigns", "NextSession", "TEXT NOT NULL DEFAULT ''");
             EnsureColumnExists(dbContext, "Campaigns", "Summary", "TEXT NOT NULL DEFAULT ''");
+            EnsureColumnExists(dbContext, "Campaigns", "CustomTablesJson", "TEXT NOT NULL DEFAULT '[]'");
         }
         catch
         {
@@ -218,7 +219,10 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             session.Date.Trim(),
             session.Location.Trim(),
             session.Objective.Trim(),
-            NormalizeThreat(session.Threat)));
+            NormalizeThreat(session.Threat),
+            session.IsRevealedToPlayers,
+            session.DetailsJson,
+            session.LootAssignmentsJson));
 
         campaign.SessionsJson = JsonSerializer.Serialize(sessions);
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -287,23 +291,72 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         return await GetByIdAsync(campaignId, cancellationToken);
     }
 
+    public async Task<Campaign?> SaveSessionDetailsAsync(Guid campaignId, Guid sessionId, string? detailsJson, string? lootAssignmentsJson, CancellationToken cancellationToken = default)
+    {
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var sessions = ParseSessions(campaign.SessionsJson);
+        var updated = false;
+
+        for (var index = 0; index < sessions.Count; index++)
+        {
+            if (sessions[index].Id != sessionId)
+            {
+                continue;
+            }
+
+            sessions[index] = sessions[index] with
+            {
+                DetailsJson = detailsJson,
+                LootAssignmentsJson = lootAssignmentsJson
+            };
+            updated = true;
+            break;
+        }
+
+        if (!updated)
+        {
+            return null;
+        }
+
+        campaign.SessionsJson = JsonSerializer.Serialize(sessions);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return await GetByIdAsync(campaignId, cancellationToken);
+    }
+
     public async Task<Campaign?> SetSessionVisibilityAsync(Guid campaignId, Guid sessionId, bool isRevealedToPlayers, CancellationToken cancellationToken = default)
     {
         var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
-        if (campaign is null) return null;
+        if (campaign is null)
+        {
+            return null;
+        }
 
         var sessions = ParseSessions(campaign.SessionsJson);
         var updated = false;
         for (var i = 0; i < sessions.Count; i++)
         {
-            if (sessions[i].Id != sessionId) continue;
+            if (sessions[i].Id != sessionId)
+            {
+                continue;
+            }
+
             sessions[i] = sessions[i] with { IsRevealedToPlayers = isRevealedToPlayers };
             updated = true;
             break;
         }
-        if (!updated) return null;
 
-        campaign.SessionsJson = JsonSerializer.Serialize(sessions); 
+        if (!updated)
+        {
+            return null;
+        }
+
+        campaign.SessionsJson = JsonSerializer.Serialize(sessions);
         await dbContext.SaveChangesAsync(cancellationToken);
         return await GetByIdAsync(campaignId, cancellationToken);
     }
@@ -317,6 +370,20 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                 collection.Add(name.Trim());
             }
         }, campaign => campaign.NpcsJson, (campaign, json) => campaign.NpcsJson = json, cancellationToken);
+    }
+
+    public async Task<Campaign?> SaveCustomTablesAsync(Guid campaignId, string tablesJson, CancellationToken cancellationToken = default)
+    {
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        campaign.CustomTablesJson = string.IsNullOrWhiteSpace(tablesJson) ? "[]" : tablesJson;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return await GetByIdAsync(campaignId, cancellationToken);
     }
 
     public async Task<Campaign?> SaveNpcAsync(Guid campaignId, CampaignNpcDto npc, CancellationToken cancellationToken = default)
@@ -438,23 +505,33 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         return await GetByIdAsync(campaignId, cancellationToken);
     }
 
-    public async Task<Campaign?> AddLootAsync(Guid campaignId, string name, CancellationToken cancellationToken = default)
+    public async Task<Campaign?> AddLootAsync(Guid campaignId, string name, Guid? sessionId, CancellationToken cancellationToken = default)
     {
-        return await UpdateNamedCollectionAsync(campaignId, collection =>
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        if (campaign is null) return null;
+
+        var items = ParseLootItems(campaign.LootJson);
+        var trimmedName = name.Trim();
+        if (!items.Any(item => string.Equals(item.Name, trimmedName, StringComparison.OrdinalIgnoreCase)))
         {
-            if (!collection.Contains(name, StringComparer.OrdinalIgnoreCase))
-            {
-                collection.Add(name.Trim());
-            }
-        }, campaign => campaign.LootJson, (campaign, json) => campaign.LootJson = json, cancellationToken);
+            items.Add(new PersistedCampaignLootItem(trimmedName, sessionId));
+        }
+
+        campaign.LootJson = JsonSerializer.Serialize(items, LootSerializerOptions);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return await GetByIdAsync(campaignId, cancellationToken);
     }
 
     public async Task<Campaign?> RemoveLootAsync(Guid campaignId, string name, CancellationToken cancellationToken = default)
     {
-        return await UpdateNamedCollectionAsync(campaignId, collection =>
-        {
-            collection.RemoveAll(item => string.Equals(item, name, StringComparison.OrdinalIgnoreCase));
-        }, campaign => campaign.LootJson, (campaign, json) => campaign.LootJson = json, cancellationToken);
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+        if (campaign is null) return null;
+
+        var items = ParseLootItems(campaign.LootJson);
+        items.RemoveAll(item => string.Equals(item.Name, name, StringComparison.OrdinalIgnoreCase));
+        campaign.LootJson = JsonSerializer.Serialize(items, LootSerializerOptions);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return await GetByIdAsync(campaignId, cancellationToken);
     }
 
     public async Task<Campaign?> AddThreadAsync(Guid campaignId, Guid threadId, string text, string visibility, CancellationToken cancellationToken = default)
@@ -1334,8 +1411,67 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                     session.Location.Trim(),
                     session.Objective.Trim(),
                     NormalizeThreat(session.Threat),
-                    session.IsRevealedToPlayers))
+                    session.IsRevealedToPlayers,
+                    session.DetailsJson,
+                    session.LootAssignmentsJson))
                 .ToList();
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private sealed record PersistedCampaignLootItem(string Name, Guid? SessionId);
+    private static readonly JsonSerializerOptions LootSerializerOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
+    private static List<PersistedCampaignLootItem> ParseLootItems(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var result = new List<PersistedCampaignLootItem>();
+            foreach (var element in doc.RootElement.EnumerateArray())
+            {
+                if (element.ValueKind == JsonValueKind.String)
+                {
+                    var name = element.GetString();
+                    if (!string.IsNullOrWhiteSpace(name))
+                    {
+                        result.Add(new PersistedCampaignLootItem(name.Trim(), null));
+                    }
+                }
+                else if (element.ValueKind == JsonValueKind.Object)
+                {
+                    // Try camelCase first, then PascalCase for backward compat
+                    string? name = null;
+                    if (element.TryGetProperty("name", out var namePropc)) name = namePropc.GetString();
+                    else if (element.TryGetProperty("Name", out var namePropP)) name = namePropP.GetString();
+
+                    Guid? sessionId = null;
+                    JsonElement sidProp;
+                    if ((element.TryGetProperty("sessionId", out sidProp) || element.TryGetProperty("SessionId", out sidProp))
+                        && sidProp.ValueKind != JsonValueKind.Null)
+                    {
+                        if (Guid.TryParse(sidProp.GetString(), out var parsed))
+                        {
+                            sessionId = parsed;
+                        }
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(name))
+                    {
+                        result.Add(new PersistedCampaignLootItem(name!.Trim(), sessionId));
+                    }
+                }
+            }
+
+            return result;
         }
         catch
         {
@@ -1748,5 +1884,5 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
 
     private sealed record PersistedCampaignThread(Guid Id, string Text, string Visibility);
     private sealed record PersistedCampaignWorldNote(Guid Id, string Title, string Category, string Content, bool IsRevealedToPlayers = false);
-    private sealed record PersistedCampaignSession(Guid Id, string Title, string Date, string Location, string Objective, string Threat, bool IsRevealedToPlayers = false);
+    private sealed record PersistedCampaignSession(Guid Id, string Title, string Date, string Location, string Objective, string Threat, bool IsRevealedToPlayers = false, string? DetailsJson = null, string? LootAssignmentsJson = null);
 }

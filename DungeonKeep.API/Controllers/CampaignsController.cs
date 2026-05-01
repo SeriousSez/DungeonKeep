@@ -234,6 +234,46 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         }
     }
 
+    [HttpPut("{campaignId:guid}/sessions/{sessionId:guid}/details")]
+    public async Task<ActionResult<CampaignDto>> SaveSessionDetails(Guid campaignId, Guid sessionId, [FromBody] SaveSessionDetailsRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var updated = await campaignService.SaveSessionDetailsAsync(campaignId, sessionId, request, user.Id, cancellationToken);
+            return updated is null ? NotFound("Campaign or session was not found.") : Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
+    [HttpPut("{campaignId:guid}/custom-tables")]
+    public async Task<ActionResult<CampaignDto>> SaveCustomTables(Guid campaignId, [FromBody] SaveCustomTablesRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var updated = await campaignService.SaveCustomTablesAsync(campaignId, request, user.Id, cancellationToken);
+            return updated is null ? NotFound("Campaign was not found.") : Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
     [HttpPatch("{campaignId:guid}/sessions/{sessionId:guid}/visibility")]
     public async Task<ActionResult<CampaignDto>> SetSessionVisibility(Guid campaignId, Guid sessionId, [FromBody] SetSessionVisibilityRequest request, CancellationToken cancellationToken)
     {
@@ -2819,7 +2859,7 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             $"Next session note: {campaign.NextSession}",
             $"Campaign summary: {campaign.Summary}",
             $"Known NPC names: {FormatList(campaign.Npcs)}",
-            $"Known loot: {FormatList(campaign.Loot)}",
+            $"Known loot: {FormatList(campaign.Loot.Select(item => item.Name))}",
             $"Open threads: {FormatList(campaign.OpenThreads.Select(thread => thread.Text))}",
             $"Recent sessions: {FormatList(campaign.Sessions.TakeLast(3).Select(session => $"{session.Title} ({session.Location})"))}",
             string.Empty,

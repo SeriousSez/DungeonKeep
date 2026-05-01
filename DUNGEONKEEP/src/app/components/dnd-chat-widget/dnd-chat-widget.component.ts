@@ -379,7 +379,7 @@ export class DndChatWidgetComponent {
                 content: this.truncateText(note.content, 320)
             })),
             npcs: [...campaign.npcs],
-            loot: [...campaign.loot],
+            loot: campaign.loot.map((item) => item.name),
             members: (campaign.members ?? []).map((member) => ({
                 userId: member.userId,
                 email: member.email,

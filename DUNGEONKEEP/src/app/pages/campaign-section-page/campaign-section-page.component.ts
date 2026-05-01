@@ -17,8 +17,10 @@ import { DungeonStoreService } from '../../state/dungeon-store.service';
 type CampaignSection = 'party' | 'sessions' | 'npcs' | 'tables' | 'loot' | 'threads' | 'notes' | 'members';
 type ThreatLevel = 'Low' | 'Moderate' | 'High' | 'Deadly';
 type NoteEditorDraftMode = 'standard' | 'ai';
+type LootViewMode = 'flat' | 'session' | 'character';
 type CampaignLootSummary = {
     name: string;
+    sessionId: string | null;
     count: number;
     category: string;
     weight?: number;
@@ -108,6 +110,7 @@ export class CampaignSectionPageComponent {
     readonly isTogglingNoteId = signal<string | null>(null);
     readonly isAddingLoot = signal(false);
     readonly isInviting = signal(false);
+    readonly lootViewMode = signal<LootViewMode>('flat');
     readonly isSavingNote = signal(false);
     readonly isDeletingNoteId = signal<string | null>(null);
 
@@ -205,11 +208,14 @@ export class CampaignSectionPageComponent {
                 || item.category.toLowerCase().includes(searchTerm));
     });
     readonly lootSummaries = computed<CampaignLootSummary[]>(() => {
-        const loot = this.selectedCampaign()?.loot ?? [];
+        const campaign = this.selectedCampaign();
+        const loot = campaign?.loot ?? [];
         const summaries = new Map<string, CampaignLootSummary>();
+        const sessionLootMetadata = this.sessionLootMetadataByName();
 
-        for (const name of loot) {
-            const normalizedName = name.trim().toLowerCase();
+        for (const item of loot) {
+            if (!item?.name?.trim()) continue;
+            const normalizedName = item.name.trim().toLowerCase();
             const existingSummary = summaries.get(normalizedName);
 
             if (existingSummary) {
@@ -218,15 +224,17 @@ export class CampaignSectionPageComponent {
             }
 
             const matchedItem = equipmentCatalogByName.get(normalizedName);
-            const category = matchedItem?.category ?? 'Custom';
+            const sessionMetadata = sessionLootMetadata.get(normalizedName);
+            const category = matchedItem?.category ?? sessionMetadata?.category ?? 'Custom';
 
             summaries.set(normalizedName, {
-                name,
+                name: item.name,
+                sessionId: item.sessionId ?? null,
                 count: 1,
                 category,
                 weight: matchedItem?.weight,
                 costGp: matchedItem?.costGp,
-                notes: matchedItem?.notes,
+                notes: matchedItem?.notes ?? sessionMetadata?.notes,
                 sourceUrl: matchedItem?.sourceUrl,
                 sourceLabel: matchedItem?.sourceLabel,
                 summary: matchedItem?.summary,
@@ -236,8 +244,242 @@ export class CampaignSectionPageComponent {
             });
         }
 
+        // Ensure assigned session loot appears in the campaign loot view,
+        // even when the item was never explicitly added to campaign.loot.
+        for (const session of campaign?.sessions ?? []) {
+            const assignments = this.parseLootAssignmentsJson(session.lootAssignmentsJson);
+
+            for (const entry of Object.values(assignments)) {
+                const itemName = entry.itemName?.trim();
+                if (!itemName) {
+                    continue;
+                }
+
+                const normalizedName = itemName.toLowerCase();
+                if (summaries.has(normalizedName)) {
+                    continue;
+                }
+
+                const assignedCount = entry.allocations.reduce(
+                    (total, allocation) => total + Math.max(0, Math.trunc(allocation.quantity || 0)),
+                    0
+                );
+                const matchedItem = equipmentCatalogByName.get(normalizedName);
+                const sessionMetadata = sessionLootMetadata.get(normalizedName);
+
+                summaries.set(normalizedName, {
+                    name: itemName,
+                    sessionId: session.id,
+                    count: Math.max(assignedCount, 1),
+                    category: matchedItem?.category ?? sessionMetadata?.category ?? 'Custom',
+                    weight: matchedItem?.weight,
+                    costGp: matchedItem?.costGp,
+                    notes: matchedItem?.notes ?? sessionMetadata?.notes,
+                    sourceUrl: matchedItem?.sourceUrl,
+                    sourceLabel: matchedItem?.sourceLabel,
+                    summary: matchedItem?.summary,
+                    detailLines: matchedItem?.detailLines,
+                    rarity: matchedItem?.rarity,
+                    attunement: matchedItem?.attunement
+                });
+            }
+        }
+
         return [...summaries.values()];
     });
+    readonly lootGroupedBySesssion = computed<Array<{ sessionId: string | null; sessionTitle: string; items: CampaignLootSummary[] }>>(() => {
+        const campaign = this.selectedCampaign();
+        if (!campaign) return [];
+
+        const summaries = this.lootSummaries();
+        const sessionMap = new Map(campaign.sessions.map((s) => [s.id, s.title]));
+        const groups = new Map<string | null, CampaignLootSummary[]>();
+
+        for (const item of summaries) {
+            const key = item.sessionId ?? null;
+            const existing = groups.get(key);
+            if (existing) {
+                existing.push(item);
+            } else {
+                groups.set(key, [item]);
+            }
+        }
+
+        const result: Array<{ sessionId: string | null; sessionTitle: string; items: CampaignLootSummary[] }> = [];
+
+        // Sessions in order, then unassigned
+        for (const session of campaign.sessions) {
+            const items = groups.get(session.id);
+            if (items && items.length > 0) {
+                result.push({ sessionId: session.id, sessionTitle: session.title, items });
+            }
+        }
+
+        const unassigned = groups.get(null);
+        if (unassigned && unassigned.length > 0) {
+            result.push({ sessionId: null, sessionTitle: 'Unassigned', items: unassigned });
+        }
+
+        return result;
+    });
+
+    readonly sessionLootMetadataByName = computed<Map<string, { notes?: string; category?: string }>>(() => {
+        const campaign = this.selectedCampaign();
+        const metadata = new Map<string, { notes?: string; category?: string }>();
+
+        if (!campaign) {
+            return metadata;
+        }
+
+        for (const session of campaign.sessions) {
+            for (const item of this.parseSessionLootEntries(session.detailsJson)) {
+                const name = item.name?.trim();
+                if (!name) {
+                    continue;
+                }
+
+                const key = name.toLowerCase();
+                const existing = metadata.get(key) ?? {};
+                const nextNotes = existing.notes || item.notes?.trim();
+                const nextCategory = existing.category || item.type?.trim();
+
+                if (nextNotes || nextCategory) {
+                    metadata.set(key, {
+                        notes: nextNotes,
+                        category: nextCategory
+                    });
+                }
+            }
+        }
+
+        return metadata;
+    });
+    readonly lootGroupedByCharacter = computed<Array<{ characterName: string; items: CampaignLootSummary[] }>>(() => {
+        const campaign = this.selectedCampaign();
+        if (!campaign) return [];
+
+        const summaries = this.lootSummaries();
+        const assigneesByName = this.lootAssigneesByName();
+        const characterMap = new Map(this.store.characters().map((character) => [character.id, character]));
+        const groups = new Map<string, CampaignLootSummary[]>();
+
+        for (const item of summaries) {
+            const key = item.name.trim().toLowerCase();
+            const assignees = assigneesByName.get(key) ?? [];
+
+            if (assignees.length === 0) {
+                continue;
+            }
+
+            for (const assignee of assignees) {
+                const existing = groups.get(assignee);
+                if (existing) {
+                    existing.push(item);
+                } else {
+                    groups.set(assignee, [item]);
+                }
+            }
+        }
+
+        const result: Array<{ characterName: string; items: CampaignLootSummary[] }> = [];
+        const orderedPartyNames = campaign.partyCharacterIds
+            .map((id) => characterMap.get(id)?.name?.trim() ?? '')
+            .filter((name) => !!name);
+
+        for (const name of orderedPartyNames) {
+            const items = groups.get(name);
+            if (items && items.length > 0) {
+                result.push({ characterName: name, items });
+                groups.delete(name);
+            }
+        }
+
+        for (const [name, items] of [...groups.entries()].sort((left, right) => left[0].localeCompare(right[0]))) {
+            if (items.length > 0) {
+                result.push({ characterName: name, items });
+            }
+        }
+
+        const unassigned = summaries.filter((item) => {
+            const key = item.name.trim().toLowerCase();
+            const assignees = assigneesByName.get(key) ?? [];
+            return assignees.length === 0;
+        });
+
+        if (unassigned.length > 0) {
+            result.push({ characterName: 'Unassigned', items: unassigned });
+        }
+
+        return result;
+    });
+    /**
+     * Map from item name (lowercase) → array of character names it was assigned to.
+     * Built from persisted session loot assignment JSON.
+     */
+    readonly lootAssigneesByName = computed<Map<string, string[]>>(() => {
+        const campaign = this.selectedCampaign();
+        if (!campaign) return new Map();
+
+        const characterMap = new Map(this.store.characters().map((c) => [c.id, c.name]));
+        const result = new Map<string, string[]>();
+
+        for (const session of campaign.sessions) {
+            const assignments = this.parseLootAssignmentsJson(session.lootAssignmentsJson);
+            for (const entry of Object.values(assignments)) {
+                const key = entry.itemName.trim().toLowerCase();
+                const names = entry.allocations
+                    .map((a) => characterMap.get(a.characterId))
+                    .filter((name): name is string => Boolean(name));
+
+                if (names.length > 0) {
+                    const existing = result.get(key) ?? [];
+                    for (const name of names) {
+                        if (!existing.includes(name)) {
+                            existing.push(name);
+                        }
+                    }
+                    result.set(key, existing);
+                }
+            }
+        }
+
+        return result;
+    });
+
+    private parseLootAssignmentsJson(raw: string | null | undefined): Record<string, { itemName: string; allocations: Array<{ characterId: string; quantity: number }> }> {
+        if (!raw?.trim()) {
+            return {};
+        }
+
+        try {
+            const parsed = JSON.parse(raw) as Record<string, { itemName: string; allocations: Array<{ characterId: string; quantity: number }> }>;
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch {
+            return {};
+        }
+    }
+
+    private parseSessionLootEntries(raw: string | null | undefined): Array<{ name: string; type?: string; notes?: string }> {
+        if (!raw?.trim()) {
+            return [];
+        }
+
+        try {
+            const parsed = JSON.parse(raw) as { loot?: Array<{ name?: string; type?: string; notes?: string }> };
+            return Array.isArray(parsed?.loot)
+                ? parsed.loot
+                    .filter((item) => typeof item?.name === 'string' && item.name.trim().length > 0)
+                    .map((item) => ({
+                        name: item.name!.trim(),
+                        type: typeof item.type === 'string' ? item.type : undefined,
+                        notes: typeof item.notes === 'string' ? item.notes : undefined
+                    }))
+                : [];
+        } catch {
+            return [];
+        }
+    }
+
     readonly totalLootWeight = computed(() => this.lootSummaries().reduce((total, item) => total + ((item.weight ?? 0) * item.count), 0));
 
     getCharacterPortraitUrl(character: Character): string {
@@ -668,23 +910,22 @@ export class CampaignSectionPageComponent {
     }
 
     openLootSummaryDetails(item: CampaignLootSummary): void {
-        if (!item.sourceUrl && !item.summary && !item.detailLines?.length && item.weight == null && item.costGp == null && !item.rarity && !item.attunement) {
-            return;
-        }
+        const normalizedName = item.name.trim().toLowerCase();
+        const matchedItem = equipmentCatalogByName.get(normalizedName);
 
         this.activeLootItemDetailModal.set({
             name: item.name,
-            category: item.category,
+            category: item.category || matchedItem?.category || 'Custom',
             quantity: item.count,
-            sourceUrl: item.sourceUrl,
-            weight: item.weight,
-            costGp: item.costGp,
-            sourceLabel: item.sourceLabel,
-            summary: item.summary,
-            notes: item.notes,
-            detailLines: item.detailLines,
-            rarity: item.rarity,
-            attunement: item.attunement
+            sourceUrl: item.sourceUrl || matchedItem?.sourceUrl || '',
+            weight: item.weight ?? matchedItem?.weight,
+            costGp: item.costGp ?? matchedItem?.costGp,
+            sourceLabel: item.sourceLabel || matchedItem?.sourceLabel,
+            summary: item.summary || matchedItem?.summary,
+            notes: item.notes || matchedItem?.notes,
+            detailLines: item.detailLines?.length ? item.detailLines : matchedItem?.detailLines,
+            rarity: item.rarity || matchedItem?.rarity,
+            attunement: item.attunement || matchedItem?.attunement
         });
     }
 

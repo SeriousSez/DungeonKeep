@@ -124,9 +124,12 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
             return null;
         }
 
-        if (existing.OwnerUserId != userId)
+        var canManageCharacter = existing.OwnerUserId == userId
+            || await IsOwnerOfAnyCampaignAsync(ResolveCampaignIds(existing), userId, cancellationToken);
+
+        if (!canManageCharacter)
         {
-            throw new UnauthorizedAccessException("Only the character owner can edit this character.");
+            throw new UnauthorizedAccessException("Only the character owner or a campaign owner can edit this character.");
         }
 
         var normalizedCampaignIds = NormalizeCampaignIds(request.CampaignIds, request.CampaignId);

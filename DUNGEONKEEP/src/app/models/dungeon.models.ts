@@ -41,6 +41,11 @@ export const DEFAULT_CAMPAIGN_MAP_GRID_COLOR = '#745338';
 export const DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X = 0;
 export const DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y = 0;
 
+export interface CampaignLootItem {
+    name: string;
+    sessionId?: string | null;
+}
+
 export interface SessionPrep {
     id: string;
     title: string;
@@ -49,6 +54,8 @@ export interface SessionPrep {
     objective: string;
     threat: ThreatLevel;
     isRevealedToPlayers: boolean;
+    detailsJson?: string | null;
+    lootAssignmentsJson?: string | null;
 }
 
 export interface CampaignMember {
@@ -217,11 +224,12 @@ export interface Campaign {
     map: CampaignMap;
     maps: CampaignMapBoard[];
     activeMapId: string;
-    loot: string[];
+    loot: CampaignLootItem[];
     npcs: string[];
     campaignNpcs: CampaignNpc[];
     currentUserRole?: CampaignMemberRole;
     members?: CampaignMember[];
+    customTablesJson?: string;
 }
 
 export interface AbilityScores {

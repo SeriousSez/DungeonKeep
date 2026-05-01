@@ -62,7 +62,7 @@
         }
         <a [routerLink]="['/campaigns', campaign.id, 'loot']" class="campaign-nav-link" [class.is-active]="isActiveSection('loot')">
             <span class="campaign-nav-label">Loot</span>
-            <span class="campaign-nav-meta">{{ campaign.loot.length }} logged</span>
+            <span class="campaign-nav-meta">{{ lootSummaries().length }} logged</span>
         </a>
         <a [routerLink]="['/campaigns', campaign.id, 'threads']" class="campaign-nav-link" [class.is-active]="isActiveSection('threads')">
             <span class="campaign-nav-label">Threads</span>
@@ -257,7 +257,7 @@
         @case ('loot') {
         <div class="section-heading">
             <h2>Loot</h2>
-            <span class="count-badge">{{ campaign.loot.length }}</span>
+            <span class="count-badge">{{ lootSummaries().length }}</span>
         </div>
 
         <div class="loot-panels" [class.loot-panels--single]="campaign.currentUserRole !== 'Owner'">
@@ -322,10 +322,27 @@
 
                 @if (lootSummaries().length > 0) {
                 <div class="loot-panel-summary">
-                    <span>Current Inventory ({{ campaign.loot.length }})</span>
-                    <span class="loot-panel-summary-meta">Total Weight: {{ formatWeight(totalLootWeight()) }} lb</span>
+                    <span>Current Inventory ({{ lootSummaries().length }})</span>
+                    <div class="loot-panel-summary-right">
+                        <span class="loot-panel-summary-meta">Total Weight: {{ formatWeight(totalLootWeight()) }} lb</span>
+                        <div class="loot-view-mode-toggle" role="group" aria-label="Loot view mode">
+                            <button type="button" class="ghost-button" [class.is-active]="lootViewMode() === 'flat'" (click)="lootViewMode.set('flat')">
+                                <i class="fa-duotone fa-thin fa-list"></i>
+                                Flat
+                            </button>
+                            <button type="button" class="ghost-button" [class.is-active]="lootViewMode() === 'session'" (click)="lootViewMode.set('session')">
+                                <i class="fa-duotone fa-thin fa-layer-group"></i>
+                                Session
+                            </button>
+                            <button type="button" class="ghost-button" [class.is-active]="lootViewMode() === 'character'" (click)="lootViewMode.set('character')">
+                                <i class="fa-duotone fa-thin fa-users"></i>
+                                Character
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
+                @if (lootViewMode() === 'flat') {
                 <div class="loot-grid-table-wrap">
                     <table class="loot-grid-table">
                         <thead>
@@ -335,6 +352,7 @@
                                 <th>QTY</th>
                                 <th>Cost (GP)</th>
                                 <th>Notes</th>
+                                <th>Assigned To</th>
                                 @if (campaign.currentUserRole === 'Owner') {
                                 <th>Action</th>
                                 }
@@ -344,22 +362,27 @@
                             @for (item of lootSummaries(); track item.name) {
                             <tr>
                                 <td>
-                                    @if (item.sourceUrl || item.summary || item.detailLines?.length || item.weight != null || item.costGp != null || item.rarity || item.attunement) {
                                     <button type="button" class="loot-name-btn" (click)="openLootSummaryDetails(item)" [attr.aria-label]="'View details for ' + item.name">
                                         <strong>{{ item.name }}</strong>
                                         <p>{{ item.category }}</p>
                                     </button>
-                                    } @else {
-                                    <div class="loot-name-cell">
-                                        <strong>{{ item.name }}</strong>
-                                        <p>{{ item.category }}</p>
-                                    </div>
-                                    }
                                 </td>
                                 <td>{{ item.weight != null ? (formatWeight(item.weight) + ' lb') : '—' }}</td>
                                 <td>{{ item.count }}</td>
                                 <td>{{ item.costGp != null ? item.costGp : '—' }}</td>
                                 <td>{{ lootNotes(item) }}</td>
+                                <td>
+                                    @let assignees = lootAssigneesByName().get(item.name.trim().toLowerCase());
+                                    @if (assignees && assignees.length > 0) {
+                                    <div class="loot-assignees">
+                                        @for (name of assignees; track name) {
+                                        <span class="loot-assignee-chip">{{ name }}</span>
+                                        }
+                                    </div>
+                                    } @else {
+                                    <span class="loot-unassigned">—</span>
+                                    }
+                                </td>
                                 @if (campaign.currentUserRole === 'Owner') {
                                 <td>
                                     <button type="button" class="ghost-button loot-row-action" (click)="removeLoot(item.name)">Remove</button>
@@ -370,6 +393,127 @@
                         </tbody>
                     </table>
                 </div>
+                } @else if (lootViewMode() === 'session') {
+                @for (group of lootGroupedBySesssion(); track group.sessionId) {
+                <div class="loot-session-group">
+                    <div class="loot-session-group-header">
+                        <i class="fa-duotone fa-thin fa-layer-group"></i>
+                        <span>{{ group.sessionTitle }}</span>
+                        <span class="loot-session-group-count">{{ group.items.length }}</span>
+                    </div>
+                    <div class="loot-grid-table-wrap">
+                        <table class="loot-grid-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Weight</th>
+                                    <th>QTY</th>
+                                    <th>Cost (GP)</th>
+                                    <th>Notes</th>
+                                    <th>Assigned To</th>
+                                    @if (campaign.currentUserRole === 'Owner') {
+                                    <th>Action</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (item of group.items; track item.name) {
+                                <tr>
+                                    <td>
+                                        <button type="button" class="loot-name-btn" (click)="openLootSummaryDetails(item)" [attr.aria-label]="'View details for ' + item.name">
+                                            <strong>{{ item.name }}</strong>
+                                            <p>{{ item.category }}</p>
+                                        </button>
+                                    </td>
+                                    <td>{{ item.weight != null ? (formatWeight(item.weight) + ' lb') : '—' }}</td>
+                                    <td>{{ item.count }}</td>
+                                    <td>{{ item.costGp != null ? item.costGp : '—' }}</td>
+                                    <td>{{ lootNotes(item) }}</td>
+                                    <td>
+                                        @let assignees = lootAssigneesByName().get(item.name.trim().toLowerCase());
+                                        @if (assignees && assignees.length > 0) {
+                                        <div class="loot-assignees">
+                                            @for (name of assignees; track name) {
+                                            <span class="loot-assignee-chip">{{ name }}</span>
+                                            }
+                                        </div>
+                                        } @else {
+                                        <span class="loot-unassigned">—</span>
+                                        }
+                                    </td>
+                                    @if (campaign.currentUserRole === 'Owner') {
+                                    <td>
+                                        <button type="button" class="ghost-button loot-row-action" (click)="removeLoot(item.name)">Remove</button>
+                                    </td>
+                                    }
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                }
+                } @else {
+                @for (group of lootGroupedByCharacter(); track group.characterName) {
+                <div class="loot-session-group">
+                    <div class="loot-session-group-header">
+                        <i class="fa-duotone fa-thin fa-user"></i>
+                        <span>{{ group.characterName }}</span>
+                        <span class="loot-session-group-count">{{ group.items.length }}</span>
+                    </div>
+                    <div class="loot-grid-table-wrap">
+                        <table class="loot-grid-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Weight</th>
+                                    <th>QTY</th>
+                                    <th>Cost (GP)</th>
+                                    <th>Notes</th>
+                                    <th>Assigned To</th>
+                                    @if (campaign.currentUserRole === 'Owner') {
+                                    <th>Action</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (item of group.items; track item.name) {
+                                <tr>
+                                    <td>
+                                        <button type="button" class="loot-name-btn" (click)="openLootSummaryDetails(item)" [attr.aria-label]="'View details for ' + item.name">
+                                            <strong>{{ item.name }}</strong>
+                                            <p>{{ item.category }}</p>
+                                        </button>
+                                    </td>
+                                    <td>{{ item.weight != null ? (formatWeight(item.weight) + ' lb') : '—' }}</td>
+                                    <td>{{ item.count }}</td>
+                                    <td>{{ item.costGp != null ? item.costGp : '—' }}</td>
+                                    <td>{{ lootNotes(item) }}</td>
+                                    <td>
+                                        @let assignees = lootAssigneesByName().get(item.name.trim().toLowerCase());
+                                        @if (assignees && assignees.length > 0) {
+                                        <div class="loot-assignees">
+                                            @for (name of assignees; track name) {
+                                            <span class="loot-assignee-chip">{{ name }}</span>
+                                            }
+                                        </div>
+                                        } @else {
+                                        <span class="loot-unassigned">—</span>
+                                        }
+                                    </td>
+                                    @if (campaign.currentUserRole === 'Owner') {
+                                    <td>
+                                        <button type="button" class="ghost-button loot-row-action" (click)="removeLoot(item.name)">Remove</button>
+                                    </td>
+                                    }
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                }
+                }
                 } @else {
                 <p class="empty-state">No party loot has been recorded yet.</p>
                 }

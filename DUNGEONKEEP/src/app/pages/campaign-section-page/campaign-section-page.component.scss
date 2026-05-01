@@ -709,6 +709,73 @@ textarea {
     font-weight: 700;
 }
 
+.loot-panel-summary-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.loot-group-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    padding: 4px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.loot-view-mode-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.loot-view-mode-toggle .ghost-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 30px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+}
+
+.loot-view-mode-toggle .ghost-button.is-active {
+    border-color: color-mix(in srgb, var(--accent-primary) 45%, var(--panel-border) 55%);
+    background: color-mix(in srgb, var(--surface-raised) 88%, var(--accent-primary) 12%);
+}
+
+.loot-session-group {
+    margin-top: 16px;
+}
+
+.loot-session-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: color-mix(in srgb, var(--surface-raised) 84%, var(--accent-primary) 16%);
+    border-left: 3px solid color-mix(in srgb, var(--panel-border) 44%, var(--accent-primary) 56%);
+    border-radius: 4px;
+    margin-bottom: 6px;
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: var(--text-main);
+}
+
+.loot-session-group-count {
+    margin-left: auto;
+    background: color-mix(in srgb, var(--surface-raised) 76%, var(--accent-primary) 24%);
+    border: 1px solid color-mix(in srgb, var(--panel-border) 48%, var(--accent-primary) 52%);
+    color: var(--text-main);
+    border-radius: 10px;
+    padding: 1px 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
 .loot-panel-summary-meta {
     color: var(--text-muted);
     font-size: 0.88rem;
@@ -788,6 +855,27 @@ textarea {
 
 .loot-row-action {
     white-space: nowrap;
+}
+
+.loot-assignees {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.loot-assignee-chip {
+    background: color-mix(in srgb, var(--surface-raised) 82%, var(--accent-primary) 18%);
+    border: 1px solid color-mix(in srgb, var(--panel-border) 52%, var(--accent-primary) 48%);
+    color: var(--text-main);
+    border-radius: 10px;
+    padding: 1px 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.loot-unassigned {
+    color: var(--text-muted);
 }
 
 .equipment-source-list {

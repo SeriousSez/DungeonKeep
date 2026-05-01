@@ -40,7 +40,7 @@ export interface ApiCampaignDto {
     sessions: ApiCampaignSessionDto[];
     npcs: string[];
     campaignNpcs: ApiCampaignNpcDto[];
-    loot: string[];
+    loot: Array<{ name: string; sessionId?: string | null }>;
     openThreads: ApiCampaignThreadDto[];
     worldNotes: ApiCampaignWorldNoteDto[];
     map: ApiCampaignMapDto;
@@ -48,6 +48,7 @@ export interface ApiCampaignDto {
     activeMapId: string;
     currentUserRole: 'Owner' | 'Member';
     members: ApiCampaignMemberDto[];
+    customTablesJson?: string;
 }
 
 export interface ApiCampaignSummaryDto {
@@ -76,6 +77,15 @@ export interface ApiCampaignSessionDto {
     objective: string;
     threat: 'Low' | 'Moderate' | 'High' | 'Deadly';
     isRevealedToPlayers: boolean;
+    detailsJson?: string | null;
+    lootAssignmentsJson?: string | null;
+}
+
+export interface UserLibrariesDto {
+    npcLibraryJson: string;
+    customTableLibraryJson: string;
+    monsterLibraryJson: string;
+    monsterReferenceJson: string;
 }
 
 export interface ApiCampaignNpcRelationshipDto {
@@ -935,6 +945,14 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/sessions/${sessionId}`, payload));
     }
 
+    async saveSessionDetails(campaignId: string, sessionId: string, payload: { detailsJson: string | null; lootAssignmentsJson: string | null }): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/sessions/${sessionId}/details`, payload));
+    }
+
+    async saveCampaignCustomTables(campaignId: string, tablesJson: string): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/custom-tables`, { tablesJson }));
+    }
+
     async generateSessionDraft(campaignId: string, payload: ApiGenerateSessionDraftRequest): Promise<ApiGenerateSessionDraftResponse> {
         return await firstValueFrom(this.http.post<ApiGenerateSessionDraftResponse>(`${this.baseUrl}/campaigns/${campaignId}/sessions/generate-draft`, payload));
     }
@@ -952,7 +970,8 @@ export class DungeonApiService {
     }
 
     async deleteCampaignNpc(campaignId: string, npcId: string): Promise<ApiCampaignDto> {
-        return await firstValueFrom(this.http.delete<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/npcs/${npcId}`));
+        const apiId = npcId.startsWith('npc-') ? npcId.slice('npc-'.length) : npcId;
+        return await firstValueFrom(this.http.delete<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/npcs/${apiId}`));
     }
 
     async removeCampaignNpc(campaignId: string, name: string): Promise<ApiCampaignDto> {
@@ -971,8 +990,8 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.post<ApiGenerateWorldNoteDraftResponse>(`${this.baseUrl}/campaigns/${campaignId}/world-notes/generate-draft`, payload));
     }
 
-    async addCampaignLoot(campaignId: string, name: string): Promise<ApiCampaignDto> {
-        return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/loot`, { name }));
+    async addCampaignLoot(campaignId: string, name: string, sessionId?: string | null): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/loot`, { name, sessionId: sessionId ?? null }));
     }
 
     async removeCampaignLoot(campaignId: string, name: string): Promise<ApiCampaignDto> {
@@ -1185,6 +1204,26 @@ export class DungeonApiService {
 
     async changePassword(currentPassword: string, newPassword: string): Promise<void> {
         await firstValueFrom(this.http.put(`${this.baseUrl}/account/password`, { currentPassword, newPassword }));
+    }
+
+    async getUserLibraries(): Promise<UserLibrariesDto> {
+        return await firstValueFrom(this.http.get<UserLibrariesDto>(`${this.baseUrl}/account/libraries`));
+    }
+
+    async saveUserNpcLibrary(json: string): Promise<UserLibrariesDto> {
+        return await firstValueFrom(this.http.put<UserLibrariesDto>(`${this.baseUrl}/account/npc-library`, { json }));
+    }
+
+    async saveUserCustomTableLibrary(json: string): Promise<UserLibrariesDto> {
+        return await firstValueFrom(this.http.put<UserLibrariesDto>(`${this.baseUrl}/account/custom-table-library`, { json }));
+    }
+
+    async saveUserMonsterLibrary(json: string): Promise<UserLibrariesDto> {
+        return await firstValueFrom(this.http.put<UserLibrariesDto>(`${this.baseUrl}/account/monster-library`, { json }));
+    }
+
+    async saveUserMonsterReference(json: string): Promise<UserLibrariesDto> {
+        return await firstValueFrom(this.http.put<UserLibrariesDto>(`${this.baseUrl}/account/monster-reference`, { json }));
     }
 
     async getNotifications(): Promise<ApiNotificationDto[]> {

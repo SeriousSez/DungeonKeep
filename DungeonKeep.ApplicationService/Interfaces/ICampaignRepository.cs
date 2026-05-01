@@ -17,7 +17,7 @@ public interface ICampaignRepository
     Task<Campaign?> SaveNpcAsync(Guid campaignId, CampaignNpcDto npc, CancellationToken cancellationToken = default);
     Task<Campaign?> RemoveNpcByIdAsync(Guid campaignId, Guid npcId, CancellationToken cancellationToken = default);
     Task<Campaign?> RemoveNpcAsync(Guid campaignId, string name, CancellationToken cancellationToken = default);
-    Task<Campaign?> AddLootAsync(Guid campaignId, string name, CancellationToken cancellationToken = default);
+    Task<Campaign?> AddLootAsync(Guid campaignId, string name, Guid? sessionId, CancellationToken cancellationToken = default);
     Task<Campaign?> RemoveLootAsync(Guid campaignId, string name, CancellationToken cancellationToken = default);
     Task<Campaign?> AddThreadAsync(Guid campaignId, Guid threadId, string text, string visibility, CancellationToken cancellationToken = default);
     Task<Campaign?> UpdateThreadAsync(Guid campaignId, Guid threadId, string text, string visibility, CancellationToken cancellationToken = default);
@@ -35,4 +35,6 @@ public interface ICampaignRepository
     Task<bool> IsActiveMemberAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default);
     Task RemoveMemberAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default);
     Task DeleteAsync(Guid campaignId, CancellationToken cancellationToken = default);
+    Task<Campaign?> SaveSessionDetailsAsync(Guid campaignId, Guid sessionId, string? detailsJson, string? lootAssignmentsJson, CancellationToken cancellationToken = default);
+    Task<Campaign?> SaveCustomTablesAsync(Guid campaignId, string tablesJson, CancellationToken cancellationToken = default);
 }

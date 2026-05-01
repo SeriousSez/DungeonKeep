@@ -12,7 +12,6 @@ export interface StoredSessionUser {
     displayName: string;
 }
 
-const STORAGE_KEY = 'dungeonkeep.state.v1';
 const SESSION_STORAGE_KEY = 'dungeonkeep.session-token.v1';
 const SESSION_USER_STORAGE_KEY = 'dungeonkeep.session-user.v1';
 
@@ -89,41 +88,15 @@ function parseStoredState(raw: string | null): Partial<StoredState> | null {
 }
 
 export function loadState(seedCampaigns: Campaign[], seedCharacters: Character[]): StoredState {
-    if (!hasBrowserStorage()) {
-        return {
-            campaigns: seedCampaigns,
-            characters: seedCharacters,
-            selectedCampaignId: seedCampaigns[0]?.id ?? ''
-        };
-    }
-
-    const parsed = parseStoredState(window.localStorage.getItem(STORAGE_KEY));
-    const campaigns = Array.isArray(parsed?.campaigns) && parsed.campaigns.length ? parsed.campaigns : seedCampaigns;
-    const characters = Array.isArray(parsed?.characters) && parsed.characters.length
-        ? parsed.characters.map((character) => normalizeCharacter(character))
-        : seedCharacters;
-    const selectedCampaignId =
-        typeof parsed?.selectedCampaignId === 'string' && campaigns.some((campaign) => campaign.id === parsed.selectedCampaignId)
-            ? parsed.selectedCampaignId
-            : campaigns[0]?.id ?? '';
-
     return {
-        campaigns,
-        characters,
-        selectedCampaignId
+        campaigns: seedCampaigns,
+        characters: seedCharacters.map((character) => normalizeCharacter(character)),
+        selectedCampaignId: seedCampaigns[0]?.id ?? ''
     };
 }
 
 export function saveState(state: StoredState): void {
-    if (!hasBrowserStorage()) {
-        return;
-    }
-
-    try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch {
-        return;
-    }
+    void state;
 }
 
 export function loadSessionToken(): string {
