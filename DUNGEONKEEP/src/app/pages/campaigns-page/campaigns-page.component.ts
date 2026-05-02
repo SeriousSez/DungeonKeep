@@ -14,7 +14,9 @@ export class CampaignsPageComponent {
     readonly store = inject(DungeonStoreService);
 
     constructor() {
-        void this.store.refreshCampaignSummaries();
+        if (this.store.initialized()) {
+            void this.store.refreshCampaignSummaries();
+        }
     }
 
     readonly visibleCampaigns = computed(() =>

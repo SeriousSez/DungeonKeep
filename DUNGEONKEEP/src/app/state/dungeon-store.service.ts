@@ -1288,11 +1288,13 @@ export class DungeonStoreService {
             if (!selected) {
                 this.selectedCampaignId.set(mappedCampaigns[0]?.id ?? '');
             }
-        } catch {
-            this.clearState();
-        } finally {
+
             this.isHydrating.set(false);
             this.initialized.set(true);
+        } catch {
+            // Preserve existing state on error rather than flashing empty.
+            // initialized stays false so the skeleton remains visible.
+            this.isHydrating.set(false);
         }
     }
 
