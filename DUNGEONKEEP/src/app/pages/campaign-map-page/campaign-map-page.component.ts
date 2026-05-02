@@ -14,6 +14,7 @@ import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { CampaignMapTokenMovedEvent, CampaignMapVisionUpdatedEvent, CampaignRealtimeService } from '../../state/campaign-realtime.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 import { SessionService } from '../../state/session.service';
+import { VoiceChatService, VoiceParticipant } from '../../state/voice-chat.service';
 
 type MapTool = 'select' | 'draw' | 'wall' | 'erase' | 'icon' | 'terrain' | 'label' | 'token';
 type MeasureTool = 'line' | 'square' | 'circle' | 'cone' | 'beam';
@@ -280,6 +281,7 @@ export class CampaignMapPageComponent {
     readonly store = inject(DungeonStoreService);
     private readonly session = inject(SessionService);
     private readonly campaignRealtime = inject(CampaignRealtimeService);
+    private readonly voiceChat = inject(VoiceChatService);
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
     private readonly destroyRef = inject(DestroyRef);
@@ -358,6 +360,7 @@ export class CampaignMapPageComponent {
     readonly measureBeamWidthFt = signal(5);
     readonly measureLine = signal<{ start: CampaignMapPoint; end: CampaignMapPoint } | null>(null);
     readonly measurePopoverOpen = signal(false);
+    readonly voicePopoverOpen = signal(false);
     readonly leftToolbarOpen = signal(true);
     readonly hasUnsavedChanges = signal(false);
     readonly confirmAction = signal<MapConfirmAction>(null);
@@ -393,6 +396,12 @@ export class CampaignMapPageComponent {
     readonly measureToolOptions = MEASURE_TOOL_OPTIONS;
     readonly measureSnapOptions = MEASURE_SNAP_OPTIONS;
     readonly measureRulesModeOptions = MEASURE_RULES_MODE_OPTIONS;
+    readonly voiceParticipants = this.voiceChat.participants;
+    readonly voiceConnectionState = this.voiceChat.connectionState;
+    readonly voiceErrorMessage = this.voiceChat.errorMessage;
+    readonly voiceMicrophoneMuted = this.voiceChat.microphoneMuted;
+    readonly voiceJoined = computed(() => this.voiceConnectionState() === 'connected');
+    readonly voiceConnecting = computed(() => this.voiceConnectionState() === 'connecting');
 
     readonly selectedCampaign = computed(() => {
         const campaignId = this.campaignId();
@@ -448,6 +457,7 @@ export class CampaignMapPageComponent {
     readonly canUndo = computed(() => this.undoStack().length > 0);
     readonly canRedo = computed(() => this.redoStack().length > 0);
     readonly currentUserId = computed(() => this.session.currentUser()?.id ?? '');
+    readonly currentUserDisplayName = computed(() => this.session.currentUser()?.displayName ?? 'You');
     readonly isRefreshingCampaignData = computed(() => {
         const campaignId = this.campaignId();
         return !!campaignId && this.store.isCampaignDetailsLoading(campaignId);
@@ -1197,6 +1207,7 @@ export class CampaignMapPageComponent {
             this.clearMapNoticeTimer();
             this.clearVisionMemoryPersistTimer();
             this.clearMapOverlayHintRefreshFrame();
+            void this.voiceChat.leave();
         });
 
         this.campaignRealtime.campaignMapVisionReset$
@@ -1437,6 +1448,16 @@ export class CampaignMapPageComponent {
                 this.rememberVisionPolygon(token, polygon);
             }
         });
+
+        effect(() => {
+            const campaignId = this.campaignId();
+            const mapId = this.currentMapId();
+            if (!campaignId || !mapId || !this.voiceJoined()) {
+                return;
+            }
+
+            void this.voiceChat.syncRoom(campaignId, mapId);
+        });
     }
 
     private async ensureCampaignDetails(campaignId: string): Promise<void> {
@@ -1538,6 +1559,51 @@ export class CampaignMapPageComponent {
 
     toggleMeasurePopover(): void {
         this.measurePopoverOpen.update(v => !v);
+    }
+
+    toggleVoicePopover(): void {
+        this.voicePopoverOpen.update(v => !v);
+    }
+
+    async joinVoiceChat(): Promise<void> {
+        const campaignId = this.campaignId();
+        const mapId = this.currentMapId();
+        if (!campaignId || !mapId || this.voiceConnecting()) {
+            return;
+        }
+
+        await this.voiceChat.join(campaignId, mapId);
+        this.cdr.detectChanges();
+    }
+
+    async leaveVoiceChat(): Promise<void> {
+        await this.voiceChat.leave();
+        this.cdr.detectChanges();
+    }
+
+    async toggleVoiceMicrophoneMuted(): Promise<void> {
+        await this.voiceChat.toggleMicrophoneMuted();
+        this.cdr.detectChanges();
+    }
+
+    setVoiceParticipantMuted(userId: string, muted: boolean): void {
+        this.voiceChat.setParticipantMuted(userId, muted);
+    }
+
+    updateVoiceParticipantVolume(userId: string, value: number): void {
+        this.voiceChat.setParticipantVolume(userId, value / 100);
+    }
+
+    voiceParticipantMutedLocally(userId: string): boolean {
+        return this.voiceChat.isParticipantMutedLocally(userId);
+    }
+
+    voiceParticipantVolumePercent(userId: string): number {
+        return Math.round(this.voiceChat.participantVolume(userId) * 100);
+    }
+
+    isCurrentUserVoiceParticipant(participant: VoiceParticipant): boolean {
+        return participant.userId === this.currentUserId();
     }
 
     selectMouseToolbarMode(): void {

@@ -1254,6 +1254,10 @@
                 <button type="button" class="map-toolbar-btn" [class.is-active]="measureEnabled()" title="Measure (M)" (click)="selectMeasureToolbarMode()">
                     <i class="fa-duotone fa-thin fa-ruler"></i>
                 </button>
+                <div class="map-toolbar-divider"></div>
+                <button type="button" class="map-toolbar-btn" [class.is-active]="voicePopoverOpen()" [title]="voiceJoined() ? 'Voice chat connected' : 'Voice chat disconnected'" (click)="toggleVoicePopover()">
+                    <i class="fa-duotone fa-thin" [class.fa-headset]="voiceJoined()" [class.fa-headphones-simple]="!voiceJoined()"></i>
+                </button>
             </div>
             @if (measurePopoverOpen()) {
             <div class="map-measure-popover">
@@ -1365,6 +1369,74 @@
                 <div class="map-measure-popover-actions">
                     <button type="button" class="ghost-button" [disabled]="!hasMeasureLine()" (click)="clearMeasurement()">Clear Measurement</button>
                 </div>
+            </div>
+            }
+            @if (voicePopoverOpen()) {
+            <div class="map-voice-popover">
+                <div class="section-heading compact-heading map-measure-popover-header">
+                    <h3>Voice Chat</h3>
+                    <button type="button" class="ghost-button compact-action" (click)="toggleVoicePopover()" aria-label="Close voice chat panel">
+                        <i class="fa-duotone fa-thin fa-chevrons-left"></i>
+                    </button>
+                </div>
+
+                @if (!voiceJoined()) {
+                <p class="sidebar-note">Voice chat is opt-in. Join when you are ready to speak on this map.</p>
+                @if (voiceErrorMessage()) {
+                <p class="map-voice-error">{{ voiceErrorMessage() }}</p>
+                }
+                <div class="map-measure-popover-actions">
+                    <button type="button" class="primary-button" [disabled]="voiceConnecting()" (click)="joinVoiceChat()">{{ voiceConnecting() ? 'Joining...' : 'Join Voice' }}</button>
+                </div>
+                } @else {
+                <div class="map-voice-self-row">
+                    <div>
+                        <strong>{{ currentUserDisplayName() }}</strong>
+                        <p class="sidebar-note">{{ voiceMicrophoneMuted() ? 'Microphone muted for everyone.' : 'Microphone is live for everyone in this voice room.' }}</p>
+                    </div>
+                    <button type="button" class="ghost-button compact-action" (click)="toggleVoiceMicrophoneMuted()">{{ voiceMicrophoneMuted() ? 'Unmute Mic' : 'Mute Mic' }}</button>
+                </div>
+
+                <div class="map-measure-section-divider"></div>
+
+                <div class="map-voice-participants">
+                    @for (participant of voiceParticipants(); track participant.connectionId) {
+                    <div class="map-voice-participant-card">
+                        <div class="map-voice-participant-header">
+                            <strong>{{ participant.displayName }}</strong>
+                            <div class="map-voice-participant-tags">
+                                @if (isCurrentUserVoiceParticipant(participant)) {
+                                <span class="status-chip">You</span>
+                                }
+                                @if (participant.microphoneMuted) {
+                                <span class="status-chip is-error">Mic muted</span>
+                                }
+                            </div>
+                        </div>
+
+                        @if (!isCurrentUserVoiceParticipant(participant)) {
+                        <div class="map-voice-participant-controls">
+                            <button type="button" class="ghost-button compact-action" (click)="setVoiceParticipantMuted(participant.userId, !voiceParticipantMutedLocally(participant.userId))">
+                                {{ voiceParticipantMutedLocally(participant.userId) ? 'Unmute Locally' : 'Mute Locally' }}
+                            </button>
+                            <label class="map-voice-volume-field">
+                                <span>Volume {{ voiceParticipantVolumePercent(participant.userId) }}%</span>
+                                <input type="range" min="0" max="100" step="1" [value]="voiceParticipantVolumePercent(participant.userId)" (input)="updateVoiceParticipantVolume(participant.userId, +$any($event.target).value)" />
+                            </label>
+                        </div>
+                        }
+                    </div>
+                    }
+                </div>
+
+                @if (voiceErrorMessage()) {
+                <p class="map-voice-error">{{ voiceErrorMessage() }}</p>
+                }
+
+                <div class="map-measure-popover-actions">
+                    <button type="button" class="ghost-button danger-button" (click)="leaveVoiceChat()">Leave Voice</button>
+                </div>
+                }
             </div>
             }
             <button type="button" class="map-toolbar-toggle" (click)="toggleLeftToolbar()" [title]="leftToolbarOpen() ? 'Hide toolbar' : 'Show toolbar'">

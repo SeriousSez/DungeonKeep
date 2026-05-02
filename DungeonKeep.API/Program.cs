@@ -119,6 +119,7 @@ app.UseCors("ClientApps");
 app.MapControllers();
 app.MapHub<CampaignHub>("/hubs/campaign");
 app.MapHub<UserHub>("/hubs/user");
+app.MapHub<VoiceHub>("/hubs/voice");
 
 app.Run();
 

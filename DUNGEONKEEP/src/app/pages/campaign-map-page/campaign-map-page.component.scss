@@ -2580,3 +2580,84 @@ app-dropdown {
     left: 0;
     inset-inline-start: 0;
 }
+
+.map-voice-popover {
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: min(390px, calc(100vw - 92px));
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 16px;
+    border: 1px solid var(--panel-border);
+    background: color-mix(in srgb, var(--surface-raised-solid) 95%, transparent);
+    box-shadow: 0 16px 30px rgba(26, 19, 13, 0.22);
+    backdrop-filter: blur(14px);
+}
+
+.map-voice-self-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.map-voice-self-row p {
+    margin: 4px 0 0;
+}
+
+.map-voice-participants {
+    display: grid;
+    gap: 8px;
+    max-height: 320px;
+    overflow: auto;
+    padding-right: 2px;
+}
+
+.map-voice-participant-card {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 88%, var(--accent-primary) 12%);
+}
+
+.map-voice-participant-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.map-voice-participant-tags {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.map-voice-participant-controls {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+}
+
+.map-voice-volume-field {
+    display: grid;
+    gap: 4px;
+    color: var(--text-main);
+    font-size: 0.82rem;
+}
+
+.map-voice-volume-field input {
+    width: 100%;
+}
+
+.map-voice-error {
+    margin: 0;
+    color: var(--color-danger);
+    font-size: 0.84rem;
+}
