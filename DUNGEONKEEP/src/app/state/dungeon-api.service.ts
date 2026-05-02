@@ -35,6 +35,7 @@ export interface ApiCampaignDto {
     hook: string;
     nextSession: string;
     summary: string;
+    bannerImageUrl: string;
     createdAtUtc: string;
     characterCount: number;
     sessions: ApiCampaignSessionDto[];
@@ -61,6 +62,7 @@ export interface ApiCampaignSummaryDto {
     hook: string;
     nextSession: string;
     summary: string;
+    bannerImageUrl: string;
     createdAtUtc: string;
     characterCount: number;
     sessionCount: number;
@@ -391,6 +393,18 @@ export interface ApiGenerateCharacterPortraitRequest {
 }
 
 export interface ApiGenerateCharacterPortraitResponse {
+    imageUrl: string;
+}
+
+export interface ApiGenerateCampaignBannerRequest {
+    name?: string;
+    setting?: string;
+    tone?: string;
+    hook?: string;
+    additionalDirection?: string;
+}
+
+export interface ApiGenerateCampaignBannerResponse {
     imageUrl: string;
 }
 
@@ -912,7 +926,7 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.get<ApiCampaignMapLibraryDto>(`${this.baseUrl}/campaigns/${campaignId}/maps/library`));
     }
 
-    async createCampaign(payload: { name: string; setting: string; tone: ApiCampaignTone; levelStart: number; levelEnd: number; hook: string; nextSession: string; summary: string }): Promise<ApiCampaignDto> {
+    async createCampaign(payload: { name: string; setting: string; tone: ApiCampaignTone; levelStart: number; levelEnd: number; hook: string; nextSession: string; summary: string; bannerImageUrl: string }): Promise<ApiCampaignDto> {
         return await firstValueFrom(this.http.post<ApiCampaignDto>(`${this.baseUrl}/campaigns`, payload));
     }
 
@@ -933,7 +947,7 @@ export class DungeonApiService {
         }
     }
 
-    async updateCampaign(campaignId: string, payload: { name: string; setting: string; tone: ApiCampaignTone; levelStart: number; levelEnd: number; hook: string; nextSession: string; summary: string }): Promise<ApiCampaignDto> {
+    async updateCampaign(campaignId: string, payload: { name: string; setting: string; tone: ApiCampaignTone; levelStart: number; levelEnd: number; hook: string; nextSession: string; summary: string; bannerImageUrl: string }): Promise<ApiCampaignDto> {
         return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}`, payload));
     }
 
@@ -1052,6 +1066,10 @@ export class DungeonApiService {
 
     async generateCampaignMapArtAi(campaignId: string, payload: ApiGenerateCampaignMapArtRequest): Promise<ApiGenerateCampaignMapArtResponse> {
         return await firstValueFrom(this.http.post<ApiGenerateCampaignMapArtResponse>(`${this.baseUrl}/campaigns/${campaignId}/map/generate-ai-art`, payload));
+    }
+
+    async generateCampaignBanner(payload: ApiGenerateCampaignBannerRequest): Promise<ApiGenerateCampaignBannerResponse> {
+        return await firstValueFrom(this.http.post<ApiGenerateCampaignBannerResponse>(`${this.baseUrl}/campaigns/generate-banner`, payload));
     }
 
     async inviteCampaignMember(campaignId: string, email: string): Promise<ApiCampaignDto> {

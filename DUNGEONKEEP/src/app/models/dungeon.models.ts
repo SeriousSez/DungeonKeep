@@ -210,6 +210,7 @@ export interface Campaign {
     levelEnd: number;
     levelRange: string;
     summary: string;
+    bannerImageUrl?: string;
     hook: string;
     nextSession: string;
     characterCount: number;
@@ -334,6 +335,7 @@ export interface CampaignDraft {
     hook: string;
     nextSession: string;
     summary: string;
+    bannerImageUrl?: string;
 }
 
 export interface CharacterDraft {

@@ -62,6 +62,7 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
             entity.Property(c => c.Hook).HasMaxLength(500);
             entity.Property(c => c.NextSession).HasMaxLength(120);
             entity.Property(c => c.Summary).HasMaxLength(1000);
+            entity.Property(c => c.BannerImageUrl).HasColumnType("longtext").IsRequired();
             entity.Property(c => c.SessionsJson).HasColumnType("longtext").IsRequired();
             entity.Property(c => c.NpcsJson).HasColumnType("longtext").IsRequired();
             entity.Property(c => c.CampaignNpcsJson).HasColumnType("longtext").IsRequired();

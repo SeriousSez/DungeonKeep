@@ -5,6 +5,7 @@
 .page-stack {
     display: grid;
     gap: 24px;
+    padding-bottom: 32px;
 }
 
 .panel {
@@ -107,6 +108,7 @@
 @media (max-width: 720px) {
     .page-stack {
         gap: 16px;
+        padding-bottom: 24px;
     }
 
     .panel {

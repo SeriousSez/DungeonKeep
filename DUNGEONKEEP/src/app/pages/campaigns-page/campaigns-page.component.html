@@ -56,6 +56,11 @@
     <section class="campaign-list">
         @for (campaign of visibleCampaigns(); track campaign.id) {
         <a class="campaign-card" [routerLink]="['/campaigns', campaign.id]">
+            @if (campaign.bannerImageUrl) {
+            <div class="campaign-card-banner-shell">
+                <img [src]="campaign.bannerImageUrl" alt="Campaign banner" class="campaign-card-banner-image" />
+            </div>
+            }
             <div class="campaign-card-top">
                 <div>
                     <h2>{{ campaign.name }}</h2>

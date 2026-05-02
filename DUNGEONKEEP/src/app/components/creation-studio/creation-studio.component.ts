@@ -1,8 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, effect, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { CampaignDraft, CharacterDraft } from '../../models/dungeon.models';
+import { DungeonApiService } from '../../state/dungeon-api.service';
+import { CampaignBannerCropModalComponent } from '../campaign-banner-crop-modal/campaign-banner-crop-modal.component';
 import { DropdownComponent, type DropdownOption } from '../dropdown/dropdown.component';
 import { ThemedDatepickerComponent } from '../themed-datepicker/themed-datepicker.component';
 
@@ -28,7 +30,8 @@ const emptyCampaignDraft = (): CampaignDraft => ({
     levelEnd: 4,
     hook: '',
     nextSession: '',
-    summary: ''
+    summary: '',
+    bannerImageUrl: ''
 });
 
 const emptyCharacterDraft = (): CharacterDraft => ({
@@ -115,12 +118,19 @@ const campaignStepOrder: ReadonlyArray<CampaignWizardStep> = ['identity', 'story
 
 @Component({
     selector: 'app-creation-studio',
-    imports: [CommonModule, FormsModule, DropdownComponent, ThemedDatepickerComponent],
+    imports: [CommonModule, FormsModule, DropdownComponent, ThemedDatepickerComponent, CampaignBannerCropModalComponent],
     templateUrl: './creation-studio.component.html',
     styleUrl: './creation-studio.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CreationStudioComponent {
+    private static readonly CAMPAIGN_BANNER_ASPECT_RATIO = 7;
+    private static readonly CAMPAIGN_BANNER_OUTPUT_WIDTH = 1280;
+    private static readonly CAMPAIGN_BANNER_OUTPUT_HEIGHT = 183;
+
+    private readonly api = inject(DungeonApiService);
+    private readonly cdr = inject(ChangeDetectorRef);
+
     readonly mode = input<'both' | 'campaign' | 'character'>('both');
     readonly campaignSeedDraft = input<CampaignDraft | null>(null);
     readonly campaignAction = input<'create' | 'edit'>('create');
@@ -161,6 +171,11 @@ export class CreationStudioComponent {
     readonly campaignTemplates = campaignTemplates;
     readonly campaignStepOrder = campaignStepOrder;
     readonly campaignDraft = signal<CampaignDraft>(emptyCampaignDraft());
+    readonly campaignBannerFeedback = signal('');
+    readonly bannerCropModalOpen = signal(false);
+    readonly bannerCropSourceImageUrl = signal('');
+    readonly isGeneratingBanner = signal(false);
+    readonly bannerPromptDetails = signal('');
     readonly characterDraft = signal<CharacterDraft>(emptyCharacterDraft());
     readonly campaignSubmitAttempted = signal(false);
     readonly campaignStepIndex = signal(0);
@@ -264,7 +279,8 @@ export class CreationStudioComponent {
                 levelEnd: seed.levelEnd,
                 hook: seed.hook,
                 nextSession: seed.nextSession,
-                summary: seed.summary
+                summary: seed.summary,
+                bannerImageUrl: seed.bannerImageUrl ?? ''
             });
             this.campaignSubmitAttempted.set(false);
             this.campaignStepIndex.set(0);
@@ -303,6 +319,163 @@ export class CreationStudioComponent {
         const levelEnd = Number.isFinite(parsed) ? Math.min(Math.max(parsed, levelStart), 20) : levelStart;
 
         this.updateCampaign('levelEnd', levelEnd);
+    }
+
+    handleCampaignBannerUpload(event: Event): void {
+        const input = event.target as HTMLInputElement | null;
+        const file = input?.files?.[0];
+
+        if (!file) {
+            return;
+        }
+
+        if (!file.type.startsWith('image/')) {
+            this.campaignBannerFeedback.set('Choose an image file for the campaign banner.');
+            if (input) {
+                input.value = '';
+            }
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const imageUrl = typeof reader.result === 'string' ? reader.result : '';
+            if (!imageUrl) {
+                this.campaignBannerFeedback.set('That banner image could not be loaded.');
+                return;
+            }
+
+            this.bannerCropSourceImageUrl.set(imageUrl);
+            this.bannerCropModalOpen.set(true);
+            this.campaignBannerFeedback.set('');
+        };
+        reader.onerror = () => {
+            this.campaignBannerFeedback.set('That banner image could not be read.');
+        };
+        reader.readAsDataURL(file);
+
+        if (input) {
+            input.value = '';
+        }
+    }
+
+    recropBanner(): void {
+        const url = this.campaignDraft().bannerImageUrl;
+        if (url) {
+            this.bannerCropSourceImageUrl.set(url);
+            this.bannerCropModalOpen.set(true);
+        }
+    }
+
+    closeBannerCropModal(): void {
+        this.bannerCropModalOpen.set(false);
+        this.bannerCropSourceImageUrl.set('');
+    }
+
+    applyBannerCrop(croppedUrl: string): void {
+        this.updateCampaign('bannerImageUrl', croppedUrl);
+        this.campaignBannerFeedback.set('Banner ready.');
+        this.bannerCropModalOpen.set(false);
+        this.bannerCropSourceImageUrl.set('');
+    }
+
+    clearCampaignBanner(): void {
+        this.updateCampaign('bannerImageUrl', '');
+        this.campaignBannerFeedback.set('');
+    }
+
+    async generateBanner(): Promise<void> {
+        if (this.isGeneratingBanner()) {
+            return;
+        }
+
+        this.isGeneratingBanner.set(true);
+        this.campaignBannerFeedback.set('Generating banner...');
+
+        try {
+            const draft = this.campaignDraft();
+            const response = await this.api.generateCampaignBanner({
+                name: draft.name || undefined,
+                setting: draft.setting || undefined,
+                tone: draft.tone || undefined,
+                hook: draft.hook || undefined,
+                additionalDirection: this.bannerPromptDetails().trim() || undefined
+            });
+
+            const normalizedBanner = await this.normalizeGeneratedBannerToAspectRatio(response.imageUrl);
+            this.bannerCropSourceImageUrl.set(normalizedBanner);
+            this.bannerCropModalOpen.set(true);
+            this.campaignBannerFeedback.set('');
+        } catch {
+            this.campaignBannerFeedback.set('Banner generation failed. Please try again.');
+        } finally {
+            this.isGeneratingBanner.set(false);
+            this.cdr.detectChanges();
+        }
+    }
+
+    private async normalizeGeneratedBannerToAspectRatio(imageUrl: string): Promise<string> {
+        try {
+            const image = await this.loadImageFromUrl(imageUrl);
+            const naturalWidth = image.naturalWidth || image.width;
+            const naturalHeight = image.naturalHeight || image.height;
+
+            if (!naturalWidth || !naturalHeight) {
+                return imageUrl;
+            }
+
+            const sourceRatio = naturalWidth / naturalHeight;
+            const targetRatio = CreationStudioComponent.CAMPAIGN_BANNER_ASPECT_RATIO;
+
+            let sourceX = 0;
+            let sourceY = 0;
+            let sourceWidth = naturalWidth;
+            let sourceHeight = naturalHeight;
+
+            if (sourceRatio > targetRatio) {
+                sourceWidth = naturalHeight * targetRatio;
+                sourceX = (naturalWidth - sourceWidth) / 2;
+            } else if (sourceRatio < targetRatio) {
+                sourceHeight = naturalWidth / targetRatio;
+                sourceY = (naturalHeight - sourceHeight) / 2;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = CreationStudioComponent.CAMPAIGN_BANNER_OUTPUT_WIDTH;
+            canvas.height = CreationStudioComponent.CAMPAIGN_BANNER_OUTPUT_HEIGHT;
+
+            const context = canvas.getContext('2d');
+            if (!context) {
+                return imageUrl;
+            }
+
+            context.imageSmoothingEnabled = true;
+            context.imageSmoothingQuality = 'high';
+            context.drawImage(
+                image,
+                sourceX,
+                sourceY,
+                sourceWidth,
+                sourceHeight,
+                0,
+                0,
+                canvas.width,
+                canvas.height
+            );
+
+            return canvas.toDataURL('image/jpeg', 0.92);
+        } catch {
+            return imageUrl;
+        }
+    }
+
+    private loadImageFromUrl(imageUrl: string): Promise<HTMLImageElement> {
+        return new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = () => reject(new Error('Unable to load generated banner image.'));
+            image.src = imageUrl;
+        });
     }
 
     onCharacterRoleChanged(value: string | number): void {

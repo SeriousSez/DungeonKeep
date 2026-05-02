@@ -86,6 +86,37 @@
                 @if (campaignLevelRangeError()) {
                 <small class="field-error">{{ campaignLevelRangeError() }}</small>
                 }
+
+                <div class="banner-upload" role="group" aria-label="Campaign banner">
+                    <span class="banner-upload-label">Campaign banner</span>
+                    <input #campaignBannerInput type="file" accept="image/*" class="banner-file-input" (change)="handleCampaignBannerUpload($event)" />
+
+                    @if (campaignDraft().bannerImageUrl) {
+                    <div class="banner-preview-shell">
+                        <img [src]="campaignDraft().bannerImageUrl" alt="Campaign banner preview" class="banner-preview-image" />
+                    </div>
+                    <div class="banner-actions">
+                        <button type="button" class="ghost-button" (click)="recropBanner()">Recrop banner</button>
+                        <button type="button" class="ghost-button" (click)="campaignBannerInput.click()">Replace banner</button>
+                        <button type="button" class="ghost-button" (click)="clearCampaignBanner()">Remove banner</button>
+                    </div>
+                    } @else {
+                    <div class="banner-actions">
+                        <button type="button" class="ghost-button" (click)="campaignBannerInput.click()" [disabled]="isGeneratingBanner()">Upload banner</button>
+                        <button type="button" class="primary-button" (click)="generateBanner()" [disabled]="isGeneratingBanner()">
+                            @if (isGeneratingBanner()) { Generating... } @else { <i class="fa-duotone fa-thin fa-wand-magic-sparkles"></i> Generate AI Banner }
+                        </button>
+                    </div>
+                    <label class="banner-prompt-field">
+                        <span>Art direction</span>
+                        <textarea rows="2" [value]="bannerPromptDetails()" (input)="bannerPromptDetails.set($any($event.target).value)" placeholder="e.g. fog-shrouded mountain fortress at dusk, armies in the valley below"></textarea>
+                    </label>
+                    }
+
+                    @if (campaignBannerFeedback()) {
+                    <small class="banner-feedback">{{ campaignBannerFeedback() }}</small>
+                    }
+                </div>
             </div>
             }
 
@@ -198,3 +229,6 @@
         }
     </div>
 </article>
+
+<app-campaign-banner-crop-modal [open]="bannerCropModalOpen()" [imageUrl]="bannerCropSourceImageUrl()" [campaignName]="campaignDraft().name || 'Campaign'" (closed)="closeBannerCropModal()" (applied)="applyBannerCrop($event)">
+</app-campaign-banner-crop-modal>

@@ -1472,6 +1472,60 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         }
     }
 
+    [HttpPost("generate-banner")]
+    public async Task<ActionResult<GenerateCampaignBannerResponse>> GenerateBanner([FromBody] GenerateCampaignBannerRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        if (!TryGetOpenAiImageConfiguration(out var apiKey, out var imagesUrl, out var model))
+        {
+            return Problem(title: "Banner generation unavailable.", detail: "OpenAI API key is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
+        try
+        {
+            var imageUrl = await SendOpenAiImagePromptAsync(apiKey, imagesUrl, model, BuildCampaignBannerPrompt(request), cancellationToken);
+            return Ok(new GenerateCampaignBannerResponse(imageUrl));
+        }
+        catch (HttpRequestException exception)
+        {
+            return Problem(title: "Banner generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return Problem(title: "Banner generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+    }
+
+    private static string BuildCampaignBannerPrompt(GenerateCampaignBannerRequest request)
+    {
+        var name = string.IsNullOrWhiteSpace(request.Name) ? "an unnamed campaign" : request.Name.Trim();
+        var setting = string.IsNullOrWhiteSpace(request.Setting) ? string.Empty : $"Setting: {request.Setting.Trim()}.";
+        var tone = string.IsNullOrWhiteSpace(request.Tone) ? string.Empty : $"Tone: {request.Tone.Trim()}.";
+        var hook = string.IsNullOrWhiteSpace(request.Hook) ? string.Empty : $"Hook: {request.Hook.Trim()}";
+        var extra = string.IsNullOrWhiteSpace(request.AdditionalDirection) ? string.Empty : $"Art direction: {request.AdditionalDirection.Trim()}";
+
+        var lines = new List<string>
+        {
+            "Create a wide cinematic fantasy landscape banner for a Dungeons & Dragons campaign.",
+            "The image should be dramatic, atmospheric, and evocative of the campaign world.",
+            "Use a wide panoramic composition — sweeping vistas, dramatic skies, iconic scenery.",
+            "No text, logos, UI, watermarks, characters in the foreground, or modern elements.",
+            $"Campaign: {name}."
+        };
+
+        if (!string.IsNullOrEmpty(setting)) lines.Add(setting);
+        if (!string.IsNullOrEmpty(tone)) lines.Add(tone);
+        if (!string.IsNullOrEmpty(hook)) lines.Add(hook);
+        if (!string.IsNullOrEmpty(extra)) lines.Add(extra);
+
+        return string.Join(" ", lines);
+    }
+
     [HttpPost("{campaignId:guid}/map/generate-ai-art")]
     public async Task<ActionResult<GenerateCampaignMapArtResponse>> GenerateMapArt(Guid campaignId, [FromBody] GenerateCampaignMapArtRequest request, CancellationToken cancellationToken)
     {
@@ -5105,6 +5159,10 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
     public sealed record GenerateCampaignMapArtRequest(string? Background, string? MapName, string? SettlementScale, string? ParchmentLayout, string? CavernLayout, string? BattlemapLocale, string? Lighting, IReadOnlyList<string>? PreferredPlaceNames, IReadOnlyList<string>? SettlementNames, IReadOnlyList<string>? RegionNames, IReadOnlyList<string>? RuinNames, IReadOnlyList<string>? CavernNames, string? AdditionalDirection, bool? SeparateLabels);
 
     public sealed record GenerateCampaignMapArtResponse(string BackgroundImageUrl, IReadOnlyList<CampaignMapLabelDto> Labels);
+
+    public sealed record GenerateCampaignBannerRequest(string? Name, string? Setting, string? Tone, string? Hook, string? AdditionalDirection);
+
+    public sealed record GenerateCampaignBannerResponse(string ImageUrl);
 
     public sealed record GenerateSessionDraftResponse(
         string Title,

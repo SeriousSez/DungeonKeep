@@ -54,6 +54,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                 campaign.Hook,
                 campaign.NextSession,
                 campaign.Summary,
+                campaign.BannerImageUrl,
                 campaign.CreatedAtUtc,
                 campaign.CharacterAssignments.Count,
                 campaign.SessionsJson,
@@ -110,7 +111,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         return campaign;
     }
 
-    public async Task<Campaign?> UpdateAsync(Guid campaignId, string name, string setting, string tone, int levelStart, int levelEnd, string hook, string nextSession, string summary, CancellationToken cancellationToken = default)
+    public async Task<Campaign?> UpdateAsync(Guid campaignId, string name, string setting, string tone, int levelStart, int levelEnd, string hook, string nextSession, string summary, string bannerImageUrl, CancellationToken cancellationToken = default)
     {
         _ = campaignSchemaReady;
         var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
@@ -127,6 +128,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         campaign.Hook = hook;
         campaign.NextSession = nextSession;
         campaign.Summary = summary;
+        campaign.BannerImageUrl = bannerImageUrl;
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return await GetByIdAsync(campaignId, cancellationToken);
@@ -165,6 +167,7 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             EnsureColumnExists(dbContext, "Campaigns", "Hook", "TEXT NOT NULL DEFAULT ''");
             EnsureColumnExists(dbContext, "Campaigns", "NextSession", "TEXT NOT NULL DEFAULT ''");
             EnsureColumnExists(dbContext, "Campaigns", "Summary", "TEXT NOT NULL DEFAULT ''");
+            EnsureColumnExists(dbContext, "Campaigns", "BannerImageUrl", "TEXT NOT NULL DEFAULT ''");
             EnsureColumnExists(dbContext, "Campaigns", "CustomTablesJson", "TEXT NOT NULL DEFAULT '[]'");
         }
         catch

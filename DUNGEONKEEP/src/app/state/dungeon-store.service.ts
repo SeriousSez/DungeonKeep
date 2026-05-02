@@ -983,7 +983,8 @@ export class DungeonStoreService {
             ),
             hook: draft.hook.trim(),
             nextSession: draft.nextSession.trim(),
-            summary: draft.summary.trim()
+            summary: draft.summary.trim(),
+            bannerImageUrl: (draft.bannerImageUrl ?? '').trim()
         };
 
         try {
@@ -1110,7 +1111,8 @@ export class DungeonStoreService {
             levelEnd: Math.min(Math.max(Math.trunc(draft.levelEnd), Math.min(Math.max(Math.trunc(draft.levelStart), 1), 20)), 20),
             hook: draft.hook,
             nextSession: draft.nextSession,
-            summary: draft.summary || 'A newly formed campaign waits for its first legend.'
+            summary: draft.summary || 'A newly formed campaign waits for its first legend.',
+            bannerImageUrl: draft.bannerImageUrl || ''
         });
 
         const campaign = this.mapCampaignFromApi(created, []);
@@ -1264,6 +1266,7 @@ export class DungeonStoreService {
                     levelEnd: mapped.levelEnd,
                     levelRange: mapped.levelRange,
                     summary: mapped.summary,
+                    bannerImageUrl: mapped.bannerImageUrl,
                     hook: mapped.hook,
                     nextSession: mapped.nextSession,
                     characterCount: mapped.characterCount,
@@ -1322,6 +1325,7 @@ export class DungeonStoreService {
             levelEnd,
             levelRange: `Levels ${levelStart}-${levelEnd}`,
             summary: campaign.summary,
+            bannerImageUrl: campaign.bannerImageUrl || '',
             hook: campaign.hook || 'A new adventure awaits.',
             nextSession: campaign.nextSession || 'TBD',
             characterCount: Math.max(campaign.characterCount ?? partyCharacterIds.length, partyCharacterIds.length),
@@ -1389,6 +1393,7 @@ export class DungeonStoreService {
             levelEnd,
             levelRange: `Levels ${levelStart}-${levelEnd}`,
             summary: campaign.summary,
+            bannerImageUrl: campaign.bannerImageUrl || '',
             hook: campaign.hook || 'A new adventure awaits.',
             nextSession: campaign.nextSession || 'TBD',
             characterCount: Math.max(campaign.characterCount ?? partyCharacterIds.length, partyCharacterIds.length),

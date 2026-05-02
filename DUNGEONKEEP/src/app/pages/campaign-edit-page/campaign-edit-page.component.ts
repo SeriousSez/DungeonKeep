@@ -49,7 +49,8 @@ export class CampaignEditPageComponent {
             levelEnd: campaign.levelEnd,
             hook: campaign.hook,
             nextSession: campaign.nextSession,
-            summary: campaign.summary
+            summary: campaign.summary,
+            bannerImageUrl: campaign.bannerImageUrl
         };
     });
 

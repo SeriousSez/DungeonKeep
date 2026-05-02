@@ -139,7 +139,7 @@ static void EnsureBaseSqliteSchema(DungeonKeepDbContext dbContext)
     );
 
     dbContext.Database.ExecuteSqlRaw(
-        "CREATE TABLE IF NOT EXISTS Campaigns (Id TEXT NOT NULL CONSTRAINT PK_Campaigns PRIMARY KEY, Name TEXT NOT NULL, Setting TEXT NOT NULL DEFAULT '', Tone TEXT NOT NULL DEFAULT 'Heroic', LevelStart INTEGER NOT NULL DEFAULT 1, LevelEnd INTEGER NOT NULL DEFAULT 4, Hook TEXT NOT NULL DEFAULT '', NextSession TEXT NOT NULL DEFAULT '', Summary TEXT NOT NULL DEFAULT '', SessionsJson TEXT NOT NULL DEFAULT '[]', NpcsJson TEXT NOT NULL DEFAULT '[]', CampaignNpcsJson TEXT NOT NULL DEFAULT '[]', LootJson TEXT NOT NULL DEFAULT '[]', OpenThreadsJson TEXT NOT NULL DEFAULT '[]', WorldNotesJson TEXT NOT NULL DEFAULT '[]', CampaignMapJson TEXT NOT NULL DEFAULT '{{}}', CreatedAtUtc TEXT NOT NULL DEFAULT '');"
+        "CREATE TABLE IF NOT EXISTS Campaigns (Id TEXT NOT NULL CONSTRAINT PK_Campaigns PRIMARY KEY, Name TEXT NOT NULL, Setting TEXT NOT NULL DEFAULT '', Tone TEXT NOT NULL DEFAULT 'Heroic', LevelStart INTEGER NOT NULL DEFAULT 1, LevelEnd INTEGER NOT NULL DEFAULT 4, Hook TEXT NOT NULL DEFAULT '', NextSession TEXT NOT NULL DEFAULT '', Summary TEXT NOT NULL DEFAULT '', BannerImageUrl TEXT NOT NULL DEFAULT '', SessionsJson TEXT NOT NULL DEFAULT '[]', NpcsJson TEXT NOT NULL DEFAULT '[]', CampaignNpcsJson TEXT NOT NULL DEFAULT '[]', LootJson TEXT NOT NULL DEFAULT '[]', OpenThreadsJson TEXT NOT NULL DEFAULT '[]', WorldNotesJson TEXT NOT NULL DEFAULT '[]', CampaignMapJson TEXT NOT NULL DEFAULT '{{}}', CreatedAtUtc TEXT NOT NULL DEFAULT '');"
     );
 
     dbContext.Database.ExecuteSqlRaw(
@@ -232,6 +232,7 @@ static void EnsureCharacterRichTextStorage(DungeonKeepDbContext dbContext, Datab
     EnsureMySqlLongTextColumnExists(dbContext, "Characters", "PortraitUrl");
     EnsureMySqlLongTextColumnExists(dbContext, "Characters", "DetailBackgroundImageUrl");
     EnsureMySqlLongTextColumnExists(dbContext, "Campaigns", "CampaignMapJson");
+    EnsureMySqlLongTextColumnExists(dbContext, "Campaigns", "BannerImageUrl");
 }
 
 static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)
@@ -261,6 +262,7 @@ static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)
     EnsureColumnExists(dbContext, "Campaigns", "Hook", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "Campaigns", "NextSession", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "Campaigns", "Summary", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Campaigns", "BannerImageUrl", "TEXT NOT NULL DEFAULT ''");
 
     EnsureColumnExists(dbContext, "Characters", "Status", "TEXT NOT NULL DEFAULT 'Ready'");
     EnsureColumnExists(dbContext, "Characters", "OwnerUserId", "TEXT NULL");
@@ -342,20 +344,21 @@ static void EnsureMySqlLongTextColumnExists(DungeonKeepDbContext dbContext, stri
         connection.Open();
     }
 
-    using var existsCommand = connection.CreateCommand();
-    existsCommand.CommandText = $"SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{tableName}' AND COLUMN_NAME = '{columnName}' LIMIT 1;";
-    var exists = existsCommand.ExecuteScalar() is not null;
-
-    if (!exists)
+    using var checkCommand = connection.CreateCommand();
+    checkCommand.CommandText = $"SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{tableName}' AND COLUMN_NAME = '{columnName}' AND TABLE_SCHEMA = DATABASE() LIMIT 1;";
+    var dataType = checkCommand.ExecuteScalar() as string;
+    if (string.Equals(dataType, "longtext", StringComparison.OrdinalIgnoreCase))
     {
-#pragma warning disable EF1002
-        dbContext.Database.ExecuteSqlRaw($"ALTER TABLE `{tableName}` ADD COLUMN `{columnName}` LONGTEXT NULL;");
-#pragma warning restore EF1002
+        return;
+    }
+
+    if (dataType is null)
+    {
         return;
     }
 
 #pragma warning disable EF1002
-    dbContext.Database.ExecuteSqlRaw($"ALTER TABLE `{tableName}` MODIFY COLUMN `{columnName}` LONGTEXT NULL;");
+    dbContext.Database.ExecuteSqlRaw($"ALTER TABLE `{tableName}` MODIFY COLUMN `{columnName}` longtext NOT NULL;");
 #pragma warning restore EF1002
 }
 

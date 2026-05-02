@@ -11,6 +11,7 @@ public sealed class Campaign
     public string Hook { get; set; } = string.Empty;
     public string NextSession { get; set; } = string.Empty;
     public string Summary { get; set; } = string.Empty;
+    public string BannerImageUrl { get; set; } = string.Empty;
     public string SessionsJson { get; set; } = "[]";
     public string NpcsJson { get; set; } = "[]";
     public string CampaignNpcsJson { get; set; } = "[]";

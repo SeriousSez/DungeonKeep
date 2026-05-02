@@ -9,7 +9,7 @@ public interface ICampaignRepository
     Task<IReadOnlyList<Campaign>> GetAllForUserAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<Campaign?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<Campaign> AddAsync(Campaign campaign, CancellationToken cancellationToken = default);
-    Task<Campaign?> UpdateAsync(Guid campaignId, string name, string setting, string tone, int levelStart, int levelEnd, string hook, string nextSession, string summary, CancellationToken cancellationToken = default);
+    Task<Campaign?> UpdateAsync(Guid campaignId, string name, string setting, string tone, int levelStart, int levelEnd, string hook, string nextSession, string summary, string bannerImageUrl, CancellationToken cancellationToken = default);
     Task<Campaign?> AddSessionAsync(Guid campaignId, CampaignSessionDto session, CancellationToken cancellationToken = default);
     Task<Campaign?> UpdateSessionAsync(Guid campaignId, CampaignSessionDto session, CancellationToken cancellationToken = default);
     Task<Campaign?> RemoveSessionAsync(Guid campaignId, Guid sessionId, CancellationToken cancellationToken = default);

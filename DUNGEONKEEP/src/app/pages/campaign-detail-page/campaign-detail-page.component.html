@@ -28,6 +28,11 @@
     } @else if (selectedCampaign(); as campaign) {
     <a routerLink="/campaigns" class="back-link">← Back to Campaigns</a>
     <section class="panel page-intro">
+        @if (campaign.bannerImageUrl) {
+        <div class="campaign-banner-shell">
+            <img [src]="campaign.bannerImageUrl" alt="Campaign banner" class="campaign-banner-image" />
+        </div>
+        }
         <div class="page-intro-header">
             <div>
                 <p class="eyebrow">Campaign details</p>
