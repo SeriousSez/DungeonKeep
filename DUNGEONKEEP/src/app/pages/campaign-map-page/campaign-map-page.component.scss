@@ -594,6 +594,27 @@ app-dropdown {
     justify-content: center;
 }
 
+.measure-readout {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 58%, var(--accent-primary) 42%);
+    background: color-mix(in srgb, var(--surface-raised) 84%, var(--accent-primary) 16%);
+}
+
+.measure-readout strong {
+    font-size: 1.1rem;
+    color: var(--text-main);
+}
+
+.measure-readout span {
+    font-size: 0.84rem;
+    color: var(--text-soft);
+}
+
 .map-board-summary-card {
     display: grid;
     gap: 4px;
@@ -2196,4 +2217,366 @@ app-dropdown {
 
 .map-board--battlemap .map-board-art {
     filter: saturate(0.98) contrast(1.01) brightness(1.08);
+}
+
+.map-measure-line {
+    stroke: color-mix(in srgb, #2b64ff 74%, #99bbff 26%);
+    stroke-width: 3;
+    stroke-dasharray: 8 6;
+    filter: drop-shadow(0 0 8px rgba(43, 100, 255, 0.3));
+}
+
+.map-measure-circle {
+    fill: color-mix(in srgb, #2b64ff 16%, transparent);
+    stroke: color-mix(in srgb, #2b64ff 74%, #99bbff 26%);
+    stroke-width: 3;
+    stroke-dasharray: 8 6;
+    filter: drop-shadow(0 0 8px rgba(43, 100, 255, 0.28));
+}
+
+.map-measure-square,
+.map-measure-cone,
+.map-measure-beam {
+    fill: color-mix(in srgb, #2b64ff 16%, transparent);
+    stroke: color-mix(in srgb, #2b64ff 74%, #99bbff 26%);
+    stroke-width: 3;
+    stroke-dasharray: 8 6;
+    filter: drop-shadow(0 0 8px rgba(43, 100, 255, 0.28));
+}
+
+.map-measure-label {
+    position: absolute;
+    z-index: 6;
+    transform: translate(-50%, -118%);
+    display: grid;
+    gap: 2px;
+    min-width: 72px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, #2b64ff 64%, var(--panel-border) 36%);
+    background: color-mix(in srgb, var(--surface-raised-solid) 80%, #2b64ff 20%);
+    box-shadow: 0 8px 20px rgba(28, 45, 96, 0.28);
+    pointer-events: none;
+    text-align: center;
+}
+
+.map-measure-label strong {
+    font-size: 0.95rem;
+    color: var(--text-main);
+    line-height: 1;
+}
+
+.map-measure-label span {
+    font-size: 0.74rem;
+    color: var(--text-soft);
+    line-height: 1;
+}
+
+// ── Left fixed toolbar ──────────────────────────────────────────────────
+
+.map-left-toolbar {
+    position: fixed;
+    left: 0;
+    inset-inline-start: 0;
+    margin-left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 200;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    overflow: visible;
+}
+
+.map-left-toolbar-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 6px;
+    border-radius: 0 16px 16px 0;
+    background: color-mix(in srgb, var(--surface-raised-solid) 92%, transparent);
+    border: 1px solid var(--panel-border);
+    border-left: 0;
+    backdrop-filter: blur(16px);
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.12);
+    overflow: hidden;
+    width: 52px;
+    opacity: 1;
+    pointer-events: all;
+    transition: width 0.22s ease, opacity 0.18s ease, padding 0.22s ease;
+}
+
+.map-left-toolbar:not(.is-open) .map-left-toolbar-body {
+    width: 0;
+    padding-inline: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.map-toolbar-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+    &:hover {
+        background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+        color: var(--accent-primary);
+        border-color: color-mix(in srgb, var(--accent-primary) 30%, transparent);
+    }
+
+    &.is-active {
+        background: color-mix(in srgb, var(--accent-primary) 22%, transparent);
+        color: var(--accent-primary);
+        border-color: color-mix(in srgb, var(--accent-primary) 50%, transparent);
+    }
+
+    &:disabled {
+        opacity: 0.38;
+        pointer-events: none;
+    }
+}
+
+.map-toolbar-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--panel-border);
+    margin: 3px 0;
+    flex-shrink: 0;
+}
+
+.map-toolbar-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 16px;
+    height: 48px;
+    border-radius: 0 8px 8px 0;
+    border: 1px solid var(--panel-border);
+    border-left: 0;
+    background: color-mix(in srgb, var(--surface-raised-solid) 88%, var(--accent-primary) 12%);
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    cursor: pointer;
+    pointer-events: all;
+    transition: background 0.15s ease, color 0.15s ease;
+
+    &:hover {
+        background: color-mix(in srgb, var(--surface-raised-solid) 70%, var(--accent-primary) 30%);
+        color: var(--accent-primary);
+    }
+}
+
+.map-measure-popover {
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: min(360px, calc(100vw - 92px));
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 16px;
+    border: 1px solid var(--panel-border);
+    background: color-mix(in srgb, var(--surface-raised-solid) 95%, transparent);
+    box-shadow: 0 16px 30px rgba(26, 19, 13, 0.22);
+    backdrop-filter: blur(14px);
+}
+
+.map-measure-popover-header {
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.map-measure-popover-header h3 {
+    margin: 0;
+    font-family: var(--display-font);
+    letter-spacing: 0.02em;
+}
+
+.map-measure-section-divider {
+    height: 1px;
+    width: 42px;
+    background: color-mix(in srgb, var(--panel-border) 75%, var(--accent-primary) 25%);
+    margin-top: 2px;
+}
+
+.map-measure-popover-actions {
+    display: grid;
+    gap: 8px;
+}
+
+.map-measure-config-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.map-measure-quick-section {
+    display: grid;
+    gap: 8px;
+}
+
+.map-measure-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.map-measure-chip-row .ghost-button {
+    min-width: 52px;
+}
+
+.map-measure-chip-row .ghost-button.is-active {
+    border-color: color-mix(in srgb, var(--accent-primary) 55%, var(--panel-border) 45%);
+    background: color-mix(in srgb, var(--accent-primary) 22%, var(--surface-raised-solid) 78%);
+    color: var(--accent-primary);
+}
+
+.map-measure-degree-row {
+    display: grid;
+    grid-template-columns: auto minmax(132px, 1fr);
+    align-items: center;
+    gap: 8px;
+}
+
+.map-measure-inline-input {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 7px 10px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 90%, transparent);
+    color: var(--text-main);
+}
+
+.map-measure-inline-input input {
+    width: 100%;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+}
+
+.map-measure-inline-input input::-webkit-outer-spin-button,
+.map-measure-inline-input input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.map-measure-fade-delay {
+    display: grid;
+    gap: 6px;
+}
+
+.map-measure-fade-actions {
+    display: inline-flex;
+    gap: 6px;
+}
+
+.map-measure-fade-actions .ghost-button.is-active {
+    border-color: color-mix(in srgb, var(--accent-primary) 55%, var(--panel-border) 45%);
+    background: color-mix(in srgb, var(--accent-primary) 22%, var(--surface-raised-solid) 78%);
+    color: var(--accent-primary);
+}
+
+.map-measure-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 90%, transparent);
+    color: var(--text-main);
+    padding: 9px 10px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.map-measure-toggle-row span i {
+    margin-left: 6px;
+    color: var(--text-soft);
+    font-size: 0.86rem;
+}
+
+.map-measure-toggle-row:hover {
+    border-color: color-mix(in srgb, var(--accent-primary) 35%, var(--panel-border) 65%);
+}
+
+.map-measure-toggle-row.is-on {
+    border-color: color-mix(in srgb, var(--accent-primary) 62%, var(--panel-border) 38%);
+    background: color-mix(in srgb, var(--accent-primary) 16%, var(--surface-raised-solid) 84%);
+}
+
+.map-measure-switch {
+    position: relative;
+    inline-size: 34px;
+    block-size: 20px;
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+    background: color-mix(in srgb, var(--surface-raised-solid) 74%, var(--text-soft) 26%);
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.map-measure-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    inline-size: 14px;
+    block-size: 14px;
+    border-radius: 50%;
+    background: var(--surface-raised-solid);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.15s ease;
+}
+
+.map-measure-toggle-row.is-on .map-measure-switch {
+    border-color: color-mix(in srgb, var(--accent-primary) 60%, var(--panel-border) 40%);
+    background: color-mix(in srgb, var(--accent-primary) 52%, var(--surface-raised-solid) 48%);
+}
+
+.map-measure-toggle-row.is-on .map-measure-switch::after {
+    transform: translateX(14px);
+}
+
+.map-measure-rules-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 90%, var(--text-soft) 10%);
+    color: var(--text-main);
+    padding: 10px 12px;
+    cursor: pointer;
+}
+
+.map-measure-rules-footer span i {
+    margin-left: 6px;
+    color: var(--text-soft);
+}
+
+.map-measure-rules-footer strong {
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.map-board-shell:fullscreen .map-left-toolbar {
+    left: 0;
+    inset-inline-start: 0;
 }

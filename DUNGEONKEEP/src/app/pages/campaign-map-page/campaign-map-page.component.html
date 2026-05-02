@@ -537,6 +537,8 @@
                 }
             </div>
 
+
+
             } @else {
             <div class="sidebar-section">
                 <div class="section-heading compact-heading">
@@ -580,6 +582,7 @@
             <div #mapBoardShell class="map-board-shell">
                 @if (isFullscreen()) {
                 <button type="button" class="ghost-button compact-action map-fullscreen-exit" (click)="toggleMapFullscreen()">Exit Fullscreen</button>
+                <ng-container [ngTemplateOutlet]="mapToolbarTemplate"></ng-container>
                 }
                 <div #mapBoard class="map-board" [class.can-edit]="canEdit()" [class.is-placement-mode]="pendingIconType() !== null || pendingTerrainType() !== null || activeTool() === 'label'" [class.has-map-art]="!!workingMap().backgroundImageUrl" [class.is-generating]="isAiArtGenerating()"
                     [style.--map-grid-columns]="gridColumns()" [style.--map-grid-rows]="gridRows()" [style.--map-grid-color]="gridColor()" [style.--map-grid-offset-x]="gridOffsetX()" [style.--map-grid-offset-y]="gridOffsetY()" [ngClass]="backgroundTextureClass()" (click)="handleBoardClick($event)"
@@ -619,7 +622,29 @@
                         <polyline class="map-stroke-preview" [class.map-stroke-preview--wall]="ctrlPolylineKind() === 'wall'" [attr.points]="ctrlPolylineRenderPoints()" [attr.stroke]="ctrlPolylineColor()" [attr.stroke-width]="ctrlPolylineWidth()" fill="none" stroke-linecap="round"
                             stroke-linejoin="round"></polyline>
                         }
+                        @if (hasMeasureLine() && measureLinePoints()) {
+                        <polyline class="map-measure-line" [attr.points]="measureLinePoints()" fill="none" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                        }
+                        @if (hasMeasureLine() && measureCircle(); as circle) {
+                        <circle class="map-measure-circle" [attr.cx]="circle.cx" [attr.cy]="circle.cy" [attr.r]="circle.radius"></circle>
+                        }
+                        @if (hasMeasureLine() && measureSquarePoints()) {
+                        <polygon class="map-measure-square" [attr.points]="measureSquarePoints()"></polygon>
+                        }
+                        @if (hasMeasureLine() && measureConePoints()) {
+                        <polygon class="map-measure-cone" [attr.points]="measureConePoints()"></polygon>
+                        }
+                        @if (hasMeasureLine() && measureBeamPoints()) {
+                        <polygon class="map-measure-beam" [attr.points]="measureBeamPoints()"></polygon>
+                        }
                     </svg>
+
+                    @if (hasMeasureLine() && measureLabelPoint(); as measurePoint) {
+                    <div class="map-measure-label" [style.left.%]="measurePoint.x * 100" [style.top.%]="measurePoint.y * 100">
+                        <strong>{{ measureDistanceFeet() }} ft</strong>
+                        <span>{{ measureDistanceSquaresRounded() }} sq</span>
+                    </div>
+                    }
 
                     @if (showMountainChains()) {
                     <div class="map-decoration-layer map-terrain-layer" aria-hidden="true">
@@ -862,9 +887,10 @@
         <div #mapBoardShell class="map-board-shell">
             @if (isFullscreen()) {
             <button type="button" class="ghost-button compact-action map-fullscreen-exit" (click)="toggleMapFullscreen()">Exit Fullscreen</button>
+            <ng-container [ngTemplateOutlet]="mapToolbarTemplate"></ng-container>
             }
             <div #mapBoard class="map-board" [class.has-map-art]="!!workingMap().backgroundImageUrl" [ngClass]="backgroundTextureClass()" [style.--map-grid-columns]="gridColumns()" [style.--map-grid-rows]="gridRows()" [style.--map-grid-color]="gridColor()" [style.--map-grid-offset-x]="gridOffsetX()"
-                [style.--map-grid-offset-y]="gridOffsetY()">
+                [style.--map-grid-offset-y]="gridOffsetY()" (click)="handleBoardClick($event)" (pointerdown)="handleBoardPointerDown($event)" (pointermove)="handleBoardPointerMove($event)" (pointerup)="handleBoardPointerUp($event)" (pointercancel)="handleBoardPointerUp($event)">
                 @if (workingMap().backgroundImageUrl) {
                 <div class="map-board-art-layer" aria-hidden="true">
                     <img class="map-board-art" [src]="workingMap().backgroundImageUrl" alt="" (load)="refreshMapOverlayHintTone()" />
@@ -896,7 +922,35 @@
                     <polyline class="map-wall-line" [attr.points]="formatStrokePoints(wall.points)" [attr.stroke-width]="wall.width" fill="none" stroke-linecap="round" stroke-linejoin="round"></polyline>
                     }
                     }
+                    @if (hasMeasureLine() && measureLinePoints()) {
+                    <polyline class="map-measure-line" [attr.points]="measureLinePoints()" fill="none" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                    }
+                    @if (hasMeasureLine() && measureCircle(); as circle) {
+                    <circle class="map-measure-circle" [attr.cx]="circle.cx" [attr.cy]="circle.cy" [attr.r]="circle.radius"></circle>
+                    }
+                    @if (hasMeasureLine() && measureSquarePoints()) {
+                    <polygon class="map-measure-square" [attr.points]="measureSquarePoints()"></polygon>
+                    }
+                    @if (hasMeasureLine() && measureConePoints()) {
+                    <polygon class="map-measure-cone" [attr.points]="measureConePoints()"></polygon>
+                    }
+                    @if (hasMeasureLine() && measureConeRoundedPath()) {
+                    <path class="map-measure-cone" [attr.d]="measureConeRoundedPath()"></path>
+                    }
+                    @if (hasMeasureLine() && measureConeRoundedPath()) {
+                    <path class="map-measure-cone" [attr.d]="measureConeRoundedPath()"></path>
+                    }
+                    @if (hasMeasureLine() && measureBeamPoints()) {
+                    <polygon class="map-measure-beam" [attr.points]="measureBeamPoints()"></polygon>
+                    }
                 </svg>
+
+                @if (hasMeasureLine() && measureLabelPoint(); as measurePoint) {
+                <div class="map-measure-label" [style.left.%]="measurePoint.x * 100" [style.top.%]="measurePoint.y * 100">
+                    <strong>{{ measureDistanceFeet() }} ft</strong>
+                    <span>{{ measureDistanceSquaresRounded() }} sq</span>
+                </div>
+                }
 
                 @if (showMountainChains()) {
                 <div class="map-decoration-layer map-terrain-layer" aria-hidden="true">
@@ -1157,7 +1211,167 @@
     </section>
     }
 
+    @if (!isFullscreen()) {
+    <ng-container [ngTemplateOutlet]="mapToolbarTemplate"></ng-container>
+    }
+
     <app-confirm-modal [open]="confirmOpen()" [title]="confirmTitle()" [message]="confirmMessage()" [confirmText]="confirmActionText()" cancelText="Cancel" (confirmed)="handleConfirmAccepted()" (cancelled)="handleConfirmCancelled()"></app-confirm-modal>
+
+    <ng-template #mapToolbarTemplate>
+    <div class="map-left-toolbar" [class.is-open]="leftToolbarOpen()">
+        <div class="map-left-toolbar-body">
+            @if (isEditorMode() && canEdit()) {
+            <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'select'" title="Select (S)" [disabled]="isEditorLocked()" (click)="selectSelectTool()">
+                <i class="fa-duotone fa-thin fa-arrow-pointer"></i>
+            </button>
+            <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'draw'" title="Draw (D)" [disabled]="isEditorLocked()" (click)="selectDrawTool()">
+                <i class="fa-duotone fa-thin fa-paintbrush-fine"></i>
+            </button>
+            <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'wall'" title="Walls (W)" [disabled]="isEditorLocked()" (click)="selectWallTool()">
+                <i class="fa-duotone fa-thin fa-border-all"></i>
+            </button>
+            <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'erase'" title="Erase (E)" [disabled]="isEditorLocked()" (click)="selectEraseTool()">
+                <i class="fa-duotone fa-thin fa-eraser"></i>
+            </button>
+            <div class="map-toolbar-divider"></div>
+            <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'icon'" title="Place Landmarks" [disabled]="isEditorLocked()" (click)="startLandmarkTool()">
+                <i class="fa-duotone fa-thin fa-location-dot"></i>
+            </button>
+            <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'terrain'" title="Place Terrain" [disabled]="isEditorLocked()" (click)="selectTerrainTool('Mountain')">
+                <i class="fa-duotone fa-thin fa-mountain"></i>
+            </button>
+            <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'label'" title="Place Labels" [disabled]="isEditorLocked()" (click)="selectLabelTool()">
+                <i class="fa-duotone fa-thin fa-tag"></i>
+            </button>
+            <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'token'" title="Place Tokens" [disabled]="isEditorLocked()" (click)="selectTokenTool()">
+                <i class="fa-duotone fa-thin fa-circle-user"></i>
+            </button>
+            <div class="map-toolbar-divider"></div>
+            }
+            <button type="button" class="map-toolbar-btn" [class.is-active]="!measureEnabled()" title="Mouse" (click)="selectMouseToolbarMode()">
+                <i class="fa-duotone fa-thin fa-arrow-pointer"></i>
+            </button>
+            <button type="button" class="map-toolbar-btn" [class.is-active]="measureEnabled()" title="Measure (M)" (click)="selectMeasureToolbarMode()">
+                <i class="fa-duotone fa-thin fa-ruler"></i>
+            </button>
+        </div>
+        @if (measurePopoverOpen()) {
+        <div class="map-measure-popover">
+            <div class="section-heading compact-heading map-measure-popover-header">
+                <h3>Measure</h3>
+                <button type="button" class="ghost-button compact-action" (click)="toggleMeasurePopover()" aria-label="Close measurement panel">
+                    <i class="fa-duotone fa-thin fa-chevrons-left"></i>
+                </button>
+            </div>
+
+            <div class="map-measure-config-grid">
+                <app-dropdown ariaLabel="Measurement shape" [value]="measureTool()" [options]="measureToolOptions" [minWidth]="160" (changed)="updateMeasureTool($event)"></app-dropdown>
+                <app-dropdown ariaLabel="Measure snapping" [value]="measureSnapMode()" [options]="measureSnapOptions" [minWidth]="160" (changed)="updateMeasureSnapMode($event)"></app-dropdown>
+            </div>
+
+            @if (measureTool() !== 'line') {
+            <div class="map-measure-section-divider"></div>
+            <div class="map-measure-quick-section">
+                <span class="field-label">Measure Origin</span>
+                <div class="map-measure-chip-row">
+                    <button type="button" class="ghost-button compact-action" [class.is-active]="measureOriginMode() === 'center'" (click)="setMeasureOriginMode('center')">Center</button>
+                    <button type="button" class="ghost-button compact-action" [class.is-active]="measureOriginMode() === 'edge'" (click)="setMeasureOriginMode('edge')">Edge</button>
+                    @if (measureTool() === 'square' || measureTool() === 'cone' || measureTool() === 'beam') {
+                    <button type="button" class="ghost-button compact-action" [class.is-active]="measureOriginMode() === 'corner'" (click)="setMeasureOriginMode('corner')">Corner</button>
+                    }
+                </div>
+            </div>
+            }
+
+            @if (measureTool() === 'cone') {
+            <div class="map-measure-section-divider"></div>
+            <button type="button" class="map-measure-toggle-row" [class.is-on]="measureConeLockWidthToHeight()" (click)="toggleMeasureConeLockWidthToHeight()">
+                <span>Lock width to height</span>
+                <span class="map-measure-switch" aria-hidden="true"></span>
+            </button>
+
+            <div class="map-measure-quick-section">
+                <span class="field-label">Cone Degree</span>
+                <div class="map-measure-degree-row">
+                    <div class="map-measure-chip-row">
+                        <button type="button" class="ghost-button compact-action" [class.is-active]="measureConeDegree() === 45" (click)="setMeasureConeDegree(45)">45</button>
+                        <button type="button" class="ghost-button compact-action" [class.is-active]="measureConeDegree() === 60" (click)="setMeasureConeDegree(60)">60</button>
+                        <button type="button" class="ghost-button compact-action" [class.is-active]="measureConeDegree() === 90" (click)="setMeasureConeDegree(90)">90</button>
+                    </div>
+                    <label class="map-measure-inline-input">
+                        <i class="fa-duotone fa-thin fa-ruler-triangle"></i>
+                        <input type="number" min="10" max="170" [value]="measureConeDegree()" (input)="setMeasureConeDegree(+$any($event.target).value)" />
+                    </label>
+                </div>
+            </div>
+
+            <div class="map-measure-quick-section">
+                <span class="field-label">Cone Shape</span>
+                <div class="map-measure-chip-row">
+                    <button type="button" class="ghost-button compact-action" [class.is-active]="measureConeShape() === 'flat'" (click)="setMeasureConeShape('flat')">Flat</button>
+                    <button type="button" class="ghost-button compact-action" [class.is-active]="measureConeShape() === 'rounded'" (click)="setMeasureConeShape('rounded')">Rounded</button>
+                </div>
+            </div>
+            }
+
+            @if (measureTool() === 'beam') {
+            <div class="map-measure-section-divider"></div>
+            <div class="map-measure-quick-section">
+                <span class="field-label">Beam Width</span>
+                <div class="map-measure-degree-row">
+                    <div class="map-measure-chip-row">
+                        <button type="button" class="ghost-button compact-action" [class.is-active]="measureBeamWidthFt() === 5" (click)="setMeasureBeamWidthFt(5)">5</button>
+                        <button type="button" class="ghost-button compact-action" [class.is-active]="measureBeamWidthFt() === 10" (click)="setMeasureBeamWidthFt(10)">10</button>
+                        <button type="button" class="ghost-button compact-action" [class.is-active]="measureBeamWidthFt() === 15" (click)="setMeasureBeamWidthFt(15)">15</button>
+                    </div>
+                    <label class="map-measure-inline-input">
+                        <i class="fa-duotone fa-thin fa-ruler-horizontal"></i>
+                        <input type="number" min="1" max="100" [value]="measureBeamWidthFt()" (input)="setMeasureBeamWidthFt(+$any($event.target).value)" />
+                    </label>
+                </div>
+            </div>
+            }
+
+            <div class="map-measure-fade-delay">
+                <div class="map-measure-section-divider"></div>
+                <span class="field-label">Fade Delay</span>
+                <div class="map-measure-fade-actions">
+                    <button type="button" class="ghost-button compact-action" [class.is-active]="measureFadeDelay() === 'instant'" (click)="setMeasureFadeDelay('instant')">Instant</button>
+                    <button type="button" class="ghost-button compact-action" [class.is-active]="measureFadeDelay() === 'linger'" (click)="setMeasureFadeDelay('linger')">Linger</button>
+                </div>
+            </div>
+
+            <button type="button" class="map-measure-toggle-row" [class.is-on]="measureAlwaysTokenMovement()" (click)="toggleAlwaysMeasureTokenMovement()">
+                <span>Always measure token movement <i class="fa-duotone fa-thin fa-circle-question"></i></span>
+                <span class="map-measure-switch" aria-hidden="true"></span>
+            </button>
+
+            <button type="button" class="map-measure-toggle-row" [class.is-on]="measureBroadcastToOthers()" (click)="toggleMeasureBroadcastToOthers()">
+                <span>Broadcast To Others</span>
+                <span class="map-measure-switch" aria-hidden="true"></span>
+            </button>
+
+            <button type="button" class="map-measure-rules-footer" (click)="updateMeasureRulesMode(measureRulesMode() === 'dnd5e4e' ? 'euclidean' : 'dnd5e4e')">
+                <span>{{ measureRulesMode() === 'dnd5e4e' ? 'D&D 5E/4E Compatible' : 'Exact Euclidean' }} <i class="fa-duotone fa-thin fa-circle-question"></i></span>
+                <strong>1 Cell = {{ 5 }} ft</strong>
+            </button>
+
+            @if (hasMeasureLine()) {
+            <div class="measure-readout">
+                <strong>{{ measureDistanceFeet() }} ft</strong>
+                <span>{{ measureDistanceSquaresRounded() }} squares</span>
+            </div>
+            }
+            <div class="map-measure-popover-actions">
+                <button type="button" class="ghost-button" [disabled]="!hasMeasureLine()" (click)="clearMeasurement()">Clear Measurement</button>
+            </div>
+        </div>
+        }
+        <button type="button" class="map-toolbar-toggle" (click)="toggleLeftToolbar()" [title]="leftToolbarOpen() ? 'Hide toolbar' : 'Show toolbar'">
+            <i class="fa-duotone fa-thin" [class.fa-chevron-left]="leftToolbarOpen()" [class.fa-chevron-right]="!leftToolbarOpen()"></i>
+        </button>
+    </div>
+    </ng-template>
 </main>
 
 <app-map-art-generation-modal [open]="mapArtModalOpen()" [isSubmitting]="isAiArtGenerating()" [background]="workingMap().background" [mapName]="mapNameDraft().trim()" [separateLabels]="separateLabelsDraft()" [settlementScale]="settlementScale()" [parchmentLayout]="parchmentLayout()"

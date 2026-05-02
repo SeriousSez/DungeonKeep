@@ -16,6 +16,12 @@ import { DungeonStoreService } from '../../state/dungeon-store.service';
 import { SessionService } from '../../state/session.service';
 
 type MapTool = 'select' | 'draw' | 'wall' | 'erase' | 'icon' | 'terrain' | 'label' | 'token';
+type MeasureTool = 'line' | 'square' | 'circle' | 'cone' | 'beam';
+type MeasureFadeDelay = 'instant' | 'linger';
+type MeasureSnapMode = 'center' | 'corner' | 'off';
+type MeasureRulesMode = 'dnd5e4e' | 'euclidean';
+type MeasureOriginMode = 'center' | 'edge' | 'corner';
+type MeasureConeShape = 'flat' | 'rounded';
 type MapConfirmAction = 'clear-map' | 'delete-icon' | 'delete-token' | 'delete-label' | 'delete-stroke' | 'delete-wall' | 'delete-map' | null;
 type MapLineKind = 'drawing' | 'wall';
 type MapAnchorProminence = 'major' | 'minor';
@@ -187,6 +193,25 @@ const LABEL_TONE_OPTIONS: DropdownOption[] = [
     { value: 'Feature', label: 'Feature', description: 'Smaller names for roads, ruins, rivers, or landmarks.' }
 ];
 
+const MEASURE_SNAP_OPTIONS: DropdownOption[] = [
+    { value: 'center', label: 'Snap to Center', description: 'Measure from cell center to cell center.' },
+    { value: 'corner', label: 'Snap to Corner', description: 'Measure from grid intersection to intersection.' },
+    { value: 'off', label: 'No Snapping', description: 'Measure freely without grid snapping.' }
+];
+
+const MEASURE_TOOL_OPTIONS: DropdownOption[] = [
+    { value: 'line', label: 'Line', description: 'Point-to-point distance from start to end.' },
+    { value: 'square', label: 'Square', description: 'Square area measured from the origin point.' },
+    { value: 'circle', label: 'Circle', description: 'Circular radius measured from the origin point.' },
+    { value: 'cone', label: 'Cone', description: 'Cone-shaped area projected from the origin point.' },
+    { value: 'beam', label: 'Beam', description: 'Rectangular beam projected from the origin point.' }
+];
+
+const MEASURE_RULES_MODE_OPTIONS: DropdownOption[] = [
+    { value: 'dnd5e4e', label: 'D&D 5E/4E Compatible', description: 'Diagonal movement counts as one square on grid distance.' },
+    { value: 'euclidean', label: 'Exact Euclidean', description: 'Uses true geometric distance for diagonals.' }
+];
+
 const MAP_LABELS_BY_BACKGROUND: Record<CampaignMapBackground, MapLabelCatalog> = {
     Parchment: {
         Keep: ['Sunward Keep', 'Wayfarer Bastion', 'Saint Ember Hold'],
@@ -319,6 +344,21 @@ export class CampaignMapPageComponent {
     readonly saveState = signal<'idle' | 'saving' | 'saved' | 'error'>('idle');
     readonly saveMessage = signal('');
     readonly mapNotice = signal('');
+    readonly measureEnabled = signal(false);
+    readonly measureTool = signal<MeasureTool>('line');
+    readonly measureSnapMode = signal<MeasureSnapMode>('center');
+    readonly measureOriginMode = signal<MeasureOriginMode>('center');
+    readonly measureFadeDelay = signal<MeasureFadeDelay>('instant');
+    readonly measureAlwaysTokenMovement = signal(true);
+    readonly measureBroadcastToOthers = signal(false);
+    readonly measureRulesMode = signal<MeasureRulesMode>('dnd5e4e');
+    readonly measureConeLockWidthToHeight = signal(false);
+    readonly measureConeDegree = signal(45);
+    readonly measureConeShape = signal<MeasureConeShape>('flat');
+    readonly measureBeamWidthFt = signal(5);
+    readonly measureLine = signal<{ start: CampaignMapPoint; end: CampaignMapPoint } | null>(null);
+    readonly measurePopoverOpen = signal(false);
+    readonly leftToolbarOpen = signal(true);
     readonly hasUnsavedChanges = signal(false);
     readonly confirmAction = signal<MapConfirmAction>(null);
     readonly isDrawing = signal(false);
@@ -350,6 +390,9 @@ export class CampaignMapPageComponent {
     readonly iconOptions = MAP_ICON_OPTIONS;
     readonly terrainOptions = MAP_TERRAIN_OPTIONS;
     readonly labelToneOptions = LABEL_TONE_OPTIONS;
+    readonly measureToolOptions = MEASURE_TOOL_OPTIONS;
+    readonly measureSnapOptions = MEASURE_SNAP_OPTIONS;
+    readonly measureRulesModeOptions = MEASURE_RULES_MODE_OPTIONS;
 
     readonly selectedCampaign = computed(() => {
         const campaignId = this.campaignId();
@@ -768,6 +811,225 @@ export class CampaignMapPageComponent {
         return '';
     });
     readonly shouldShowPlacementHint = computed(() => this.canEdit() && this.showPlacementHint() && this.placementHint().trim().length > 0);
+    readonly hasMeasureLine = computed(() => this.measureLine() !== null);
+    readonly measureDistanceSquares = computed(() => {
+        const line = this.measureLine();
+        if (!line) {
+            return 0;
+        }
+
+        const deltaXCells = (line.end.x - line.start.x) * this.gridColumns();
+        const deltaYCells = (line.end.y - line.start.y) * this.gridRows();
+
+        if (this.measureRulesMode() === 'dnd5e4e') {
+            return Math.max(Math.abs(deltaXCells), Math.abs(deltaYCells));
+        }
+
+        return Math.hypot(deltaXCells, deltaYCells);
+    });
+    readonly measureDistanceFeet = computed(() => Math.round(this.measureDistanceSquares() * MAP_VISION_FEET_PER_GRID_SQUARE));
+    readonly measureDistanceSquaresRounded = computed(() => Number(this.measureDistanceSquares().toFixed(1)));
+    readonly measureLinePoints = computed(() => {
+        if (this.measureTool() !== 'line') {
+            return '';
+        }
+
+        const line = this.measureLine();
+        if (!line) {
+            return '';
+        }
+
+        return `${Math.round(line.start.x * 1000)},${Math.round(line.start.y * 700)} ${Math.round(line.end.x * 1000)},${Math.round(line.end.y * 700)}`;
+    });
+    readonly measureCircle = computed(() => {
+        if (this.measureTool() !== 'circle') {
+            return null;
+        }
+
+        const line = this.measureLine();
+        if (!line) {
+            return null;
+        }
+
+        const deltaX = (line.end.x - line.start.x) * 1000;
+        const deltaY = (line.end.y - line.start.y) * 700;
+        return {
+            cx: Math.round(line.start.x * 1000),
+            cy: Math.round(line.start.y * 700),
+            radius: Math.hypot(deltaX, deltaY)
+        };
+    });
+    readonly measureSquarePoints = computed(() => {
+        if (this.measureTool() !== 'square') {
+            return '';
+        }
+
+        const line = this.measureLine();
+        if (!line) {
+            return '';
+        }
+
+        const startX = line.start.x * 1000;
+        const startY = line.start.y * 700;
+        const deltaX = (line.end.x - line.start.x) * 1000;
+        const deltaY = (line.end.y - line.start.y) * 700;
+        const halfSide = Math.max(Math.abs(deltaX), Math.abs(deltaY));
+        if (halfSide < 1) {
+            return '';
+        }
+
+        const side = halfSide * 2;
+        const half = side / 2;
+        const angle = Math.atan2(deltaY, deltaX);
+        const unitX = Math.cos(angle);
+        const unitY = Math.sin(angle);
+        const perpX = -unitY;
+        const perpY = unitX;
+
+        if (this.measureOriginMode() === 'corner') {
+            const p1x = startX;
+            const p1y = startY;
+            const p2x = startX + (unitX * side);
+            const p2y = startY + (unitY * side);
+            const p3x = p2x + (perpX * side);
+            const p3y = p2y + (perpY * side);
+            const p4x = startX + (perpX * side);
+            const p4y = startY + (perpY * side);
+            return `${Math.round(p1x)},${Math.round(p1y)} ${Math.round(p2x)},${Math.round(p2y)} ${Math.round(p3x)},${Math.round(p3y)} ${Math.round(p4x)},${Math.round(p4y)}`;
+        }
+
+        const centerX = this.measureOriginMode() === 'edge'
+            ? startX + (unitX * half)
+            : startX;
+        const centerY = this.measureOriginMode() === 'edge'
+            ? startY + (unitY * half)
+            : startY;
+
+        const p1x = centerX + (unitX * half) + (perpX * half);
+        const p1y = centerY + (unitY * half) + (perpY * half);
+        const p2x = centerX - (unitX * half) + (perpX * half);
+        const p2y = centerY - (unitY * half) + (perpY * half);
+        const p3x = centerX - (unitX * half) - (perpX * half);
+        const p3y = centerY - (unitY * half) - (perpY * half);
+        const p4x = centerX + (unitX * half) - (perpX * half);
+        const p4y = centerY + (unitY * half) - (perpY * half);
+
+        return `${Math.round(p1x)},${Math.round(p1y)} ${Math.round(p2x)},${Math.round(p2y)} ${Math.round(p3x)},${Math.round(p3y)} ${Math.round(p4x)},${Math.round(p4y)}`;
+    });
+    readonly measureConePoints = computed(() => {
+        if (this.measureTool() !== 'cone' || this.measureConeShape() !== 'flat') {
+            return '';
+        }
+
+        const line = this.measureLine();
+        if (!line) {
+            return '';
+        }
+
+        const startX = line.start.x * 1000;
+        const startY = line.start.y * 700;
+        const endX = line.end.x * 1000;
+        const endY = line.end.y * 700;
+        const deltaX = endX - startX;
+        const deltaY = endY - startY;
+        const length = Math.hypot(deltaX, deltaY);
+        if (length < 1) {
+            return '';
+        }
+
+        const directionX = deltaX / length;
+        const directionY = deltaY / length;
+        const configuredDegrees = this.measureConeLockWidthToHeight() ? 53 : this.measureConeDegree();
+        const spreadHalfAngle = (Math.max(10, Math.min(170, configuredDegrees)) / 2) * (Math.PI / 180);
+        const leftAngle = Math.atan2(directionY, directionX) - spreadHalfAngle;
+        const rightAngle = Math.atan2(directionY, directionX) + spreadHalfAngle;
+        const leftX = startX + Math.cos(leftAngle) * length;
+        const leftY = startY + Math.sin(leftAngle) * length;
+        const rightX = startX + Math.cos(rightAngle) * length;
+        const rightY = startY + Math.sin(rightAngle) * length;
+
+        return `${Math.round(startX)},${Math.round(startY)} ${Math.round(leftX)},${Math.round(leftY)} ${Math.round(rightX)},${Math.round(rightY)}`;
+    });
+    readonly measureConeRoundedPath = computed(() => {
+        if (this.measureTool() !== 'cone' || this.measureConeShape() !== 'rounded') {
+            return '';
+        }
+
+        const line = this.measureLine();
+        if (!line) {
+            return '';
+        }
+
+        const startX = line.start.x * 1000;
+        const startY = line.start.y * 700;
+        const endX = line.end.x * 1000;
+        const endY = line.end.y * 700;
+        const deltaX = endX - startX;
+        const deltaY = endY - startY;
+        const length = Math.hypot(deltaX, deltaY);
+        if (length < 1) {
+            return '';
+        }
+
+        const baseAngle = Math.atan2(deltaY, deltaX);
+        const configuredDegrees = this.measureConeLockWidthToHeight() ? 53 : this.measureConeDegree();
+        const spreadHalfAngle = (Math.max(10, Math.min(170, configuredDegrees)) / 2) * (Math.PI / 180);
+        const leftAngle = baseAngle - spreadHalfAngle;
+        const rightAngle = baseAngle + spreadHalfAngle;
+        const leftX = startX + Math.cos(leftAngle) * length;
+        const leftY = startY + Math.sin(leftAngle) * length;
+        const rightX = startX + Math.cos(rightAngle) * length;
+        const rightY = startY + Math.sin(rightAngle) * length;
+        const largeArcFlag = configuredDegrees > 180 ? 1 : 0;
+
+        return `M ${Math.round(startX)} ${Math.round(startY)} L ${Math.round(leftX)} ${Math.round(leftY)} A ${Math.round(length)} ${Math.round(length)} 0 ${largeArcFlag} 1 ${Math.round(rightX)} ${Math.round(rightY)} Z`;
+    });
+    readonly measureBeamPoints = computed(() => {
+        if (this.measureTool() !== 'beam') {
+            return '';
+        }
+
+        const line = this.measureLine();
+        if (!line) {
+            return '';
+        }
+
+        const startX = line.start.x * 1000;
+        const startY = line.start.y * 700;
+        const endX = line.end.x * 1000;
+        const endY = line.end.y * 700;
+        const deltaX = endX - startX;
+        const deltaY = endY - startY;
+        const length = Math.hypot(deltaX, deltaY);
+        if (length < 1) {
+            return '';
+        }
+
+        const perpendicularX = -deltaY / length;
+        const perpendicularY = deltaX / length;
+        const cellWidthPx = 1000 / Math.max(1, this.gridColumns());
+        const beamWidthCells = Math.max(1, this.measureBeamWidthFt()) / MAP_VISION_FEET_PER_GRID_SQUARE;
+        const beamHalfWidth = (beamWidthCells * cellWidthPx) / 2;
+
+        const p1X = startX + (perpendicularX * beamHalfWidth);
+        const p1Y = startY + (perpendicularY * beamHalfWidth);
+        const p2X = startX - (perpendicularX * beamHalfWidth);
+        const p2Y = startY - (perpendicularY * beamHalfWidth);
+        const p3X = endX - (perpendicularX * beamHalfWidth);
+        const p3Y = endY - (perpendicularY * beamHalfWidth);
+        const p4X = endX + (perpendicularX * beamHalfWidth);
+        const p4Y = endY + (perpendicularY * beamHalfWidth);
+
+        return `${Math.round(p1X)},${Math.round(p1Y)} ${Math.round(p2X)},${Math.round(p2Y)} ${Math.round(p3X)},${Math.round(p3Y)} ${Math.round(p4X)},${Math.round(p4Y)}`;
+    });
+    readonly measureLabelPoint = computed(() => {
+        const line = this.measureLine();
+        if (!line) {
+            return null;
+        }
+
+        return line.end;
+    });
     readonly saveStatusText = computed(() => {
         if (this.isAiArtGenerating()) {
             return this.saveMessage();
@@ -871,6 +1133,8 @@ export class CampaignMapPageComponent {
     private lastLoadedMapSignature = '';
     private lastLoadedRouteMapId = '';
     private activeStrokePointerId: number | null = null;
+    private measurePointerId: number | null = null;
+    private measureClearTimerId: ReturnType<typeof setTimeout> | null = null;
     private activeLineKind: MapLineKind | null = null;
     private activeStrokeOrigin: CampaignMapPoint | null = null;
     private activeStrokeDrawMode: 'freehand' | 'circle' = 'freehand';
@@ -1220,6 +1484,16 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        if (!event.ctrlKey && !event.metaKey && event.key.toLowerCase() === 'm') {
+            if (this.measureEnabled()) {
+                this.selectMouseToolbarMode();
+            } else {
+                this.selectMeasureToolbarMode();
+            }
+            event.preventDefault();
+            return;
+        }
+
         if (!this.canModify()) {
             return;
         }
@@ -1250,6 +1524,155 @@ export class CampaignMapPageComponent {
         if (handled) {
             event.preventDefault();
         }
+    }
+
+    toggleLeftToolbar(): void {
+        this.leftToolbarOpen.update((isOpen) => {
+            if (isOpen) {
+                this.measurePopoverOpen.set(false);
+            }
+
+            return !isOpen;
+        });
+    }
+
+    toggleMeasurePopover(): void {
+        this.measurePopoverOpen.update(v => !v);
+    }
+
+    selectMouseToolbarMode(): void {
+        this.measureEnabled.set(false);
+        this.measurePopoverOpen.set(false);
+        this.measurePointerId = null;
+        this.clearMeasureClearTimer();
+    }
+
+    selectMeasureToolbarMode(): void {
+        this.measureEnabled.set(true);
+        this.measurePopoverOpen.set(true);
+
+        this.clearCtrlPolylineDraft();
+        this.pendingIconType.set(null);
+        this.pendingTerrainType.set(null);
+    }
+
+    toggleMeasureMode(): void {
+        const nextEnabled = !this.measureEnabled();
+        if (nextEnabled) {
+            this.selectMeasureToolbarMode();
+            return;
+        }
+
+        this.selectMouseToolbarMode();
+    }
+
+    clearMeasurement(): void {
+        this.clearMeasureClearTimer();
+        this.measureLine.set(null);
+        this.measurePointerId = null;
+    }
+
+    updateMeasureSnapMode(value: string | number): void {
+        const mode = typeof value === 'string' ? value : String(value);
+        this.measureSnapMode.set(mode === 'corner' || mode === 'off' ? mode : 'center');
+    }
+
+    updateMeasureTool(value: string | number): void {
+        const mode = typeof value === 'string' ? value : String(value);
+        if (mode === 'square' || mode === 'circle' || mode === 'cone' || mode === 'beam') {
+            this.measureTool.set(mode);
+            return;
+        }
+
+        // Keep compatibility with older saved dropdown value.
+        if (mode === 'radius') {
+            this.measureTool.set('circle');
+            return;
+        }
+
+        this.measureTool.set('line');
+    }
+
+    setMeasureOriginMode(mode: MeasureOriginMode): void {
+        if ((this.measureTool() === 'circle' && mode === 'corner') || this.measureTool() === 'line') {
+            return;
+        }
+
+        this.measureOriginMode.set(mode);
+    }
+
+    toggleMeasureConeLockWidthToHeight(): void {
+        this.measureConeLockWidthToHeight.update(v => !v);
+    }
+
+    setMeasureConeDegree(value: number): void {
+        if (!Number.isFinite(value)) {
+            return;
+        }
+
+        this.measureConeDegree.set(Math.max(10, Math.min(170, Math.round(value))));
+    }
+
+    setMeasureConeShape(shape: MeasureConeShape): void {
+        this.measureConeShape.set(shape);
+    }
+
+    setMeasureBeamWidthFt(value: number): void {
+        if (!Number.isFinite(value)) {
+            return;
+        }
+
+        this.measureBeamWidthFt.set(Math.max(1, Math.min(100, Math.round(value))));
+    }
+
+    updateMeasureRulesMode(value: string | number): void {
+        const mode = typeof value === 'string' ? value : String(value);
+        this.measureRulesMode.set(mode === 'euclidean' ? 'euclidean' : 'dnd5e4e');
+    }
+
+    setMeasureFadeDelay(mode: MeasureFadeDelay): void {
+        this.measureFadeDelay.set(mode);
+    }
+
+    toggleAlwaysMeasureTokenMovement(): void {
+        this.measureAlwaysTokenMovement.update(v => !v);
+    }
+
+    toggleMeasureBroadcastToOthers(): void {
+        this.measureBroadcastToOthers.update(v => !v);
+    }
+
+    private clearMeasureClearTimer(): void {
+        if (this.measureClearTimerId) {
+            clearTimeout(this.measureClearTimerId);
+            this.measureClearTimerId = null;
+        }
+    }
+
+    private scheduleMeasureClear(): void {
+        this.clearMeasureClearTimer();
+        if (this.measureFadeDelay() === 'instant') {
+            this.clearMeasurement();
+            return;
+        }
+
+        this.measureClearTimerId = setTimeout(() => {
+            this.measureLine.set(null);
+            this.measureClearTimerId = null;
+        }, 2500);
+    }
+
+    private snapMeasurePoint(point: CampaignMapPoint): CampaignMapPoint {
+        const mode = this.measureSnapMode();
+        if (mode === 'off') {
+            return point;
+        }
+
+        if (mode === 'corner') {
+            return this.snapRoutePointToGridIntersection(point);
+        }
+
+        return this.snapTokenPointToGrid(point, 1);
     }
 
     @HostListener('document:keyup', ['$event'])
@@ -1377,6 +1800,7 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.measureEnabled.set(false);
         this.clearCtrlPolylineDraft();
         this.activeTool.set('select');
         this.pendingIconType.set(null);
@@ -1388,6 +1812,7 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.measureEnabled.set(false);
         this.clearCtrlPolylineDraft();
         this.activeTool.set('draw');
         this.pendingIconType.set(null);
@@ -1399,6 +1824,7 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.measureEnabled.set(false);
         this.clearCtrlPolylineDraft();
         this.activeTool.set('wall');
         this.pendingIconType.set(null);
@@ -1410,6 +1836,7 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.measureEnabled.set(false);
         this.clearCtrlPolylineDraft();
         this.activeTool.set('erase');
         this.pendingIconType.set(null);
@@ -1421,6 +1848,7 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.measureEnabled.set(false);
         this.clearCtrlPolylineDraft();
         this.activeTool.set('icon');
         this.pendingIconType.set(iconType);
@@ -1432,6 +1860,7 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.measureEnabled.set(false);
         this.clearCtrlPolylineDraft();
         this.activeTool.set('terrain');
         this.pendingTerrainType.set(terrainType);
@@ -1443,6 +1872,7 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.measureEnabled.set(false);
         this.clearCtrlPolylineDraft();
         this.activeTool.set('label');
         this.pendingIconType.set(null);
@@ -1454,6 +1884,7 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.measureEnabled.set(false);
         this.clearCtrlPolylineDraft();
         this.activeTool.set('token');
         this.pendingIconType.set(null);
@@ -1478,6 +1909,7 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        this.measureEnabled.set(false);
         this.clearCtrlPolylineDraft();
         this.pendingIconType.set(null);
         this.pendingTerrainType.set(null);
@@ -2723,6 +3155,10 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        if (this.measureEnabled()) {
+            return;
+        }
+
         if (!this.canModify()) {
             return;
         }
@@ -2876,6 +3312,20 @@ export class CampaignMapPageComponent {
     }
 
     handleBoardPointerDown(event: PointerEvent): void {
+        if (this.measureEnabled() && event.button === 0) {
+            const point = this.getRelativePoint(event.clientX, event.clientY);
+            if (!point) {
+                return;
+            }
+
+            const snapped = this.snapMeasurePoint(point);
+            this.measureLine.set({ start: snapped, end: snapped });
+            this.measurePointerId = event.pointerId;
+            (event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId);
+            event.preventDefault();
+            return;
+        }
+
         if (!this.canModify() || event.button !== 0) {
             return;
         }
@@ -2988,6 +3438,19 @@ export class CampaignMapPageComponent {
     }
 
     handleBoardPointerMove(event: PointerEvent): void {
+        if (this.measureEnabled() && this.measurePointerId === event.pointerId) {
+            const point = this.getRelativePoint(event.clientX, event.clientY);
+            const line = this.measureLine();
+            if (!point || !line) {
+                return;
+            }
+
+            const snapped = this.snapMeasurePoint(point);
+            this.measureLine.set({ start: line.start, end: snapped });
+            event.preventDefault();
+            return;
+        }
+
         if (this.handlePendingOrActiveIconMove(event)) {
             return;
         }
@@ -3081,6 +3544,16 @@ export class CampaignMapPageComponent {
     }
 
     handleBoardPointerUp(event: PointerEvent): void {
+        if (this.measureEnabled() && this.measurePointerId === event.pointerId) {
+            this.measurePointerId = null;
+            (event.currentTarget as HTMLElement | null)?.releasePointerCapture(event.pointerId);
+            if (this.measureFadeDelay() === 'instant') {
+                this.clearMeasurement();
+            }
+            event.preventDefault();
+            return;
+        }
+
         if (this.finishIconInteraction(event)) {
             return;
         }
@@ -3475,6 +3948,13 @@ export class CampaignMapPageComponent {
         this.draggingTokenOrigin = { x: token.x, y: token.y };
         this.draggingTokenFreeMove = event.ctrlKey || this.ctrlKeyPressed;
         this.pendingDragHistory = this.draggingTokenMode === 'editor' ? this.createHistoryEntry() : null;
+
+        if (this.measureAlwaysTokenMovement()) {
+            const snappedOrigin = this.snapMeasurePoint(this.draggingTokenOrigin);
+            this.clearMeasureClearTimer();
+            this.measureLine.set({ start: snappedOrigin, end: snappedOrigin });
+        }
+
         (event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId);
         event.stopPropagation();
     }
@@ -3519,6 +3999,17 @@ export class CampaignMapPageComponent {
                 };
             });
         });
+
+        if (this.measureAlwaysTokenMovement() && this.draggingTokenOrigin) {
+            const movedToken = this.workingMap().tokens.find((entry) => entry.id === tokenId) ?? null;
+            if (movedToken) {
+                this.clearMeasureClearTimer();
+                this.measureLine.set({
+                    start: this.snapMeasurePoint(this.draggingTokenOrigin),
+                    end: this.snapMeasurePoint({ x: movedToken.x, y: movedToken.y })
+                });
+            }
+        }
 
         event.preventDefault();
         event.stopPropagation();
@@ -3629,6 +4120,14 @@ export class CampaignMapPageComponent {
         if (!movedToken || !origin || (movedToken.x === origin.x && movedToken.y === origin.y)) {
             this.pendingDragHistory = null;
             return;
+        }
+
+        if (this.measureAlwaysTokenMovement()) {
+            this.measureLine.set({
+                start: this.snapMeasurePoint(origin),
+                end: this.snapMeasurePoint({ x: movedToken.x, y: movedToken.y })
+            });
+            this.scheduleMeasureClear();
         }
 
         this.pendingDragHistory = null;
