@@ -1211,10 +1211,6 @@
     </section>
     }
 
-    @if (!isFullscreen()) {
-    <ng-container [ngTemplateOutlet]="mapToolbarTemplate"></ng-container>
-    }
-
     <app-confirm-modal [open]="confirmOpen()" [title]="confirmTitle()" [message]="confirmMessage()" [confirmText]="confirmActionText()" cancelText="Cancel" (confirmed)="handleConfirmAccepted()" (cancelled)="handleConfirmCancelled()"></app-confirm-modal>
 
     <ng-template #mapToolbarTemplate>
@@ -1445,6 +1441,10 @@
         </div>
     </ng-template>
 </main>
+
+@if (!isFullscreen()) {
+<ng-container [ngTemplateOutlet]="mapToolbarTemplate"></ng-container>
+}
 
 <app-map-art-generation-modal [open]="mapArtModalOpen()" [isSubmitting]="isAiArtGenerating()" [background]="workingMap().background" [mapName]="mapNameDraft().trim()" [separateLabels]="separateLabelsDraft()" [settlementScale]="settlementScale()" [parchmentLayout]="parchmentLayout()"
     [cavernLayout]="cavernLayout()" [battlemapLocale]="battlemapLocale()" [lighting]="lighting()" [settlementNamesText]="settlementNamesDraft()" [regionNamesText]="regionNamesDraft()" [ruinNamesText]="ruinNamesDraft()" [cavernNamesText]="cavernNamesDraft()"
