@@ -348,8 +348,11 @@ public sealed class AuthService(IAuthRepository authRepository, IAccountActivati
 
     public async Task<UserLibrariesDto> GetUserLibrariesAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var user = await authRepository.GetUserByIdAsync(userId, cancellationToken)
-            ?? throw new InvalidOperationException("User not found.");
+        var user = await authRepository.GetUserByIdAsync(userId, cancellationToken);
+        if (user is null)
+        {
+            return new UserLibrariesDto("[]", "[]", "[]", "[]");
+        }
 
         return MapLibraries(user);
     }
