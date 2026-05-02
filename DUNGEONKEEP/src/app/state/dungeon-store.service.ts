@@ -89,7 +89,12 @@ export class DungeonStoreService {
         });
 
         effect(() => {
+            const sessionInitialized = this.session.initialized();
             const currentUserId = this.session.currentUser()?.id ?? '';
+
+            if (!sessionInitialized) {
+                return;
+            }
 
             if (!currentUserId) {
                 this.clearState();
