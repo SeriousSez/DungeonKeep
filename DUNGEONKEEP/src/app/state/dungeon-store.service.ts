@@ -1292,9 +1292,14 @@ export class DungeonStoreService {
             this.isHydrating.set(false);
             this.initialized.set(true);
         } catch {
-            // Preserve existing state on error rather than flashing empty.
-            // initialized stays false so the skeleton remains visible.
+            // On error, preserve existing campaigns/characters if any.
+            // Only clear state if starting with nothing.
+            if (this.campaigns().length === 0) {
+                this.clearState();
+            }
+        } finally {
             this.isHydrating.set(false);
+            this.initialized.set(true);
         }
     }
 
