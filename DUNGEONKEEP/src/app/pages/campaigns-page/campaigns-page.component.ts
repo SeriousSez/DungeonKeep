@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, effect, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { DungeonStoreService } from '../../state/dungeon-store.service';
@@ -14,9 +14,13 @@ export class CampaignsPageComponent {
     readonly store = inject(DungeonStoreService);
 
     constructor() {
-        if (this.store.initialized()) {
+        effect(() => {
+            if (!this.store.initialized()) {
+                return;
+            }
+
             void this.store.refreshCampaignSummaries();
-        }
+        });
     }
 
     readonly visibleCampaigns = computed(() =>
