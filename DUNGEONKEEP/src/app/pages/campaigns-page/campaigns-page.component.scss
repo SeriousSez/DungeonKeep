@@ -15,9 +15,53 @@
     backdrop-filter: blur(18px);
 }
 
-.page-intro,
-.empty-panel {
+.page-intro {
     padding: clamp(14px, 3vw, 24px);
+}
+
+.empty-panel {
+    padding: clamp(32px, 6vw, 64px) clamp(24px, 4vw, 48px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 14px;
+}
+
+.empty-icon {
+    font-size: 3.2rem;
+    color: var(--accent-primary);
+    opacity: 0.55;
+    margin-bottom: 8px;
+    line-height: 1;
+}
+
+.empty-actions {
+    margin-top: 8px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 22px;
+    min-height: 42px;
+    border-radius: 999px;
+    background: var(--accent-primary);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: opacity 120ms ease, box-shadow 120ms ease;
+
+    &:hover {
+        opacity: 0.88;
+        box-shadow: 0 4px 16px color-mix(in srgb, var(--accent-primary) 35%, transparent);
+    }
 }
 
 .page-intro {
@@ -294,8 +338,7 @@
         flex: 1;
     }
 
-    .create-link,
-    .empty-panel .create-link {
+    .create-link {
         align-self: flex-start;
     }
 
@@ -329,9 +372,12 @@
     }
 
     .page-intro,
-    .empty-panel,
     .campaign-card {
         padding: 12px;
+    }
+
+    .empty-panel {
+        padding: 40px 20px;
     }
 
     .campaign-meta {

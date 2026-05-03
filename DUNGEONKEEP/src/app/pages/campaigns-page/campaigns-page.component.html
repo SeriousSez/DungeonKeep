@@ -55,10 +55,18 @@
 
     @if (visibleCampaignCount() === 0) {
     <section class="panel empty-panel">
-        <p class="eyebrow">No active campaigns</p>
-        <h2>You are not part of any campaigns yet</h2>
-        <p>Create a campaign or wait for an invite to see it here.</p>
-        <a routerLink="/campaigns/new" class="create-link">Create Campaign</a>
+        <div class="empty-icon">
+            <i class="fa-duotone fa-thin fa-map"></i>
+        </div>
+        <p class="eyebrow">No campaigns found</p>
+        <h2>Your adventure awaits</h2>
+        <p>Create your first campaign to begin building your world — or wait for a GM to send you an invite.</p>
+        <div class="empty-actions">
+            <a routerLink="/campaigns/new" class="btn-primary">
+                <i class="fa-duotone fa-thin fa-plus"></i>
+                New Campaign
+            </a>
+        </div>
     </section>
     } @else {
     <section class="campaign-list">

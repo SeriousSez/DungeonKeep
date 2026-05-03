@@ -18,6 +18,7 @@ export class PartyRosterComponent {
     @Input() countLabel: string = 'assigned';
     @Input() emptyTitle: string = 'No party members assigned';
     @Input() emptyMessage: string = 'Add a character below to give this campaign a roster.';
+    @Input() emptyIcon: string = '';
     @Input() emptyActionLabel: string = '';
     @Input() emptyActionLink: string = '';
 

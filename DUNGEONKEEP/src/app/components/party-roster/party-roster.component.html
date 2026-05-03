@@ -46,10 +46,18 @@
 
         @if (!selectedParty.length) {
         <div class="empty-state">
+            @if (emptyIcon) {
+            <div class="empty-state-icon" aria-hidden="true">
+                <i class="fa-duotone fa-thin fa-{{ emptyIcon }}"></i>
+            </div>
+            }
             <h3>{{ emptyTitle }}</h3>
             <p>{{ emptyMessage }}</p>
             @if (emptyActionLabel && emptyActionLink) {
-            <a class="primary-button empty-state-button" [routerLink]="emptyActionLink">{{ emptyActionLabel }}</a>
+            <a class="empty-state-cta" [routerLink]="emptyActionLink">
+                <i class="fa-duotone fa-thin fa-plus"></i>
+                {{ emptyActionLabel }}
+            </a>
             }
         </div>
         }
