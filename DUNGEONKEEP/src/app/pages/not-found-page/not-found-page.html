@@ -1,45 +1,62 @@
 <main class="not-found-shell">
-    <section class="panel not-found-hero">
-        <div class="not-found-copy">
-            <p class="eyebrow">Wayfinding Error</p>
-            <div class="title-row">
-                <span class="status-mark" aria-hidden="true">404</span>
-                <div>
-                    <h1>This path does not exist in the campaign ledger.</h1>
-                    <p>The route you tried to open is missing, expired, or was never mapped into DungeonKeep.</p>
-                </div>
-            </div>
+    <div class="not-found-bg" aria-hidden="true">
+        <div class="bg-rune bg-rune--1"><i class="fa-duotone fa-thin fa-dungeon"></i></div>
+        <div class="bg-rune bg-rune--2"><i class="fa-duotone fa-thin fa-scroll"></i></div>
+        <div class="bg-rune bg-rune--3"><i class="fa-duotone fa-thin fa-map"></i></div>
+    </div>
 
-            @if (requestedPath) {
-            <p class="requested-path">Requested path: <span>{{ requestedPath }}</span></p>
-            }
-
-            <div class="action-row">
-                <a routerLink="/dashboard" class="primary-button">Return to Dashboard</a>
-                <a routerLink="/campaigns" class="ghost-button">Browse Campaigns</a>
-                <a routerLink="/characters" class="ghost-button">Open Characters</a>
+    <section class="not-found-card">
+        <div class="card-header">
+            <div class="glyph" aria-hidden="true">
+                <i class="fa-duotone fa-thin fa-skull-crossbones"></i>
             </div>
+            <div class="glyph-label">Error 404</div>
         </div>
 
-        <div class="not-found-card" aria-hidden="true">
-            <div class="card-rune">
-                <i class="fa-duotone fa-thin fa-compass-drafting"></i>
-            </div>
-            <strong>Map the next move</strong>
-            <p>Use the main hubs to jump back into an active campaign, reopen your roster, or start a new thread from the dashboard.</p>
-            <div class="card-grid">
-                <div>
-                    <span>Campaigns</span>
-                    <strong>Worlds, maps, threads</strong>
-                </div>
-                <div>
-                    <span>Characters</span>
-                    <strong>Builds, notes, gear</strong>
-                </div>
-                <div>
-                    <span>Dashboard</span>
-                    <strong>Your active command center</strong>
-                </div>
+        <div class="card-body">
+            <h1>Lost in the dungeon depths.</h1>
+            <p class="lead">Your party has wandered off the known map. This path leads only to darkness — the page you seek has been lost, unmapped, or claimed by forces unknown.</p>
+        </div>
+
+        <div class="nf-divider" aria-hidden="true">
+            <span></span>
+            <i class="fa-duotone fa-thin fa-diamond"></i>
+            <span></span>
+        </div>
+
+        <div class="navigation-section">
+            <p class="nav-hint">Choose your next move, adventurer</p>
+            <div class="nav-grid">
+                @if (previousPath) {
+                <a [routerLink]="previousPath" class="nav-tile nav-tile--back">
+                    <i class="fa-duotone fa-thin fa-arrow-left" aria-hidden="true"></i>
+                    <div>
+                        <strong>Go back</strong>
+                        <span>{{ previousPath }}</span>
+                    </div>
+                </a>
+                }
+                <a routerLink="/dashboard" class="nav-tile nav-tile--primary">
+                    <i class="fa-duotone fa-thin fa-compass" aria-hidden="true"></i>
+                    <div>
+                        <strong>Dashboard</strong>
+                        <span>Your command centre</span>
+                    </div>
+                </a>
+                <a routerLink="/campaigns" class="nav-tile">
+                    <i class="fa-duotone fa-thin fa-map-location-dot" aria-hidden="true"></i>
+                    <div>
+                        <strong>Campaigns</strong>
+                        <span>Worlds &amp; session notes</span>
+                    </div>
+                </a>
+                <a routerLink="/characters" class="nav-tile">
+                    <i class="fa-duotone fa-thin fa-user-shield" aria-hidden="true"></i>
+                    <div>
+                        <strong>Characters</strong>
+                        <span>Builds, lore &amp; gear</span>
+                    </div>
+                </a>
             </div>
         </div>
     </section>

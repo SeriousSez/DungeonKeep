@@ -11,5 +11,8 @@ import { Router, RouterLink } from '@angular/router';
 export class NotFoundPage {
   private readonly router = inject(Router);
 
-  readonly requestedPath = this.router.url !== '/404' ? this.router.url : '';
+  readonly previousPath = (() => {
+    const prev = this.router.lastSuccessfulNavigation()?.previousNavigation?.finalUrl?.toString();
+    return prev && prev !== '/' ? prev : '';
+  })();
 }
