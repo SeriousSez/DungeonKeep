@@ -28,6 +28,10 @@
             <i class="fa-duotone fa-thin fa-magnifying-glass" aria-hidden="true"></i>
             <input type="search" class="template-search" placeholder="Search catalog..." [value]="templateSearch()" (input)="templateSearch.set($any($event.target).value)" aria-label="Search monster catalog" />
         </div>
+        <div class="template-filter-row">
+            <app-dropdown [value]="templateCategoryFilter()" [options]="templateCategoryFilterOptions()" [minWidth]="170" (changed)="updateTemplateCategoryFilter($event)"></app-dropdown>
+            <app-dropdown [value]="templateCrFilter()" [options]="templateCrFilterOptions()" [minWidth]="130" (changed)="updateTemplateCrFilter($event)"></app-dropdown>
+        </div>
         <ul class="template-results" role="listbox" aria-label="Template options">
             @for (entry of templateResults(); track entry.slug) {
             <li class="template-result" role="option" tabindex="0" (click)="applyTemplate(entry)" (keydown.enter)="applyTemplate(entry)">

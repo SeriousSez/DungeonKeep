@@ -354,7 +354,7 @@ export class PremadeCharactersPageComponent {
         };
         const created = await this.store.createCharacter(draft);
         if (created) {
-            this.router.navigate(['/character', created.id]);
+            this.router.navigate(['/characters', created.id]);
         }
     }
 

@@ -98,10 +98,64 @@
 }
 
 .manager-feedback p,
-.table-callout p,
-.empty-state {
+.table-callout p {
     margin: 0;
     color: var(--text-soft);
+}
+
+.empty-state {
+    display: grid;
+    place-items: center;
+    text-align: center;
+    gap: 12px;
+    padding: clamp(40px, 7vw, 72px) clamp(24px, 4vw, 48px);
+    border: 1px solid var(--panel-border);
+    border-radius: 20px;
+    background: var(--surface-raised);
+}
+
+.empty-state-icon {
+    font-size: 2.8rem;
+    color: var(--accent-primary);
+    opacity: 0.5;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.empty-state h3 {
+    margin: 0;
+    font-family: var(--display-font);
+    font-weight: 700;
+    font-size: 1.25rem;
+}
+
+.empty-state p {
+    margin: 0;
+    color: var(--text-muted);
+    max-width: 40ch;
+    line-height: 1.6;
+}
+
+.empty-state-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    padding: 0 22px;
+    min-height: 42px;
+    border-radius: 999px;
+    background: var(--accent-primary);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: none;
+    cursor: pointer;
+    transition: opacity 120ms ease, box-shadow 120ms ease;
+
+    &:hover {
+        opacity: 0.88;
+        box-shadow: 0 4px 16px color-mix(in srgb, var(--accent-primary) 35%, transparent);
+    }
 }
 
 @media (max-width: 900px) {

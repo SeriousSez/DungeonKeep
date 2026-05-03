@@ -102,7 +102,7 @@
         <div class="party-members-list">
             @for (character of activePartyMembers(); track character.id) {
             <article class="party-member-card">
-                <a class="party-member-link" [routerLink]="['/character', character.id]" [attr.aria-label]="'Open ' + character.name">
+                <a class="party-member-link" [routerLink]="['/characters', character.id]" [attr.aria-label]="'Open ' + character.name">
                     <div class="member-portrait" aria-hidden="true">
                         @if (getCharacterPortraitUrl(character)) {
                         <img [src]="getCharacterPortraitUrl(character)" [alt]="" />
@@ -143,7 +143,7 @@
         <div class="party-members-list">
             @for (character of inactivePartyMembers(); track character.id) {
             <article class="party-member-card party-member-card--inactive">
-                <a class="party-member-link" [routerLink]="['/character', character.id]" [attr.aria-label]="'Open ' + character.name">
+                <a class="party-member-link" [routerLink]="['/characters', character.id]" [attr.aria-label]="'Open ' + character.name">
                     <div class="member-portrait" aria-hidden="true">
                         @if (getCharacterPortraitUrl(character)) {
                         <img [src]="getCharacterPortraitUrl(character)" [alt]="" />

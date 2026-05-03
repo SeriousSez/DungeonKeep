@@ -7901,7 +7901,7 @@ export class NewCharacterStandardPageComponent {
                 this.clearBuilderSessionSnapshot();
             }
 
-            await this.router.navigate(['/character', resultCharacter.id]);
+            await this.router.navigate(['/characters', resultCharacter.id]);
         } catch {
             this.completionError.set('Unable to complete character creation right now.');
         } finally {

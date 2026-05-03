@@ -54,7 +54,19 @@
             }
         </div>
         } @else {
-        <p class="empty-state">No tables yet. Create one for rumors, encounters, treasure, or anything else you want to roll at the table.</p>
+        <div class="empty-state">
+            <div class="empty-state-icon" aria-hidden="true">
+                <i class="fa-duotone fa-thin fa-dice-d20"></i>
+            </div>
+            <h3>No tables yet</h3>
+            <p>Build reusable tables for random encounters, rumors, treasure, tavern chatter, or anything else your campaign needs.</p>
+            @if (canEdit()) {
+            <button type="button" class="empty-state-cta" (click)="openNewTable()">
+                <i class="fa-duotone fa-thin fa-plus"></i>
+                New Table
+            </button>
+            }
+        </div>
         }
     </section>
 

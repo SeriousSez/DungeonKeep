@@ -9,7 +9,7 @@
 
     <div class="character-grid">
         @for (character of selectedParty; track character.id) {
-        <article class="character-card" [routerLink]="['/character', character.id]">
+        <article class="character-card" [routerLink]="['/characters', character.id]">
             <div class="character-card-top">
                 <div class="character-card-identity">
                     <div class="character-card-portrait" aria-hidden="true">

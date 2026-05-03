@@ -253,7 +253,7 @@ export class NewCharacterPageComponent {
 
             const created = await this.store.createCharacter(draft);
             if (created) {
-                await this.router.navigate(['/character', created.id]);
+                await this.router.navigate(['/characters', created.id]);
             }
         } finally {
             this.quickBuildPending.set(false);
@@ -284,7 +284,7 @@ export class NewCharacterPageComponent {
 
             const created = await this.store.createCharacter(draft);
             if (created) {
-                await this.router.navigate(['/character', created.id]);
+                await this.router.navigate(['/characters', created.id]);
             }
         } finally {
             this.randomBuildPending.set(false);

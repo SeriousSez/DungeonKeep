@@ -237,7 +237,7 @@ export const routes: Routes = [
             breadcrumb: 'Character Builder',
             parentCrumbs: [
                 { label: 'Characters', url: '/characters' },
-                { label: 'Character', url: '/character/:id' }
+                { label: 'Character', url: '/characters/:id' }
             ]
         }
     },
@@ -249,7 +249,7 @@ export const routes: Routes = [
             breadcrumb: 'Character Builder',
             parentCrumbs: [
                 { label: 'Characters', url: '/characters' },
-                { label: 'Character', url: '/character/:id' }
+                { label: 'Character', url: '/characters/:id' }
             ]
         }
     },
@@ -261,7 +261,7 @@ export const routes: Routes = [
             breadcrumb: 'Character Builder',
             parentCrumbs: [
                 { label: 'Characters', url: '/characters' },
-                { label: 'Character', url: '/character/:id' }
+                { label: 'Character', url: '/characters/:id' }
             ]
         }
     },
@@ -411,7 +411,7 @@ export const routes: Routes = [
         data: { title: 'Rules Reference', breadcrumb: 'Reference', parentCrumbs: [{ label: 'Rules', url: '/rules' }] }
     },
     {
-        path: 'character/:id',
+        path: 'characters/:id',
         component: CharacterDetailPageComponent,
         data: { title: 'Character', breadcrumb: 'Character', parentCrumbs: [{ label: 'Characters', url: '/characters' }] }
     },

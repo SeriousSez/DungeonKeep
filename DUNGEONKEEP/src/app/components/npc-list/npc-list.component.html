@@ -119,12 +119,18 @@
     </div>
     } @else {
     <div class="empty-state-panel">
-        <h3>No NPCs match the current view.</h3>
-        <p>Try clearing filters, loading the mock cast, or add a new NPC to start building the campaign roster.</p>
+        <div class="empty-state-icon" aria-hidden="true">
+            <i class="fa-duotone fa-thin fa-masks-theater"></i>
+        </div>
+        <h3>No NPCs here yet</h3>
+        <p>Build your cast of villains, allies, and strangers — or use filters to find someone already in the library.</p>
         @if (canEdit()) {
         <div class="empty-state-actions">
             <button type="button" class="ghost-button" (click)="clearFilters.emit()">Clear Filters</button>
-            <button type="button" class="primary-button" (click)="addNpc.emit()">Add NPC</button>
+            <button type="button" class="empty-state-cta" (click)="addNpc.emit()">
+                <i class="fa-duotone fa-thin fa-plus"></i>
+                New NPC
+            </button>
         </div>
         }
     </div>

@@ -124,6 +124,55 @@ input {
     padding: clamp(12px, 2.5vw, 18px);
 }
 
+.empty-state-panel {
+    place-items: center;
+    text-align: center;
+    padding: clamp(32px, 6vw, 56px) clamp(24px, 4vw, 40px);
+    min-height: 220px;
+}
+
+.empty-state-icon {
+    font-size: 2.8rem;
+    color: var(--accent-primary);
+    opacity: 0.5;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.empty-state-panel h3 {
+    margin: 0;
+    font-family: var(--display-font);
+    font-weight: 700;
+}
+
+.empty-state-panel p {
+    margin: 0;
+    color: var(--text-muted);
+    max-width: 38ch;
+    line-height: 1.6;
+}
+
+.empty-state-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 20px;
+    min-height: 40px;
+    border-radius: 999px;
+    background: var(--accent-primary);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.88rem;
+    border: none;
+    cursor: pointer;
+    transition: opacity 120ms ease, box-shadow 120ms ease;
+
+    &:hover {
+        opacity: 0.88;
+        box-shadow: 0 4px 14px color-mix(in srgb, var(--accent-primary) 35%, transparent);
+    }
+}
+
 .npc-card {
     cursor: pointer;
     transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;

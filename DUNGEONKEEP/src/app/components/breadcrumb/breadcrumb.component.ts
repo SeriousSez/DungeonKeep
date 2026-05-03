@@ -113,7 +113,7 @@ export class BreadcrumbComponent {
         }
 
         if ((url?.startsWith('/characters/') && /\/characters\/[^/]+$/.test(url) && characterName)
-            || (url?.startsWith('/character/') && /\/character\/[^/]+$/.test(url) && characterName)) {
+            || (url?.startsWith('/characters/') && /\/characters\/[^/]+$/.test(url) && characterName)) {
             return characterName;
         }
 

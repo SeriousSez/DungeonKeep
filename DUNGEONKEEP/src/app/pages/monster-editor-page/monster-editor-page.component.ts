@@ -270,6 +270,29 @@ function normalizeEntry(entry: MonsterCatalogEntry): MonsterCatalogEntry {
     };
 }
 
+function challengeRatingSortValue(challengeRating: string | null | undefined): number {
+    const raw = challengeRating?.trim() ?? '';
+    if (!raw) {
+        return Number.POSITIVE_INFINITY;
+    }
+
+    if (raw.includes('/')) {
+        const [numeratorRaw, denominatorRaw] = raw.split('/');
+        const numerator = Number(numeratorRaw);
+        const denominator = Number(denominatorRaw);
+        if (!Number.isNaN(numerator) && !Number.isNaN(denominator) && denominator !== 0) {
+            return numerator / denominator;
+        }
+    }
+
+    const numeric = Number(raw);
+    if (!Number.isNaN(numeric)) {
+        return numeric;
+    }
+
+    return Number.POSITIVE_INFINITY;
+}
+
 @Component({
     selector: 'app-monster-editor-page',
     standalone: true,
@@ -293,6 +316,8 @@ export class MonsterEditorPageComponent {
     readonly confirmDiscardTarget = signal('');
 
     readonly templateSearch = signal('');
+    readonly templateCategoryFilter = signal('all');
+    readonly templateCrFilter = signal('all');
     readonly templatePickerOpen = signal(false);
     readonly activeTitleSuggestions = signal<{ section: SectionKey; index: number } | null>(null);
 
@@ -300,19 +325,58 @@ export class MonsterEditorPageComponent {
 
     readonly sizeOptions = SIZE_OPTIONS;
     readonly categoryOptions = CATEGORY_OPTIONS;
+    readonly templateCategoryFilterOptions = computed<DropdownOption[]>(() => {
+        const categories = Array.from(new Set(normalizedCatalog
+            .map((entry) => entry.creatureCategory)
+            .filter((category) => !!category)))
+            .sort((left, right) => left.localeCompare(right));
+
+        return [
+            { value: 'all', label: 'All categories' },
+            ...categories.map((category) => ({ value: category, label: category }))
+        ];
+    });
+    readonly templateCrFilterOptions = computed<DropdownOption[]>(() => {
+        const challengeRatings = Array.from(new Set(normalizedCatalog
+            .map((entry) => entry.challengeRating?.trim() ?? '')
+            .filter((challengeRating) => challengeRating.length > 0)))
+            .sort((left, right) => {
+                const leftValue = challengeRatingSortValue(left);
+                const rightValue = challengeRatingSortValue(right);
+                if (leftValue === rightValue) {
+                    return left.localeCompare(right);
+                }
+
+                return leftValue - rightValue;
+            });
+
+        return [
+            { value: 'all', label: 'All CR' },
+            ...challengeRatings.map((challengeRating) => ({ value: challengeRating, label: `CR ${challengeRating}` }))
+        ];
+    });
 
     readonly templateResults = computed(() => {
         const query = this.templateSearch().trim().toLowerCase();
+        const categoryFilter = this.templateCategoryFilter();
+        const crFilter = this.templateCrFilter();
+
+        const categoryFilteredCatalog = categoryFilter === 'all'
+            ? normalizedCatalog
+            : normalizedCatalog.filter((entry) => entry.creatureCategory === categoryFilter);
+        const baseCatalog = crFilter === 'all'
+            ? categoryFilteredCatalog
+            : categoryFilteredCatalog.filter((entry) => (entry.challengeRating?.trim() ?? '') === crFilter);
+
         if (!query) {
-            return normalizedCatalog.slice(0, 30);
+            return baseCatalog;
         }
 
-        return normalizedCatalog
+        return baseCatalog
             .filter((entry) => [entry.name, entry.challengeRating, entry.creatureType, entry.creatureCategory]
                 .join(' ')
                 .toLowerCase()
-                .includes(query))
-            .slice(0, 40);
+                .includes(query));
     });
 
     readonly pageTitle = computed(() => this.isEditMode() ? `Edit: ${this.draft().name || 'Monster'}` : 'New Monster');
@@ -376,7 +440,17 @@ export class MonsterEditorPageComponent {
     openTemplatePicker(): void {
         this.templatePickerOpen.set(true);
         this.templateSearch.set('');
+        this.templateCategoryFilter.set('all');
+        this.templateCrFilter.set('all');
         this.cdr.detectChanges();
+    }
+
+    updateTemplateCategoryFilter(value: string | number): void {
+        this.templateCategoryFilter.set(typeof value === 'string' ? value : String(value));
+    }
+
+    updateTemplateCrFilter(value: string | number): void {
+        this.templateCrFilter.set(typeof value === 'string' ? value : String(value));
     }
 
     closeTemplatePicker(): void {
