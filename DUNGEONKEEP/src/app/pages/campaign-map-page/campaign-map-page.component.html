@@ -8,31 +8,6 @@
 </main>
 } @else if (selectedCampaign(); as campaign) {
 <main class="page-stack" [class.page-stack--editor]="isEditorMode()">
-    <a [routerLink]="backLink().route" class="back-link">← {{ backLink().label }}</a>
-
-    <section class="panel page-intro">
-        <div class="page-intro-header">
-            <div>
-                <p class="eyebrow">Campaign workspace</p>
-                <h1>{{ isEditorMode() ? 'Map Editor' : 'Campaign Map' }}</h1>
-                <p>{{ isEditorMode() ? 'Work on one board at a time with freehand drawing, seeded terrain generation, and landmark editing.' : 'Review one board at a time, then switch into edit mode when you want to change drawings, landmarks, or map art.' }}</p>
-            </div>
-            <div class="header-actions">
-                @if (isEditorMode() && canModify()) {
-                <button type="button" class="ghost-button" [disabled]="hasUnsavedChanges() || saveState() === 'saving' || isAiArtGenerating() || isRefreshingCampaignData()" (click)="refreshMapData()">{{ isRefreshingCampaignData() ? 'Refreshing...' : 'Refresh Data' }}</button>
-                <button type="button" class="primary-button" [disabled]="!hasUnsavedChanges() || saveState() === 'saving' || isAiArtGenerating()" (click)="saveMap()">{{ saveState() === 'saving' ? 'Saving...' : 'Save Map' }}</button>
-                <a [routerLink]="['/campaigns', campaign.id, 'edit']" class="primary-button">Edit Campaign</a>
-                }
-                @if (!isEditorMode() && canEdit() && currentMapBoard(); as activeMap) {
-                <a [routerLink]="['/campaigns', campaign.id, 'maps', activeMap.id, 'edit']" class="primary-button">Edit Map</a>
-                }
-                @if (isEditorMode() && shouldShowSaveStatus()) {
-                <span class="status-chip" [class.is-error]="saveState() === 'error'" [class.is-saving]="saveState() === 'saving' || isAiArtGenerating()">{{ saveStatusText() }}</span>
-                }
-            </div>
-        </div>
-    </section>
-
     @if (isEditorMode()) {
     <section class="map-layout map-layout--editor">
         <aside class="panel map-sidebar map-sidebar--left">
@@ -565,11 +540,20 @@
         <section class="panel map-stage-panel map-stage-panel--editor">
             <div class="map-stage-header">
                 <div>
+                    <a [routerLink]="backLink().route" class="back-link back-link--stage">← {{ backLink().label }}</a>
                     <p class="eyebrow">Map board</p>
                     <h2>{{ currentMapBoard()?.name }}</h2>
                     <p class="sidebar-note">{{ campaign.name }} · {{ workingMap().background }}</p>
                 </div>
                 <div class="map-stage-meta">
+                    @if (canModify()) {
+                    <button type="button" class="ghost-button compact-action" [disabled]="hasUnsavedChanges() || saveState() === 'saving' || isAiArtGenerating() || isRefreshingCampaignData()" (click)="refreshMapData()">{{ isRefreshingCampaignData() ? 'Refreshing...' : 'Refresh Data' }}</button>
+                    <button type="button" class="primary-button compact-action" [disabled]="!hasUnsavedChanges() || saveState() === 'saving' || isAiArtGenerating()" (click)="saveMap()">{{ saveState() === 'saving' ? 'Saving...' : 'Save Map' }}</button>
+                    <a [routerLink]="['/campaigns', campaign.id, 'edit']" class="primary-button compact-action">Edit Campaign</a>
+                    }
+                    @if (shouldShowSaveStatus()) {
+                    <span class="status-chip" [class.is-error]="saveState() === 'error'" [class.is-saving]="saveState() === 'saving' || isAiArtGenerating()">{{ saveStatusText() }}</span>
+                    }
                     <button type="button" class="ghost-button compact-action" (click)="toggleMapFullscreen()">{{ isFullscreen() ? 'Exit Fullscreen' : 'Fullscreen' }}</button>
                     <button type="button" class="ghost-button compact-action" (click)="toggleGuide()">{{ showGuide() ? 'Hide Guide' : 'Show Guide' }}</button>
                     <button type="button" class="ghost-button compact-action" (click)="togglePlacementHintVisibility()">{{ showPlacementHint() ? 'Hide Hint' : 'Show Hint' }}</button>
@@ -868,11 +852,15 @@
     <section class="panel map-stage-panel map-stage-panel--viewer">
         <div class="map-stage-header">
             <div>
+                <a [routerLink]="backLink().route" class="back-link back-link--stage">← {{ backLink().label }}</a>
                 <p class="eyebrow">Map board</p>
                 <h2>{{ currentMapBoard()?.name }}</h2>
                 <p class="sidebar-note">{{ campaign.name }} · {{ workingMap().background }}</p>
             </div>
             <div class="map-stage-meta map-stage-meta--viewer">
+                @if (canEdit() && currentMapBoard(); as activeMap) {
+                <a [routerLink]="['/campaigns', campaign.id, 'maps', activeMap.id, 'edit']" class="primary-button compact-action">Edit Map</a>
+                }
                 <button type="button" class="ghost-button compact-action" (click)="toggleMapFullscreen()">{{ isFullscreen() ? 'Exit Fullscreen' : 'Fullscreen' }}</button>
                 <button type="button" class="ghost-button compact-action" (click)="toggleGuide()">{{ showGuide() ? 'Hide Guide' : 'Show Guide' }}</button>
                 @if (canSeeWallOutlines()) {

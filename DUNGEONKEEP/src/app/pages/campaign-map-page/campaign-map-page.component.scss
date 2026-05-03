@@ -71,6 +71,14 @@
     letter-spacing: 0.02em;
 }
 
+.back-link--stage {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    font-size: 0.82rem;
+}
+
 .sidebar-note {
     margin-bottom: 0;
 }
@@ -85,11 +93,6 @@
 }
 
 .page-stack--editor .page-intro {
-    width: min(100%, 1480px);
-    justify-self: center;
-}
-
-.page-stack--editor .back-link {
     width: min(100%, 1480px);
     justify-self: center;
 }
