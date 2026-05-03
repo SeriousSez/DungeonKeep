@@ -1,9 +1,11 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
 import { MultiSelectDropdownComponent, MultiSelectOptionGroup } from '../../components/multi-select-dropdown/multi-select-dropdown.component';
 import { CampaignNpc, NpcHostilityFilter, NpcImportanceFilter, NpcLifeFilter, NpcSortField } from '../../models/campaign-npc.models';
+
+const ALL_CAMPAIGNS_FILTER_VALUE = '__all_campaigns__';
 
 @Component({
     selector: 'app-npc-list',
@@ -32,6 +34,17 @@ export class NpcListComponent {
     readonly hostility = input<NpcHostilityFilter>('All');
     readonly importance = input<NpcImportanceFilter>('All');
     readonly sortBy = input<NpcSortField>('RecentlyUpdated');
+    readonly campaignFilterGroups = computed<ReadonlyArray<MultiSelectOptionGroup>>(() => [
+        {
+            label: '',
+            options: [{ value: ALL_CAMPAIGNS_FILTER_VALUE, label: 'All Campaigns' }]
+        },
+        ...this.campaignGroups()
+    ]);
+    readonly campaignFilterSelection = computed<string[]>(() => {
+        const selected = this.selectedCampaignIds();
+        return selected.length === 0 ? [ALL_CAMPAIGNS_FILTER_VALUE] : selected;
+    });
 
     readonly searchChanged = output<string>();
     readonly campaignSelectionChanged = output<string[]>();
@@ -81,6 +94,16 @@ export class NpcListComponent {
 
     emitSearch(value: string): void {
         this.searchChanged.emit(value);
+    }
+
+    emitCampaignSelection(value: string[]): void {
+        if (value.includes(ALL_CAMPAIGNS_FILTER_VALUE)) {
+            const campaignIds = value.filter((entry) => entry !== ALL_CAMPAIGNS_FILTER_VALUE);
+            this.campaignSelectionChanged.emit(campaignIds);
+            return;
+        }
+
+        this.campaignSelectionChanged.emit(value);
     }
 
     emitFaction(value: string | number): void {

@@ -83,17 +83,6 @@ p {
     gap: 8px;
 }
 
-.campaign-filter-control {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px;
-    align-items: center;
-}
-
-.filter-reset-button {
-    min-width: 8.75rem;
-}
-
 .field span {
     font-size: 0.8rem;
     font-weight: 700;
