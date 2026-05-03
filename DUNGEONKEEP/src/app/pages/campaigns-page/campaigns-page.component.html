@@ -1,5 +1,5 @@
 <main class="page-stack">
-    @if (!store.initialized()) {
+    @if (!store.initialized() || store.isRefreshingCampaignSummaries()) {
     <section class="panel page-intro skeleton-panel">
         <div class="page-intro-copy skeleton-stack">
             <div class="skeleton-line skeleton-eyebrow"></div>

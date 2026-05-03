@@ -43,6 +43,7 @@ export class DungeonStoreService {
     readonly selectedCampaignId = signal('');
     readonly initialized = signal(false);
     readonly isHydrating = signal(false);
+    readonly isRefreshingCampaignSummaries = signal(false);
     readonly loadingCampaignDetails = signal<string[]>([]);
 
     private readonly api = inject(DungeonApiService);
@@ -162,6 +163,8 @@ export class DungeonStoreService {
     }
 
     async refreshCampaignSummaries(): Promise<void> {
+        this.isRefreshingCampaignSummaries.set(true);
+
         try {
             const [campaignDtos, accessibleCharacterDtos] = await Promise.all([
                 this.api.getCampaignSummaries(),
@@ -229,6 +232,8 @@ export class DungeonStoreService {
             this.campaigns.set(merged);
         } catch {
             // Keep existing state on error
+        } finally {
+            this.isRefreshingCampaignSummaries.set(false);
         }
     }
 
