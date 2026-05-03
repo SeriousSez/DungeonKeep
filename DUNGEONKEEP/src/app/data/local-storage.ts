@@ -187,6 +187,7 @@ const THEME_STORAGE_KEY = 'dungeonkeep.theme.v1';
 export type StoredTheme = 'system' | 'light' | 'dark';
 
 const COMPACT_MODE_STORAGE_KEY = 'dungeonkeep.compactMode.v1';
+const CAMPAIGN_ORDER_STORAGE_KEY_PREFIX = 'dungeonkeep.campaign-order.v1';
 
 export function loadCompactMode(): boolean {
     if (!hasBrowserStorage()) return false;
@@ -213,6 +214,40 @@ export function saveTheme(theme: StoredTheme): void {
     if (!hasBrowserStorage()) return;
     try {
         window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {
+        return;
+    }
+}
+
+export function loadCampaignDisplayOrder(userId: string): string[] {
+    if (!hasBrowserStorage() || !userId) {
+        return [];
+    }
+
+    const raw = window.localStorage.getItem(`${CAMPAIGN_ORDER_STORAGE_KEY_PREFIX}.${userId}`);
+    if (!raw) {
+        return [];
+    }
+
+    try {
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+
+        return parsed.filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+    } catch {
+        return [];
+    }
+}
+
+export function saveCampaignDisplayOrder(userId: string, campaignIds: string[]): void {
+    if (!hasBrowserStorage() || !userId) {
+        return;
+    }
+
+    try {
+        window.localStorage.setItem(`${CAMPAIGN_ORDER_STORAGE_KEY_PREFIX}.${userId}`, JSON.stringify(campaignIds));
     } catch {
         return;
     }

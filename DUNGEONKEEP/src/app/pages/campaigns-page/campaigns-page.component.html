@@ -42,7 +42,15 @@
             <p>Only campaigns you belong to are shown here.</p>
         </div>
 
-        <a routerLink="/campaigns/new" class="create-link">+ New Campaign</a>
+        <div class="page-intro-actions">
+            @if (visibleCampaignCount() > 1) {
+            <button type="button" class="create-link" [class.is-active]="isReorderMode()" (click)="toggleReorderMode()">
+                <i class="fa-duotone fa-thin fa-arrows-up-down"></i>
+                {{ isReorderMode() ? 'Done' : 'Reorder' }}
+            </button>
+            }
+            <a routerLink="/campaigns/new" class="create-link">+ New Campaign</a>
+        </div>
     </section>
 
     @if (visibleCampaignCount() === 0) {
@@ -55,28 +63,37 @@
     } @else {
     <section class="campaign-list">
         @for (campaign of visibleCampaigns(); track campaign.id) {
-        <a class="campaign-card" [routerLink]="['/campaigns', campaign.id]">
-            @if (campaign.bannerImageUrl) {
-            <div class="campaign-card-banner-shell">
-                <img [src]="campaign.bannerImageUrl" alt="Campaign banner" class="campaign-card-banner-image" />
+        <article class="campaign-card-shell" [class.is-draggable]="isReorderMode()" [class.is-drag-over]="dragOverCampaignId() === campaign.id" [attr.draggable]="isReorderMode() ? true : null" (dragstart)="onDragStart(campaign.id, $event)" (dragover)="onDragOver(campaign.id, $event)"
+            (dragleave)="onDragLeave(campaign.id)" (drop)="onDrop(campaign.id, $event)" (dragend)="onDragEnd()">
+            @if (isReorderMode()) {
+            <div class="drag-handle" aria-hidden="true">
+                <i class="fa-duotone fa-thin fa-grip-dots-vertical"></i>
             </div>
             }
-            <div class="campaign-card-top">
-                <div>
-                    <h2>{{ campaign.name }}</h2>
-                    <p>{{ campaign.setting }}</p>
+            <a class="campaign-card" [routerLink]="isReorderMode() ? null : ['/campaigns', campaign.id]">
+                @if (campaign.bannerImageUrl) {
+                <div class="campaign-card-banner-shell">
+                    <img [src]="campaign.bannerImageUrl" alt="Campaign banner" class="campaign-card-banner-image" />
                 </div>
-                <span class="campaign-pill">{{ campaign.currentUserRole }}</span>
-            </div>
+                }
+                <div class="campaign-card-top">
+                    <div>
+                        <h2>{{ campaign.name }}</h2>
+                        <p>{{ campaign.setting }}</p>
+                    </div>
+                    <span class="campaign-pill">{{ campaign.currentUserRole }}</span>
+                </div>
 
-            <p class="campaign-summary">{{ campaign.summary }}</p>
+                <p class="campaign-summary">{{ campaign.summary }}</p>
 
-            <div class="campaign-meta">
-                <span>{{ campaign.levelRange }}</span>
-                <span>{{ campaign.sessions.length }} sessions</span>
-                <span>{{ campaign.npcs.length }} NPCs</span>
-            </div>
-        </a>
+                <div class="campaign-meta">
+                    <span>{{ campaign.levelRange }}</span>
+                    <span>{{ campaign.sessions.length }} sessions</span>
+                    <span>{{ campaign.npcs.length }} NPCs</span>
+                </div>
+            </a>
+
+        </article>
         }
     </section>
     }
