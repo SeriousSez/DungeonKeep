@@ -1183,7 +1183,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                     NormalizeMapIconType(icon.Type),
                     string.IsNullOrWhiteSpace(icon.Label) ? DefaultMapIconLabel(icon.Type) : icon.Label.Trim(),
                     ClampMapCoordinate(icon.X),
-                    ClampMapCoordinate(icon.Y)))
+                    ClampMapCoordinate(icon.Y),
+                    string.IsNullOrWhiteSpace(icon.WorldNoteId) ? null : icon.WorldNoteId.Trim()))
                 .ToList(),
             (map.Tokens ?? [])
                 .Where(token => !string.IsNullOrWhiteSpace(token.ImageUrl))
@@ -1197,7 +1198,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                     token.Note?.Trim() ?? string.Empty,
                     NormalizeMapAssignedUserId(token.AssignedUserId, token.AssignedCharacterId),
                     NormalizeMapAssignedCharacterId(token.AssignedCharacterId),
-                    NormalizeMapTokenMoveRevision(token.MoveRevision)))
+                    NormalizeMapTokenMoveRevision(token.MoveRevision),
+                    string.IsNullOrWhiteSpace(token.WorldNoteId) ? null : token.WorldNoteId.Trim()))
                 .ToList(),
             (map.Decorations ?? [])
                 .Select(decoration => new CampaignMapDecorationDto(
@@ -1208,7 +1210,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                     ClampMapCoordinate(decoration.Y),
                     ClampMapScale(decoration.Scale),
                     ClampMapRotation(decoration.Rotation),
-                    ClampMapOpacity(decoration.Opacity)))
+                    ClampMapOpacity(decoration.Opacity),
+                    string.IsNullOrWhiteSpace(decoration.WorldNoteId) ? null : decoration.WorldNoteId.Trim()))
                 .ToList(),
             (map.Labels ?? [])
                 .Where(label => !string.IsNullOrWhiteSpace(label.Text))
@@ -1219,7 +1222,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                     ClampMapCoordinate(label.X),
                     ClampMapCoordinate(label.Y),
                     ClampMapRotation(label.Rotation),
-                    NormalizeMapLabelStyle(label.Style, label.Tone)))
+                    NormalizeMapLabelStyle(label.Style, label.Tone),
+                    string.IsNullOrWhiteSpace(label.WorldNoteId) ? null : label.WorldNoteId.Trim()))
                 .ToList(),
             new CampaignMapLayersDto(
                 NormalizeMapStrokeCollection(map.Layers?.Rivers),
@@ -1371,7 +1375,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                 ClampMapCoordinate(decoration.Y),
                 ClampMapScale(decoration.Scale),
                 ClampMapRotation(decoration.Rotation),
-                ClampMapOpacity(decoration.Opacity)))
+                ClampMapOpacity(decoration.Opacity),
+                string.IsNullOrWhiteSpace(decoration.WorldNoteId) ? null : decoration.WorldNoteId.Trim()))
             .ToList();
     }
 

@@ -103,6 +103,7 @@ export interface CampaignMapIcon {
     label: string;
     x: number;
     y: number;
+    worldNoteId?: string | null;
 }
 
 export interface CampaignMapToken {
@@ -116,6 +117,7 @@ export interface CampaignMapToken {
     assignedUserId?: string | null;
     assignedCharacterId?: string | null;
     moveRevision: number;
+    worldNoteId?: string | null;
 }
 
 export interface CampaignMapDecoration {
@@ -127,6 +129,7 @@ export interface CampaignMapDecoration {
     scale: number;
     rotation: number;
     opacity: number;
+    worldNoteId?: string | null;
 }
 
 export interface CampaignMapLabelStyle {
@@ -156,6 +159,7 @@ export interface CampaignMapLabel {
     y: number;
     rotation: number;
     style: CampaignMapLabelStyle;
+    worldNoteId?: string | null;
 }
 
 export interface CampaignMapLayers {

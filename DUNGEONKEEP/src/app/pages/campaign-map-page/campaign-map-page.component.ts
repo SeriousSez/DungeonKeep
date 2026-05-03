@@ -382,6 +382,12 @@ export class CampaignMapPageComponent {
     readonly ctrlPolylineColor = signal(this.brushColor());
     readonly ctrlPolylineWidth = signal(this.brushWidth());
 
+    readonly iconWorldNoteIdDraft = signal('');
+    readonly tokenWorldNoteIdDraft = signal('');
+    readonly labelWorldNoteIdDraft = signal('');
+    readonly decorationWorldNoteIdDraft = signal('');
+    readonly mapItemNotePopup = signal<{ title: string; content: string; category: string } | null>(null);
+
     readonly backgroundOptions = MAP_BACKGROUND_OPTIONS;
     readonly brushColorOptions = BRUSH_COLOR_OPTIONS;
     readonly terrainColorOptions = BRUSH_COLOR_OPTIONS;
@@ -402,6 +408,20 @@ export class CampaignMapPageComponent {
     readonly voiceMicrophoneMuted = this.voiceChat.microphoneMuted;
     readonly voiceJoined = computed(() => this.voiceConnectionState() === 'connected');
     readonly voiceConnecting = computed(() => this.voiceConnectionState() === 'connecting');
+
+    readonly worldNoteOptions = computed<DropdownOption[]>(() => {
+        const notes = this.selectedCampaign()?.worldNotes ?? [];
+        const options: DropdownOption[] = [
+            { value: '', label: 'No linked note', description: 'This item has no world note attached.' }
+        ];
+        options.push(...notes.map((note) => ({
+            value: note.id,
+            label: note.title,
+            description: `${note.category}${note.isRevealedToPlayers ? '' : ' · Hidden from players'}`,
+            group: note.category
+        } satisfies DropdownOption)));
+        return options;
+    });
 
     readonly selectedCampaign = computed(() => {
         const campaignId = this.campaignId();
@@ -1391,6 +1411,7 @@ export class CampaignMapPageComponent {
         effect(() => {
             const selectedIcon = this.selectedIcon();
             this.iconLabelDraft.set(selectedIcon?.label ?? '');
+            this.iconWorldNoteIdDraft.set(selectedIcon?.worldNoteId ?? '');
         });
 
         effect(() => {
@@ -1398,6 +1419,7 @@ export class CampaignMapPageComponent {
             this.tokenNameDraft.set(selectedToken?.name ?? '');
             this.tokenNoteDraft.set(selectedToken?.note ?? '');
             this.tokenAssignmentDraft.set(this.tokenAssignmentValue(selectedToken));
+            this.tokenWorldNoteIdDraft.set(selectedToken?.worldNoteId ?? '');
         });
 
         effect(() => {
@@ -1431,6 +1453,11 @@ export class CampaignMapPageComponent {
 
             this.labelTextDraft.set(selectedLabel.text);
             this.labelToneDraft.set(selectedLabel.tone);
+            this.labelWorldNoteIdDraft.set(selectedLabel.worldNoteId ?? '');
+        });
+
+        effect(() => {
+            this.decorationWorldNoteIdDraft.set(this.selectedDecoration()?.worldNoteId ?? '');
         });
 
         effect(() => {
@@ -2790,6 +2817,101 @@ export class CampaignMapPageComponent {
         this.markDirty('Landmark label updated.');
     }
 
+    updateIconWorldNoteId(value: string | number): void {
+        this.iconWorldNoteIdDraft.set(String(value));
+    }
+
+    applyIconWorldNote(): void {
+        const selectedIcon = this.selectedIcon();
+        if (!selectedIcon || !this.canModify()) {
+            return;
+        }
+
+        const nextId = this.iconWorldNoteIdDraft() || null;
+        if (nextId === (selectedIcon.worldNoteId ?? null)) {
+            return;
+        }
+
+        this.captureHistorySnapshot();
+        this.mutateMap((map) => {
+            map.icons = map.icons.map((icon) => icon.id === selectedIcon.id ? { ...icon, worldNoteId: nextId } : icon);
+        });
+        this.markDirty('Landmark note link updated.');
+    }
+
+    updateTokenWorldNoteId(value: string | number): void {
+        this.tokenWorldNoteIdDraft.set(String(value));
+    }
+
+    applyTokenWorldNote(): void {
+        const selectedToken = this.selectedToken();
+        if (!selectedToken || !this.canModify()) {
+            return;
+        }
+
+        const nextId = this.tokenWorldNoteIdDraft() || null;
+        if (nextId === (selectedToken.worldNoteId ?? null)) {
+            return;
+        }
+
+        this.captureHistorySnapshot();
+        this.mutateMap((map) => {
+            map.tokens = map.tokens.map((token) => token.id === selectedToken.id ? { ...token, worldNoteId: nextId } : token);
+        });
+        this.markDirty('Token note link updated.');
+    }
+
+    updateLabelWorldNoteId(value: string | number): void {
+        this.labelWorldNoteIdDraft.set(String(value));
+    }
+
+    applyLabelWorldNote(): void {
+        const selectedLabel = this.selectedLabel();
+        if (!selectedLabel || !this.canModify()) {
+            return;
+        }
+
+        const nextId = this.labelWorldNoteIdDraft() || null;
+        if (nextId === (selectedLabel.worldNoteId ?? null)) {
+            return;
+        }
+
+        this.captureHistorySnapshot();
+        this.mutateMap((map) => {
+            map.labels = map.labels.map((label) => label.id === selectedLabel.id ? { ...label, worldNoteId: nextId } : label);
+        });
+        this.markDirty('Label note link updated.');
+    }
+
+    updateDecorationWorldNoteId(value: string | number): void {
+        this.decorationWorldNoteIdDraft.set(String(value));
+    }
+
+    applyDecorationWorldNote(): void {
+        const selectedDecoration = this.selectedDecoration();
+        if (!selectedDecoration || !this.canModify()) {
+            return;
+        }
+
+        const nextId = this.decorationWorldNoteIdDraft() || null;
+        if (nextId === (selectedDecoration.worldNoteId ?? null)) {
+            return;
+        }
+
+        const patch = (d: CampaignMapDecoration) => d.id === selectedDecoration.id ? { ...d, worldNoteId: nextId } : d;
+        this.captureHistorySnapshot();
+        this.mutateMap((map) => {
+            map.decorations = map.decorations.map(patch);
+            map.layers.mountainChains = map.layers.mountainChains.map(patch);
+            map.layers.forestBelts = map.layers.forestBelts.map(patch);
+        });
+        this.markDirty('Terrain note link updated.');
+    }
+
+    closeMapItemNotePopup(): void {
+        this.mapItemNotePopup.set(null);
+    }
+
     requestDeleteSelectedIcon(): void {
         if (!this.selectedIcon() || !this.canModify()) {
             return;
@@ -3236,6 +3358,10 @@ export class CampaignMapPageComponent {
         }
 
         if (!this.canModify()) {
+            const point = this.getRelativePoint(event.clientX, event.clientY);
+            if (point) {
+                this.tryOpenWorldNotePopupAtPoint(point.x, point.y);
+            }
             return;
         }
 
@@ -3649,11 +3775,13 @@ export class CampaignMapPageComponent {
                 if (beforeDrag !== afterDrag) {
                     this.pushHistoryEntry(this.pendingDragHistory, 'undo');
                     this.redoStack.set([]);
+                    this.pendingDragHistory = null;
+                    this.markDirty('Terrain moved.');
+                    return;
                 }
             }
 
             this.pendingDragHistory = null;
-            this.markDirty('Terrain moved.');
             return;
         }
 
@@ -3668,11 +3796,13 @@ export class CampaignMapPageComponent {
                 if (beforeDrag !== afterDrag) {
                     this.pushHistoryEntry(this.pendingDragHistory, 'undo');
                     this.redoStack.set([]);
+                    this.pendingDragHistory = null;
+                    this.markDirty('Label moved.');
+                    return;
                 }
             }
 
             this.pendingDragHistory = null;
-            this.markDirty('Label moved.');
             return;
         }
 
@@ -3921,11 +4051,13 @@ export class CampaignMapPageComponent {
                 if (beforeDrag !== afterDrag) {
                     this.pushHistoryEntry(this.pendingDragHistory, 'undo');
                     this.redoStack.set([]);
+                    this.pendingDragHistory = null;
+                    this.markDirty('Landmark moved.');
+                    return true;
                 }
             }
 
             this.pendingDragHistory = null;
-            this.markDirty('Landmark moved.');
             return true;
         }
 
@@ -3997,11 +4129,13 @@ export class CampaignMapPageComponent {
             if (beforeDrag !== afterDrag) {
                 this.pushHistoryEntry(this.pendingDragHistory, 'undo');
                 this.redoStack.set([]);
+                this.pendingDragHistory = null;
+                this.markDirty('Label moved.');
+                return;
             }
         }
 
         this.pendingDragHistory = null;
-        this.markDirty('Label moved.');
     }
 
     handleTokenPointerDown(event: PointerEvent, tokenId: string): void {
@@ -6541,6 +6675,51 @@ export class CampaignMapPageComponent {
         }
 
         return closestDistance <= 0.05 ? closestLabel : null;
+    }
+
+    private tryOpenWorldNotePopupAtPoint(x: number, y: number): void {
+        const campaign = this.selectedCampaign();
+        if (!campaign) {
+            return;
+        }
+
+        const worldNotes = campaign.worldNotes ?? [];
+        const resolve = (id: string | null | undefined) => {
+            if (!id) {
+                return null;
+            }
+            const note = worldNotes.find((n) => n.id === id);
+            return note && (this.canEdit() || note.isRevealedToPlayers) ? note : null;
+        };
+
+        let note = resolve(this.findNearestIconAtPoint(x, y)?.worldNoteId);
+        if (!note) {
+            note = resolve(this.findNearestLabelAtPoint(x, y)?.worldNoteId);
+        }
+        if (!note) {
+            note = resolve(this.findNearestDecorationAtPoint(x, y)?.worldNoteId);
+        }
+        if (!note) {
+            const map = this.workingMap();
+            const cols = this.gridColumns();
+            const rows = this.gridRows();
+            for (const token of map.tokens) {
+                const span = this.normalizeTokenGridSpan(token.size);
+                const hw = (span / cols) * 0.6;
+                const hh = (span / rows) * 0.6;
+                if (Math.abs(x - token.x) < hw && Math.abs(y - token.y) < hh) {
+                    note = resolve(token.worldNoteId);
+                    if (note) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (note) {
+            this.mapItemNotePopup.set({ title: note.title, content: note.content, category: note.category });
+            this.cdr.detectChanges();
+        }
     }
 
     private sanitizeTokenName(fileName: string): string {

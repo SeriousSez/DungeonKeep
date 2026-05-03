@@ -1694,7 +1694,8 @@ export class DungeonStoreService {
                 type: this.normalizeMapIconType(icon.type),
                 label: icon.label?.trim() || this.defaultMapIconLabel(icon.type),
                 x: this.normalizeMapCoordinate(icon.x),
-                y: this.normalizeMapCoordinate(icon.y)
+                y: this.normalizeMapCoordinate(icon.y),
+                worldNoteId: icon.worldNoteId ?? null
             })),
             tokens: (map?.tokens ?? []).map((token) => ({
                 id: token.id,
@@ -1706,7 +1707,8 @@ export class DungeonStoreService {
                 note: token.note?.trim() || '',
                 assignedUserId: token.assignedUserId?.trim() || null,
                 assignedCharacterId: token.assignedCharacterId?.trim() || null,
-                moveRevision: this.normalizeMapTokenMoveRevision(token.moveRevision)
+                moveRevision: this.normalizeMapTokenMoveRevision(token.moveRevision),
+                worldNoteId: token.worldNoteId ?? null
             })).filter((token) => !!token.imageUrl),
             decorations: (map?.decorations ?? []).map((decoration) => ({
                 id: decoration.id,
@@ -1716,7 +1718,8 @@ export class DungeonStoreService {
                 y: this.normalizeMapCoordinate(decoration.y),
                 scale: this.normalizeMapScale(decoration.scale),
                 rotation: this.normalizeMapRotation(decoration.rotation),
-                opacity: this.normalizeMapOpacity(decoration.opacity)
+                opacity: this.normalizeMapOpacity(decoration.opacity),
+                worldNoteId: decoration.worldNoteId ?? null
             })),
             labels: (map?.labels ?? []).map((label) => ({
                 id: label.id,
@@ -1725,7 +1728,8 @@ export class DungeonStoreService {
                 x: this.normalizeMapCoordinate(label.x),
                 y: this.normalizeMapCoordinate(label.y),
                 rotation: this.normalizeMapRotation(label.rotation),
-                style: this.normalizeMapLabelStyle(label.style, label.tone)
+                style: this.normalizeMapLabelStyle(label.style, label.tone),
+                worldNoteId: label.worldNoteId ?? null
             })),
             layers: {
                 rivers: (map?.layers?.rivers ?? []).map((stroke) => ({
@@ -1822,7 +1826,8 @@ export class DungeonStoreService {
                 type: this.normalizeMapIconType(icon.type),
                 label: icon.label?.trim() || this.defaultMapIconLabel(icon.type),
                 x: this.normalizeMapCoordinate(icon.x),
-                y: this.normalizeMapCoordinate(icon.y)
+                y: this.normalizeMapCoordinate(icon.y),
+                worldNoteId: icon.worldNoteId ?? null
             })),
             tokens: map.tokens.map((token) => ({
                 id: token.id,
@@ -1834,7 +1839,8 @@ export class DungeonStoreService {
                 note: token.note?.trim() || '',
                 assignedUserId: token.assignedUserId?.trim() || null,
                 assignedCharacterId: token.assignedCharacterId?.trim() || null,
-                moveRevision: this.normalizeMapTokenMoveRevision(token.moveRevision)
+                moveRevision: this.normalizeMapTokenMoveRevision(token.moveRevision),
+                worldNoteId: token.worldNoteId ?? null
             })).filter((token) => !!token.imageUrl),
             decorations: map.decorations.map((decoration) => ({
                 id: decoration.id,
@@ -1844,7 +1850,8 @@ export class DungeonStoreService {
                 y: this.normalizeMapCoordinate(decoration.y),
                 scale: this.normalizeMapScale(decoration.scale),
                 rotation: this.normalizeMapRotation(decoration.rotation),
-                opacity: this.normalizeMapOpacity(decoration.opacity)
+                opacity: this.normalizeMapOpacity(decoration.opacity),
+                worldNoteId: decoration.worldNoteId ?? null
             })),
             labels: map.labels.map((label) => ({
                 id: label.id,
@@ -1853,7 +1860,8 @@ export class DungeonStoreService {
                 x: this.normalizeMapCoordinate(label.x),
                 y: this.normalizeMapCoordinate(label.y),
                 rotation: this.normalizeMapRotation(label.rotation),
-                style: this.normalizeMapLabelStyleToApi(label.style, label.tone)
+                style: this.normalizeMapLabelStyleToApi(label.style, label.tone),
+                worldNoteId: label.worldNoteId ?? null
             })),
             layers: {
                 rivers: map.layers.rivers.map((stroke) => ({
@@ -1873,7 +1881,8 @@ export class DungeonStoreService {
                     y: this.normalizeMapCoordinate(decoration.y),
                     scale: this.normalizeMapScale(decoration.scale),
                     rotation: this.normalizeMapRotation(decoration.rotation),
-                    opacity: this.normalizeMapOpacity(decoration.opacity)
+                    opacity: this.normalizeMapOpacity(decoration.opacity),
+                    worldNoteId: decoration.worldNoteId ?? null
                 })),
                 forestBelts: map.layers.forestBelts.map((decoration) => ({
                     id: decoration.id,
@@ -1883,7 +1892,8 @@ export class DungeonStoreService {
                     y: this.normalizeMapCoordinate(decoration.y),
                     scale: this.normalizeMapScale(decoration.scale),
                     rotation: this.normalizeMapRotation(decoration.rotation),
-                    opacity: this.normalizeMapOpacity(decoration.opacity)
+                    opacity: this.normalizeMapOpacity(decoration.opacity),
+                    worldNoteId: decoration.worldNoteId ?? null
                 }))
             },
             visionMemory: map.visionMemory.map((entry) => ({

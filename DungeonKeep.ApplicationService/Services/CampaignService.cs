@@ -1645,7 +1645,8 @@ public sealed class CampaignService(
                 NormalizeMapIconType(icon.Type),
                 string.IsNullOrWhiteSpace(icon.Label) ? DefaultMapIconLabel(icon.Type) : icon.Label.Trim(),
                 ClampMapCoordinate(icon.X),
-                ClampMapCoordinate(icon.Y)))
+                ClampMapCoordinate(icon.Y),
+                string.IsNullOrWhiteSpace(icon.WorldNoteId) ? null : icon.WorldNoteId.Trim()))
             .ToList();
 
         var normalizedTokens = (map.Tokens ?? [])
@@ -1660,7 +1661,8 @@ public sealed class CampaignService(
                 token.Note?.Trim() ?? string.Empty,
                 NormalizeMapAssignedUserId(token.AssignedUserId, token.AssignedCharacterId),
                 NormalizeMapAssignedCharacterId(token.AssignedCharacterId),
-                NormalizeMapTokenMoveRevision(token.MoveRevision)))
+                NormalizeMapTokenMoveRevision(token.MoveRevision),
+                string.IsNullOrWhiteSpace(token.WorldNoteId) ? null : token.WorldNoteId.Trim()))
             .ToList();
 
         var normalizedDecorations = (map.Decorations ?? [])
@@ -1672,7 +1674,8 @@ public sealed class CampaignService(
                 ClampMapCoordinate(decoration.Y),
                 ClampMapScale(decoration.Scale),
                 ClampMapRotation(decoration.Rotation),
-                ClampMapOpacity(decoration.Opacity)))
+                ClampMapOpacity(decoration.Opacity),
+                string.IsNullOrWhiteSpace(decoration.WorldNoteId) ? null : decoration.WorldNoteId.Trim()))
             .ToList();
 
         var normalizedLabels = (map.Labels ?? [])
@@ -1684,7 +1687,8 @@ public sealed class CampaignService(
                 ClampMapCoordinate(label.X),
                 ClampMapCoordinate(label.Y),
                 ClampMapRotation(label.Rotation),
-                NormalizeMapLabelStyle(label.Style, label.Tone)))
+                NormalizeMapLabelStyle(label.Style, label.Tone),
+                string.IsNullOrWhiteSpace(label.WorldNoteId) ? null : label.WorldNoteId.Trim()))
             .ToList();
 
         var normalizedLayers = new CampaignMapLayersDto(

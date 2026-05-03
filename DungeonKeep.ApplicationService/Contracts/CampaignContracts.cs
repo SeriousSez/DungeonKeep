@@ -217,7 +217,8 @@ public sealed record CampaignMapIconDto(
     string Type,
     string Label,
     double X,
-    double Y
+    double Y,
+    string? WorldNoteId = null
 );
 
 public sealed record CampaignMapTokenDto(
@@ -230,7 +231,8 @@ public sealed record CampaignMapTokenDto(
     string Note,
     Guid? AssignedUserId,
     Guid? AssignedCharacterId,
-    long MoveRevision
+    long MoveRevision,
+    string? WorldNoteId = null
 );
 
 public sealed record CampaignMapTokenMovedDto(
@@ -248,7 +250,8 @@ public sealed record CampaignMapDecorationDto(
     double Y,
     double Scale,
     double Rotation,
-    double Opacity
+    double Opacity,
+    string? WorldNoteId = null
 );
 
 public sealed record CampaignMapLabelDto(
@@ -258,7 +261,8 @@ public sealed record CampaignMapLabelDto(
     double X,
     double Y,
     double Rotation,
-    CampaignMapLabelStyleDto? Style
+    CampaignMapLabelStyleDto? Style,
+    string? WorldNoteId = null
 );
 
 public sealed record CampaignMapLabelStyleDto(

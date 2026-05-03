@@ -395,6 +395,22 @@
     opacity: 0.75;
 }
 
+.world-note-category-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+    background: color-mix(in srgb, var(--surface-raised) 80%, var(--accent-primary) 20%);
+    color: var(--text-main);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    align-self: flex-start;
+}
+
 .session-card-header,
 .member-card,
 .thread-row {

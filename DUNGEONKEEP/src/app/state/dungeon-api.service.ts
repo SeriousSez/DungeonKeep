@@ -209,6 +209,7 @@ export interface ApiCampaignMapIconDto {
     label: string;
     x: number;
     y: number;
+    worldNoteId?: string | null;
 }
 
 export interface ApiCampaignMapTokenDto {
@@ -222,6 +223,7 @@ export interface ApiCampaignMapTokenDto {
     assignedUserId?: string | null;
     assignedCharacterId?: string | null;
     moveRevision: number;
+    worldNoteId?: string | null;
 }
 
 export interface ApiCampaignMapTokenMovedDto {
@@ -258,6 +260,7 @@ export interface ApiCampaignMapDecorationDto {
     scale: number;
     rotation: number;
     opacity: number;
+    worldNoteId?: string | null;
 }
 
 export interface ApiCampaignMapLabelDto {
@@ -268,6 +271,7 @@ export interface ApiCampaignMapLabelDto {
     y: number;
     rotation: number;
     style?: ApiCampaignMapLabelStyleDto;
+    worldNoteId?: string | null;
 }
 
 export interface ApiCampaignMapLabelStyleDto {

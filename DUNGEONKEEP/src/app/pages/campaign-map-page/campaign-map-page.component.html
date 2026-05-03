@@ -299,6 +299,9 @@
                     <label class="field-label" for="map-selected-label-text">Label text</label>
                     <input id="map-selected-label-text" type="text" [value]="labelTextDraft()" (input)="updateLabelTextDraft($any($event.target).value)" placeholder="Rename this label" />
                     <button type="button" class="primary-button full-width-button" (click)="applySelectedLabel()">Apply Label Details</button>
+                    <label class="field-label">Linked world note</label>
+                    <app-dropdown ariaLabel="Linked world note" [value]="labelWorldNoteIdDraft()" [options]="worldNoteOptions()" [minWidth]="220" (changed)="updateLabelWorldNoteId($event)"></app-dropdown>
+                    <button type="button" class="ghost-button full-width-button" (click)="applyLabelWorldNote()">Apply Note Link</button>
                     <button type="button" class="ghost-button danger-button full-width-button" (click)="requestDeleteSelectedLabel()">Delete Label</button>
                     } @else {
                     <p class="sidebar-note">Labels can be inspected here, but only campaign owners can move or edit them.</p>
@@ -341,6 +344,9 @@
                     <button type="button" class="ghost-button full-width-button" [disabled]="!canPreviewVision()" (click)="toggleVisionPreview()">{{ showVisionPreview() ? 'Hide Sight Preview' : 'Preview Sight' }}</button>
                     <button type="button" class="ghost-button full-width-button" [disabled]="!hasVisionMemory()" (click)="resetCurrentMapVisionExploration()">Reset Sight Memory</button>
                     <p class="sidebar-note token-assignment-summary">{{ visionPreviewSummary() }}</p>
+                    <label class="field-label">Linked world note</label>
+                    <app-dropdown ariaLabel="Linked world note" [value]="tokenWorldNoteIdDraft()" [options]="worldNoteOptions()" [minWidth]="220" (changed)="updateTokenWorldNoteId($event)"></app-dropdown>
+                    <button type="button" class="ghost-button full-width-button" (click)="applyTokenWorldNote()">Apply Note Link</button>
                     <button type="button" class="primary-button full-width-button" (click)="applySelectedTokenDetails()">Apply Token Details</button>
                     <button type="button" class="ghost-button danger-button full-width-button" (click)="requestDeleteSelectedToken()">Delete Token</button>
                     } @else {
@@ -371,6 +377,12 @@
                     </div>
 
                     <p class="sidebar-note">This terrain piece uses the current terrain palette styling and can be moved in Select mode.</p>
+
+                    @if (canEdit()) {
+                    <label class="field-label">Linked world note</label>
+                    <app-dropdown ariaLabel="Linked world note" [value]="decorationWorldNoteIdDraft()" [options]="worldNoteOptions()" [minWidth]="220" (changed)="updateDecorationWorldNoteId($event)"></app-dropdown>
+                    <button type="button" class="ghost-button full-width-button" (click)="applyDecorationWorldNote()">Apply Note Link</button>
+                    }
                 </div>
             </div>
             }
@@ -449,6 +461,9 @@
                         <input id="map-icon-label" type="text" [value]="iconLabelDraft()" (input)="updateIconLabelDraft($any($event.target).value)" placeholder="Name this landmark" />
                         <button type="button" class="primary-button" (click)="applySelectedIconLabel()">Apply</button>
                     </div>
+                    <label class="field-label">Linked world note</label>
+                    <app-dropdown ariaLabel="Linked world note" [value]="iconWorldNoteIdDraft()" [options]="worldNoteOptions()" [minWidth]="220" (changed)="updateIconWorldNoteId($event)"></app-dropdown>
+                    <button type="button" class="ghost-button full-width-button" (click)="applyIconWorldNote()">Apply Note Link</button>
                     <button type="button" class="ghost-button danger-button full-width-button" (click)="requestDeleteSelectedIcon()">Delete Landmark</button>
                     }
                 </div>
@@ -1072,7 +1087,7 @@
         <section class="map-shortcuts-panel" aria-label="Player map shortcuts">
             <div class="map-shortcuts-header">
                 <div>
-                    <p class="eyebrow">Table Shortcuts</p>
+                    <p class="eyebrow">Map Shortcuts</p>
                     <h3>Quick controls for players</h3>
                 </div>
                 <p class="map-shortcuts-intro">Keep these nearby when you need to move fast, check sightlines, or clean up the table view without opening the full guide.</p>
@@ -1120,7 +1135,7 @@
                             <kbd>Fullscreen</kbd>
                         </div>
                         <h4>Clean up the view</h4>
-                        <p>Use the top-right controls to hide the guide or switch into fullscreen for table play. Editors can also hide the placement hint there.</p>
+                        <p>Use the top-right controls to hide the guide or switch into fullscreen for cleaner table play.</p>
                     </div>
                 </article>
             </div>
@@ -1130,7 +1145,7 @@
         <section #mapGuidePanel class="map-guide-panel" aria-label="Map guide">
             <div class="map-guide-panel-header section-heading compact-heading">
                 <div>
-                    <p class="eyebrow">Table Guide</p>
+                    <p class="eyebrow">Map Guide</p>
                     <h2>How to Read This Map</h2>
                 </div>
                 <p class="map-guide-intro">Player view now keeps assigned token vision active automatically, including remembered exploration. Use this as a quick reminder of what is visible and interactive at the table.</p>
@@ -1165,6 +1180,7 @@
                         <li>Use the layer controls to simplify the board when you need to focus on one visible element type.</li>
                     </ul>
                 </article>
+                @if (canEdit()) {
                 <article class="map-guide-card">
                     <div class="map-guide-card-header">
                         <span class="map-guide-icon" aria-hidden="true"><i class="fa-duotone fa-thin fa-people-group"></i></span>
@@ -1179,6 +1195,7 @@
                         <li>If you need structural changes, move into editor mode instead of viewer mode.</li>
                     </ul>
                 </article>
+                }
                 <article class="map-guide-card">
                     <div class="map-guide-card-header">
                         <span class="map-guide-icon" aria-hidden="true"><i class="fa-duotone fa-thin fa-dice-d20"></i></span>
@@ -1200,6 +1217,21 @@
     }
 
     <app-confirm-modal [open]="confirmOpen()" [title]="confirmTitle()" [message]="confirmMessage()" [confirmText]="confirmActionText()" cancelText="Cancel" (confirmed)="handleConfirmAccepted()" (cancelled)="handleConfirmCancelled()"></app-confirm-modal>
+
+    @if (mapItemNotePopup(); as popup) {
+    <div class="map-note-popup-backdrop" role="presentation" (click)="closeMapItemNotePopup()">
+        <div class="map-note-popup" role="dialog" aria-modal="true" [attr.aria-label]="popup.title" (click)="$event.stopPropagation()">
+            <div class="map-note-popup-header">
+                <span class="map-note-popup-category">{{ popup.category }}</span>
+                <button type="button" class="map-note-popup-close" (click)="closeMapItemNotePopup()" aria-label="Close note">
+                    <i class="fa-duotone fa-thin fa-times" aria-hidden="true"></i>
+                </button>
+            </div>
+            <h3 class="map-note-popup-title">{{ popup.title }}</h3>
+            <p class="map-note-popup-content">{{ popup.content }}</p>
+        </div>
+    </div>
+    }
 
     <ng-template #mapToolbarTemplate>
         <div class="map-left-toolbar" [class.is-open]="leftToolbarOpen()">
