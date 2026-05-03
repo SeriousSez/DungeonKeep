@@ -2391,6 +2391,7 @@ app-dropdown {
     background: color-mix(in srgb, var(--surface-raised-solid) 95%, transparent);
     box-shadow: 0 16px 30px rgba(26, 19, 13, 0.22);
     backdrop-filter: blur(14px);
+    font-size: 0.9rem;
 }
 
 .map-measure-popover-header {
@@ -2402,6 +2403,19 @@ app-dropdown {
     margin: 0;
     font-family: var(--display-font);
     letter-spacing: 0.02em;
+    font-size: 1.5rem;
+}
+
+.map-measure-popover .field-label {
+    font-size: 0.72rem;
+}
+
+.map-measure-popover .ghost-button,
+.map-measure-popover .app-dropdown,
+.map-measure-toggle-row,
+.map-measure-rules-footer,
+.map-measure-inline-input {
+    font-size: 0.82rem;
 }
 
 .map-measure-section-divider {
@@ -2595,6 +2609,17 @@ app-dropdown {
     background: color-mix(in srgb, var(--surface-raised-solid) 95%, transparent);
     box-shadow: 0 16px 30px rgba(26, 19, 13, 0.22);
     backdrop-filter: blur(14px);
+    font-size: 0.9rem;
+}
+
+.map-voice-popover h3 {
+    font-size: 1.45rem;
+}
+
+.map-voice-popover p,
+.map-voice-popover .ghost-button,
+.map-voice-popover .primary-button {
+    font-size: 0.88rem;
 }
 
 .map-voice-self-row {

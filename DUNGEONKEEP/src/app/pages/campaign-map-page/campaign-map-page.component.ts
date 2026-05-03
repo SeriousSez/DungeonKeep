@@ -1551,6 +1551,7 @@ export class CampaignMapPageComponent {
         this.leftToolbarOpen.update((isOpen) => {
             if (isOpen) {
                 this.measurePopoverOpen.set(false);
+                this.voicePopoverOpen.set(false);
             }
 
             return !isOpen;
@@ -1558,11 +1559,19 @@ export class CampaignMapPageComponent {
     }
 
     toggleMeasurePopover(): void {
-        this.measurePopoverOpen.update(v => !v);
+        const shouldOpen = !this.measurePopoverOpen();
+        this.measurePopoverOpen.set(shouldOpen);
+        if (shouldOpen) {
+            this.voicePopoverOpen.set(false);
+        }
     }
 
     toggleVoicePopover(): void {
-        this.voicePopoverOpen.update(v => !v);
+        const shouldOpen = !this.voicePopoverOpen();
+        this.voicePopoverOpen.set(shouldOpen);
+        if (shouldOpen) {
+            this.measurePopoverOpen.set(false);
+        }
     }
 
     async joinVoiceChat(): Promise<void> {
@@ -1616,6 +1625,7 @@ export class CampaignMapPageComponent {
     selectMeasureToolbarMode(): void {
         this.measureEnabled.set(true);
         this.measurePopoverOpen.set(true);
+        this.voicePopoverOpen.set(false);
 
         this.clearCtrlPolylineDraft();
         this.pendingIconType.set(null);
