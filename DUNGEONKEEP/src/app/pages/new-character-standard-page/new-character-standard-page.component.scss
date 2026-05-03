@@ -286,7 +286,7 @@
         font-family: var(--font-display, inherit);
     }
 
-    span {
+    div>span {
         font-size: 0.78rem;
         color: var(--text-muted);
         line-height: 1.35;
