@@ -436,6 +436,13 @@ export class NewCharacterStandardPageComponent {
 
         this.restorePremadeSelectionFromNavigation();
 
+        effect(() => {
+            if (!this.showBackstoryGenerator() || this.backstoryPromptUserEdited()) {
+                return;
+            }
+            this.backstoryPromptDetails.set(this.buildAutoBackstoryDirection());
+        });
+
         effect((onCleanup) => {
             if (!this.faithDropdownOpen()) {
                 return;
@@ -649,7 +656,20 @@ export class NewCharacterStandardPageComponent {
     readonly flaws = signal<string[]>([]);
     readonly showBackstoryGenerator = signal(false);
     readonly backstoryPromptDetails = signal('');
+    private readonly backstoryPromptUserEdited = signal(false);
     readonly generatedBackstory = signal('');
+    private readonly backstorySnapshot = signal<{ className: string; species: string; background: string } | null>(null);
+    readonly isBackstoryStale = computed(() => {
+        const snapshot = this.backstorySnapshot();
+        if (!snapshot || !this.generatedBackstory()) {
+            return false;
+        }
+        return (
+            snapshot.className !== this.getCurrentClassSummary() ||
+            snapshot.species !== (this.selectedSpeciesName() || 'Unknown species') ||
+            snapshot.background !== (this.selectedBackgroundName() || 'Unknown background')
+        );
+    });
     readonly isGeneratingBackstory = signal(false);
     readonly backstoryGenerationError = signal('');
     readonly isSavingGeneratedBackstory = signal(false);
@@ -7459,7 +7479,8 @@ export class NewCharacterStandardPageComponent {
         const nextOpen = !this.showBackstoryGenerator();
         this.showBackstoryGenerator.set(nextOpen);
 
-        if (nextOpen && !this.backstoryPromptDetails().trim()) {
+        if (nextOpen) {
+            this.backstoryPromptUserEdited.set(false);
             this.backstoryPromptDetails.set(this.buildAutoBackstoryDirection());
         }
 
@@ -7468,6 +7489,7 @@ export class NewCharacterStandardPageComponent {
     };
 
     readonly onBackstoryPromptDetailsChanged = (value: string) => {
+        this.backstoryPromptUserEdited.set(true);
         this.backstoryPromptDetails.set(value);
     };
 
@@ -7526,6 +7548,7 @@ export class NewCharacterStandardPageComponent {
     readonly clearGeneratedBackstory = () => {
         this.generatedBackstory.set('');
         this.backstorySaveMessage.set('');
+        this.backstorySnapshot.set(null);
     };
 
     readonly saveGeneratedBackstoryToCharacter = async () => {
@@ -7578,6 +7601,11 @@ export class NewCharacterStandardPageComponent {
             });
 
             this.generatedBackstory.set(response.backstory);
+            this.backstorySnapshot.set({
+                className: this.getCurrentClassSummary(),
+                species: this.selectedSpeciesName() || 'Unknown species',
+                background: this.selectedBackgroundName() || 'Unknown background'
+            });
         } catch (error) {
             this.backstoryGenerationError.set(this.getBackstoryGenerationErrorMessage(error));
         } finally {

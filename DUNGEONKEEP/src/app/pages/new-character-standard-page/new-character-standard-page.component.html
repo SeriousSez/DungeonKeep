@@ -60,10 +60,66 @@
     } @else {
     @switch (activeStandardStep()) {
     @case ('home') {
-    <section class="panel step-panel">
-        <h2>Standard Builder Home</h2>
-        <p>Use the step bar above to move through Class, Species, Background, Abilities, Equipment, and What's Next.</p>
-        <a class="inline-action" [routerLink]="getBuilderStepRoute('class')" [state]="getBuilderRouteState()" queryParamsHandling="preserve">Go to 1. Class</a>
+    <section class="panel step-panel step-panel--home">
+        <div class="home-intro">
+            <h2>Build your character</h2>
+            <p class="home-intro-hint">Work through six steps in order — or jump to any step at any time using the bar above.</p>
+        </div>
+        <div class="home-name-field">
+            <label class="home-name-label" for="home-character-name">Character name</label>
+            <input id="home-character-name" class="wide-input" type="text" [value]="completionCharacterName()" (input)="onCompletionCharacterNameChanged($any($event.target).value)" placeholder="Give your adventurer a name…" autocomplete="off" />
+        </div>
+        <div class="home-step-grid">
+            <a class="home-step-tile" [routerLink]="getBuilderStepRoute('class')" [state]="getBuilderRouteState()" queryParamsHandling="preserve">
+                <span class="home-step-num">1</span>
+                <i class="fa-duotone fa-thin fa-sword" aria-hidden="true"></i>
+                <div>
+                    <strong>Class</strong>
+                    <span>Your role, hit die, and core abilities</span>
+                </div>
+            </a>
+            <a class="home-step-tile" [routerLink]="getBuilderStepRoute('species')" [state]="getBuilderRouteState()" queryParamsHandling="preserve">
+                <span class="home-step-num">2</span>
+                <i class="fa-duotone fa-thin fa-dragon" aria-hidden="true"></i>
+                <div>
+                    <strong>Species</strong>
+                    <span>Racial traits, size, speed, and languages</span>
+                </div>
+            </a>
+            <a class="home-step-tile" [routerLink]="getBuilderStepRoute('background')" [state]="getBuilderRouteState()" queryParamsHandling="preserve">
+                <span class="home-step-num">3</span>
+                <i class="fa-duotone fa-thin fa-scroll" aria-hidden="true"></i>
+                <div>
+                    <strong>Background</strong>
+                    <span>Skill proficiencies and your backstory origin</span>
+                </div>
+            </a>
+            <a class="home-step-tile" [routerLink]="getBuilderStepRoute('abilities')" [state]="getBuilderRouteState()" queryParamsHandling="preserve">
+                <span class="home-step-num">4</span>
+                <i class="fa-duotone fa-thin fa-dice-d20" aria-hidden="true"></i>
+                <div>
+                    <strong>Abilities</strong>
+                    <span>Assign STR, DEX, CON, INT, WIS, and CHA</span>
+                </div>
+            </a>
+            <a class="home-step-tile" [routerLink]="getBuilderStepRoute('equipment')" [state]="getBuilderRouteState()" queryParamsHandling="preserve">
+                <span class="home-step-num">5</span>
+                <i class="fa-duotone fa-thin fa-shield-halved" aria-hidden="true"></i>
+                <div>
+                    <strong>Equipment</strong>
+                    <span>Armor, weapons, and starting gear</span>
+                </div>
+            </a>
+            <a class="home-step-tile" [routerLink]="getBuilderStepRoute('whats-next')" [state]="getBuilderRouteState()" queryParamsHandling="preserve">
+                <span class="home-step-num">6</span>
+                <i class="fa-duotone fa-thin fa-star" aria-hidden="true"></i>
+                <div>
+                    <strong>What's Next</strong>
+                    <span>Name, finalize, and save your character</span>
+                </div>
+            </a>
+        </div>
+        <a class="inline-action home-start-cta" [routerLink]="getBuilderStepRoute('class')" [state]="getBuilderRouteState()" queryParamsHandling="preserve">Begin with Step 1: Class →</a>
     </section>
     }
 
@@ -1528,7 +1584,17 @@
                     </div>
                     <div class="tag-row">
                         <span>Backstory</span>
-                        <button type="button" (click)="toggleBackstoryGenerator()">{{ showBackstoryGenerator() ? 'Hide Generator' : 'Generate Backstory' }}</button>
+                        <button type="button" class="backstory-toggle-btn" [class.backstory-toggle-btn--stale]="!showBackstoryGenerator() && isBackstoryStale()" (click)="toggleBackstoryGenerator()">
+                            @if (showBackstoryGenerator()) {
+                            Hide Generator
+                            } @else if (generatedBackstory() && isBackstoryStale()) {
+                            <i class="fa-duotone fa-thin fa-triangle-exclamation" aria-hidden="true"></i> Draft Outdated
+                            } @else if (generatedBackstory()) {
+                            View Draft
+                            } @else {
+                            Generate Backstory
+                            }
+                        </button>
 
                         @if (showBackstoryGenerator()) {
                         <div class="backstory-generator">
@@ -1548,6 +1614,12 @@
                             }
 
                             @if (generatedBackstory()) {
+                            @if (isBackstoryStale()) {
+                            <div class="backstory-stale-notice">
+                                <i class="fa-duotone fa-thin fa-triangle-exclamation" aria-hidden="true"></i>
+                                Your class, species, or background has changed since this was generated. Regenerate for an updated draft.
+                            </div>
+                            }
                             <div class="backstory-result">
                                 <div class="backstory-rich-text" [innerHTML]="formatBackstoryRichText(generatedBackstory())"></div>
                                 <div class="backstory-result-actions">
