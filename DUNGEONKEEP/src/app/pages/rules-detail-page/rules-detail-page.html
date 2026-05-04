@@ -196,17 +196,23 @@
             <p>Use the same searchable item catalog available from character setup.</p>
         </div>
 
-        <div class="equipment-catalog-controls">
-            <label class="equipment-filter-label" for="rules-equipment-search">Filter items</label>
-            <input id="rules-equipment-search" class="equipment-search-input" type="text" placeholder="Item name, category, notes..." [value]="equipmentSearchTerm()" (input)="onEquipmentSearchChanged($any($event.target).value)" />
-        </div>
-
-        <div class="equipment-source-list">
-            @for (category of equipmentCategories(); track category) {
-            <button type="button" class="equipment-source-chip" [class.active]="selectedEquipmentCategory() === category" (click)="onEquipmentCategorySelected(category)">
-                {{ category }}
-            </button>
-            }
+        <div class="equipment-filter-bar">
+            <div class="equipment-search-wrap">
+                <i class="fa-duotone fa-thin fa-magnifying-glass equipment-search-icon" aria-hidden="true"></i>
+                <input id="rules-equipment-search" class="equipment-search-input" type="text" placeholder="Item name, category, notes..." [value]="equipmentSearchTerm()" (input)="onEquipmentSearchChanged($any($event.target).value)" />
+                @if (equipmentSearchTerm()) {
+                <button type="button" class="equipment-search-clear" (click)="onEquipmentSearchChanged('')" aria-label="Clear search">
+                    <i class="fa-duotone fa-thin fa-xmark"></i>
+                </button>
+                }
+            </div>
+            <div class="equipment-chip-group">
+                @for (category of equipmentCategories(); track category) {
+                <button type="button" class="equipment-source-chip" [class.active]="selectedEquipmentCategory() === category" (click)="onEquipmentCategorySelected(category)">
+                    {{ category }}
+                </button>
+                }
+            </div>
         </div>
 
         <div class="equipment-item-list">

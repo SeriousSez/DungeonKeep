@@ -1,7 +1,8 @@
 import { CommonModule, DOCUMENT } from '@angular/common';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ChangeDetectorRef, Component, DestroyRef, computed, effect, HostListener, inject, signal } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter, map, startWith } from 'rxjs';
 import { DungeonStoreService } from './state/dungeon-store.service';
 import { BreadcrumbComponent } from './components/breadcrumb/breadcrumb.component';
 import { DndChatWidgetComponent } from './components/dnd-chat-widget/dnd-chat-widget.component';
@@ -52,6 +53,14 @@ export class App {
   readonly isInitialized = computed(() => this.session.initialized());
   readonly rulesBrowseLinks = rulesBrowseLinks;
   readonly rulesResourceLinks = rulesResourceLinks;
+  private readonly currentUrl = toSignal(
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd),
+      map((e) => (e as NavigationEnd).urlAfterRedirects),
+      startWith(typeof window !== 'undefined' ? window.location.pathname : '/')
+    )
+  );
+  readonly isRulesActive = computed(() => this.currentUrl()?.startsWith('/rules') ?? false);
   readonly iconForLiveNotification = (type: string) => LIVE_NOTIFICATION_ICONS[type] ?? 'bell';
   private previousUserId: string | null = null;
   private readonly seenNotificationIds = new Set<string>();

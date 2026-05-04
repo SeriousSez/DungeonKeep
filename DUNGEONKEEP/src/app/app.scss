@@ -115,7 +115,8 @@
     white-space: nowrap;
 
     &:hover,
-    .nav-group.is-open & {
+    .nav-group.is-open &,
+    &.is-active {
         background: rgba(216, 147, 75, 0.18);
         border-color: rgba(176, 104, 54, 0.32);
         color: var(--color-primary);
@@ -262,10 +263,15 @@
     font-weight: 600;
     transition: background 0.12s ease, color 0.12s ease, transform 0.12s ease;
 
-    &:hover {
+    &:hover,
+    &.is-active {
         background: rgba(163, 91, 41, 0.1);
         color: var(--color-primary);
         transform: translateX(2px);
+    }
+
+    &.is-active {
+        font-weight: 700;
     }
 }
 
