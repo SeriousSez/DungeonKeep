@@ -494,13 +494,17 @@
 .equipment-item-list {
     display: grid;
     gap: 10px;
+    max-height: 600px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
+    align-content: start;
 }
 
 .equipment-item-card {
     border: 1px solid var(--panel-border);
     border-radius: 16px;
     background: linear-gradient(180deg, color-mix(in srgb, var(--surface-raised) 92%, transparent), color-mix(in srgb, var(--surface-raised-solid) 88%, var(--accent-primary) 12%));
-    overflow: hidden;
 }
 
 .equipment-item-card.is-expanded {
