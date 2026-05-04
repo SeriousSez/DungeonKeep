@@ -173,6 +173,15 @@
     background: var(--color-surface-alt);
 }
 
+.catalog-btn {
+    min-height: 0;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    justify-content: center;
+}
+
 .ghost-btn--sm {
     padding: 5px 10px;
     font-size: 0.82rem;

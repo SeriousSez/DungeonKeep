@@ -33,7 +33,7 @@
         <app-dropdown ariaLabel="Filter by type" [value]="selectedType()" [options]="typeOptions" [minWidth]="160" (changed)="updateSelectedType($event)"></app-dropdown>
 
         <div class="library-actions">
-            <a routerLink="/rules/monsters" class="ghost-btn">
+            <a routerLink="/rules/monsters" class="secondary-btn catalog-btn">
                 <i class="fa-duotone fa-thin fa-book-open" aria-hidden="true"></i>
                 Browse Catalog
             </a>
@@ -63,7 +63,7 @@
         <p>Create a monster from scratch or clone an existing one from the official catalog as a starting point.</p>
         <div class="empty-state-actions">
             <a routerLink="/monsters/new" class="primary-btn">New Monster</a>
-            <a routerLink="/rules/monsters" class="ghost-btn">Browse Official Catalog</a>
+            <a routerLink="/rules/monsters" class="secondary-btn catalog-btn">Browse Official Catalog</a>
         </div>
     </section>
     } @else if (filteredMonsters().length === 0) {
