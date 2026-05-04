@@ -18,6 +18,7 @@ const ALL_CAMPAIGNS_FILTER_VALUE = '__all_campaigns__';
 export class NpcListComponent {
     readonly filtersExpanded = signal(false);
     readonly npcs = input.required<readonly CampaignNpc[]>();
+    readonly totalNpcCount = input<number>(0);
     readonly selectedNpcId = input<string | null>(null);
     readonly canEdit = input<boolean>(false);
     readonly showCampaignFilter = input<boolean>(false);

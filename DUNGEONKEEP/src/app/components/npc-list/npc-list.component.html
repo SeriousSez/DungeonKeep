@@ -3,7 +3,9 @@
         <div>
             <p class="eyebrow">Campaign Cast</p>
             <h2>NPC List</h2>
+            @if (totalNpcCount() > 0) {
             <p>Search the cast, filter by factions and tags, and jump straight into an NPC card during play.</p>
+            }
         </div>
 
         <div class="npc-list-actions">
@@ -13,6 +15,7 @@
         </div>
     </div>
 
+    @if (totalNpcCount() > 0) {
     <div class="filter-grid">
         <label class="field search-field">
             <span>Search</span>
@@ -61,6 +64,7 @@
             <app-dropdown ariaLabel="Sort NPCs" [value]="sortBy()" [options]="sortOptions" [searchable]="false" [placeholder]="'Recently updated'" (changed)="emitSort($event)"></app-dropdown>
         </label>
     </div>
+    }
 
     @if (npcs().length > 0) {
     <div class="npc-card-grid">
@@ -120,10 +124,16 @@
             <i class="fa-duotone fa-thin fa-masks-theater"></i>
         </div>
         <h3>No NPCs here yet</h3>
-        <p>Build your cast of villains, allies, and strangers — or use filters to find someone already in the library.</p>
+        @if (totalNpcCount() > 0) {
+        <p>No results match your current filters.</p>
+        } @else {
+        <p>Add your first NPC to start building the cast.</p>
+        }
         @if (canEdit()) {
         <div class="empty-state-actions">
+            @if (totalNpcCount() > 0) {
             <button type="button" class="ghost-button" (click)="clearFilters.emit()">Clear Filters</button>
+            }
             <button type="button" class="empty-state-cta" (click)="addNpc.emit()">
                 <i class="fa-duotone fa-thin fa-plus"></i>
                 New NPC
