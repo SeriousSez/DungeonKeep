@@ -304,21 +304,21 @@ export class SessionDetailPageComponent {
             const campaignId = this.campaignId();
             const storeInitialized = this.store.initialized();
             const detailsLoadRequested = this.detailsLoadRequested();
-            const detailsLoaded = this.currentCampaign()?.detailsLoaded === true;
             const detailsLoading = campaignId ? this.store.isCampaignDetailsLoading(campaignId) : false;
 
-            if (!campaignId || !storeInitialized || detailsLoadRequested || detailsLoaded || detailsLoading) {
+            if (!campaignId || !storeInitialized || detailsLoadRequested || detailsLoading) {
                 return;
             }
 
             this.detailsLoadRequested.set(true);
-            void this.store.ensureCampaignLoaded(campaignId);
+            void this.store.refreshCampaignLoaded(campaignId);
         });
 
         effect(() => {
             const campaignId = this.campaignId();
             const sessionId = this.sessionId();
             const storeInitialized = this.store.initialized();
+            const isDetailsLoading = campaignId ? this.store.isCampaignDetailsLoading(campaignId) : false;
 
             if (!campaignId || !sessionId) {
                 return;
@@ -338,7 +338,7 @@ export class SessionDetailPageComponent {
 
             const summary = campaign.sessions.find((session) => session.id === sessionId) ?? null;
             if (!campaign.detailsLoaded) {
-                if (this.detailsLoadRequested() && !this.store.isCampaignDetailsLoading(campaignId)) {
+                if (this.detailsLoadRequested() && !isDetailsLoading) {
                     this.loadError.set('The requested session details could not be loaded.');
                     this.initialized.set(true);
                     this.cdr.detectChanges();
@@ -351,6 +351,9 @@ export class SessionDetailPageComponent {
             this.lootAssignments.set(this.parseLootAssignments(summary?.lootAssignmentsJson ?? null));
 
             if (!summary && !draft) {
+                if (isDetailsLoading) {
+                    return;
+                }
                 this.loadError.set('The requested session could not be found in this campaign.');
                 this.initialized.set(true);
                 this.cdr.detectChanges();

@@ -52,9 +52,6 @@
                 @if (canEdit()) {
                 <span class="detail-pill">{{ session.threat }}</span>
                 }
-                @if (hasRichDraft()) {
-                <span class="detail-pill detail-pill-accent">Draft Loaded</span>
-                }
                 @if (canEdit()) {
                 <a class="ghost-button" [routerLink]="editLink()">Edit Session</a>
                 }
