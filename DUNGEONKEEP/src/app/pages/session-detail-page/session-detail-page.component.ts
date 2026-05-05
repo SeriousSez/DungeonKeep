@@ -351,7 +351,7 @@ export class SessionDetailPageComponent {
             this.lootAssignments.set(this.parseLootAssignments(summary?.lootAssignmentsJson ?? null));
 
             if (!summary && !draft) {
-                if (isDetailsLoading) {
+                if (isDetailsLoading || !this.detailsLoadRequested()) {
                     return;
                 }
                 this.loadError.set('The requested session could not be found in this campaign.');
