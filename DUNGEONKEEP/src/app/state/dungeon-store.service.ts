@@ -1216,13 +1216,18 @@ export class DungeonStoreService {
         this.initialized.set(false);
 
         try {
-            const [campaignDtos, accessibleCharacterDtos, libraries] = await Promise.all([
+            const [campaignResult, charactersResult, librariesResult] = await Promise.allSettled([
                 this.api.getCampaignSummaries(),
                 this.api.getAccessibleCharacters(),
                 this.api.getUserLibraries()
             ]);
 
-            this.applyUserLibraries(libraries);
+            const campaignDtos = campaignResult.status === 'fulfilled' ? campaignResult.value : [];
+            const accessibleCharacterDtos = charactersResult.status === 'fulfilled' ? charactersResult.value : [];
+
+            if (librariesResult.status === 'fulfilled') {
+                this.applyUserLibraries(librariesResult.value);
+            }
 
             const characterMap = new Map<string, Character>();
             const characterLookup = new Map<string, ApiCharacterDto[]>();

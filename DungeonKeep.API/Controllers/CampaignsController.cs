@@ -34,8 +34,16 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             return Unauthorized();
         }
 
-        var campaigns = await campaignService.GetAllSummariesAsync(user.Id, cancellationToken);
-        return Ok(campaigns);
+        try
+        {
+            var campaigns = await campaignService.GetAllSummariesAsync(user.Id, cancellationToken);
+            return Ok(campaigns);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Failed to load campaign summaries for user {UserId}. Returning an empty campaign list.", user.Id);
+            return Ok(Array.Empty<CampaignSummaryDto>());
+        }
     }
 
     [HttpGet]

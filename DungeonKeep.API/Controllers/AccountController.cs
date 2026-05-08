@@ -1,12 +1,13 @@
 using DungeonKeep.ApplicationService.Contracts;
 using DungeonKeep.ApplicationService.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace DungeonKeep.API.Controllers;
 
 [ApiController]
 [Route("api/account")]
-public sealed class AccountController(IAuthService authService) : ControllerBase
+public sealed class AccountController(IAuthService authService, ILogger<AccountController> logger) : ControllerBase
 {
     [HttpPut("profile")]
     public async Task<ActionResult<AuthUserDto>> UpdateProfile(
@@ -55,8 +56,16 @@ public sealed class AccountController(IAuthService authService) : ControllerBase
             return Unauthorized();
         }
 
-        var libraries = await authService.GetUserLibrariesAsync(user.Id, cancellationToken);
-        return Ok(libraries);
+        try
+        {
+            var libraries = await authService.GetUserLibrariesAsync(user.Id, cancellationToken);
+            return Ok(libraries);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Failed to load user libraries for user {UserId}. Returning empty libraries.", user.Id);
+            return Ok(new UserLibrariesDto("[]", "[]", "[]", "[]"));
+        }
     }
 
     [HttpPut("npc-library")]
