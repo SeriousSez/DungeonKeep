@@ -114,6 +114,10 @@
     background: var(--surface-raised);
 }
 
+.empty-state--standalone {
+    width: 100%;
+}
+
 .empty-state-icon {
     font-size: 2.8rem;
     color: var(--accent-primary);

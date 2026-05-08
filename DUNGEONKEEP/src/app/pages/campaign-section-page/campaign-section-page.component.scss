@@ -513,6 +513,10 @@ textarea {
     flex: 1;
 }
 
+.thread-body .thread-visibility-pill {
+    justify-self: start;
+}
+
 .thread-body p {
     margin: 0;
     padding: 10px 12px;
@@ -991,6 +995,69 @@ textarea {
     border: 1px dashed var(--panel-border);
     border-radius: 12px;
     background: color-mix(in srgb, var(--surface-raised) 88%, var(--panel-bg) 12%);
+}
+
+.section-empty-state {
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    padding: 20px;
+    border: 1px dashed color-mix(in srgb, var(--panel-border) 68%, var(--accent-primary) 32%);
+    border-radius: 16px;
+    background:
+        radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent-primary) 12%, transparent), transparent 52%),
+        color-mix(in srgb, var(--surface-raised) 90%, var(--panel-bg) 10%);
+    text-align: center;
+}
+
+.section-empty-state-icon {
+    display: grid;
+    place-items: center;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 56%, var(--accent-primary) 44%);
+    background: color-mix(in srgb, var(--surface-raised) 76%, var(--accent-primary) 24%);
+    color: var(--text-main);
+    font-size: 1.45rem;
+}
+
+.section-empty-state h3 {
+    margin: 0;
+    font-family: var(--display-font);
+    font-size: 1.08rem;
+    letter-spacing: 0.02em;
+    color: var(--text-main);
+}
+
+.section-empty-state p {
+    margin: 0;
+    max-width: 60ch;
+    color: var(--text-muted);
+    line-height: 1.55;
+}
+
+.empty-state-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    min-height: 40px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 50%, var(--accent-primary) 50%);
+    background: color-mix(in srgb, var(--surface-raised) 70%, var(--accent-primary) 30%);
+    color: var(--text-main);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.empty-state-cta:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--panel-border) 35%, var(--accent-primary) 65%);
+    background: color-mix(in srgb, var(--surface-raised) 58%, var(--accent-primary) 42%);
 }
 
 .empty-state {

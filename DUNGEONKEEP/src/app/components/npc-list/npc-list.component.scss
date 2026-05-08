@@ -120,6 +120,10 @@ input {
     min-height: 220px;
 }
 
+.empty-state-panel--standalone {
+    width: 100%;
+}
+
 .empty-state-icon {
     font-size: 2.8rem;
     color: var(--accent-primary);

@@ -13,6 +13,7 @@
     </section>
     }
 
+    @if (allTables().length > 0) {
     <section class="table-panel panel">
         <div class="table-panel-heading">
             <div>
@@ -27,7 +28,6 @@
             </div>
         </div>
 
-        @if (allTables().length > 0) {
         <div class="table-card-list">
             @for (table of allTables(); track table.id) {
             <article class="table-card" tabindex="0" role="link" [attr.aria-label]="'Open ' + table.title" (click)="openTable(table.id)" (keydown.enter)="openTable(table.id)" (keydown.space)="openTable(table.id); $event.preventDefault()">
@@ -53,22 +53,22 @@
             </article>
             }
         </div>
-        } @else {
-        <div class="empty-state">
-            <div class="empty-state-icon" aria-hidden="true">
-                <i class="fa-duotone fa-thin fa-dice-d20"></i>
-            </div>
-            <h3>No tables yet</h3>
-            <p>Build reusable tables for random encounters, rumors, treasure, tavern chatter, or anything else your campaign needs.</p>
-            @if (canEdit()) {
-            <button type="button" class="empty-state-cta" (click)="openNewTable()">
-                <i class="fa-duotone fa-thin fa-plus"></i>
-                New Table
-            </button>
-            }
-        </div>
-        }
     </section>
+    } @else {
+    <div class="empty-state empty-state--standalone">
+        <div class="empty-state-icon" aria-hidden="true">
+            <i class="fa-duotone fa-thin fa-dice-d20"></i>
+        </div>
+        <h3>No tables yet</h3>
+        <p>Build reusable tables for random encounters, rumors, treasure, tavern chatter, or anything else your campaign needs.</p>
+        @if (canEdit()) {
+        <button type="button" class="empty-state-cta" (click)="openNewTable()">
+            <i class="fa-duotone fa-thin fa-plus"></i>
+            New Table
+        </button>
+        }
+    </div>
+    }
 
     <app-confirm-modal [open]="deleteCandidate() !== null" [title]="libraryMode() ? 'Delete Library Table?' : 'Delete Table?'" [message]="deleteCandidate() ? 'Remove ' + deleteCandidate()!.title + '?' : 'Delete table?'" confirmText="Delete" cancelText="Cancel" (confirmed)="confirmDeleteTable()"
         (cancelled)="cancelDeleteTable()"></app-confirm-modal>

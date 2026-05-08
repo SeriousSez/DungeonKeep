@@ -8,7 +8,7 @@
 }
 
 .panel {
-    background: var(--panel-bg);
+    background: var(--surface-raised);
     border: 1px solid var(--panel-border);
     border-radius: 24px;
     box-shadow: var(--panel-shadow);
@@ -32,11 +32,12 @@
 
 .page-intro-header h1 {
     margin: 0 0 8px;
+    color: var(--text-main);
 }
 
 .page-intro-header p {
     margin: 0;
-    color: var(--text-soft);
+    color: var(--text-muted);
 }
 
 .library-note {

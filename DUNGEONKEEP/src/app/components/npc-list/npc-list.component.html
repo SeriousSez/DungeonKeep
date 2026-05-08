@@ -1,3 +1,4 @@
+@if (totalNpcCount() > 0) {
 <section class="npc-list-shell">
     <div class="npc-list-header">
         <div>
@@ -124,16 +125,10 @@
             <i class="fa-duotone fa-thin fa-masks-theater"></i>
         </div>
         <h3>No NPCs here yet</h3>
-        @if (totalNpcCount() > 0) {
         <p>No results match your current filters.</p>
-        } @else {
-        <p>Add your first NPC to start building the cast.</p>
-        }
         @if (canEdit()) {
         <div class="empty-state-actions">
-            @if (totalNpcCount() > 0) {
             <button type="button" class="ghost-button" (click)="clearFilters.emit()">Clear Filters</button>
-            }
             <button type="button" class="empty-state-cta" (click)="addNpc.emit()">
                 <i class="fa-duotone fa-thin fa-plus"></i>
                 New NPC
@@ -143,3 +138,20 @@
     </div>
     }
 </section>
+} @else {
+<div class="empty-state-panel empty-state-panel--standalone">
+    <div class="empty-state-icon" aria-hidden="true">
+        <i class="fa-duotone fa-thin fa-masks-theater"></i>
+    </div>
+    <h3>No NPCs here yet</h3>
+    <p>Add your first NPC to start building the cast.</p>
+    @if (canEdit()) {
+    <div class="empty-state-actions">
+        <button type="button" class="empty-state-cta" (click)="addNpc.emit()">
+            <i class="fa-duotone fa-thin fa-plus"></i>
+            New NPC
+        </button>
+    </div>
+    }
+</div>
+}

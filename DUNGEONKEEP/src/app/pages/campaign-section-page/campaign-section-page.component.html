@@ -131,7 +131,19 @@
             }
         </div>
         } @else {
-        <p class="empty-state">No active party members are assigned right now.</p>
+        <div class="section-empty-state" role="status" aria-live="polite">
+            <div class="section-empty-state-icon" aria-hidden="true">
+                <i class="fa-duotone fa-thin fa-user-clock"></i>
+            </div>
+            <h3>No active party members right now</h3>
+            <p>Activate or assign characters to move them from reserve into the active adventuring roster.</p>
+            @if (campaign.currentUserRole === 'Owner') {
+            <a class="empty-state-cta" [routerLink]="['/characters/new']">
+                <i class="fa-duotone fa-thin fa-plus"></i>
+                Add Character
+            </a>
+            }
+        </div>
         }
 
         @if (inactivePartyMembers().length > 0) {
@@ -174,7 +186,19 @@
         </div>
         }
         } @else {
-        <p class="empty-state">No party members assigned to this campaign yet.</p>
+        <div class="section-empty-state" role="status" aria-live="polite">
+            <div class="section-empty-state-icon" aria-hidden="true">
+                <i class="fa-duotone fa-thin fa-user-group"></i>
+            </div>
+            <h3>No party members assigned yet</h3>
+            <p>Invite or create characters to build your active adventuring party for this campaign.</p>
+            @if (campaign.currentUserRole === 'Owner') {
+            <a class="empty-state-cta" [routerLink]="['/characters/new']">
+                <i class="fa-duotone fa-thin fa-plus"></i>
+                Add Character
+            </a>
+            }
+        </div>
         }
         }
 
@@ -217,7 +241,19 @@
             }
         </div>
         } @else {
-        <p class="empty-state">No sessions are mapped out yet. Add the next objective and session beats here as the campaign takes shape.</p>
+        <div class="section-empty-state" role="status" aria-live="polite">
+            <div class="section-empty-state-icon" aria-hidden="true">
+                <i class="fa-duotone fa-thin fa-scroll"></i>
+            </div>
+            <h3>No sessions mapped yet</h3>
+            <p>Add your next objective and sketch session beats so players always know what is ahead.</p>
+            @if (campaign.currentUserRole === 'Owner') {
+            <a class="empty-state-cta" [routerLink]="['/campaigns', campaign.id, 'sessions', 'new']">
+                <i class="fa-duotone fa-thin fa-plus"></i>
+                Add Session
+            </a>
+            }
+        </div>
         }
         }
 
@@ -250,7 +286,13 @@
         @if (campaign.currentUserRole === 'Owner') {
         <app-custom-table-manager [campaignId]="campaign.id" [canEdit]="true"></app-custom-table-manager>
         } @else {
-        <p class="empty-state">Only the campaign owner can manage custom tables for this campaign.</p>
+        <div class="section-empty-state" role="status" aria-live="polite">
+            <div class="section-empty-state-icon" aria-hidden="true">
+                <i class="fa-duotone fa-thin fa-lock"></i>
+            </div>
+            <h3>Custom tables are owner-managed</h3>
+            <p>Only the campaign owner can create or edit custom tables for this campaign.</p>
+        </div>
         }
         }
 
@@ -515,7 +557,13 @@
                 }
                 }
                 } @else {
-                <p class="empty-state">No party loot has been recorded yet.</p>
+                <div class="section-empty-state" role="status" aria-live="polite">
+                    <div class="section-empty-state-icon" aria-hidden="true">
+                        <i class="fa-duotone fa-thin fa-coins"></i>
+                    </div>
+                    <h3>No party loot recorded yet</h3>
+                    <p>Track treasure, clues, and rewards here so everyone can see what the party has earned.</p>
+                </div>
                 }
             </section>
         </div>
@@ -551,7 +599,19 @@
             }
         </div>
         } @else {
-        <p class="empty-state">No open threads yet.</p>
+        <div class="section-empty-state" role="status" aria-live="polite">
+            <div class="section-empty-state-icon" aria-hidden="true">
+                <i class="fa-duotone fa-thin fa-knot"></i>
+            </div>
+            <h3>No open threads yet</h3>
+            <p>Use open threads to track unresolved hooks and long-running complications between sessions.</p>
+            @if (campaign.currentUserRole === 'Owner') {
+            <button type="button" class="empty-state-cta" (click)="openAddThreadModal()">
+                <i class="fa-duotone fa-thin fa-plus"></i>
+                Add Thread
+            </button>
+            }
+        </div>
         }
         }
 
@@ -675,7 +735,19 @@
             }
         </div>
         } @else {
-        <p class="empty-state">No world notes have been recorded yet.</p>
+        <div class="section-empty-state" role="status" aria-live="polite">
+            <div class="section-empty-state-icon" aria-hidden="true">
+                <i class="fa-duotone fa-thin fa-book-open-cover"></i>
+            </div>
+            <h3>No world notes recorded yet</h3>
+            <p>Capture lore, rumors, factions, and landmarks here so your table has a shared campaign memory.</p>
+            @if (campaign.currentUserRole === 'Owner') {
+            <button type="button" class="empty-state-cta" (click)="openAddWorldNoteForm()">
+                <i class="fa-duotone fa-thin fa-plus"></i>
+                Add First Note
+            </button>
+            }
+        </div>
         }
         }
 
@@ -711,7 +783,13 @@
             }
         </div>
         } @else {
-        <p class="empty-state">No campaign members are listed yet.</p>
+        <div class="section-empty-state" role="status" aria-live="polite">
+            <div class="section-empty-state-icon" aria-hidden="true">
+                <i class="fa-duotone fa-thin fa-users"></i>
+            </div>
+            <h3>No campaign members listed yet</h3>
+            <p>Invite players to collaborate on this campaign and keep everyone aligned on prep and progress.</p>
+        </div>
         }
         }
         }
