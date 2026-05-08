@@ -437,7 +437,15 @@ export class DungeonStoreService {
             return null;
         }
 
-        const campaignIds = draft.campaignIds ?? (draft.campaignId ? [draft.campaignId] : undefined);
+        const currentCampaignIds = (currentCharacter?.campaignIds ?? []).filter((id): id is string => typeof id === 'string' && !!id);
+        const shouldPreserveCurrentCampaignIds =
+            !draft.campaignIds
+            && currentCampaignIds.length > 0
+            && (!draft.campaignId || draft.campaignId === currentCharacter?.campaignId);
+        const campaignIds = draft.campaignIds
+            ?? (shouldPreserveCurrentCampaignIds
+                ? currentCampaignIds
+                : (draft.campaignId ? [draft.campaignId] : undefined));
 
         try {
             const updated = await this.api.updateCharacter(characterId, {
@@ -447,7 +455,7 @@ export class DungeonStoreService {
                 level: resolvedLevel,
                 background: draft.background || 'Freshly arrived adventurer',
                 notes: notesForSave,
-                campaignId: campaignIds?.[0],
+                campaignId: campaignIds?.[0] ?? draft.campaignId,
                 campaignIds,
                 species: draft.race,
                 alignment: draft.alignment,
@@ -468,6 +476,7 @@ export class DungeonStoreService {
                 spells: Array.isArray(draft.spells) ? draft.spells.join(', ') : undefined,
                 experiencePoints: typeof draft.experiencePoints === 'number' ? Math.max(0, Math.trunc(draft.experiencePoints)) : undefined,
                 portraitUrl: draft.image,
+                portraitOriginalImageUrl: draft.portraitOriginalImageUrl,
                 detailBackgroundImageUrl: draft.detailBackgroundImageUrl,
                 goals: draft.goals,
                 secrets: draft.secrets,
@@ -994,7 +1003,8 @@ export class DungeonStoreService {
             hook: draft.hook.trim(),
             nextSession: draft.nextSession.trim(),
             summary: draft.summary.trim(),
-            bannerImageUrl: (draft.bannerImageUrl ?? '').trim()
+            bannerImageUrl: (draft.bannerImageUrl ?? '').trim(),
+            bannerOriginalImageUrl: (draft.bannerOriginalImageUrl ?? draft.bannerImageUrl ?? '').trim()
         };
 
         try {
@@ -1122,7 +1132,8 @@ export class DungeonStoreService {
             hook: draft.hook,
             nextSession: draft.nextSession,
             summary: draft.summary || 'A newly formed campaign waits for its first legend.',
-            bannerImageUrl: draft.bannerImageUrl || ''
+            bannerImageUrl: draft.bannerImageUrl || '',
+            bannerOriginalImageUrl: draft.bannerOriginalImageUrl || draft.bannerImageUrl || ''
         });
 
         const campaign = this.mapCampaignFromApi(created, []);
@@ -1169,6 +1180,7 @@ export class DungeonStoreService {
                 spells: Array.isArray(draft.spells) ? draft.spells.join(', ') : (draft.spells || ''),
                 experiencePoints: draft.experiencePoints ?? 0,
                 portraitUrl: draft.image || '',
+                portraitOriginalImageUrl: draft.portraitOriginalImageUrl || draft.image || '',
                 detailBackgroundImageUrl: draft.detailBackgroundImageUrl || '',
                 goals: draft.goals || '',
                 secrets: draft.secrets || '',
@@ -1277,6 +1289,7 @@ export class DungeonStoreService {
                     levelRange: mapped.levelRange,
                     summary: mapped.summary,
                     bannerImageUrl: mapped.bannerImageUrl,
+                    bannerOriginalImageUrl: mapped.bannerOriginalImageUrl,
                     hook: mapped.hook,
                     nextSession: mapped.nextSession,
                     characterCount: mapped.characterCount,
@@ -1343,6 +1356,7 @@ export class DungeonStoreService {
             levelRange: `Levels ${levelStart}-${levelEnd}`,
             summary: campaign.summary,
             bannerImageUrl: campaign.bannerImageUrl || '',
+            bannerOriginalImageUrl: campaign.bannerOriginalImageUrl || '',
             hook: campaign.hook || 'A new adventure awaits.',
             nextSession: campaign.nextSession || 'TBD',
             characterCount: Math.max(campaign.characterCount ?? partyCharacterIds.length, partyCharacterIds.length),
@@ -1411,6 +1425,7 @@ export class DungeonStoreService {
             levelRange: `Levels ${levelStart}-${levelEnd}`,
             summary: campaign.summary,
             bannerImageUrl: campaign.bannerImageUrl || '',
+            bannerOriginalImageUrl: campaign.bannerOriginalImageUrl || '',
             hook: campaign.hook || 'A new adventure awaits.',
             nextSession: campaign.nextSession || 'TBD',
             characterCount: Math.max(campaign.characterCount ?? partyCharacterIds.length, partyCharacterIds.length),
@@ -2032,6 +2047,7 @@ export class DungeonStoreService {
                 ? Math.max(0, Math.trunc(draft!.experiencePoints as number))
                 : Math.max(0, Math.trunc(Number(character.experiencePoints) || 0)),
             image: draft?.image || character.portraitUrl || '',
+            imageOriginal: draft?.portraitOriginalImageUrl || character.portraitOriginalImageUrl || '',
             detailBackgroundImageUrl: draft?.detailBackgroundImageUrl || character.detailBackgroundImageUrl || ''
         };
     }

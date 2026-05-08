@@ -741,7 +741,7 @@ export class CharacterDetailPageComponent {
             }
 
             this.lastPortraitSourceCharacterId = characterId;
-            this.portraitOriginalImageUrl.set(characterId ? this.readStoredPortraitOriginalImageUrl(characterId) : '');
+            this.portraitOriginalImageUrl.set(this.character()?.imageOriginal?.trim() || '');
             this.detailBackgroundCachedImageUrl.set(characterId ? this.readStoredDetailBackgroundImageUrl(characterId) : '');
         });
 
@@ -1581,7 +1581,7 @@ export class CharacterDetailPageComponent {
         }
 
         if (!originalImageUrl) {
-            this.storePortraitOriginalImageUrl(char.id, sourceImageUrl);
+            this.portraitOriginalImageUrl.set(sourceImageUrl);
         }
 
         this.portraitGenerationError.set('');
@@ -1599,7 +1599,7 @@ export class CharacterDetailPageComponent {
 
         try {
             const imageUrl = await this.readPortraitFile(file);
-            this.storePortraitOriginalImageUrl(this.characterId, imageUrl);
+            this.portraitOriginalImageUrl.set(imageUrl);
             this.portraitCropSourceImageUrl.set(imageUrl);
             this.portraitCropModalOpen.set(true);
         } catch (error) {
@@ -1634,7 +1634,7 @@ export class CharacterDetailPageComponent {
                 additionalDirection: this.buildPortraitAdditionalDirection(this.portraitPromptDetails().trim())
             });
 
-            this.storePortraitOriginalImageUrl(this.characterId, response.imageUrl);
+            this.portraitOriginalImageUrl.set(response.imageUrl);
             await this.persistPortrait(response.imageUrl, 'Portrait generated and saved.');
         } catch (error) {
             this.portraitGenerationError.set(this.getPortraitGenerationErrorMessage(error));
@@ -1665,7 +1665,7 @@ export class CharacterDetailPageComponent {
             return;
         }
 
-        this.storePortraitOriginalImageUrl(this.characterId, '');
+        this.portraitOriginalImageUrl.set('');
         await this.persistPortrait('', 'Portrait removed.');
     };
 
@@ -1677,7 +1677,7 @@ export class CharacterDetailPageComponent {
             || '';
 
         if (char && sourceImageUrl) {
-            this.storePortraitOriginalImageUrl(char.id, sourceImageUrl);
+            this.portraitOriginalImageUrl.set(sourceImageUrl);
         }
 
         this.portraitCropModalOpen.set(false);
@@ -4717,29 +4717,6 @@ export class CharacterDetailPageComponent {
         }
     }
 
-    private readStoredPortraitOriginalImageUrl(characterId: string): string {
-        try {
-            return globalThis.localStorage?.getItem(`dungeonkeep-portrait-original:${characterId}`)?.trim() ?? '';
-        } catch {
-            return '';
-        }
-    }
-
-    private storePortraitOriginalImageUrl(characterId: string, imageUrl: string): void {
-        const trimmed = imageUrl.trim();
-        this.portraitOriginalImageUrl.set(trimmed);
-
-        try {
-            if (!trimmed) {
-                globalThis.localStorage?.removeItem(`dungeonkeep-portrait-original:${characterId}`);
-            } else {
-                globalThis.localStorage?.setItem(`dungeonkeep-portrait-original:${characterId}`, trimmed);
-            }
-        } catch {
-            // Ignore browser storage failures and fall back to in-memory state.
-        }
-    }
-
     private readStoredDetailBackgroundImageUrl(characterId: string): string {
         try {
             return globalThis.localStorage?.getItem(`dungeonkeep-detail-background:${characterId}`)?.trim() ?? '';
@@ -4891,7 +4868,8 @@ export class CharacterDetailPageComponent {
                 campaignId: char.campaignId,
                 hitPoints: char.hitPoints,
                 maxHitPoints: char.maxHitPoints,
-                image: imageUrl
+                image: imageUrl,
+                portraitOriginalImageUrl: this.portraitOriginalImageUrl().trim()
             });
 
             this.portraitSaveMessage.set(updated ? successMessage : 'Unable to save portrait right now.');

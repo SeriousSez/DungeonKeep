@@ -128,6 +128,7 @@ public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : IChara
         string spells,
         int experiencePoints,
         string portraitUrl,
+        string portraitOriginalImageUrl,
         string detailBackgroundImageUrl,
         string goals,
         string secrets,
@@ -166,6 +167,7 @@ public sealed class CharacterRepository(DungeonKeepDbContext dbContext) : IChara
         character.Spells = spells;
         character.ExperiencePoints = Math.Max(0, experiencePoints);
         character.PortraitUrl = portraitUrl;
+        character.PortraitOriginalImageUrl = portraitOriginalImageUrl;
         character.DetailBackgroundImageUrl = detailBackgroundImageUrl;
         character.Goals = goals;
         character.Secrets = secrets;

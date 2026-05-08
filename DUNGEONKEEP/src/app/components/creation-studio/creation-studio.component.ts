@@ -31,7 +31,8 @@ const emptyCampaignDraft = (): CampaignDraft => ({
     hook: '',
     nextSession: '',
     summary: '',
-    bannerImageUrl: ''
+    bannerImageUrl: '',
+    bannerOriginalImageUrl: ''
 });
 
 const emptyCharacterDraft = (): CharacterDraft => ({
@@ -174,6 +175,7 @@ export class CreationStudioComponent {
     readonly campaignBannerFeedback = signal('');
     readonly bannerCropModalOpen = signal(false);
     readonly bannerCropSourceImageUrl = signal('');
+    readonly bannerCropOriginalImageUrl = signal('');
     readonly isGeneratingBanner = signal(false);
     readonly bannerPromptDetails = signal('');
     readonly characterDraft = signal<CharacterDraft>(emptyCharacterDraft());
@@ -280,8 +282,10 @@ export class CreationStudioComponent {
                 hook: seed.hook,
                 nextSession: seed.nextSession,
                 summary: seed.summary,
-                bannerImageUrl: seed.bannerImageUrl ?? ''
+                bannerImageUrl: seed.bannerImageUrl ?? '',
+                bannerOriginalImageUrl: seed.bannerOriginalImageUrl ?? seed.bannerImageUrl ?? ''
             });
+            this.bannerCropOriginalImageUrl.set(seed.bannerOriginalImageUrl ?? seed.bannerImageUrl ?? '');
             this.campaignSubmitAttempted.set(false);
             this.campaignStepIndex.set(0);
             this.selectedTemplateId.set('');
@@ -346,6 +350,7 @@ export class CreationStudioComponent {
             }
 
             this.bannerCropSourceImageUrl.set(imageUrl);
+            this.bannerCropOriginalImageUrl.set(imageUrl);
             this.bannerCropModalOpen.set(true);
             this.campaignBannerFeedback.set('');
         };
@@ -360,7 +365,7 @@ export class CreationStudioComponent {
     }
 
     recropBanner(): void {
-        const url = this.campaignDraft().bannerImageUrl;
+        const url = this.bannerCropOriginalImageUrl() || this.campaignDraft().bannerImageUrl;
         if (url) {
             this.bannerCropSourceImageUrl.set(url);
             this.bannerCropModalOpen.set(true);
@@ -373,6 +378,16 @@ export class CreationStudioComponent {
     }
 
     applyBannerCrop(croppedUrl: string): void {
+        const sourceImageUrl = this.bannerCropOriginalImageUrl().trim()
+            || this.bannerCropSourceImageUrl().trim()
+            || this.campaignDraft().bannerImageUrl?.trim()
+            || '';
+
+        if (sourceImageUrl) {
+            this.bannerCropOriginalImageUrl.set(sourceImageUrl);
+            this.updateCampaign('bannerOriginalImageUrl', sourceImageUrl);
+        }
+
         this.updateCampaign('bannerImageUrl', croppedUrl);
         this.campaignBannerFeedback.set('Banner ready.');
         this.bannerCropModalOpen.set(false);
@@ -381,6 +396,8 @@ export class CreationStudioComponent {
 
     clearCampaignBanner(): void {
         this.updateCampaign('bannerImageUrl', '');
+        this.updateCampaign('bannerOriginalImageUrl', '');
+        this.bannerCropOriginalImageUrl.set('');
         this.campaignBannerFeedback.set('');
     }
 
@@ -404,6 +421,8 @@ export class CreationStudioComponent {
 
             const normalizedBanner = await this.normalizeGeneratedBannerToAspectRatio(response.imageUrl);
             this.bannerCropSourceImageUrl.set(normalizedBanner);
+            this.bannerCropOriginalImageUrl.set(normalizedBanner);
+            this.updateCampaign('bannerOriginalImageUrl', normalizedBanner);
             this.bannerCropModalOpen.set(true);
             this.campaignBannerFeedback.set('');
         } catch {

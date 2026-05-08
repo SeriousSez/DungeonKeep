@@ -11,6 +11,7 @@ public sealed record CampaignSummaryRecord(
     string NextSession,
     string Summary,
     string BannerImageUrl,
+    string BannerOriginalImageUrl,
     DateTime CreatedAtUtc,
     int CharacterCount,
     string SessionsJson,
@@ -30,6 +31,7 @@ public sealed record CampaignSummaryDto(
     string NextSession,
     string Summary,
     string BannerImageUrl,
+    string BannerOriginalImageUrl,
     DateTime CreatedAtUtc,
     int CharacterCount,
     int SessionCount,
@@ -49,6 +51,7 @@ public sealed record CampaignDto(
     string NextSession,
     string Summary,
     string BannerImageUrl,
+    string BannerOriginalImageUrl,
     DateTime CreatedAtUtc,
     int CharacterCount,
     IReadOnlyList<CampaignSessionDto> Sessions,
@@ -331,7 +334,8 @@ public sealed record CreateCampaignRequest(
     string Hook,
     string NextSession,
     string Summary,
-    string? BannerImageUrl
+    string? BannerImageUrl,
+    string? BannerOriginalImageUrl
 );
 
 public sealed record UpdateCampaignRequest(
@@ -343,7 +347,8 @@ public sealed record UpdateCampaignRequest(
     string Hook,
     string NextSession,
     string Summary,
-    string? BannerImageUrl
+    string? BannerImageUrl,
+    string? BannerOriginalImageUrl
 );
 
 public sealed record CreateCampaignThreadRequest(string Text, string Visibility);

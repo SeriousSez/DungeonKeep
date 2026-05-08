@@ -215,6 +215,7 @@ export interface Campaign {
     levelRange: string;
     summary: string;
     bannerImageUrl?: string;
+    bannerOriginalImageUrl?: string;
     hook: string;
     nextSession: string;
     characterCount: number;
@@ -327,6 +328,7 @@ export interface Character {
     spells?: string[];
     experiencePoints?: number;
     image?: string;
+    imageOriginal?: string;
     detailBackgroundImageUrl?: string;
 }
 
@@ -340,6 +342,7 @@ export interface CampaignDraft {
     nextSession: string;
     summary: string;
     bannerImageUrl?: string;
+    bannerOriginalImageUrl?: string;
 }
 
 export interface CharacterDraft {
@@ -381,4 +384,5 @@ export interface CharacterDraft {
     goals?: string;
     secrets?: string;
     sessionHistory?: string;
+    portraitOriginalImageUrl?: string;
 }

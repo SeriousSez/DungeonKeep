@@ -106,6 +106,7 @@ public sealed class CampaignService(
             NextSession = request.NextSession.Trim(),
             Summary = request.Summary.Trim(),
             BannerImageUrl = (request.BannerImageUrl ?? string.Empty).Trim(),
+            BannerOriginalImageUrl = (request.BannerOriginalImageUrl ?? request.BannerImageUrl ?? string.Empty).Trim(),
             SessionsJson = SerializeSessions(DefaultSessions),
             NpcsJson = SerializeNamedItems(DefaultNpcs),
             CampaignNpcsJson = SerializeCampaignNpcs(DefaultCampaignNpcs),
@@ -165,6 +166,7 @@ public sealed class CampaignService(
             request.NextSession.Trim(),
             request.Summary.Trim(),
             (request.BannerImageUrl ?? string.Empty).Trim(),
+            (request.BannerOriginalImageUrl ?? request.BannerImageUrl ?? string.Empty).Trim(),
             cancellationToken
         );
 
@@ -1137,6 +1139,7 @@ public sealed class CampaignService(
             campaign.NextSession,
             campaign.Summary,
             campaign.BannerImageUrl,
+            campaign.BannerOriginalImageUrl,
             campaign.CreatedAtUtc,
             campaign.CharacterAssignments.Count,
             visibleSessions,
@@ -1197,6 +1200,7 @@ public sealed class CampaignService(
             campaign.NextSession,
             campaign.Summary,
             campaign.BannerImageUrl,
+            campaign.BannerOriginalImageUrl,
             campaign.CreatedAtUtc,
             campaign.CharacterCount,
             CountJsonArrayItems(campaign.SessionsJson),

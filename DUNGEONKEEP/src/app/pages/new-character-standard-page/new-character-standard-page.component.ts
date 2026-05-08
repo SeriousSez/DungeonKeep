@@ -7705,6 +7705,7 @@ export class NewCharacterStandardPageComponent {
             hitPoints: maxHitPoints,
             maxHitPoints,
             image: this.completionPortraitImageUrl(),
+            portraitOriginalImageUrl: this.completionPortraitOriginalImageUrl().trim() || this.completionPortraitImageUrl().trim(),
             gender: this.physicalGender().trim(),
             alignment: this.getSelectedAlignmentLabel(),
             faith: this.selectedFaith().trim(),
@@ -7923,7 +7924,6 @@ export class NewCharacterStandardPageComponent {
                 this.completionError.set('Unable to complete character creation right now.');
                 return;
             }
-
             this.clearBuilderSessionSnapshot(existingId || resultCharacter.id);
             if (!existingId) {
                 this.clearBuilderSessionSnapshot();
