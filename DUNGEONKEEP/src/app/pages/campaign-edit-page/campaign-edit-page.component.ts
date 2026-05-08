@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, effect, inject, signal, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { CreationStudioComponent } from '../../components/creation-studio/creation-studio.component';
@@ -20,6 +20,8 @@ export class CampaignEditPageComponent {
     private readonly router = inject(Router);
     private readonly route = inject(ActivatedRoute);
     private readonly cdr = inject(ChangeDetectorRef);
+
+    @ViewChild('creationStudio') creationStudio?: CreationStudioComponent;
 
     readonly campaignId = computed(() => this.route.snapshot.paramMap.get('id') ?? '');
 
@@ -89,6 +91,10 @@ export class CampaignEditPageComponent {
         this.cdr.detectChanges();
 
         try {
+            if (this.creationStudio) {
+                this.creationStudio.campaignIsSubmitting.set(true);
+            }
+
             const updated = await this.store.updateCampaign(id, draft);
             if (!updated) {
                 this.updateError.set(this.store.lastError() || 'Could not update campaign. Please try again.');
@@ -100,6 +106,10 @@ export class CampaignEditPageComponent {
         } catch (error) {
             this.updateError.set(extractApiError(error, 'An error occurred while updating the campaign.'));
             this.cdr.detectChanges();
+        } finally {
+            if (this.creationStudio) {
+                this.creationStudio.campaignIsSubmitting.set(false);
+            }
         }
     }
 }

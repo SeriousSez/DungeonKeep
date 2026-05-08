@@ -181,6 +181,7 @@ export class CreationStudioComponent {
     readonly characterDraft = signal<CharacterDraft>(emptyCharacterDraft());
     readonly campaignSubmitAttempted = signal(false);
     readonly campaignStepIndex = signal(0);
+    readonly campaignIsSubmitting = signal(false);
 
     readonly currentCampaignStep = computed(() => this.campaignStepOrder[this.campaignStepIndex()]);
     readonly canGoToPreviousStep = computed(() => this.campaignStepIndex() > 0);
@@ -269,7 +270,7 @@ export class CreationStudioComponent {
     constructor() {
         effect(() => {
             const seed = this.campaignSeedDraft();
-            if (!seed) {
+            if (!seed || this.campaignIsSubmitting()) {
                 return;
             }
 
@@ -612,10 +613,14 @@ export class CreationStudioComponent {
         }
 
         this.campaignCreated.emit(draft);
-        this.campaignDraft.set(emptyCampaignDraft());
-        this.campaignSubmitAttempted.set(false);
-        this.campaignStepIndex.set(0);
-        this.selectedTemplateId.set('');
+
+        // Only reset form if creating new campaign, not editing
+        if (this.campaignAction() !== 'edit') {
+            this.campaignDraft.set(emptyCampaignDraft());
+            this.campaignSubmitAttempted.set(false);
+            this.campaignStepIndex.set(0);
+            this.selectedTemplateId.set('');
+        }
     }
 
     addCharacter(): void {

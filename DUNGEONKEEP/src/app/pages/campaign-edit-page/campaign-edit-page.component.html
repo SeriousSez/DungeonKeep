@@ -26,7 +26,7 @@
     </section>
     }
 
-    <app-creation-studio [mode]="'campaign'" [campaignAction]="'edit'" [campaignSeedDraft]="draft" (campaignCreated)="handleCampaignUpdate($event)"></app-creation-studio>
+    <app-creation-studio #creationStudio [mode]="'campaign'" [campaignAction]="'edit'" [campaignSeedDraft]="draft" (campaignCreated)="handleCampaignUpdate($event)"></app-creation-studio>
     } @else {
     <section class="panel page-intro">
         <p class="eyebrow">Access restricted</p>

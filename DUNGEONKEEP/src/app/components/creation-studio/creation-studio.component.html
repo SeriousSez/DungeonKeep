@@ -163,11 +163,11 @@
             }
 
             <div class="wizard-actions">
-                <button type="button" class="ghost-button" [disabled]="!canGoToPreviousStep()" (click)="goToPreviousCampaignStep()">Back</button>
+                <button type="button" class="ghost-button" [disabled]="!canGoToPreviousStep() || campaignIsSubmitting()" (click)="goToPreviousCampaignStep()">Back</button>
                 @if (canGoToNextStep()) {
-                <button type="button" class="primary-button" (click)="goToNextCampaignStep()">Continue</button>
+                <button type="button" class="primary-button" [disabled]="campaignIsSubmitting()" (click)="goToNextCampaignStep()">Continue</button>
                 } @else {
-                <button type="submit" class="primary-button" [disabled]="campaignSubmitAttempted() && hasCampaignValidationErrors()">{{ campaignSubmitLabel() }}</button>
+                <button type="submit" class="primary-button" [class.is-loading]="campaignIsSubmitting()" [disabled]="(campaignSubmitAttempted() && hasCampaignValidationErrors()) || campaignIsSubmitting()">{{ campaignSubmitLabel() }}</button>
                 }
             </div>
         </form>
