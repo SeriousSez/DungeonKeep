@@ -5,7 +5,7 @@
 .feat-detail-page {
     display: grid;
     gap: 20px;
-    padding-bottom: 48px;
+    padding-bottom: clamp(16px, 4vh, 28px);
 }
 
 /* --- Shared panel --- */

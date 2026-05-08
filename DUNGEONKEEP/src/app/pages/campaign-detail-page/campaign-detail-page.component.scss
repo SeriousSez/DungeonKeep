@@ -9,7 +9,7 @@ html {
 .page-stack {
     display: grid;
     gap: 24px;
-    padding-bottom: 32px;
+    padding-bottom: clamp(16px, 4vh, 28px);
 }
 
 .panel {
@@ -23,21 +23,55 @@ html {
 
 .page-intro {
     padding: clamp(14px, 3vw, 24px);
-}
-
-.campaign-banner-shell {
-    margin-bottom: 14px;
-    border: 1px solid var(--panel-border);
-    border-radius: 18px;
+    position: relative;
     overflow: hidden;
-    background: var(--surface-raised);
+    isolation: isolate;
 }
 
-.campaign-banner-image {
-    display: block;
-    width: 100%;
-    aspect-ratio: 7 / 1;
-    object-fit: cover;
+.page-intro>* {
+    position: relative;
+    z-index: 1;
+}
+
+.page-intro-with-banner {
+    border-color: color-mix(in srgb, var(--panel-border) 42%, rgba(255, 255, 255, 0.28));
+    background:
+        linear-gradient(180deg,
+            rgba(20, 16, 14, 0.16) 0%,
+            rgba(20, 16, 14, 0.42) 46%,
+            rgba(20, 16, 14, 0.82) 100%),
+        var(--campaign-intro-banner-image) center / cover no-repeat,
+        var(--panel-bg);
+    box-shadow: 0 24px 48px rgba(46, 24, 11, 0.18);
+}
+
+.page-intro-with-banner::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 248, 239, 0.1), transparent 42%);
+    pointer-events: none;
+}
+
+.page-intro-with-banner h1,
+.page-intro-with-banner p,
+.page-intro-with-banner .back-link {
+    color: #f9f1e6;
+}
+
+.page-intro-with-banner .eyebrow {
+    color: rgba(255, 241, 222, 0.82);
+}
+
+.page-intro-with-banner .ghost-button {
+    border-color: rgba(255, 255, 255, 0.24);
+    background: rgba(20, 16, 14, 0.32);
+    color: #fff7eb;
+    backdrop-filter: blur(8px);
+}
+
+.page-intro-with-banner .primary-button {
+    box-shadow: 0 12px 24px rgba(20, 16, 14, 0.28);
 }
 
 .page-intro-header {

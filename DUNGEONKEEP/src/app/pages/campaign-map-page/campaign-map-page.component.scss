@@ -1,6 +1,6 @@
 :host {
     display: block;
-    padding-bottom: 48px;
+    padding-bottom: clamp(16px, 4vh, 28px);
 }
 
 .page-stack {

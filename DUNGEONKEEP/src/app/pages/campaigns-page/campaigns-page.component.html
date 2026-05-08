@@ -78,12 +78,7 @@
                 <i class="fa-duotone fa-thin fa-grip-dots-vertical"></i>
             </div>
             }
-            <a class="campaign-card" [routerLink]="isReorderMode() ? null : ['/campaigns', campaign.id]">
-                @if (campaign.bannerImageUrl) {
-                <div class="campaign-card-banner-shell">
-                    <img [src]="campaign.bannerImageUrl" alt="Campaign banner" class="campaign-card-banner-image" />
-                </div>
-                }
+            <a class="campaign-card" [class.campaign-card-with-banner]="!!campaign.bannerImageUrl" [style.--campaign-card-banner-image]="campaign.bannerImageUrl ? 'url(' + campaign.bannerImageUrl + ')' : 'none'" [routerLink]="isReorderMode() ? null : ['/campaigns', campaign.id]">
                 <div class="campaign-card-top">
                     <div>
                         <h2>{{ campaign.name }}</h2>

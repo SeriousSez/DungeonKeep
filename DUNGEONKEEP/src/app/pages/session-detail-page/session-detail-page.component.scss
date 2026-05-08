@@ -5,7 +5,7 @@
 .page-stack {
     display: grid;
     gap: 24px;
-    padding-bottom: 28px;
+    padding-bottom: clamp(16px, 4vh, 28px);
 }
 
 .panel {

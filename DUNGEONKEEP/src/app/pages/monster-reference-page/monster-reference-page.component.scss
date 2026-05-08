@@ -5,7 +5,7 @@
 .monster-reference-page {
     display: grid;
     gap: 20px;
-    padding-bottom: 32px;
+    padding-bottom: clamp(16px, 4vh, 28px);
 }
 
 .panel {
