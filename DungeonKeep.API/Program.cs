@@ -359,6 +359,9 @@ static void EnsureMySqlLongTextColumnExists(DungeonKeepDbContext dbContext, stri
 
     if (dataType is null)
     {
+#pragma warning disable EF1002
+        dbContext.Database.ExecuteSqlRaw($"ALTER TABLE `{tableName}` ADD COLUMN `{columnName}` longtext NOT NULL DEFAULT '';");
+#pragma warning restore EF1002
         return;
     }
 
@@ -366,7 +369,6 @@ static void EnsureMySqlLongTextColumnExists(DungeonKeepDbContext dbContext, stri
     dbContext.Database.ExecuteSqlRaw($"ALTER TABLE `{tableName}` MODIFY COLUMN `{columnName}` longtext NOT NULL;");
 #pragma warning restore EF1002
 }
-
 static void EnsureNotificationsAndMessagesSchemaMySQL(DungeonKeepDbContext dbContext)
 {
     // IDs are char(36) (Pomelo default for Guid), datetimes are datetime(6).
