@@ -167,7 +167,8 @@
                 @if (canGoToNextStep()) {
                 <button type="button" class="primary-button" [disabled]="campaignIsSubmitting()" (click)="goToNextCampaignStep()">Continue</button>
                 } @else {
-                <button type="submit" class="primary-button" [class.is-loading]="campaignIsSubmitting()" [disabled]="(campaignSubmitAttempted() && hasCampaignValidationErrors()) || campaignIsSubmitting()">{{ campaignSubmitLabel() }}</button>
+                <button type="submit" class="primary-button" [class.is-loading]="campaignIsSubmitting()" [attr.aria-label]="campaignSubmitLabel()" [disabled]="(campaignSubmitAttempted() && hasCampaignValidationErrors()) || campaignIsSubmitting()"><span class="loading-label">{{ campaignSubmitLabel()
+                        }}</span></button>
                 }
             </div>
         </form>
