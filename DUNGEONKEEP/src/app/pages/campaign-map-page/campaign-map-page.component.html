@@ -1503,7 +1503,7 @@
                                     class="encounter-stat-input"
                                     [value]="entry.currentHp ?? ''"
                                     placeholder="—"
-                                    [readOnly]="!canEdit()"
+                                    [readOnly]="!canEdit() && !entry.isOwnToken"
                                     (change)="updateTokenCurrentHp(entry.token.id, $any($event.target).value)"
                                     aria-label="Current HP for {{ entry.name }}"
                                 />
@@ -1513,7 +1513,7 @@
                                     class="encounter-stat-input"
                                     [value]="entry.maxHp ?? ''"
                                     placeholder="—"
-                                    [readOnly]="!canEdit()"
+                                    [readOnly]="!canEdit() && !entry.isOwnToken"
                                     (change)="updateTokenMaxHp(entry.token.id, $any($event.target).value)"
                                     aria-label="Max HP for {{ entry.name }}"
                                 />
@@ -1525,7 +1525,7 @@
                                     class="encounter-stat-input"
                                     [value]="entry.armorClass ?? ''"
                                     placeholder="—"
-                                    [readOnly]="!canEdit()"
+                                    [readOnly]="!canEdit() && !entry.isOwnToken"
                                     (change)="updateTokenArmorClass(entry.token.id, $any($event.target).value)"
                                     aria-label="AC for {{ entry.name }}"
                                 />
@@ -1540,7 +1540,7 @@
                             (click)="toggleTokenEncounterHidden(entry.token.id)"
                             [title]="entry.isHiddenFromPlayers ? 'Reveal to players' : 'Hide from players'"
                         >
-                            <i class="fa-duotone fa-thin" [class.fa-eye]="entry.isHiddenFromPlayers" [class.fa-eye-slash]="!entry.isHiddenFromPlayers"></i>
+                            <i class="fa-duotone fa-thin" [class.fa-eye-slash]="entry.isHiddenFromPlayers" [class.fa-eye]="!entry.isHiddenFromPlayers"></i>
                             {{ entry.isHiddenFromPlayers ? 'Reveal' : 'Hide' }}
                         </button>
                         }

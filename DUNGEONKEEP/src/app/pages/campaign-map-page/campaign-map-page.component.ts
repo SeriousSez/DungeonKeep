@@ -1684,12 +1684,9 @@ export class CampaignMapPageComponent {
             return;
         }
 
-        const parsed = value.trim() === '' ? null : parseInt(value, 10);
-        const nextInitiative = parsed !== null && Number.isFinite(parsed) ? parsed : null;
-
         this.mutateMap((map) => {
             map.tokens = map.tokens.map((token) =>
-                token.id === tokenId ? { ...token, initiative: nextInitiative } : token
+                token.id === tokenId ? { ...token, initiative: this.parseNumericInput(value) } : token
             );
         });
         this.markDirty('Initiative updated.');
@@ -1714,51 +1711,51 @@ export class CampaignMapPageComponent {
     }
 
     updateTokenCurrentHp(tokenId: string, value: string): void {
-        if (!this.canEdit()) {
+        if (!this.canEdit() && !this.isOwnTokenById(tokenId)) {
             return;
         }
 
-        const parsed = value.trim() === '' ? null : parseInt(value, 10);
-        const nextHp = parsed !== null && Number.isFinite(parsed) ? parsed : null;
-
         this.mutateMap((map) => {
             map.tokens = map.tokens.map((token) =>
-                token.id === tokenId ? { ...token, currentHp: nextHp } : token
+                token.id === tokenId ? { ...token, currentHp: this.parseNumericInput(value) } : token
             );
         });
         this.markDirty('HP updated.');
     }
 
     updateTokenMaxHp(tokenId: string, value: string): void {
-        if (!this.canEdit()) {
+        if (!this.canEdit() && !this.isOwnTokenById(tokenId)) {
             return;
         }
 
-        const parsed = value.trim() === '' ? null : parseInt(value, 10);
-        const nextHp = parsed !== null && Number.isFinite(parsed) ? parsed : null;
-
         this.mutateMap((map) => {
             map.tokens = map.tokens.map((token) =>
-                token.id === tokenId ? { ...token, maxHp: nextHp } : token
+                token.id === tokenId ? { ...token, maxHp: this.parseNumericInput(value) } : token
             );
         });
         this.markDirty('Max HP updated.');
     }
 
     updateTokenArmorClass(tokenId: string, value: string): void {
-        if (!this.canEdit()) {
+        if (!this.canEdit() && !this.isOwnTokenById(tokenId)) {
             return;
         }
 
-        const parsed = value.trim() === '' ? null : parseInt(value, 10);
-        const nextAc = parsed !== null && Number.isFinite(parsed) ? parsed : null;
-
         this.mutateMap((map) => {
             map.tokens = map.tokens.map((token) =>
-                token.id === tokenId ? { ...token, armorClass: nextAc } : token
+                token.id === tokenId ? { ...token, armorClass: this.parseNumericInput(value) } : token
             );
         });
         this.markDirty('AC updated.');
+    }
+
+    private parseNumericInput(value: string): number | null {
+        if (value.trim() === '') {
+            return null;
+        }
+
+        const parsed = parseInt(value, 10);
+        return Number.isFinite(parsed) ? parsed : null;
     }
 
     private isOwnTokenById(tokenId: string): boolean {
