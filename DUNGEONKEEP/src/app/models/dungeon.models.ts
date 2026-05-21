@@ -118,6 +118,11 @@ export interface CampaignMapToken {
     assignedCharacterId?: string | null;
     moveRevision: number;
     worldNoteId?: string | null;
+    initiative?: number | null;
+    encounterHidden?: boolean;
+    currentHp?: number | null;
+    maxHp?: number | null;
+    armorClass?: number | null;
 }
 
 export interface CampaignMapDecoration {
