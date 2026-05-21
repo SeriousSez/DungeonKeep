@@ -30,6 +30,18 @@ type SettlementScale = 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis';
 type ParchmentLayout = 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular';
 type CavernLayout = 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes';
 
+interface EncounterEntry {
+    token: CampaignMapToken;
+    name: string;
+    initiative: number | null;
+    isCharacter: boolean;
+    armorClass: number | null;
+    currentHp: number | null;
+    maxHp: number | null;
+    isHiddenFromPlayers: boolean;
+    isOwnToken: boolean;
+}
+
 interface MapVisionMemoryEntryState {
     key: string;
     polygons: CampaignMapPoint[][];
@@ -361,6 +373,7 @@ export class CampaignMapPageComponent {
     readonly measureLine = signal<{ start: CampaignMapPoint; end: CampaignMapPoint } | null>(null);
     readonly measurePopoverOpen = signal(false);
     readonly voicePopoverOpen = signal(false);
+    readonly encounterPopoverOpen = signal(false);
     readonly leftToolbarOpen = signal(true);
     readonly hasUnsavedChanges = signal(false);
     readonly confirmAction = signal<MapConfirmAction>(null);
@@ -408,6 +421,60 @@ export class CampaignMapPageComponent {
     readonly voiceMicrophoneMuted = this.voiceChat.microphoneMuted;
     readonly voiceJoined = computed(() => this.voiceConnectionState() === 'connected');
     readonly voiceConnecting = computed(() => this.voiceConnectionState() === 'connecting');
+
+    readonly encounterEntries = computed<EncounterEntry[]>(() => {
+        const tokens = this.workingMap().tokens;
+        const characters = this.campaignCharacters();
+        const isOwner = this.canEdit();
+        const currentUserId = this.currentUserId();
+        const entries: EncounterEntry[] = [];
+
+        for (const token of tokens) {
+            const isHidden = token.encounterHidden === true;
+            const character = token.assignedCharacterId
+                ? characters.find((c) => c.id === token.assignedCharacterId) ?? null
+                : null;
+            const isCharacter = character !== null;
+            const isOwnToken = isCharacter
+                ? (character.ownerUserId === currentUserId)
+                : (token.assignedUserId === currentUserId);
+
+            if (!isOwner && isHidden && !isOwnToken) {
+                continue;
+            }
+
+            const armorClass = isCharacter
+                ? (token.armorClass ?? character.armorClass ?? null)
+                : (token.armorClass ?? null);
+            const currentHp = isCharacter
+                ? (token.currentHp ?? character.hitPoints ?? null)
+                : (token.currentHp ?? null);
+            const maxHp = isCharacter
+                ? (token.maxHp ?? character.maxHitPoints ?? null)
+                : (token.maxHp ?? null);
+
+            entries.push({
+                token,
+                name: token.name,
+                initiative: token.initiative ?? null,
+                isCharacter,
+                armorClass,
+                currentHp,
+                maxHp,
+                isHiddenFromPlayers: isHidden,
+                isOwnToken
+            });
+        }
+
+        return entries.sort((a, b) => {
+            const ai = a.initiative;
+            const bi = b.initiative;
+            if (ai === null && bi === null) return 0;
+            if (ai === null) return 1;
+            if (bi === null) return -1;
+            return bi - ai;
+        });
+    });
 
     readonly worldNoteOptions = computed<DropdownOption[]>(() => {
         const notes = this.selectedCampaign()?.worldNotes ?? [];
@@ -1590,6 +1657,7 @@ export class CampaignMapPageComponent {
         this.measurePopoverOpen.set(shouldOpen);
         if (shouldOpen) {
             this.voicePopoverOpen.set(false);
+            this.encounterPopoverOpen.set(false);
         }
     }
 
@@ -1598,7 +1666,118 @@ export class CampaignMapPageComponent {
         this.voicePopoverOpen.set(shouldOpen);
         if (shouldOpen) {
             this.measurePopoverOpen.set(false);
+            this.encounterPopoverOpen.set(false);
         }
+    }
+
+    toggleEncounterPopover(): void {
+        const shouldOpen = !this.encounterPopoverOpen();
+        this.encounterPopoverOpen.set(shouldOpen);
+        if (shouldOpen) {
+            this.measurePopoverOpen.set(false);
+            this.voicePopoverOpen.set(false);
+        }
+    }
+
+    updateTokenInitiative(tokenId: string, value: string): void {
+        if (!this.canEdit() && !this.isOwnTokenById(tokenId)) {
+            return;
+        }
+
+        const parsed = value.trim() === '' ? null : parseInt(value, 10);
+        const nextInitiative = parsed !== null && Number.isFinite(parsed) ? parsed : null;
+
+        this.mutateMap((map) => {
+            map.tokens = map.tokens.map((token) =>
+                token.id === tokenId ? { ...token, initiative: nextInitiative } : token
+            );
+        });
+        this.markDirty('Initiative updated.');
+    }
+
+    toggleTokenEncounterHidden(tokenId: string): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
+        const token = this.workingMap().tokens.find((t) => t.id === tokenId);
+        if (!token) {
+            return;
+        }
+
+        this.mutateMap((map) => {
+            map.tokens = map.tokens.map((t) =>
+                t.id === tokenId ? { ...t, encounterHidden: !t.encounterHidden } : t
+            );
+        });
+        this.markDirty('Encounter visibility updated.');
+    }
+
+    updateTokenCurrentHp(tokenId: string, value: string): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
+        const parsed = value.trim() === '' ? null : parseInt(value, 10);
+        const nextHp = parsed !== null && Number.isFinite(parsed) ? parsed : null;
+
+        this.mutateMap((map) => {
+            map.tokens = map.tokens.map((token) =>
+                token.id === tokenId ? { ...token, currentHp: nextHp } : token
+            );
+        });
+        this.markDirty('HP updated.');
+    }
+
+    updateTokenMaxHp(tokenId: string, value: string): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
+        const parsed = value.trim() === '' ? null : parseInt(value, 10);
+        const nextHp = parsed !== null && Number.isFinite(parsed) ? parsed : null;
+
+        this.mutateMap((map) => {
+            map.tokens = map.tokens.map((token) =>
+                token.id === tokenId ? { ...token, maxHp: nextHp } : token
+            );
+        });
+        this.markDirty('Max HP updated.');
+    }
+
+    updateTokenArmorClass(tokenId: string, value: string): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
+        const parsed = value.trim() === '' ? null : parseInt(value, 10);
+        const nextAc = parsed !== null && Number.isFinite(parsed) ? parsed : null;
+
+        this.mutateMap((map) => {
+            map.tokens = map.tokens.map((token) =>
+                token.id === tokenId ? { ...token, armorClass: nextAc } : token
+            );
+        });
+        this.markDirty('AC updated.');
+    }
+
+    private isOwnTokenById(tokenId: string): boolean {
+        const token = this.workingMap().tokens.find((t) => t.id === tokenId);
+        if (!token) {
+            return false;
+        }
+
+        const userId = this.currentUserId();
+        if (token.assignedUserId === userId) {
+            return true;
+        }
+
+        if (token.assignedCharacterId) {
+            const character = this.campaignCharacters().find((c) => c.id === token.assignedCharacterId);
+            return character?.ownerUserId === userId;
+        }
+
+        return false;
     }
 
     async joinVoiceChat(): Promise<void> {

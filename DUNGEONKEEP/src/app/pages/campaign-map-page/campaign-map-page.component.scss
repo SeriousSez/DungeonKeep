@@ -2689,6 +2689,191 @@ app-dropdown {
     color: var(--color-danger);
     font-size: 0.84rem;
 }
+
+// ── Encounter Tracker Popover ────────────────────────────────────────────
+
+.map-encounter-popover {
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: min(360px, calc(100vw - 92px));
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 16px;
+    border: 1px solid var(--panel-border);
+    background: color-mix(in srgb, var(--surface-raised-solid) 95%, transparent);
+    box-shadow: 0 16px 30px rgba(26, 19, 13, 0.22);
+    backdrop-filter: blur(14px);
+    font-size: 0.9rem;
+}
+
+.map-encounter-popover h3 {
+    font-size: 1.45rem;
+}
+
+.map-encounter-popover p {
+    font-size: 0.88rem;
+    margin: 0;
+}
+
+.encounter-entry-list {
+    display: grid;
+    gap: 8px;
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.encounter-entry {
+    display: grid;
+    gap: 6px;
+    padding: 10px;
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 88%, var(--accent-primary) 12%);
+}
+
+.encounter-entry--hidden {
+    opacity: 0.72;
+    border-style: dashed;
+}
+
+.encounter-entry-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.encounter-entry-name {
+    flex: 1;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.encounter-initiative-field {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.encounter-initiative-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-soft);
+}
+
+.encounter-initiative-input {
+    width: 46px;
+    padding: 4px 6px;
+    border: 1px solid var(--panel-border);
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 90%, transparent);
+    color: var(--text-main);
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-align: center;
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    &:focus {
+        outline: none;
+        border-color: color-mix(in srgb, var(--accent-primary) 55%, var(--panel-border) 45%);
+    }
+
+    &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+}
+
+.encounter-entry-stats {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-top: 4px;
+    border-top: 1px solid var(--panel-border);
+}
+
+.encounter-stat-field {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.encounter-stat-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-soft);
+    flex-shrink: 0;
+}
+
+.encounter-stat-input {
+    width: 40px;
+    padding: 3px 5px;
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 90%, transparent);
+    color: var(--text-main);
+    font: inherit;
+    font-size: 0.84rem;
+    text-align: center;
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    &:focus {
+        outline: none;
+        border-color: color-mix(in srgb, var(--accent-primary) 55%, var(--panel-border) 45%);
+    }
+
+    &[readonly] {
+        cursor: default;
+    }
+}
+
+.encounter-stat-sep {
+    color: var(--text-soft);
+    font-size: 0.8rem;
+}
+
+.encounter-visibility-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    justify-self: start;
+}
+
+.is-warning {
+    background: color-mix(in srgb, var(--color-warning, #c97f00) 18%, var(--surface-raised-solid) 82%);
+    border-color: color-mix(in srgb, var(--color-warning, #c97f00) 40%, var(--panel-border) 60%);
+    color: var(--color-warning, #c97f00);
+}
+
+.is-success {
+    background: color-mix(in srgb, var(--color-success, #2d7a4f) 18%, var(--surface-raised-solid) 82%);
+    border-color: color-mix(in srgb, var(--color-success, #2d7a4f) 40%, var(--panel-border) 60%);
+    color: var(--color-success, #2d7a4f);
+}
 .map-note-popup-backdrop {
     position: fixed;
     inset: 0;

@@ -1274,6 +1274,9 @@
                 <button type="button" class="map-toolbar-btn" [class.is-active]="voicePopoverOpen()" [title]="voiceJoined() ? 'Voice chat connected' : 'Voice chat disconnected'" (click)="toggleVoicePopover()">
                     <i class="fa-duotone fa-thin" [class.fa-headset]="voiceJoined()" [class.fa-headphones-simple]="!voiceJoined()"></i>
                 </button>
+                <button type="button" class="map-toolbar-btn" [class.is-active]="encounterPopoverOpen()" title="Encounter Tracker" (click)="toggleEncounterPopover()">
+                    <i class="fa-duotone fa-thin fa-swords"></i>
+                </button>
             </div>
             @if (measurePopoverOpen()) {
             <div class="map-measure-popover">
@@ -1451,6 +1454,98 @@
 
                 <div class="map-measure-popover-actions">
                     <button type="button" class="ghost-button danger-button" (click)="leaveVoiceChat()">Leave Voice</button>
+                </div>
+                }
+            </div>
+            }
+            @if (encounterPopoverOpen()) {
+            <div class="map-encounter-popover">
+                <div class="section-heading compact-heading map-measure-popover-header">
+                    <h3>Encounter</h3>
+                    <button type="button" class="ghost-button compact-action" (click)="toggleEncounterPopover()" aria-label="Close encounter tracker">
+                        <i class="fa-duotone fa-thin fa-chevrons-left"></i>
+                    </button>
+                </div>
+
+                @if (encounterEntries().length === 0) {
+                <p class="sidebar-note">No tokens on the map yet. Place character, NPC, or monster tokens to track the encounter.</p>
+                } @else {
+                <div class="encounter-entry-list">
+                    @for (entry of encounterEntries(); track entry.token.id) {
+                    <div class="encounter-entry" [class.encounter-entry--hidden]="entry.isHiddenFromPlayers && canEdit()">
+                        <div class="encounter-entry-main">
+                            <label class="encounter-initiative-field">
+                                <span class="encounter-initiative-label">Init</span>
+                                <input
+                                    type="number"
+                                    class="encounter-initiative-input"
+                                    [value]="entry.initiative ?? ''"
+                                    placeholder="—"
+                                    [disabled]="!canEdit() && !entry.isOwnToken"
+                                    (change)="updateTokenInitiative(entry.token.id, $any($event.target).value)"
+                                    aria-label="Initiative for {{ entry.name }}"
+                                />
+                            </label>
+                            <span class="encounter-entry-name">{{ entry.name }}</span>
+                            @if (!entry.isCharacter) {
+                            <span class="status-chip" [class.is-warning]="entry.isHiddenFromPlayers" [class.is-success]="!entry.isHiddenFromPlayers">
+                                {{ entry.isHiddenFromPlayers ? 'Hidden' : 'Revealed' }}
+                            </span>
+                            }
+                        </div>
+
+                        @if (canEdit() || (entry.isOwnToken && entry.isCharacter)) {
+                        <div class="encounter-entry-stats">
+                            <label class="encounter-stat-field">
+                                <span class="encounter-stat-label">HP</span>
+                                <input
+                                    type="number"
+                                    class="encounter-stat-input"
+                                    [value]="entry.currentHp ?? ''"
+                                    placeholder="—"
+                                    [readOnly]="!canEdit()"
+                                    (change)="updateTokenCurrentHp(entry.token.id, $any($event.target).value)"
+                                    aria-label="Current HP for {{ entry.name }}"
+                                />
+                                <span class="encounter-stat-sep">/</span>
+                                <input
+                                    type="number"
+                                    class="encounter-stat-input"
+                                    [value]="entry.maxHp ?? ''"
+                                    placeholder="—"
+                                    [readOnly]="!canEdit()"
+                                    (change)="updateTokenMaxHp(entry.token.id, $any($event.target).value)"
+                                    aria-label="Max HP for {{ entry.name }}"
+                                />
+                            </label>
+                            <label class="encounter-stat-field">
+                                <span class="encounter-stat-label">AC</span>
+                                <input
+                                    type="number"
+                                    class="encounter-stat-input"
+                                    [value]="entry.armorClass ?? ''"
+                                    placeholder="—"
+                                    [readOnly]="!canEdit()"
+                                    (change)="updateTokenArmorClass(entry.token.id, $any($event.target).value)"
+                                    aria-label="AC for {{ entry.name }}"
+                                />
+                            </label>
+                        </div>
+                        }
+
+                        @if (canEdit() && !entry.isCharacter) {
+                        <button
+                            type="button"
+                            class="encounter-visibility-btn ghost-button compact-action"
+                            (click)="toggleTokenEncounterHidden(entry.token.id)"
+                            [title]="entry.isHiddenFromPlayers ? 'Reveal to players' : 'Hide from players'"
+                        >
+                            <i class="fa-duotone fa-thin" [class.fa-eye]="entry.isHiddenFromPlayers" [class.fa-eye-slash]="!entry.isHiddenFromPlayers"></i>
+                            {{ entry.isHiddenFromPlayers ? 'Reveal' : 'Hide' }}
+                        </button>
+                        }
+                    </div>
+                    }
                 </div>
                 }
             </div>
