@@ -249,6 +249,11 @@
                     } @else if (npcTokenOptions().length === 1) {
                     <p class="sidebar-note">NPCs will appear here once they are part of this campaign.</p>
                     }
+                    <label class="field-label" for="map-token-monster">Monster token</label>
+                    <app-dropdown id="map-token-monster" ariaLabel="Monster token" [value]="tokenPlacementMonsterId()" [options]="monsterTokenOptions()" [minWidth]="220" [disabled]="isEditorLocked()" (changed)="updateTokenPlacementMonster($event)"></app-dropdown>
+                    @if (monsterTokenOptions().length === 1) {
+                    <p class="sidebar-note">Create or import monsters in Monster Library to place monster tokens from your collection.</p>
+                    }
                     <label class="field-label" for="map-token-upload">Token art</label>
                     <input id="map-token-upload" class="map-file-input" type="file" accept="image/*" [disabled]="isEditorLocked()" (change)="handleTokenUpload($event)" />
                     @if (hasPendingTokenPlacement()) {
@@ -260,7 +265,7 @@
                         }
                         <div class="token-upload-copy">
                             <strong>{{ tokenPlacementNameDraft().trim() || 'Token' }}</strong>
-                            <span>{{ tokenPlacementAssignedCharacterId() ? 'Linked to a character and ready to place' : tokenPlacementNpcId() ? 'Linked to an NPC and ready to place' : 'Ready to place on the board' }}</span>
+                            <span>{{ tokenPlacementAssignedCharacterId() ? 'Linked to a character and ready to place' : tokenPlacementNpcId() ? 'Linked to an NPC and ready to place' : tokenPlacementMonsterId() ? 'Monster token ready to place' : 'Ready to place on the board' }}</span>
                         </div>
                     </div>
                     }
@@ -273,7 +278,7 @@
                     @if (tokenUploadFeedback()) {
                     <p class="sidebar-note">{{ tokenUploadFeedback() }}</p>
                     } @else {
-                    <p class="sidebar-note">Choose a character portrait or upload token art, then click the board to place it. You can keep placing the same token until you clear it.</p>
+                    <p class="sidebar-note">Choose a character, NPC, or monster and then click the board to place it. Rules monsters will auto-generate portrait art when needed and save it for later placements.</p>
                     }
                 </div>
                 }
@@ -564,7 +569,6 @@
                     @if (canModify()) {
                     <button type="button" class="ghost-button compact-action" [disabled]="hasUnsavedChanges() || saveState() === 'saving' || isAiArtGenerating() || isRefreshingCampaignData()" (click)="refreshMapData()">{{ isRefreshingCampaignData() ? 'Refreshing...' : 'Refresh Data' }}</button>
                     <button type="button" class="primary-button compact-action" [disabled]="!hasUnsavedChanges() || saveState() === 'saving' || isAiArtGenerating()" (click)="saveMap()">{{ saveState() === 'saving' ? 'Saving...' : 'Save Map' }}</button>
-                    <a [routerLink]="['/campaigns', campaign.id, 'edit']" class="primary-button compact-action">Edit Campaign</a>
                     }
                     @if (shouldShowSaveStatus()) {
                     <span class="status-chip" [class.is-error]="saveState() === 'error'" [class.is-saving]="saveState() === 'saving' || isAiArtGenerating()">{{ saveStatusText() }}</span>
@@ -621,24 +625,24 @@
                         <polyline class="map-stroke-preview" [class.map-stroke-preview--wall]="ctrlPolylineKind() === 'wall'" [attr.points]="ctrlPolylineRenderPoints()" [attr.stroke]="ctrlPolylineColor()" [attr.stroke-width]="ctrlPolylineWidth()" fill="none" stroke-linecap="round"
                             stroke-linejoin="round"></polyline>
                         }
-                        @if (hasMeasureLine() && measureLinePoints()) {
+                        @if (measureEnabled() && hasMeasureLine() && measureLinePoints()) {
                         <polyline class="map-measure-line" [attr.points]="measureLinePoints()" fill="none" stroke-linecap="round" stroke-linejoin="round"></polyline>
                         }
-                        @if (hasMeasureLine() && measureCircle(); as circle) {
+                        @if (measureEnabled() && hasMeasureLine() && measureCircle(); as circle) {
                         <circle class="map-measure-circle" [attr.cx]="circle.cx" [attr.cy]="circle.cy" [attr.r]="circle.radius"></circle>
                         }
-                        @if (hasMeasureLine() && measureSquarePoints()) {
+                        @if (measureEnabled() && hasMeasureLine() && measureSquarePoints()) {
                         <polygon class="map-measure-square" [attr.points]="measureSquarePoints()"></polygon>
                         }
-                        @if (hasMeasureLine() && measureConePoints()) {
+                        @if (measureEnabled() && hasMeasureLine() && measureConePoints()) {
                         <polygon class="map-measure-cone" [attr.points]="measureConePoints()"></polygon>
                         }
-                        @if (hasMeasureLine() && measureBeamPoints()) {
+                        @if (measureEnabled() && hasMeasureLine() && measureBeamPoints()) {
                         <polygon class="map-measure-beam" [attr.points]="measureBeamPoints()"></polygon>
                         }
                     </svg>
 
-                    @if (hasMeasureLine() && measureLabelPoint(); as measurePoint) {
+                    @if (measureEnabled() && hasMeasureLine() && measureLabelPoint(); as measurePoint) {
                     <div class="map-measure-label" [style.left.%]="measurePoint.x * 100" [style.top.%]="measurePoint.y * 100">
                         <strong>{{ measureDistanceFeet() }} ft</strong>
                         <span>{{ measureDistanceSquaresRounded() }} sq</span>
@@ -925,30 +929,30 @@
                     <polyline class="map-wall-line" [attr.points]="formatStrokePoints(wall.points)" [attr.stroke-width]="wall.width" fill="none" stroke-linecap="round" stroke-linejoin="round"></polyline>
                     }
                     }
-                    @if (hasMeasureLine() && measureLinePoints()) {
+                    @if (measureEnabled() && hasMeasureLine() && measureLinePoints()) {
                     <polyline class="map-measure-line" [attr.points]="measureLinePoints()" fill="none" stroke-linecap="round" stroke-linejoin="round"></polyline>
                     }
-                    @if (hasMeasureLine() && measureCircle(); as circle) {
+                    @if (measureEnabled() && hasMeasureLine() && measureCircle(); as circle) {
                     <circle class="map-measure-circle" [attr.cx]="circle.cx" [attr.cy]="circle.cy" [attr.r]="circle.radius"></circle>
                     }
-                    @if (hasMeasureLine() && measureSquarePoints()) {
+                    @if (measureEnabled() && hasMeasureLine() && measureSquarePoints()) {
                     <polygon class="map-measure-square" [attr.points]="measureSquarePoints()"></polygon>
                     }
-                    @if (hasMeasureLine() && measureConePoints()) {
+                    @if (measureEnabled() && hasMeasureLine() && measureConePoints()) {
                     <polygon class="map-measure-cone" [attr.points]="measureConePoints()"></polygon>
                     }
-                    @if (hasMeasureLine() && measureConeRoundedPath()) {
+                    @if (measureEnabled() && hasMeasureLine() && measureConeRoundedPath()) {
                     <path class="map-measure-cone" [attr.d]="measureConeRoundedPath()"></path>
                     }
-                    @if (hasMeasureLine() && measureConeRoundedPath()) {
+                    @if (measureEnabled() && hasMeasureLine() && measureConeRoundedPath()) {
                     <path class="map-measure-cone" [attr.d]="measureConeRoundedPath()"></path>
                     }
-                    @if (hasMeasureLine() && measureBeamPoints()) {
+                    @if (measureEnabled() && hasMeasureLine() && measureBeamPoints()) {
                     <polygon class="map-measure-beam" [attr.points]="measureBeamPoints()"></polygon>
                     }
                 </svg>
 
-                @if (hasMeasureLine() && measureLabelPoint(); as measurePoint) {
+                @if (measureEnabled() && hasMeasureLine() && measureLabelPoint(); as measurePoint) {
                 <div class="map-measure-label" [style.left.%]="measurePoint.x * 100" [style.top.%]="measurePoint.y * 100">
                     <strong>{{ measureDistanceFeet() }} ft</strong>
                     <span>{{ measureDistanceSquaresRounded() }} sq</span>
@@ -1476,15 +1480,8 @@
                         <div class="encounter-entry-main">
                             <label class="encounter-initiative-field">
                                 <span class="encounter-initiative-label">Init</span>
-                                <input
-                                    type="number"
-                                    class="encounter-initiative-input"
-                                    [value]="entry.initiative ?? ''"
-                                    placeholder="—"
-                                    [disabled]="!canEdit() && !entry.isOwnToken"
-                                    (change)="updateTokenInitiative(entry.token.id, $any($event.target).value)"
-                                    aria-label="Initiative for {{ entry.name }}"
-                                />
+                                <input type="number" class="encounter-initiative-input" [value]="entry.initiative ?? ''" placeholder="—" [disabled]="!canEdit() && !entry.isOwnToken" (change)="updateTokenInitiative(entry.token.id, $any($event.target).value)"
+                                    aria-label="Initiative for {{ entry.name }}" />
                             </label>
                             <span class="encounter-entry-name">{{ entry.name }}</span>
                             @if (!entry.isCharacter) {
@@ -1498,48 +1495,19 @@
                         <div class="encounter-entry-stats">
                             <label class="encounter-stat-field">
                                 <span class="encounter-stat-label">HP</span>
-                                <input
-                                    type="number"
-                                    class="encounter-stat-input"
-                                    [value]="entry.currentHp ?? ''"
-                                    placeholder="—"
-                                    [readOnly]="!canEdit() && !entry.isOwnToken"
-                                    (change)="updateTokenCurrentHp(entry.token.id, $any($event.target).value)"
-                                    aria-label="Current HP for {{ entry.name }}"
-                                />
+                                <input type="number" class="encounter-stat-input" [value]="entry.currentHp ?? ''" placeholder="—" [readOnly]="!canEdit() && !entry.isOwnToken" (change)="updateTokenCurrentHp(entry.token.id, $any($event.target).value)" aria-label="Current HP for {{ entry.name }}" />
                                 <span class="encounter-stat-sep">/</span>
-                                <input
-                                    type="number"
-                                    class="encounter-stat-input"
-                                    [value]="entry.maxHp ?? ''"
-                                    placeholder="—"
-                                    [readOnly]="!canEdit() && !entry.isOwnToken"
-                                    (change)="updateTokenMaxHp(entry.token.id, $any($event.target).value)"
-                                    aria-label="Max HP for {{ entry.name }}"
-                                />
+                                <input type="number" class="encounter-stat-input" [value]="entry.maxHp ?? ''" placeholder="—" [readOnly]="!canEdit() && !entry.isOwnToken" (change)="updateTokenMaxHp(entry.token.id, $any($event.target).value)" aria-label="Max HP for {{ entry.name }}" />
                             </label>
                             <label class="encounter-stat-field">
                                 <span class="encounter-stat-label">AC</span>
-                                <input
-                                    type="number"
-                                    class="encounter-stat-input"
-                                    [value]="entry.armorClass ?? ''"
-                                    placeholder="—"
-                                    [readOnly]="!canEdit() && !entry.isOwnToken"
-                                    (change)="updateTokenArmorClass(entry.token.id, $any($event.target).value)"
-                                    aria-label="AC for {{ entry.name }}"
-                                />
+                                <input type="number" class="encounter-stat-input" [value]="entry.armorClass ?? ''" placeholder="—" [readOnly]="!canEdit() && !entry.isOwnToken" (change)="updateTokenArmorClass(entry.token.id, $any($event.target).value)" aria-label="AC for {{ entry.name }}" />
                             </label>
                         </div>
                         }
 
                         @if (canEdit() && !entry.isCharacter) {
-                        <button
-                            type="button"
-                            class="encounter-visibility-btn ghost-button compact-action"
-                            (click)="toggleTokenEncounterHidden(entry.token.id)"
-                            [title]="entry.isHiddenFromPlayers ? 'Reveal to players' : 'Hide from players'"
-                        >
+                        <button type="button" class="encounter-visibility-btn ghost-button compact-action" (click)="toggleTokenEncounterHidden(entry.token.id)" [title]="entry.isHiddenFromPlayers ? 'Reveal to players' : 'Hide from players'">
                             <i class="fa-duotone fa-thin" [class.fa-eye-slash]="entry.isHiddenFromPlayers" [class.fa-eye]="!entry.isHiddenFromPlayers"></i>
                             {{ entry.isHiddenFromPlayers ? 'Reveal' : 'Hide' }}
                         </button>

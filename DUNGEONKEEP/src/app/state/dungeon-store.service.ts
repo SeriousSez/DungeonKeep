@@ -320,10 +320,14 @@ export class DungeonStoreService {
             const existingIndex = campaigns.findIndex((campaign) => campaign.id === updated.id);
             const existingCampaign = existingIndex >= 0 ? campaigns[existingIndex] : null;
             const mapped = this.mapCampaignFromApi(updated, partyCharacterIds);
+            const incomingMapsAreCompact = mapped.maps.length > 0 && mapped.maps.every((map) => this.isCompactMapBoardPayload(map));
             const normalized = existingCampaign
                 ? {
                     ...mapped,
-                    currentUserRole: existingCampaign.currentUserRole ?? mapped.currentUserRole
+                    currentUserRole: existingCampaign.currentUserRole ?? mapped.currentUserRole,
+                    maps: incomingMapsAreCompact ? existingCampaign.maps : mapped.maps,
+                    map: incomingMapsAreCompact ? existingCampaign.map : mapped.map,
+                    activeMapId: incomingMapsAreCompact ? existingCampaign.activeMapId : mapped.activeMapId
                 }
                 : mapped;
 
@@ -337,6 +341,20 @@ export class DungeonStoreService {
             next[existingIndex] = normalized;
             return next;
         });
+    }
+
+    private isCompactMapBoardPayload(map: CampaignMapBoard): boolean {
+        return map.backgroundImageUrl.trim().length === 0
+            && map.strokes.length === 0
+            && map.walls.length === 0
+            && map.icons.length === 0
+            && map.tokens.length === 0
+            && map.decorations.length === 0
+            && map.labels.length === 0
+            && map.layers.rivers.length === 0
+            && map.layers.mountainChains.length === 0
+            && map.layers.forestBelts.length === 0
+            && map.visionMemory.length === 0;
     }
 
     applyCampaignMapTokenMoved(event: ApiCampaignMapTokenMovedDto): void {
@@ -842,7 +860,23 @@ export class DungeonStoreService {
 
         try {
             const updated = await this.api.updateCampaignMap(campaignId, this.mapCampaignMapLibraryToApi(payload));
-            this.replaceCampaignFromApi(campaignId, updated);
+
+            // The update endpoint returns compact map boards for non-active maps.
+            // Rehydrate the response with the local just-saved library so token lists
+            // do not collapse while the follow-up library refresh is in flight.
+            const library = this.mapCampaignMapLibraryToApi(payload);
+            const activeBoard = library.maps.find((map) => map.id === library.activeMapId) ?? library.maps[0];
+            const activeMap = activeBoard
+                ? (({ id: _id, name: _name, ...mapPayload }) => mapPayload)(activeBoard)
+                : updated.map;
+
+            this.replaceCampaignFromApi(campaignId, {
+                ...updated,
+                activeMapId: library.activeMapId,
+                map: activeMap,
+                maps: library.maps
+            });
+
             await this.refreshCampaignMapLibrary(campaignId);
             return true;
         } catch {
@@ -1728,8 +1762,21 @@ export class DungeonStoreService {
                 assignedUserId: token.assignedUserId?.trim() || null,
                 assignedCharacterId: token.assignedCharacterId?.trim() || null,
                 moveRevision: this.normalizeMapTokenMoveRevision(token.moveRevision),
-                worldNoteId: token.worldNoteId ?? null
-            })).filter((token) => !!token.imageUrl),
+                worldNoteId: token.worldNoteId ?? null,
+                initiative: typeof token.initiative === 'number' && Number.isFinite(token.initiative)
+                    ? Math.trunc(token.initiative)
+                    : null,
+                encounterHidden: token.encounterHidden === true,
+                currentHp: typeof token.currentHp === 'number' && Number.isFinite(token.currentHp)
+                    ? Math.max(0, Math.trunc(token.currentHp))
+                    : null,
+                maxHp: typeof token.maxHp === 'number' && Number.isFinite(token.maxHp)
+                    ? Math.max(0, Math.trunc(token.maxHp))
+                    : null,
+                armorClass: typeof token.armorClass === 'number' && Number.isFinite(token.armorClass)
+                    ? Math.max(0, Math.trunc(token.armorClass))
+                    : null
+            })),
             decorations: (map?.decorations ?? []).map((decoration) => ({
                 id: decoration.id,
                 type: this.normalizeMapDecorationType(decoration.type),
@@ -1860,8 +1907,21 @@ export class DungeonStoreService {
                 assignedUserId: token.assignedUserId?.trim() || null,
                 assignedCharacterId: token.assignedCharacterId?.trim() || null,
                 moveRevision: this.normalizeMapTokenMoveRevision(token.moveRevision),
-                worldNoteId: token.worldNoteId ?? null
-            })).filter((token) => !!token.imageUrl),
+                worldNoteId: token.worldNoteId ?? null,
+                initiative: typeof token.initiative === 'number' && Number.isFinite(token.initiative)
+                    ? Math.trunc(token.initiative)
+                    : null,
+                encounterHidden: token.encounterHidden === true,
+                currentHp: typeof token.currentHp === 'number' && Number.isFinite(token.currentHp)
+                    ? Math.max(0, Math.trunc(token.currentHp))
+                    : null,
+                maxHp: typeof token.maxHp === 'number' && Number.isFinite(token.maxHp)
+                    ? Math.max(0, Math.trunc(token.maxHp))
+                    : null,
+                armorClass: typeof token.armorClass === 'number' && Number.isFinite(token.armorClass)
+                    ? Math.max(0, Math.trunc(token.armorClass))
+                    : null
+            })),
             decorations: map.decorations.map((decoration) => ({
                 id: decoration.id,
                 type: this.normalizeMapDecorationType(decoration.type),

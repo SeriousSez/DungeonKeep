@@ -15,6 +15,7 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
     public DbSet<DirectMessageThread> DirectMessageThreads => Set<DirectMessageThread>();
     public DbSet<DirectMessageParticipant> DirectMessageParticipants => Set<DirectMessageParticipant>();
     public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
+    public DbSet<MonsterPortraitOverride> MonsterPortraitOverrides => Set<MonsterPortraitOverride>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -228,6 +229,16 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
                 .WithMany()
                 .HasForeignKey(m => m.SenderUserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MonsterPortraitOverride>(entity =>
+        {
+            entity.HasKey(entry => entry.Slug);
+            entity.Property(entry => entry.Slug).HasMaxLength(191).IsRequired();
+            entity.Property(entry => entry.ImageUrl).HasColumnType("longtext").IsRequired();
+            entity.Property(entry => entry.OriginalImageUrl).HasColumnType("longtext").IsRequired();
+            entity.Property(entry => entry.UpdatedAtUtc).IsRequired();
+            entity.Property(entry => entry.UpdatedByUserId);
         });
     }
 }

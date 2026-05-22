@@ -91,6 +91,7 @@ export class CampaignRealtimeService {
 
         connection.on('CampaignMapUpdated', (campaign: ApiCampaignDto) => {
             this.store.applyCampaignRealtimeUpdate(campaign);
+            void this.store.refreshCampaignMapLibrary(campaign.id);
         });
 
         connection.on('CampaignActiveMapChanged', (event: CampaignActiveMapChangedEvent) => {

@@ -38,6 +38,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICharacterRepository, CharacterRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IMessageRepository, MessageRepository>();
+        services.AddScoped<IMonsterPortraitRepository, MonsterPortraitRepository>();
 
         if (emailOptions.IsEnabled)
         {

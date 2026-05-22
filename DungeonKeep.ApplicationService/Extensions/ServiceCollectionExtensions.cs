@@ -15,6 +15,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICharacterService, CharacterService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IMessageService, MessageService>();
+        services.AddScoped<IMonsterPortraitService, MonsterPortraitService>();
 
         services.AddValidatorsFromAssemblyContaining<SignupRequestValidator>();
 

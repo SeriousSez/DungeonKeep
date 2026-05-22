@@ -235,7 +235,12 @@ public sealed record CampaignMapTokenDto(
     Guid? AssignedUserId,
     Guid? AssignedCharacterId,
     long MoveRevision,
-    string? WorldNoteId = null
+    string? WorldNoteId = null,
+    int? Initiative = null,
+    bool? EncounterHidden = null,
+    int? CurrentHp = null,
+    int? MaxHp = null,
+    int? ArmorClass = null
 );
 
 public sealed record CampaignMapTokenMovedDto(

@@ -92,6 +92,14 @@ export interface UserLibrariesDto {
     monsterReferenceJson: string;
 }
 
+export interface ApiMonsterPortraitOverrideDto {
+    slug: string;
+    imageUrl: string;
+    originalImageUrl: string;
+    updatedAtUtc: string;
+    updatedByUserId: string | null;
+}
+
 export interface ApiCampaignNpcRelationshipDto {
     id: string;
     targetNpcId: string;
@@ -226,6 +234,11 @@ export interface ApiCampaignMapTokenDto {
     assignedCharacterId?: string | null;
     moveRevision: number;
     worldNoteId?: string | null;
+    initiative?: number | null;
+    encounterHidden?: boolean | null;
+    currentHp?: number | null;
+    maxHp?: number | null;
+    armorClass?: number | null;
 }
 
 export interface ApiCampaignMapTokenMovedDto {
@@ -1251,6 +1264,18 @@ export class DungeonApiService {
 
     async saveUserMonsterReference(json: string): Promise<UserLibrariesDto> {
         return await firstValueFrom(this.http.put<UserLibrariesDto>(`${this.baseUrl}/account/monster-reference`, { json }));
+    }
+
+    async getMonsterPortraitOverrides(): Promise<ApiMonsterPortraitOverrideDto[]> {
+        return await firstValueFrom(this.http.get<ApiMonsterPortraitOverrideDto[]>(`${this.baseUrl}/monster-portraits`));
+    }
+
+    async saveMonsterPortraitOverride(payload: {
+        slug: string;
+        imageUrl: string;
+        originalImageUrl: string;
+    }): Promise<ApiMonsterPortraitOverrideDto> {
+        return await firstValueFrom(this.http.put<ApiMonsterPortraitOverrideDto>(`${this.baseUrl}/monster-portraits`, payload));
     }
 
     async getNotifications(): Promise<ApiNotificationDto[]> {

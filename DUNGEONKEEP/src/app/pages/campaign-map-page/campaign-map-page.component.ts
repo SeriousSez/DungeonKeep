@@ -8,11 +8,16 @@ import { TokenImageCropModalComponent } from '../../components/token-image-crop-
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
 import { mergeCampaignNpcSources } from '../../data/campaign-npc.helpers';
 import { loadCampaignNpcDrafts } from '../../data/campaign-npc.storage';
+import { monsterCatalog } from '../../data/monster-catalog.generated';
+import { sanitizeCustomMonster } from '../../data/monster-library.helpers';
 import { CampaignNpc } from '../../models/campaign-npc.models';
 import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelFontFamily, CampaignMapLabelTone, CampaignMapPoint, CampaignMapStroke, CampaignMapToken, CampaignMapWall, CampaignTone, Character, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS } from '../../models/dungeon.models';
+import { CustomMonster, MonsterCatalogEntry } from '../../models/monster-reference.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { CampaignMapTokenMovedEvent, CampaignMapVisionUpdatedEvent, CampaignRealtimeService } from '../../state/campaign-realtime.service';
+import { DungeonApiService } from '../../state/dungeon-api.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
+import { extractApiError } from '../../state/extract-api-error';
 import { SessionService } from '../../state/session.service';
 import { VoiceChatService, VoiceParticipant } from '../../state/voice-chat.service';
 
@@ -108,6 +113,28 @@ interface MapEditorHistoryEntry {
     activeMapId: string;
 }
 
+interface RulesMonsterPortraitEntry {
+    slug: string;
+    imageUrl: string;
+    originalImageUrl: string;
+    updatedAt: string;
+}
+
+interface TokenMonsterPreset {
+    value: string;
+    source: 'rules' | 'custom';
+    slug: string;
+    name: string;
+    size: string;
+    challengeRating: string;
+    creatureType: string;
+    creatureCategory: string;
+    alignment: string;
+    hitPoints: number | null;
+    armorClass: number | null;
+    imageUrl: string;
+}
+
 type MapLabelCatalog = Record<CampaignMapIconType, readonly string[]>;
 
 const TOKEN_SIZE_OPTIONS: DropdownOption[] = [
@@ -180,6 +207,8 @@ const CAVERN_LAYOUT_OPTIONS: DropdownOption[] = [
     { value: 'RuinedUndercity', label: 'Ruined Undercity', description: 'Buried structures, collapsed streets, and ancient subterranean ruins.' },
     { value: 'LavaTubes', label: 'Lava Tubes', description: 'Volcanic channels, magma scars, and heat-cut cavern paths.' }
 ];
+
+const normalizedRulesMonsterCatalog = monsterCatalog.map((entry) => normalizeRulesMonsterEntry(entry));
 
 const MAP_ICON_OPTIONS: MapIconOption[] = [
     { type: 'Keep', label: 'Keep', description: 'Strongholds, castles, and bastions.', iconClass: 'fa-duotone fa-thin fa-chess-rook' },
@@ -291,6 +320,7 @@ export class CampaignMapPageComponent {
     private static readonly MAP_OVERLAY_HINT_LUMINANCE_THRESHOLD = 0.58;
 
     readonly store = inject(DungeonStoreService);
+    private readonly api = inject(DungeonApiService);
     private readonly session = inject(SessionService);
     private readonly campaignRealtime = inject(CampaignRealtimeService);
     private readonly voiceChat = inject(VoiceChatService);
@@ -326,6 +356,8 @@ export class CampaignMapPageComponent {
     readonly tokenAssignmentDraft = signal('none');
     readonly tokenPlacementCharacterId = signal('');
     readonly tokenPlacementNpcId = signal('');
+    readonly tokenPlacementMonsterId = signal('');
+    readonly sharedMonsterPortraitOverrides = signal<RulesMonsterPortraitEntry[]>([]);
     readonly tokenPlacementAssignedUserId = signal<string | null>(null);
     readonly tokenPlacementAssignedCharacterId = signal<string | null>(null);
     readonly tokenPlacementNameDraft = signal('Token');
@@ -333,6 +365,7 @@ export class CampaignMapPageComponent {
     readonly tokenPlacementImageUrl = signal('');
     readonly tokenPlacementSize = signal(1);
     readonly tokenUploadFeedback = signal('');
+    readonly tokenMonsterPortraitGenerating = signal(false);
     readonly pendingTokenImageLoadFailed = signal(false);
     readonly failedTokenImages = signal<Record<string, string>>({});
     readonly tokenCropModalOpen = signal(false);
@@ -660,6 +693,63 @@ export class CampaignMapPageComponent {
 
         return mergeCampaignNpcSources(campaign.npcs, campaign.campaignNpcs ?? [], loadCampaignNpcDrafts(campaignId) ?? []);
     });
+    readonly monsterLibrary = computed<CustomMonster[]>(() => (this.store.userMonsterLibrary() ?? [])
+        .map((entry) => sanitizeCustomMonster(entry as CustomMonster))
+        .filter((monster) => monster.name.trim().length > 0)
+        .sort((left, right) => left.name.localeCompare(right.name)));
+    readonly rulesMonsterPortraitEntries = computed<RulesMonsterPortraitEntry[]>(() => this.sharedMonsterPortraitOverrides());
+    readonly rulesMonsterPortraitMap = computed<Record<string, string>>(() => {
+        const bySlug: Record<string, string> = {};
+
+        for (const entry of this.rulesMonsterPortraitEntries()) {
+            bySlug[entry.slug] = entry.imageUrl;
+        }
+
+        return bySlug;
+    });
+    readonly tokenMonsterPresets = computed<TokenMonsterPreset[]>(() => {
+        const portraitsBySlug = this.rulesMonsterPortraitMap();
+        const customPresets = this.monsterLibrary().map((monster) => ({
+            value: `custom:${monster.id}`,
+            source: 'custom' as const,
+            slug: monster.slug,
+            name: monster.name,
+            size: monster.size,
+            challengeRating: monster.challengeRating,
+            creatureType: monster.creatureType,
+            creatureCategory: monster.creatureCategory,
+            alignment: monster.alignment,
+            hitPoints: monster.hitPoints,
+            armorClass: monster.armorClass,
+            imageUrl: ''
+        }));
+
+        const rulesPresets = normalizedRulesMonsterCatalog.map((monster) => ({
+            value: `rules:${monster.slug}`,
+            source: 'rules' as const,
+            slug: monster.slug,
+            name: monster.name,
+            size: monster.size,
+            challengeRating: monster.challengeRating,
+            creatureType: monster.creatureType,
+            creatureCategory: monster.creatureCategory,
+            alignment: monster.alignment,
+            hitPoints: monster.hitPoints,
+            armorClass: monster.armorClass,
+            imageUrl: portraitsBySlug[monster.slug] ?? ''
+        }));
+
+        return [...customPresets, ...rulesPresets];
+    });
+    readonly tokenMonsterPresetByValue = computed(() => {
+        const map = new Map<string, TokenMonsterPreset>();
+
+        for (const preset of this.tokenMonsterPresets()) {
+            map.set(preset.value, preset);
+        }
+
+        return map;
+    });
     readonly characterTokenOptions = computed<DropdownOption[]>(() => {
         const options: DropdownOption[] = [
             {
@@ -677,6 +767,25 @@ export class CampaignMapPageComponent {
                     ? `${character.ownerDisplayName} will automatically control this token.`
                     : 'This token will stay linked to the selected character.',
                 group: 'Character Portraits'
+            } satisfies DropdownOption)));
+
+        return options;
+    });
+    readonly monsterTokenOptions = computed<DropdownOption[]>(() => {
+        const options: DropdownOption[] = [
+            {
+                value: '',
+                label: 'Choose a monster',
+                description: 'Choose from your custom monsters or the rules compendium.'
+            }
+        ];
+
+        options.push(...this.tokenMonsterPresets()
+            .map((monster) => ({
+                value: monster.value,
+                label: monster.name,
+                description: `CR ${monster.challengeRating || '—'} • ${monster.creatureType || monster.creatureCategory || 'Monster'}`,
+                group: monster.source === 'rules' ? 'Rules Compendium' : 'Monster Library'
             } satisfies DropdownOption)));
 
         return options;
@@ -874,6 +983,7 @@ export class CampaignMapPageComponent {
         this.tokenPlacementImageUrl().trim()
         || this.tokenPlacementCharacterId()
         || this.tokenPlacementNpcId()
+        || this.tokenPlacementMonsterId()
     ));
     readonly placementHint = computed(() => {
         if (this.ctrlPolylineActive()) {
@@ -1287,6 +1397,7 @@ export class CampaignMapPageComponent {
     private readonly shiftKeyPressed = signal(false);
     private mapOverlayHintRefreshFrameId: number | null = null;
     private lastMapOverlayHintSourceKey = '';
+    private pendingMonsterPortraitRegenerationSlug: string | null = null;
 
     constructor() {
         this.destroyRef.onDestroy(() => {
@@ -1392,7 +1503,7 @@ export class CampaignMapPageComponent {
                 return;
             }
 
-            if (this.canModify() && this.persistInFlight && campaign.id === this.lastLoadedCampaignId && routeMapId === this.lastLoadedRouteMapId) {
+            if (this.canPersistMapChanges() && this.persistInFlight && campaign.id === this.lastLoadedCampaignId && routeMapId === this.lastLoadedRouteMapId) {
                 return;
             }
 
@@ -1401,7 +1512,7 @@ export class CampaignMapPageComponent {
                 return;
             }
 
-            if (this.canModify() && this.hasUnsavedChanges() && !this.persistInFlight) {
+            if (this.canPersistMapChanges() && this.hasUnsavedChanges() && !this.persistInFlight) {
                 this.mergeRealtimeTokenState(campaign, routeMapId);
                 return;
             }
@@ -1552,6 +1663,18 @@ export class CampaignMapPageComponent {
 
             void this.voiceChat.syncRoom(campaignId, mapId);
         });
+        void this.loadSharedMonsterPortraitOverrides();
+    }
+
+    private async loadSharedMonsterPortraitOverrides(): Promise<void> {
+        try {
+            const entries = await this.api.getMonsterPortraitOverrides();
+            this.sharedMonsterPortraitOverrides.set(this.parseRulesMonsterPortraitEntries(entries));
+        } catch {
+            this.sharedMonsterPortraitOverrides.set([]);
+        }
+
+        this.cdr.detectChanges();
     }
 
     private async ensureCampaignDetails(campaignId: string): Promise<void> {
@@ -2209,10 +2332,12 @@ export class CampaignMapPageComponent {
     }
 
     updateTokenPlacementCharacter(value: string | number): void {
+        this.tokenMonsterPortraitGenerating.set(false);
         const characterId = typeof value === 'string' ? value : String(value);
         if (!characterId) {
             this.tokenPlacementCharacterId.set('');
             this.tokenPlacementNpcId.set('');
+            this.tokenPlacementMonsterId.set('');
             this.tokenPlacementAssignedCharacterId.set(null);
             this.tokenPlacementAssignedUserId.set(null);
             this.tokenUploadFeedback.set(this.tokenPlacementImageUrl() ? 'Custom token art ready. Click the board to place it.' : '');
@@ -2224,6 +2349,7 @@ export class CampaignMapPageComponent {
             this.tokenUploadFeedback.set('That character is not currently available in this campaign.');
             this.tokenPlacementCharacterId.set('');
             this.tokenPlacementNpcId.set('');
+            this.tokenPlacementMonsterId.set('');
             this.tokenPlacementAssignedCharacterId.set(null);
             this.tokenPlacementAssignedUserId.set(null);
             return;
@@ -2231,6 +2357,7 @@ export class CampaignMapPageComponent {
 
         this.tokenPlacementCharacterId.set(character.id);
         this.tokenPlacementNpcId.set('');
+        this.tokenPlacementMonsterId.set('');
         this.tokenPlacementImageUrl.set(character.image?.trim() ?? '');
         this.pendingTokenImageLoadFailed.set(false);
         this.tokenPlacementNameDraft.set(character.name);
@@ -2246,9 +2373,11 @@ export class CampaignMapPageComponent {
     }
 
     updateTokenPlacementNpc(value: string | number): void {
+        this.tokenMonsterPortraitGenerating.set(false);
         const npcId = typeof value === 'string' ? value : String(value);
         if (!npcId) {
             this.tokenPlacementNpcId.set('');
+            this.tokenPlacementMonsterId.set('');
             this.tokenPlacementAssignedCharacterId.set(null);
             this.tokenPlacementAssignedUserId.set(null);
             this.tokenUploadFeedback.set(this.tokenPlacementImageUrl() ? 'Custom token art ready. Click the board to place it.' : '');
@@ -2264,6 +2393,7 @@ export class CampaignMapPageComponent {
 
         this.tokenPlacementNpcId.set(npc.id);
         this.tokenPlacementCharacterId.set('');
+        this.tokenPlacementMonsterId.set('');
         this.tokenPlacementImageUrl.set(npc.imageUrl?.trim() ?? '');
         this.pendingTokenImageLoadFailed.set(false);
         this.tokenPlacementNameDraft.set(npc.name);
@@ -2274,6 +2404,260 @@ export class CampaignMapPageComponent {
         this.tokenUploadFeedback.set(`${npc.name} is ready to place as an NPC token.${npc.imageUrl?.trim() ? '' : ' The token will use initials until a portrait is added.'}`);
         this.selectTokenTool();
         this.cdr.detectChanges();
+    }
+
+    async updateTokenPlacementMonster(value: string | number): Promise<void> {
+        const monsterId = typeof value === 'string' ? value : String(value);
+        if (!monsterId) {
+            this.tokenPlacementMonsterId.set('');
+            this.tokenPlacementAssignedCharacterId.set(null);
+            this.tokenPlacementAssignedUserId.set(null);
+            this.tokenMonsterPortraitGenerating.set(false);
+            this.tokenUploadFeedback.set(this.tokenPlacementImageUrl() ? 'Custom token art ready. Click the board to place it.' : '');
+            return;
+        }
+
+        const monster = this.tokenMonsterPresetByValue().get(monsterId) ?? null;
+        if (!monster) {
+            this.tokenUploadFeedback.set('That monster is not currently available in your library.');
+            this.tokenPlacementMonsterId.set('');
+            this.tokenMonsterPortraitGenerating.set(false);
+            return;
+        }
+
+        const noteParts = [
+            `CR ${monster.challengeRating || '—'}`,
+            monster.creatureType || monster.creatureCategory || '',
+            monster.hitPoints != null ? `HP ${monster.hitPoints}` : '',
+            monster.armorClass != null ? `AC ${monster.armorClass}` : ''
+        ].filter((part) => part.length > 0);
+
+        this.tokenPlacementMonsterId.set(monster.value);
+        this.pendingMonsterPortraitRegenerationSlug = null;
+        this.tokenPlacementCharacterId.set('');
+        this.tokenPlacementNpcId.set('');
+        this.tokenPlacementImageUrl.set(monster.imageUrl.trim());
+        this.pendingTokenImageLoadFailed.set(false);
+        this.tokenPlacementNameDraft.set(monster.name);
+        this.tokenPlacementNoteDraft.set(noteParts.join(' | '));
+        this.tokenPlacementAssignedCharacterId.set(null);
+        this.tokenPlacementAssignedUserId.set(null);
+        this.tokenPlacementSize.set(1);
+
+        if (!monster.imageUrl.trim() && monster.source === 'rules') {
+            this.tokenMonsterPortraitGenerating.set(true);
+            this.tokenUploadFeedback.set(`Generating token art for ${monster.name}...`);
+            this.cdr.detectChanges();
+
+            try {
+                const generated = await this.generateAndSaveRulesMonsterPortrait(monster);
+                this.applyGeneratedPortraitToExistingMonsterTokens(monster, generated.imageUrl, monster.imageUrl);
+                if (this.tokenPlacementMonsterId() === monster.value) {
+                    this.tokenPlacementImageUrl.set(generated.imageUrl);
+                    this.pendingTokenImageLoadFailed.set(false);
+                }
+
+                this.tokenUploadFeedback.set(generated.persisted
+                    ? `${monster.name} is ready to place as a monster token.`
+                    : `${monster.name} is ready to place as a monster token. Portrait was generated and cached locally, but could not be saved to the shared monster gallery yet.`);
+            } catch (error) {
+                this.tokenUploadFeedback.set(this.buildMonsterPortraitGenerationFailureMessage(monster.name, error));
+            } finally {
+                this.tokenMonsterPortraitGenerating.set(false);
+            }
+        } else {
+            this.tokenMonsterPortraitGenerating.set(false);
+            this.tokenUploadFeedback.set(`${monster.name} is ready to place as a monster token.${monster.imageUrl.trim() ? '' : ' Upload art if you want an image instead of initials.'}`);
+        }
+
+        this.selectTokenTool();
+        this.cdr.detectChanges();
+    }
+
+    private parseRulesMonsterPortraitEntries(value: unknown): RulesMonsterPortraitEntry[] {
+        if (!Array.isArray(value)) {
+            return [];
+        }
+
+        return value
+            .map((entry) => this.toRulesMonsterPortraitEntry(entry))
+            .filter((entry): entry is RulesMonsterPortraitEntry => entry !== null);
+    }
+
+    private toRulesMonsterPortraitEntry(value: unknown): RulesMonsterPortraitEntry | null {
+        if (!value || typeof value !== 'object') {
+            return null;
+        }
+
+        const candidate = value as Record<string, unknown>;
+        const slug = typeof candidate['slug'] === 'string' ? candidate['slug'].trim().toLowerCase() : '';
+        const imageUrl = typeof candidate['imageUrl'] === 'string' ? candidate['imageUrl'].trim() : '';
+
+        if (!slug || !imageUrl) {
+            return null;
+        }
+
+        const originalImageUrl = typeof candidate['originalImageUrl'] === 'string'
+            ? candidate['originalImageUrl'].trim()
+            : imageUrl;
+        const updatedAt = typeof candidate['updatedAt'] === 'string' && candidate['updatedAt'].trim()
+            ? candidate['updatedAt'].trim()
+            : new Date().toISOString();
+
+        return {
+            slug,
+            imageUrl,
+            originalImageUrl,
+            updatedAt
+        };
+    }
+
+    private async generateAndSaveRulesMonsterPortrait(monster: TokenMonsterPreset): Promise<{ imageUrl: string; persisted: boolean }> {
+        const response = await this.api.generateCharacterPortrait({
+            name: monster.name,
+            className: monster.creatureType || 'Monster',
+            background: 'Dungeons and Dragons monster reference token art',
+            species: monster.creatureCategory || monster.creatureType || 'Monster',
+            alignment: monster.alignment || 'unaligned',
+            gender: '',
+            additionalDirection: this.buildRulesMonsterPortraitDirection(monster)
+        });
+
+        const optimizedImageUrl = await this.optimizeMapArtForStorage(response.imageUrl);
+        const existingEntries = this.rulesMonsterPortraitEntries();
+        const nextEntry: RulesMonsterPortraitEntry = {
+            slug: monster.slug,
+            imageUrl: optimizedImageUrl,
+            originalImageUrl: response.imageUrl,
+            updatedAt: new Date().toISOString()
+        };
+
+        const existingIndex = existingEntries.findIndex((entry) => entry.slug === monster.slug);
+        const nextEntries = [...existingEntries];
+        if (existingIndex >= 0) {
+            nextEntries[existingIndex] = nextEntry;
+        } else {
+            nextEntries.push(nextEntry);
+        }
+
+        // Keep the image immediately available even if the server save fails.
+        this.sharedMonsterPortraitOverrides.set(nextEntries);
+
+        let persisted = false;
+        try {
+            const savedEntry = await this.api.saveMonsterPortraitOverride({
+                slug: nextEntry.slug,
+                imageUrl: nextEntry.imageUrl,
+                originalImageUrl: nextEntry.originalImageUrl
+            });
+
+            const persistedEntry = this.toRulesMonsterPortraitEntry(savedEntry);
+            if (persistedEntry) {
+                const mergedEntries = [...this.rulesMonsterPortraitEntries()];
+                const persistedIndex = mergedEntries.findIndex((entry) => entry.slug === persistedEntry.slug);
+                if (persistedIndex >= 0) {
+                    mergedEntries[persistedIndex] = persistedEntry;
+                } else {
+                    mergedEntries.push(persistedEntry);
+                }
+
+                this.sharedMonsterPortraitOverrides.set(mergedEntries);
+            }
+
+            persisted = true;
+        } catch {
+            // Non-blocking: token placement should keep working with the local cached image.
+        }
+
+        return {
+            imageUrl: optimizedImageUrl,
+            persisted
+        };
+    }
+
+
+    private buildRulesMonsterPortraitDirection(monster: TokenMonsterPreset): string {
+        const avoidProfileFraming = this.shouldAvoidProfilePortrait(monster);
+        const details = [
+            `Challenge rating: ${monster.challengeRating || 'unknown'}`,
+            monster.creatureType ? `Type: ${monster.creatureType}` : '',
+            monster.creatureCategory ? `Category: ${monster.creatureCategory}` : '',
+            monster.alignment ? `Alignment: ${monster.alignment}` : '',
+            avoidProfileFraming
+                ? 'Create non-profile monster token art that clearly shows the creature form (full body or imposing silhouette), not a humanoid bust/headshot portrait, with a transparent or neutral tabletop-friendly backdrop.'
+                : 'Create centered monster token art with clean silhouette and transparent or neutral backdrop suitable for a tabletop token. Avoid cinematic profile-photo framing.'
+        ].filter((detail) => detail.length > 0);
+
+        return details.join(' ');
+    }
+
+    private shouldAvoidProfilePortrait(monster: TokenMonsterPreset): boolean {
+        const normalizedType = `${monster.creatureType} ${monster.creatureCategory}`.toLowerCase();
+        const isHumanoid = normalizedType.includes('humanoid');
+        return !isHumanoid;
+    }
+
+    private buildMonsterPortraitGenerationFailureMessage(monsterName: string, error: unknown): string {
+        const apiMessage = extractApiError(error, '').toLowerCase();
+        if (apiMessage.includes('billing_hard_limit_reached') || apiMessage.includes('billing hard limit has been reached')) {
+            return `${monsterName} is ready to place as a monster token, but AI portrait generation is unavailable because the OpenAI billing limit has been reached. This token will use initials until billing is restored or art is uploaded.`;
+        }
+
+        return `${monsterName} is ready to place as a monster token. Art generation is unavailable right now, so this token will use initials.`;
+    }
+
+    private buildMonsterPortraitRegenerationFailureMessage(monsterName: string, error: unknown): string {
+        const apiMessage = extractApiError(error, '').toLowerCase();
+        if (apiMessage.includes('billing_hard_limit_reached') || apiMessage.includes('billing hard limit has been reached')) {
+            return `${monsterName} portrait could not be regenerated because the OpenAI billing limit has been reached. This token will use initials until billing is restored or art is uploaded.`;
+        }
+
+        return `${monsterName} portrait could not be regenerated right now. This token will use initials until art is available.`;
+    }
+
+    private applyGeneratedPortraitToExistingMonsterTokens(monster: TokenMonsterPreset, imageUrl: string, previousImageUrl: string): void {
+        const normalizedName = monster.name.trim().toLowerCase();
+        const nextImageUrl = imageUrl.trim();
+        const previous = previousImageUrl.trim();
+        if (!normalizedName || !nextImageUrl) {
+            return;
+        }
+
+        const changedTokenIds: string[] = [];
+        this.mutateMap((map) => {
+            map.tokens = map.tokens.map((token) => {
+                const tokenName = token.name.trim().toLowerCase();
+                const tokenImageUrl = token.imageUrl.trim();
+                const isSameMonster = tokenName === normalizedName;
+                const shouldReplace = isSameMonster
+                    && (tokenImageUrl.length === 0 || (previous.length > 0 && tokenImageUrl === previous));
+
+                if (!shouldReplace) {
+                    return token;
+                }
+
+                changedTokenIds.push(token.id);
+                return {
+                    ...token,
+                    imageUrl: nextImageUrl
+                };
+            });
+        });
+
+        if (changedTokenIds.length === 0) {
+            return;
+        }
+
+        this.failedTokenImages.update((current) => {
+            const next = { ...current };
+            for (const tokenId of changedTokenIds) {
+                delete next[tokenId];
+            }
+
+            return next;
+        });
+
+        this.markDirty(`Updated existing ${monster.name} token art.`);
     }
 
     updateTokenPlacementNoteDraft(value: string): void {
@@ -2463,12 +2847,49 @@ export class CampaignMapPageComponent {
         return !!this.tokenPlacementImageUrl().trim() && !this.pendingTokenImageLoadFailed();
     }
 
-    markPendingTokenImageFailed(): void {
+    async markPendingTokenImageFailed(): Promise<void> {
         if (!this.tokenPlacementImageUrl().trim()) {
             return;
         }
 
         this.pendingTokenImageLoadFailed.set(true);
+
+        const selectedMonsterId = this.tokenPlacementMonsterId();
+        const selectedMonster = selectedMonsterId
+            ? this.tokenMonsterPresetByValue().get(selectedMonsterId) ?? null
+            : null;
+
+        if (!selectedMonster || selectedMonster.source !== 'rules' || this.tokenMonsterPortraitGenerating()) {
+            this.cdr.detectChanges();
+            return;
+        }
+
+        if (this.pendingMonsterPortraitRegenerationSlug === selectedMonster.slug) {
+            this.cdr.detectChanges();
+            return;
+        }
+
+        this.pendingMonsterPortraitRegenerationSlug = selectedMonster.slug;
+        this.tokenMonsterPortraitGenerating.set(true);
+        this.tokenUploadFeedback.set(`Stored portrait for ${selectedMonster.name} failed to load. Regenerating token art...`);
+
+        try {
+            const generated = await this.generateAndSaveRulesMonsterPortrait(selectedMonster);
+            this.applyGeneratedPortraitToExistingMonsterTokens(selectedMonster, generated.imageUrl, selectedMonster.imageUrl);
+            if (this.tokenPlacementMonsterId() === selectedMonster.value) {
+                this.tokenPlacementImageUrl.set(generated.imageUrl);
+                this.pendingTokenImageLoadFailed.set(false);
+            }
+
+            this.tokenUploadFeedback.set(generated.persisted
+                ? `${selectedMonster.name} portrait regenerated and ready to place.`
+                : `${selectedMonster.name} portrait regenerated and ready to place. It was cached locally but could not be saved to the shared monster gallery yet.`);
+        } catch (error) {
+            this.tokenUploadFeedback.set(this.buildMonsterPortraitRegenerationFailureMessage(selectedMonster.name, error));
+        } finally {
+            this.tokenMonsterPortraitGenerating.set(false);
+        }
+
         this.cdr.detectChanges();
     }
 
@@ -2710,8 +3131,10 @@ export class CampaignMapPageComponent {
             }
 
             const tokenName = this.sanitizeTokenName(file.name);
+            this.tokenMonsterPortraitGenerating.set(false);
             this.tokenPlacementCharacterId.set('');
             this.tokenPlacementNpcId.set('');
+            this.tokenPlacementMonsterId.set('');
             this.tokenPlacementAssignedCharacterId.set(null);
             this.tokenPlacementAssignedUserId.set(null);
             this.tokenCropSourceImageUrl.set(imageUrl);
@@ -2738,6 +3161,8 @@ export class CampaignMapPageComponent {
 
         this.tokenPlacementCharacterId.set('');
         this.tokenPlacementNpcId.set('');
+        this.tokenPlacementMonsterId.set('');
+        this.tokenMonsterPortraitGenerating.set(false);
         this.tokenPlacementAssignedUserId.set(null);
         this.tokenPlacementAssignedCharacterId.set(null);
         this.tokenPlacementImageUrl.set('');
@@ -2759,8 +3184,10 @@ export class CampaignMapPageComponent {
 
     applyTokenCrop(croppedImageUrl: string): void {
         const tokenName = this.tokenCropSourceName().trim() || 'Token';
+        this.tokenMonsterPortraitGenerating.set(false);
         this.tokenPlacementCharacterId.set('');
         this.tokenPlacementNpcId.set('');
+        this.tokenPlacementMonsterId.set('');
         this.tokenPlacementAssignedCharacterId.set(null);
         this.tokenPlacementAssignedUserId.set(null);
         this.tokenPlacementImageUrl.set(croppedImageUrl);
@@ -4317,6 +4744,11 @@ export class CampaignMapPageComponent {
     handleTokenPointerDown(event: PointerEvent, tokenId: string): void {
         this.selectToken(tokenId);
 
+        if (this.measureEnabled()) {
+            event.stopPropagation();
+            return;
+        }
+
         const token = this.workingMap().tokens.find((entry) => entry.id === tokenId) ?? null;
         if (!token) {
             event.stopPropagation();
@@ -4406,6 +4838,10 @@ export class CampaignMapPageComponent {
     }
 
     private handleSelectedTokenArrowMove(event: KeyboardEvent): boolean {
+        if (this.measureEnabled()) {
+            return false;
+        }
+
         const direction = this.tokenArrowMoveDirection(event.key);
         if (!direction || event.ctrlKey || event.metaKey) {
             return false;
@@ -4796,7 +5232,7 @@ export class CampaignMapPageComponent {
     }
 
     private markDirty(message = 'Unsaved changes.'): void {
-        if (!this.canModify()) {
+        if (!this.canPersistMapChanges()) {
             return;
         }
 
@@ -4808,7 +5244,7 @@ export class CampaignMapPageComponent {
     }
 
     private queueAutosave(): void {
-        if (!this.canModify()) {
+        if (!this.canPersistMapChanges()) {
             return;
         }
 
@@ -4826,7 +5262,7 @@ export class CampaignMapPageComponent {
                 return;
             }
 
-            if (!this.canModify() || !this.hasUnsavedChanges() || this.persistInFlight) {
+            if (!this.canPersistMapChanges() || !this.hasUnsavedChanges() || this.persistInFlight) {
                 return;
             }
 
@@ -4853,7 +5289,7 @@ export class CampaignMapPageComponent {
     }
 
     private shouldDeferAutosave(): boolean {
-        if (!this.canModify()) {
+        if (!this.canPersistMapChanges()) {
             return false;
         }
 
@@ -4862,6 +5298,10 @@ export class CampaignMapPageComponent {
         }
 
         return this.ctrlPolylineActive() && (this.activeTool() === 'draw' || this.activeTool() === 'wall');
+    }
+
+    private canPersistMapChanges(): boolean {
+        return this.canEdit() && !this.isEditorLocked();
     }
 
     private showMapNotice(message: string): void {
@@ -5031,7 +5471,7 @@ export class CampaignMapPageComponent {
     private async persistWorkingMap(): Promise<void> {
         const campaign = this.selectedCampaign();
         const currentMap = this.currentMapBoard();
-        if (!campaign || !currentMap || !this.canModify()) {
+        if (!campaign || !currentMap || !this.canPersistMapChanges()) {
             return;
         }
 
@@ -5084,7 +5524,7 @@ export class CampaignMapPageComponent {
             this.persistInFlight = false;
             this.cdr.detectChanges();
 
-            if (this.autosaveQueuedWhileSaving && this.hasUnsavedChanges() && this.canModify()) {
+            if (this.autosaveQueuedWhileSaving && this.hasUnsavedChanges() && this.canPersistMapChanges()) {
                 this.autosaveQueuedWhileSaving = false;
                 this.queueAutosave();
             }
@@ -5496,6 +5936,7 @@ export class CampaignMapPageComponent {
         this.tokenPlacementNameDraft.set('Token');
         this.tokenPlacementNoteDraft.set('');
         this.tokenPlacementImageUrl.set('');
+        this.tokenPlacementMonsterId.set('');
         this.tokenPlacementNpcId.set('');
         this.tokenPlacementSize.set(1);
         this.tokenAssignmentDraft.set('none');
@@ -8320,4 +8761,64 @@ export class CampaignMapPageComponent {
 
         return Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));
     }
+}
+
+function normalizeRulesMonsterEntry(entry: MonsterCatalogEntry): MonsterCatalogEntry {
+    return {
+        ...entry,
+        name: normalizeRulesMonsterName(entry.name, entry.slug),
+        creatureType: normalizeRulesMonsterCreatureType(entry.creatureType),
+        creatureCategory: normalizeRulesMonsterLabel(entry.creatureCategory) || deriveRulesMonsterCategory(entry.creatureType),
+        size: normalizeRulesMonsterLabel(entry.size),
+        alignment: entry.alignment.trim(),
+        speed: entry.speed.trim(),
+        sourceLabel: entry.sourceLabel.trim()
+    };
+}
+
+function normalizeRulesMonsterName(value: string, slug: string): string {
+    const trimmed = value.trim();
+    if (!trimmed || /^\d+(?:\.\d+)?$/.test(trimmed)) {
+        return formatRulesMonsterName(slug);
+    }
+
+    return trimmed;
+}
+
+function formatRulesMonsterName(value: string): string {
+    const normalized = value.replace(/[-_]+/g, ' ').trim();
+    if (!normalized) {
+        return 'Unknown Monster';
+    }
+
+    return normalized
+        .split(/\s+/)
+        .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+        .join(' ');
+}
+
+function normalizeRulesMonsterLabel(value: string): string {
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return '';
+    }
+
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
+function normalizeRulesMonsterCreatureType(value: string): string {
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return 'Unknown';
+    }
+
+    return trimmed
+        .split(',')
+        .map((part) => normalizeRulesMonsterLabel(part))
+        .join(', ');
+}
+
+function deriveRulesMonsterCategory(creatureType: string): string {
+    const primaryType = creatureType.split(',')[0]?.trim() ?? '';
+    return normalizeRulesMonsterLabel(primaryType) || 'Other';
 }

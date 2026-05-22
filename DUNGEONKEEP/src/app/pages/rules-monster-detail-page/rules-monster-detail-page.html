@@ -3,7 +3,11 @@
     <section class="panel monster-page-shell">
         <header class="monster-strip">
             <div class="monster-strip-icon" aria-hidden="true">
+                @if (showGeneratedPortrait()) {
+                <img class="monster-strip-portrait" [src]="monsterPortraitUrl()" [alt]="monster.name + ' portrait'" (error)="handlePortraitImageError()" />
+                } @else {
                 <i class="fa-duotone fa-thin fa-dragon"></i>
+                }
             </div>
 
             <div class="monster-strip-copy">
@@ -15,11 +19,18 @@
             <div class="monster-strip-actions">
                 <a class="secondary-link-btn" routerLink="/rules/monsters">Back to Monsters</a>
                 <a class="secondary-link-btn" [routerLink]="['/monsters/new']" [queryParams]="{ template: monster.slug }">Use as Template</a>
+                <button type="button" class="secondary-link-btn" [disabled]="isPortraitGenerating()" [class.is-loading]="isPortraitGenerating()" (click)="generateMonsterPortrait()">
+                    <span class="loading-label">{{ isPortraitGenerating() ? 'Generating Portrait...' : generatePortraitButtonLabel() }}</span>
+                </button>
                 @if (monster.sourceUrl) {
                 <a class="primary-link-btn" [href]="monster.sourceUrl" target="_blank" rel="noopener noreferrer">Open Full Stat Block</a>
                 }
             </div>
         </header>
+
+        @if (portraitGenerationError()) {
+        <p class="monster-portrait-error" role="status">{{ portraitGenerationError() }}</p>
+        }
 
         <div class="monster-sheet-body">
             <div class="monster-tags-row">

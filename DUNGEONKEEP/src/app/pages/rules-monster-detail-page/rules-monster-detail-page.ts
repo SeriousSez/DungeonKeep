@@ -5,6 +5,8 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { monsterCatalog } from '../../data/monster-catalog.generated';
 import { MonsterCatalogEntry, MonsterTextSectionEntry } from '../../models/monster-reference.models';
+import { DungeonApiService } from '../../state/dungeon-api.service';
+import { extractApiError } from '../../state/extract-api-error';
 
 const normalizedMonsterCatalog = monsterCatalog.map((entry) => normalizeMonsterCatalogEntry(entry));
 
@@ -20,8 +22,37 @@ export class RulesMonsterDetailPage {
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly api = inject(DungeonApiService);
 
   readonly monster = signal<MonsterCatalogEntry | null>(null);
+  readonly portraitOverrides = signal<RulesMonsterPortraitEntry[]>([]);
+  readonly isPortraitGenerating = signal(false);
+  readonly portraitGenerationError = signal('');
+  readonly portraitImageLoadFailed = signal(false);
+  readonly hasLoadedPortraitOverrides = signal(false);
+
+  readonly portraitBySlug = computed<Record<string, string>>(() => {
+    const entries = this.portraitOverrides();
+    const bySlug: Record<string, string> = {};
+
+    for (const entry of entries) {
+      bySlug[entry.slug] = entry.imageUrl;
+    }
+
+    return bySlug;
+  });
+
+  readonly monsterPortraitUrl = computed(() => {
+    const monster = this.monster();
+    if (!monster) {
+      return '';
+    }
+
+    return this.portraitBySlug()[monster.slug] ?? '';
+  });
+
+  readonly showGeneratedPortrait = computed(() => this.monsterPortraitUrl().trim().length > 0 && !this.portraitImageLoadFailed());
+  readonly generatePortraitButtonLabel = computed(() => this.showGeneratedPortrait() ? 'Regenerate Portrait' : 'Generate Portrait');
 
   readonly profileTags = computed(() => {
     const monster = this.monster();
@@ -87,13 +118,75 @@ export class RulesMonsterDetailPage {
   });
 
   constructor() {
+    void this.loadMonsterPortraitOverrides();
+
     this.route.paramMap
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
         const slug = (params.get('monsterSlug') ?? '').trim().toLowerCase();
         this.monster.set(findMonsterBySlug(slug));
+        this.portraitGenerationError.set('');
+        this.portraitImageLoadFailed.set(false);
         this.cdr.detectChanges();
       });
+  }
+
+  async generateMonsterPortrait(): Promise<void> {
+    const monster = this.monster();
+    if (!monster || this.isPortraitGenerating()) {
+      return;
+    }
+
+    this.isPortraitGenerating.set(true);
+    this.portraitGenerationError.set('');
+    this.cdr.detectChanges();
+
+    try {
+      const response = await this.api.generateCharacterPortrait({
+        name: monster.name,
+        className: monster.creatureType || 'Monster',
+        background: 'Dungeons and Dragons monster reference token art',
+        species: monster.creatureCategory || monster.creatureType || 'Monster',
+        alignment: monster.alignment || 'unaligned',
+        gender: '',
+        additionalDirection: this.buildPortraitGenerationDirection(monster)
+      });
+
+      const nextEntry: RulesMonsterPortraitEntry = {
+        slug: monster.slug,
+        imageUrl: response.imageUrl,
+        originalImageUrl: response.imageUrl,
+        updatedAt: new Date().toISOString()
+      };
+
+      this.upsertPortraitOverride(nextEntry);
+      this.portraitImageLoadFailed.set(false);
+
+      try {
+        const savedEntry = await this.api.saveMonsterPortraitOverride({
+          slug: nextEntry.slug,
+          imageUrl: nextEntry.imageUrl,
+          originalImageUrl: nextEntry.originalImageUrl
+        });
+
+        const persisted = this.toRulesMonsterPortraitEntry(savedEntry);
+        if (persisted) {
+          this.upsertPortraitOverride(persisted);
+        }
+      } catch {
+        // Keep the portrait available locally even if persisting the override fails.
+      }
+    } catch (error: unknown) {
+      this.portraitGenerationError.set(this.buildPortraitGenerationFailureMessage(error));
+    } finally {
+      this.isPortraitGenerating.set(false);
+      this.cdr.detectChanges();
+    }
+  }
+
+  handlePortraitImageError(): void {
+    this.portraitImageLoadFailed.set(true);
+    this.cdr.detectChanges();
   }
 
   subtitle(): string {
@@ -164,6 +257,98 @@ export class RulesMonsterDetailPage {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
   }
+
+  private async loadMonsterPortraitOverrides(): Promise<void> {
+    try {
+      const entries = await this.api.getMonsterPortraitOverrides();
+      this.portraitOverrides.set(this.parseRulesMonsterPortraitEntries(entries));
+    } catch {
+      this.portraitOverrides.set([]);
+    } finally {
+      this.hasLoadedPortraitOverrides.set(true);
+      this.cdr.detectChanges();
+    }
+  }
+
+  private parseRulesMonsterPortraitEntries(value: unknown): RulesMonsterPortraitEntry[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .map((entry) => this.toRulesMonsterPortraitEntry(entry))
+      .filter((entry): entry is RulesMonsterPortraitEntry => entry !== null);
+  }
+
+  private toRulesMonsterPortraitEntry(value: unknown): RulesMonsterPortraitEntry | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const candidate = value as Record<string, unknown>;
+    const slug = typeof candidate['slug'] === 'string' ? candidate['slug'].trim().toLowerCase() : '';
+    const imageUrl = typeof candidate['imageUrl'] === 'string' ? candidate['imageUrl'].trim() : '';
+    if (!slug || !imageUrl) {
+      return null;
+    }
+
+    const originalImageUrl = typeof candidate['originalImageUrl'] === 'string'
+      ? candidate['originalImageUrl'].trim() || imageUrl
+      : imageUrl;
+    const updatedAt = typeof candidate['updatedAtUtc'] === 'string' && candidate['updatedAtUtc'].trim().length > 0
+      ? candidate['updatedAtUtc'].trim()
+      : new Date().toISOString();
+
+    return {
+      slug,
+      imageUrl,
+      originalImageUrl,
+      updatedAt
+    };
+  }
+
+  private upsertPortraitOverride(entry: RulesMonsterPortraitEntry): void {
+    const next = [...this.portraitOverrides()];
+    const existingIndex = next.findIndex((current) => current.slug === entry.slug);
+    if (existingIndex >= 0) {
+      next[existingIndex] = entry;
+    } else {
+      next.push(entry);
+    }
+
+    this.portraitOverrides.set(next);
+  }
+
+  private buildPortraitGenerationDirection(monster: MonsterCatalogEntry): string {
+    const avoidProfileFraming = shouldAvoidProfilePortrait(monster.slug, monster.size, monster.creatureType, monster.creatureCategory);
+    const details = [
+      `Challenge rating: ${monster.challengeRating || 'unknown'}`,
+      monster.creatureType ? `Type: ${monster.creatureType}` : '',
+      monster.creatureCategory ? `Category: ${monster.creatureCategory}` : '',
+      monster.alignment ? `Alignment: ${monster.alignment}` : '',
+      avoidProfileFraming
+        ? 'Create non-profile monster token art that clearly shows the creature form (full body or imposing silhouette), not a humanoid bust/headshot portrait, with a transparent or neutral tabletop-friendly backdrop.'
+        : 'Create centered monster token art with clean silhouette and transparent or neutral backdrop suitable for a tabletop token. Avoid cinematic profile-photo framing.'
+    ].filter((detail) => detail.length > 0);
+
+    return details.join(' ');
+  }
+
+  private buildPortraitGenerationFailureMessage(error: unknown): string {
+    const apiMessage = extractApiError(error, '').toLowerCase();
+    if (apiMessage.includes('billing_hard_limit_reached') || apiMessage.includes('billing hard limit has been reached')) {
+      return 'Portrait generation is unavailable because the OpenAI billing limit has been reached.';
+    }
+
+    return 'Portrait generation is unavailable right now. Please try again in a moment.';
+  }
+}
+
+interface RulesMonsterPortraitEntry {
+  slug: string;
+  imageUrl: string;
+  originalImageUrl: string;
+  updatedAt: string;
 }
 
 function findMonsterBySlug(slug: string): MonsterCatalogEntry | null {
@@ -240,4 +425,10 @@ function slugifyMonsterName(name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+function shouldAvoidProfilePortrait(slug: string, size: string, creatureType: string, creatureCategory: string): boolean {
+  const normalizedType = `${creatureType} ${creatureCategory}`.toLowerCase();
+  const isHumanoid = normalizedType.includes('humanoid');
+  return !isHumanoid;
 }

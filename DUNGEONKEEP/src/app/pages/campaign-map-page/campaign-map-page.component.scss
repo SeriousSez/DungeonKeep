@@ -797,6 +797,11 @@ app-dropdown {
 .selected-token-mark {
     width: 52px;
     height: 52px;
+    min-width: 52px;
+    flex: 0 0 52px;
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
     border-radius: 50%;
     overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--panel-border) 60%, var(--accent-primary) 40%);
@@ -2706,15 +2711,16 @@ app-dropdown {
     background: color-mix(in srgb, var(--surface-raised-solid) 95%, transparent);
     box-shadow: 0 16px 30px rgba(26, 19, 13, 0.22);
     backdrop-filter: blur(14px);
-    font-size: 0.9rem;
+    font-size: 0.82rem;
+    overflow-x: hidden;
 }
 
 .map-encounter-popover h3 {
-    font-size: 1.45rem;
+    font-size: 1.2rem;
 }
 
 .map-encounter-popover p {
-    font-size: 0.88rem;
+    font-size: 0.8rem;
     margin: 0;
 }
 
@@ -2733,6 +2739,7 @@ app-dropdown {
     border: 1px solid var(--panel-border);
     border-radius: 12px;
     background: color-mix(in srgb, var(--surface-raised-solid) 88%, var(--accent-primary) 12%);
+    min-width: 0;
 }
 
 .encounter-entry--hidden {
@@ -2744,12 +2751,15 @@ app-dropdown {
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
+    flex-wrap: wrap;
 }
 
 .encounter-entry-name {
     flex: 1;
+    min-width: 0;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.82rem;
     color: var(--text-main);
     white-space: nowrap;
     overflow: hidden;
@@ -2764,7 +2774,7 @@ app-dropdown {
 }
 
 .encounter-initiative-label {
-    font-size: 0.68rem;
+    font-size: 0.62rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -2779,7 +2789,7 @@ app-dropdown {
     background: color-mix(in srgb, var(--surface-raised-solid) 90%, transparent);
     color: var(--text-main);
     font: inherit;
-    font-size: 0.88rem;
+    font-size: 0.8rem;
     font-weight: 700;
     text-align: center;
 
@@ -2806,16 +2816,19 @@ app-dropdown {
     gap: 10px;
     padding-top: 4px;
     border-top: 1px solid var(--panel-border);
+    min-width: 0;
+    flex-wrap: wrap;
 }
 
 .encounter-stat-field {
     display: flex;
     align-items: center;
     gap: 4px;
+    min-width: 0;
 }
 
 .encounter-stat-label {
-    font-size: 0.68rem;
+    font-size: 0.62rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -2831,7 +2844,7 @@ app-dropdown {
     background: color-mix(in srgb, var(--surface-raised-solid) 90%, transparent);
     color: var(--text-main);
     font: inherit;
-    font-size: 0.84rem;
+    font-size: 0.78rem;
     text-align: center;
 
     &::-webkit-outer-spin-button,
@@ -2852,15 +2865,16 @@ app-dropdown {
 
 .encounter-stat-sep {
     color: var(--text-soft);
-    font-size: 0.8rem;
+    font-size: 0.74rem;
 }
 
 .encounter-visibility-btn {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     justify-self: start;
+    max-width: 100%;
 }
 
 .is-warning {
@@ -2874,6 +2888,7 @@ app-dropdown {
     border-color: color-mix(in srgb, var(--color-success) 40%, var(--panel-border) 60%);
     color: var(--color-success);
 }
+
 .map-note-popup-backdrop {
     position: fixed;
     inset: 0;

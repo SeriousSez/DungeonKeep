@@ -1654,7 +1654,6 @@ public sealed class CampaignService(
             .ToList();
 
         var normalizedTokens = (map.Tokens ?? [])
-            .Where(token => !string.IsNullOrWhiteSpace(token.ImageUrl))
             .Select(token => new CampaignMapTokenDto(
                 token.Id == Guid.Empty ? Guid.NewGuid() : token.Id,
                 string.IsNullOrWhiteSpace(token.Name) ? "Token" : token.Name.Trim(),
@@ -1666,7 +1665,12 @@ public sealed class CampaignService(
                 NormalizeMapAssignedUserId(token.AssignedUserId, token.AssignedCharacterId),
                 NormalizeMapAssignedCharacterId(token.AssignedCharacterId),
                 NormalizeMapTokenMoveRevision(token.MoveRevision),
-                string.IsNullOrWhiteSpace(token.WorldNoteId) ? null : token.WorldNoteId.Trim()))
+                string.IsNullOrWhiteSpace(token.WorldNoteId) ? null : token.WorldNoteId.Trim(),
+                NormalizeMapTokenInitiative(token.Initiative),
+                token.EncounterHidden == true,
+                NormalizeMapTokenStat(token.CurrentHp),
+                NormalizeMapTokenStat(token.MaxHp),
+                NormalizeMapTokenStat(token.ArmorClass)))
             .ToList();
 
         var normalizedDecorations = (map.Decorations ?? [])
@@ -2230,6 +2234,26 @@ public sealed class CampaignService(
     private static long NormalizeMapTokenMoveRevision(long value)
     {
         return Math.Max(0L, value);
+    }
+
+    private static int? NormalizeMapTokenInitiative(int? value)
+    {
+        if (!value.HasValue)
+        {
+            return null;
+        }
+
+        return value.Value;
+    }
+
+    private static int? NormalizeMapTokenStat(int? value)
+    {
+        if (!value.HasValue)
+        {
+            return null;
+        }
+
+        return Math.Max(0, value.Value);
     }
 
     private static long NormalizeMapVisionRevision(long value)
