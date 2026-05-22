@@ -4207,6 +4207,7 @@ export class CampaignMapPageComponent {
 
         if (this.hasPendingTokenPlacement()) {
             const snappedPoint = this.snapTokenPointToGrid(point, this.tokenPlacementSize());
+            const shouldStartHiddenInEncounter = !!this.tokenPlacementNpcId() || !!this.tokenPlacementMonsterId();
             const token: CampaignMapToken = {
                 id: this.createId(),
                 name: this.tokenPlacementNameDraft().trim() || 'Token',
@@ -4217,6 +4218,7 @@ export class CampaignMapPageComponent {
                 note: this.tokenPlacementNoteDraft().trim(),
                 assignedUserId: this.tokenPlacementAssignedUserId(),
                 assignedCharacterId: this.tokenPlacementAssignedCharacterId(),
+                encounterHidden: shouldStartHiddenInEncounter,
                 moveRevision: 0
             };
 
