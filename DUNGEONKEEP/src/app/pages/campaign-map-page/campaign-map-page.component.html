@@ -1502,11 +1502,13 @@
                             <span class="encounter-stat-label">HP</span>
                             <input type="number" class="encounter-stat-input" [value]="entry.currentHp ?? ''" placeholder="—" [readOnly]="!canEdit() && !entry.isOwnToken" (change)="updateTokenCurrentHp(entry.token.id, $any($event.target).value)" aria-label="Current HP for {{ entry.name }}" />
                             <span class="encounter-stat-sep">/</span>
-                            <input type="number" class="encounter-stat-input" [value]="entry.maxHp ?? ''" placeholder="—" [readOnly]="!canEdit() && !entry.isOwnToken" (change)="updateTokenMaxHp(entry.token.id, $any($event.target).value)" aria-label="Max HP for {{ entry.name }}" />
+                            <input type="number" class="encounter-stat-input" [value]="entry.maxHp ?? ''" placeholder="—" [readOnly]="entry.isCharacter || (!canEdit() && !entry.isOwnToken)" (change)="updateTokenMaxHp(entry.token.id, $any($event.target).value)"
+                                aria-label="Max HP for {{ entry.name }}" />
                         </label>
                         <label class="encounter-stat-field">
                             <span class="encounter-stat-label">AC</span>
-                            <input type="number" class="encounter-stat-input" [value]="entry.armorClass ?? ''" placeholder="—" [readOnly]="!canEdit() && !entry.isOwnToken" (change)="updateTokenArmorClass(entry.token.id, $any($event.target).value)" aria-label="AC for {{ entry.name }}" />
+                            <input type="number" class="encounter-stat-input" [value]="entry.armorClass ?? ''" placeholder="—" [readOnly]="entry.isCharacter || (!canEdit() && !entry.isOwnToken)" (change)="updateTokenArmorClass(entry.token.id, $any($event.target).value)"
+                                aria-label="AC for {{ entry.name }}" />
                         </label>
                     </div>
                     }

@@ -11,7 +11,7 @@ import { loadCampaignNpcDrafts } from '../../data/campaign-npc.storage';
 import { monsterCatalog } from '../../data/monster-catalog.generated';
 import { sanitizeCustomMonster } from '../../data/monster-library.helpers';
 import { CampaignNpc } from '../../models/campaign-npc.models';
-import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelFontFamily, CampaignMapLabelTone, CampaignMapPoint, CampaignMapStroke, CampaignMapToken, CampaignMapWall, CampaignTone, Character, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS } from '../../models/dungeon.models';
+import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelFontFamily, CampaignMapLabelTone, CampaignMapPoint, CampaignMapStroke, CampaignMapToken, CampaignMapWall, CampaignTone, Character, CharacterDraft, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS } from '../../models/dungeon.models';
 import { CustomMonster, MonsterCatalogEntry } from '../../models/monster-reference.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { CampaignMapTokenMovedEvent, CampaignMapVisionUpdatedEvent, CampaignRealtimeService } from '../../state/campaign-realtime.service';
@@ -1897,16 +1897,25 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        const nextCurrentHp = this.parseNumericInput(value);
+
         this.mutateMap((map) => {
             map.tokens = map.tokens.map((token) =>
-                token.id === tokenId ? { ...token, currentHp: this.parseNumericInput(value) } : token
+                token.id === tokenId ? { ...token, currentHp: nextCurrentHp } : token
             );
         });
+
+        this.syncCharacterHpFromEncounterToken(tokenId, nextCurrentHp);
         this.markDirty('HP updated.');
     }
 
     updateTokenMaxHp(tokenId: string, value: string): void {
         if (!this.canEdit() && !this.isOwnTokenById(tokenId)) {
+            return;
+        }
+
+        const token = this.workingMap().tokens.find((entry) => entry.id === tokenId);
+        if (token?.assignedCharacterId) {
             return;
         }
 
@@ -1920,6 +1929,11 @@ export class CampaignMapPageComponent {
 
     updateTokenArmorClass(tokenId: string, value: string): void {
         if (!this.canEdit() && !this.isOwnTokenById(tokenId)) {
+            return;
+        }
+
+        const token = this.workingMap().tokens.find((entry) => entry.id === tokenId);
+        if (token?.assignedCharacterId) {
             return;
         }
 
@@ -1938,6 +1952,70 @@ export class CampaignMapPageComponent {
 
         const parsed = parseInt(value, 10);
         return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    private syncCharacterHpFromEncounterToken(tokenId: string, nextCurrentHp: number | null): void {
+        if (nextCurrentHp === null) {
+            return;
+        }
+
+        const token = this.workingMap().tokens.find((entry) => entry.id === tokenId);
+        if (!token?.assignedCharacterId) {
+            return;
+        }
+
+        const character = this.campaignCharacters().find((entry) => entry.id === token.assignedCharacterId);
+        if (!character) {
+            return;
+        }
+
+        const clampedCurrentHp = Math.max(0, Math.min(character.maxHitPoints, Math.trunc(nextCurrentHp)));
+        if (clampedCurrentHp === character.hitPoints) {
+            return;
+        }
+
+        const draft: CharacterDraft = {
+            name: character.name,
+            playerName: character.playerName,
+            race: character.race,
+            className: character.className,
+            level: character.level,
+            role: character.role,
+            background: character.background,
+            notes: character.notes,
+            campaignId: character.campaignId,
+            campaignIds: character.campaignIds,
+            abilityScores: character.abilityScores,
+            skills: character.skills,
+            armorClass: character.armorClass,
+            hitPoints: clampedCurrentHp,
+            deathSaveFailures: character.deathSaveFailures,
+            deathSaveSuccesses: character.deathSaveSuccesses,
+            maxHitPoints: character.maxHitPoints,
+            gender: character.gender,
+            alignment: character.alignment,
+            faith: character.faith,
+            lifestyle: character.lifestyle,
+            classFeatures: character.classFeatures,
+            speciesTraits: character.speciesTraits,
+            languages: character.languages,
+            personalityTraits: character.personalityTraits,
+            ideals: character.ideals,
+            bonds: character.bonds,
+            flaws: character.flaws,
+            equipment: character.equipment,
+            spells: character.spells,
+            experiencePoints: character.experiencePoints,
+            image: character.image,
+            detailBackgroundImageUrl: character.detailBackgroundImageUrl,
+            portraitOriginalImageUrl: character.imageOriginal
+        };
+
+        void this.store.updateCharacter(character.id, draft).then((updated) => {
+            if (updated) {
+                this.cdr.detectChanges();
+            }
+        });
     }
 
     private isOwnTokenById(tokenId: string): boolean {
