@@ -149,6 +149,8 @@ const MAP_TOKEN_GRID_SPANS = [0.5, 1, 2, 4] as const;
 const MAP_GRID_VISIBILITY_STORAGE_KEY = 'dungeonkeep.campaign-map.show-grid';
 const MAP_GRID_CONTROLS_EXPANDED_STORAGE_KEY = 'dungeonkeep.campaign-map.grid-controls-expanded';
 const MAP_PLACEMENT_HINT_VISIBILITY_STORAGE_KEY = 'dungeonkeep.campaign-map.show-placement-hint';
+const MAP_ENCOUNTER_POPOVER_POSITION_STORAGE_KEY = 'dungeonkeep.campaign-map.encounter-popover-position';
+const MAP_ENCOUNTER_POPOVER_VIEWPORT_MARGIN = 12;
 const MAP_AUTOSAVE_DELAY_MS = 450;
 const MAP_VISION_MEMORY_LIMIT = 40;
 const MAP_VISION_FEET_PER_GRID_SQUARE = 5;
@@ -331,6 +333,7 @@ export class CampaignMapPageComponent {
     private readonly mapBoard = viewChild<ElementRef<HTMLDivElement>>('mapBoard');
     private readonly mapBoardShell = viewChild<ElementRef<HTMLDivElement>>('mapBoardShell');
     private readonly mapGuidePanel = viewChild<ElementRef<HTMLElement>>('mapGuidePanel');
+    private readonly encounterPopoverElement = viewChild<ElementRef<HTMLDivElement>>('encounterPopoverElement');
 
     readonly campaignId = signal('');
     readonly routeMapId = signal('');
@@ -407,6 +410,8 @@ export class CampaignMapPageComponent {
     readonly measurePopoverOpen = signal(false);
     readonly voicePopoverOpen = signal(false);
     readonly encounterPopoverOpen = signal(false);
+    readonly encounterPopoverPosition = signal(this.readStoredEncounterPopoverPosition());
+    readonly encounterPopoverDragging = signal(false);
     readonly leftToolbarOpen = signal(true);
     readonly hasUnsavedChanges = signal(false);
     readonly confirmAction = signal<MapConfirmAction>(null);
@@ -1395,6 +1400,9 @@ export class CampaignMapPageComponent {
     private ctrlKeyPressed = false;
     private suppressNextBoardClick = false;
     private readonly shiftKeyPressed = signal(false);
+    private encounterPopoverDragPointerId: number | null = null;
+    private encounterPopoverDragOffsetX = 0;
+    private encounterPopoverDragOffsetY = 0;
     private mapOverlayHintRefreshFrameId: number | null = null;
     private lastMapOverlayHintSourceKey = '';
     private pendingMonsterPortraitRegenerationSlug: string | null = null;
@@ -1799,7 +1807,58 @@ export class CampaignMapPageComponent {
         if (shouldOpen) {
             this.measurePopoverOpen.set(false);
             this.voicePopoverOpen.set(false);
+            this.normalizeEncounterPopoverPosition();
         }
+    }
+
+    startEncounterPopoverDrag(event: PointerEvent): void {
+        if (event.button !== 0 || !this.encounterPopoverOpen()) {
+            return;
+        }
+
+        const target = event.target as HTMLElement | null;
+        if (target?.closest('button, input, textarea, select, a, label')) {
+            return;
+        }
+
+        const position = this.encounterPopoverPosition();
+        this.encounterPopoverDragPointerId = event.pointerId;
+        this.encounterPopoverDragOffsetX = event.clientX - position.x;
+        this.encounterPopoverDragOffsetY = event.clientY - position.y;
+        this.encounterPopoverDragging.set(true);
+        event.preventDefault();
+    }
+
+    @HostListener('document:pointermove', ['$event'])
+    handleEncounterPopoverPointerMove(event: PointerEvent): void {
+        if (this.encounterPopoverDragPointerId === null || event.pointerId !== this.encounterPopoverDragPointerId) {
+            return;
+        }
+
+        const nextPosition = this.clampEncounterPopoverPosition(
+            event.clientX - this.encounterPopoverDragOffsetX,
+            event.clientY - this.encounterPopoverDragOffsetY
+        );
+
+        this.encounterPopoverPosition.set(nextPosition);
+    }
+
+    @HostListener('document:pointerup', ['$event'])
+    handleEncounterPopoverPointerUp(event: PointerEvent): void {
+        if (this.encounterPopoverDragPointerId === null || event.pointerId !== this.encounterPopoverDragPointerId) {
+            return;
+        }
+
+        this.finishEncounterPopoverDrag();
+    }
+
+    @HostListener('document:pointercancel', ['$event'])
+    handleEncounterPopoverPointerCancel(event: PointerEvent): void {
+        if (this.encounterPopoverDragPointerId === null || event.pointerId !== this.encounterPopoverDragPointerId) {
+            return;
+        }
+
+        this.finishEncounterPopoverDrag();
     }
 
     updateTokenInitiative(tokenId: string, value: string): void {
@@ -2116,7 +2175,13 @@ export class CampaignMapPageComponent {
     @HostListener('document:fullscreenchange')
     handleFullscreenChange(): void {
         this.isFullscreen.set(globalThis.document?.fullscreenElement === this.mapBoardShell()?.nativeElement);
+        this.normalizeEncounterPopoverPosition();
         this.cdr.detectChanges();
+    }
+
+    @HostListener('window:resize')
+    handleWindowResize(): void {
+        this.normalizeEncounterPopoverPosition();
     }
 
     refreshMapOverlayHintTone(): void {
@@ -3084,6 +3149,89 @@ export class CampaignMapPageComponent {
         } catch {
             return true;
         }
+    }
+
+    private readStoredEncounterPopoverPosition(): { x: number; y: number } {
+        const fallbackX = 72;
+        const fallbackY = this.defaultEncounterPopoverY();
+
+        try {
+            const raw = globalThis.localStorage?.getItem(MAP_ENCOUNTER_POPOVER_POSITION_STORAGE_KEY);
+            if (!raw) {
+                return this.clampEncounterPopoverPosition(fallbackX, fallbackY);
+            }
+
+            const parsed = JSON.parse(raw) as Partial<{ x: number; y: number }>;
+            if (typeof parsed.x !== 'number' || typeof parsed.y !== 'number' || !Number.isFinite(parsed.x) || !Number.isFinite(parsed.y)) {
+                return this.clampEncounterPopoverPosition(fallbackX, fallbackY);
+            }
+
+            return this.clampEncounterPopoverPosition(parsed.x, parsed.y);
+        } catch {
+            return this.clampEncounterPopoverPosition(fallbackX, fallbackY);
+        }
+    }
+
+    private defaultEncounterPopoverY(): number {
+        const viewportHeight = globalThis.innerHeight;
+        if (!Number.isFinite(viewportHeight) || viewportHeight <= 0) {
+            return 120;
+        }
+
+        return Math.max(MAP_ENCOUNTER_POPOVER_VIEWPORT_MARGIN, Math.round((viewportHeight * 0.5) - 220));
+    }
+
+    private storeEncounterPopoverPosition(position: { x: number; y: number }): void {
+        try {
+            globalThis.localStorage?.setItem(MAP_ENCOUNTER_POPOVER_POSITION_STORAGE_KEY, JSON.stringify(position));
+        } catch {
+            // Ignore storage failures and keep drag placement working in-memory.
+        }
+    }
+
+    private normalizeEncounterPopoverPosition(): void {
+        const normalized = this.clampEncounterPopoverPosition(
+            this.encounterPopoverPosition().x,
+            this.encounterPopoverPosition().y
+        );
+
+        if (
+            normalized.x === this.encounterPopoverPosition().x
+            && normalized.y === this.encounterPopoverPosition().y
+        ) {
+            return;
+        }
+
+        this.encounterPopoverPosition.set(normalized);
+        this.storeEncounterPopoverPosition(normalized);
+    }
+
+    private finishEncounterPopoverDrag(): void {
+        this.encounterPopoverDragPointerId = null;
+        this.encounterPopoverDragging.set(false);
+        this.storeEncounterPopoverPosition(this.encounterPopoverPosition());
+    }
+
+    private clampEncounterPopoverPosition(x: number, y: number): { x: number; y: number } {
+        const viewportWidth = Number.isFinite(globalThis.innerWidth) && globalThis.innerWidth > 0
+            ? globalThis.innerWidth
+            : 1280;
+        const viewportHeight = Number.isFinite(globalThis.innerHeight) && globalThis.innerHeight > 0
+            ? globalThis.innerHeight
+            : 720;
+
+        const popoverElement = this.encounterPopoverElement()?.nativeElement;
+        const popoverWidth = popoverElement?.offsetWidth ?? 360;
+        const popoverHeight = popoverElement?.offsetHeight ?? 440;
+        const minX = MAP_ENCOUNTER_POPOVER_VIEWPORT_MARGIN;
+        const minY = MAP_ENCOUNTER_POPOVER_VIEWPORT_MARGIN;
+        const maxX = Math.max(minX, viewportWidth - popoverWidth - MAP_ENCOUNTER_POPOVER_VIEWPORT_MARGIN);
+        const maxY = Math.max(minY, viewportHeight - popoverHeight - MAP_ENCOUNTER_POPOVER_VIEWPORT_MARGIN);
+
+        return {
+            x: Math.round(Math.min(Math.max(x, minX), maxX)),
+            y: Math.round(Math.min(Math.max(y, minY), maxY))
+        };
     }
 
     private storePlacementHintVisibility(value: boolean): void {

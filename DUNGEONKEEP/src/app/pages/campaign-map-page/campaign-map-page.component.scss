@@ -2698,10 +2698,10 @@ app-dropdown {
 // ── Encounter Tracker Popover ────────────────────────────────────────────
 
 .map-encounter-popover {
-    position: absolute;
-    left: calc(100% + 12px);
-    top: 50%;
-    transform: translateY(-50%);
+    position: fixed;
+    left: 72px;
+    top: 120px;
+    z-index: 210;
     width: min(360px, calc(100vw - 92px));
     display: grid;
     gap: 10px;
@@ -2713,6 +2713,20 @@ app-dropdown {
     backdrop-filter: blur(14px);
     font-size: 0.82rem;
     overflow-x: hidden;
+}
+
+.map-encounter-popover.is-dragging {
+    user-select: none;
+}
+
+.map-encounter-popover-header {
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+}
+
+.map-encounter-popover.is-dragging .map-encounter-popover-header {
+    cursor: grabbing;
 }
 
 .map-encounter-popover h3 {
