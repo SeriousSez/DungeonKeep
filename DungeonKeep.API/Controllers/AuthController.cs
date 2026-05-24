@@ -51,6 +51,34 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
         }
     }
 
+    [HttpPost("request-password-reset")]
+    public async Task<ActionResult<PasswordResetRequestAcceptedDto>> RequestPasswordReset([FromBody] RequestPasswordResetRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await authService.RequestPasswordResetAsync(request, GetClientBaseUrl(), cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<ActionResult<PasswordResetResultDto>> ResetPassword([FromBody] CompletePasswordResetRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await authService.CompletePasswordResetAsync(request, cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(exception.Message);
+        }
+    }
+
     [HttpPost("login")]
     public async Task<ActionResult<AuthSessionDto>> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
     {

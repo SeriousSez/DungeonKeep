@@ -133,6 +133,8 @@ public sealed class AuthRepository(DungeonKeepDbContext dbContext) : IAuthReposi
             EnsureColumnExists("AppUsers", "IsEmailVerified", "INTEGER NOT NULL DEFAULT 0", "TINYINT(1) NOT NULL DEFAULT 0");
             EnsureColumnExists("AppUsers", "ActivationCodeHash", "TEXT NOT NULL DEFAULT ''", "TEXT NOT NULL");
             EnsureColumnExists("AppUsers", "ActivationCodeExpiresAtUtc", "TEXT NULL", "DATETIME(6) NULL");
+            EnsureColumnExists("AppUsers", "PasswordResetCodeHash", "TEXT NOT NULL DEFAULT ''", "TEXT NOT NULL");
+            EnsureColumnExists("AppUsers", "PasswordResetCodeExpiresAtUtc", "TEXT NULL", "DATETIME(6) NULL");
 
             EnsureColumnExists("AppUsers", "NpcLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
             EnsureColumnExists("AppUsers", "CustomTableLibraryJson", "TEXT NOT NULL DEFAULT '[]'");

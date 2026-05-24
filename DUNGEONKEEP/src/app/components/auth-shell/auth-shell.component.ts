@@ -6,6 +6,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import { SessionService } from '../../state/session.service';
 
+type AuthMode = 'login' | 'signup' | 'activate' | 'forgot' | 'reset';
+
 @Component({
     selector: 'app-auth-shell',
     standalone: true,
@@ -22,7 +24,7 @@ export class AuthShellComponent {
     private readonly router = inject(Router);
     private readonly destroyRef = inject(DestroyRef);
 
-    readonly mode = signal<'login' | 'signup' | 'activate'>('login');
+    readonly mode = signal<AuthMode>('login');
     readonly errorMessage = signal('');
     readonly infoMessage = signal('');
     readonly isSubmitting = signal(false);
@@ -45,6 +47,17 @@ export class AuthShellComponent {
         code: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(6), Validators.maxLength(6)] })
     });
 
+    readonly forgotPasswordForm = new FormGroup({
+        email: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email] })
+    });
+
+    readonly resetPasswordForm = new FormGroup({
+        email: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
+        code: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(6), Validators.maxLength(6)] }),
+        newPassword: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(8)] }),
+        confirmPassword: new FormControl('', { nonNullable: true, validators: [Validators.required] })
+    });
+
     constructor() {
         this.route.queryParamMap
             .pipe(takeUntilDestroyed(this.destroyRef))
@@ -58,6 +71,22 @@ export class AuthShellComponent {
                     if (email) {
                         this.activationForm.controls.email.setValue(email);
                         this.loginForm.controls.email.setValue(email);
+                        this.forgotPasswordForm.controls.email.setValue(email);
+                        this.resetPasswordForm.controls.email.setValue(email);
+                    }
+                } else if (mode === 'forgot') {
+                    this.mode.set('forgot');
+                    if (email) {
+                        this.forgotPasswordForm.controls.email.setValue(email);
+                        this.loginForm.controls.email.setValue(email);
+                        this.resetPasswordForm.controls.email.setValue(email);
+                    }
+                } else if (mode === 'reset') {
+                    this.mode.set('reset');
+                    if (email) {
+                        this.resetPasswordForm.controls.email.setValue(email);
+                        this.loginForm.controls.email.setValue(email);
+                        this.forgotPasswordForm.controls.email.setValue(email);
                     }
                 } else if (mode === 'signup') {
                     this.mode.set('signup');
@@ -65,6 +94,8 @@ export class AuthShellComponent {
                     this.mode.set('login');
                     if (email) {
                         this.loginForm.controls.email.setValue(email);
+                        this.forgotPasswordForm.controls.email.setValue(email);
+                        this.resetPasswordForm.controls.email.setValue(email);
                     }
                 }
 
@@ -72,12 +103,22 @@ export class AuthShellComponent {
             });
     }
 
-    setMode(mode: 'login' | 'signup'): void {
+    setMode(mode: AuthMode): void {
         this.errorMessage.set('');
         this.infoMessage.set('');
+        const queryParams = mode === 'login'
+            ? {}
+            : mode === 'signup'
+                ? { mode: 'signup' }
+                : mode === 'activate'
+                    ? { mode: 'activate', email: this.activationForm.controls.email.getRawValue() }
+                    : mode === 'forgot'
+                        ? { mode: 'forgot', email: this.forgotPasswordForm.controls.email.getRawValue() }
+                        : { mode: 'reset', email: this.resetPasswordForm.controls.email.getRawValue() };
+
         void this.router.navigate([], {
             relativeTo: this.route,
-            queryParams: mode === 'signup' ? { mode: 'signup' } : {},
+            queryParams,
             replaceUrl: true
         });
     }
@@ -204,6 +245,77 @@ export class AuthShellComponent {
             this.errorMessage.set(result.error ?? 'Unable to resend activation code.');
         } else {
             this.infoMessage.set(result.message ?? 'A new activation code was sent.');
+        }
+
+        this.cdr.detectChanges();
+    }
+
+    async submitPasswordResetRequest(): Promise<void> {
+        if (this.forgotPasswordForm.invalid) {
+            this.forgotPasswordForm.markAllAsTouched();
+            return;
+        }
+
+        this.isSubmitting.set(true);
+        this.errorMessage.set('');
+        this.infoMessage.set('');
+
+        const email = this.forgotPasswordForm.controls.email.getRawValue();
+        const result = await this.session.requestPasswordReset(email);
+
+        this.isSubmitting.set(false);
+        if (!result.ok) {
+            this.errorMessage.set(result.error ?? 'Unable to request password reset.');
+        } else {
+            this.resetPasswordForm.controls.email.setValue(email);
+            this.loginForm.controls.email.setValue(email);
+            this.infoMessage.set(result.message ?? 'If an account exists for that email, a reset code has been sent.');
+            void this.router.navigate([], {
+                relativeTo: this.route,
+                queryParams: { mode: 'reset', email },
+                replaceUrl: true
+            });
+        }
+
+        this.cdr.detectChanges();
+    }
+
+    async submitPasswordReset(): Promise<void> {
+        if (this.resetPasswordForm.invalid) {
+            this.resetPasswordForm.markAllAsTouched();
+            return;
+        }
+
+        const newPassword = this.resetPasswordForm.controls.newPassword.getRawValue();
+        const confirmPassword = this.resetPasswordForm.controls.confirmPassword.getRawValue();
+        if (newPassword !== confirmPassword) {
+            this.errorMessage.set('Passwords do not match.');
+            return;
+        }
+
+        this.isSubmitting.set(true);
+        this.errorMessage.set('');
+        this.infoMessage.set('');
+
+        const result = await this.session.resetPassword(
+            this.resetPasswordForm.controls.email.getRawValue(),
+            this.resetPasswordForm.controls.code.getRawValue(),
+            newPassword
+        );
+
+        this.isSubmitting.set(false);
+        if (!result.ok) {
+            this.errorMessage.set(result.error ?? 'Unable to reset password.');
+        } else {
+            const email = result.email ?? this.resetPasswordForm.controls.email.getRawValue();
+            this.loginForm.controls.email.setValue(email);
+            this.forgotPasswordForm.controls.email.setValue(email);
+            this.infoMessage.set(result.message ?? 'Password reset complete. You can sign in now.');
+            void this.router.navigate([], {
+                relativeTo: this.route,
+                queryParams: { email },
+                replaceUrl: true
+            });
         }
 
         this.cdr.detectChanges();

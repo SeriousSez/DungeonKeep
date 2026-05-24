@@ -385,6 +385,15 @@ export interface ApiActivationResultDto {
     message: string;
 }
 
+export interface ApiPasswordResetRequestAcceptedDto {
+    message: string;
+}
+
+export interface ApiPasswordResetResultDto {
+    email: string;
+    message: string;
+}
+
 export interface ApiGenerateCharacterBackstoryRequest {
     className: string;
     background: string;
@@ -1228,6 +1237,14 @@ export class DungeonApiService {
 
     async resendActivationCode(payload: { email: string }): Promise<ApiActivationResultDto> {
         return await firstValueFrom(this.http.post<ApiActivationResultDto>(`${this.baseUrl}/auth/resend-activation`, payload));
+    }
+
+    async requestPasswordReset(payload: { email: string }): Promise<ApiPasswordResetRequestAcceptedDto> {
+        return await firstValueFrom(this.http.post<ApiPasswordResetRequestAcceptedDto>(`${this.baseUrl}/auth/request-password-reset`, payload));
+    }
+
+    async resetPassword(payload: { email: string; code: string; newPassword: string }): Promise<ApiPasswordResetResultDto> {
+        return await firstValueFrom(this.http.post<ApiPasswordResetResultDto>(`${this.baseUrl}/auth/reset-password`, payload));
     }
 
     async login(payload: { email: string; password: string }): Promise<ApiAuthSessionDto> {

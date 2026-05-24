@@ -7,9 +7,14 @@ using System.Text.Json;
 
 namespace DungeonKeep.ApplicationService.Services;
 
-public sealed class AuthService(IAuthRepository authRepository, IAccountActivationEmailService accountActivationEmailService, INotificationRepository notificationRepository) : IAuthService
+public sealed class AuthService(
+    IAuthRepository authRepository,
+    IAccountActivationEmailService accountActivationEmailService,
+    IPasswordResetEmailService passwordResetEmailService,
+    INotificationRepository notificationRepository) : IAuthService
 {
     private static readonly TimeSpan ActivationCodeLifetime = TimeSpan.FromMinutes(20);
+    private static readonly TimeSpan PasswordResetCodeLifetime = TimeSpan.FromMinutes(20);
 
     public async Task<SignupPendingActivationDto> SignupAsync(SignupRequest request, string? clientBaseUrl, CancellationToken cancellationToken = default)
     {
@@ -162,6 +167,69 @@ public sealed class AuthService(IAuthRepository authRepository, IAccountActivati
         );
     }
 
+    public async Task<PasswordResetRequestAcceptedDto> RequestPasswordResetAsync(RequestPasswordResetRequest request, string? clientBaseUrl, CancellationToken cancellationToken = default)
+    {
+        var normalizedEmail = NormalizeEmail(request.Email);
+        if (string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            throw new InvalidOperationException("Email is required.");
+        }
+
+        var user = await authRepository.GetUserByEmailAsync(normalizedEmail, cancellationToken);
+        if (user is not null && user.IsEmailVerified)
+        {
+            var resetCode = CreateActivationCode();
+            var resetCodeExpiresAtUtc = DateTime.UtcNow.Add(PasswordResetCodeLifetime);
+            user.PasswordResetCodeHash = HashActivationCode(resetCode);
+            user.PasswordResetCodeExpiresAtUtc = resetCodeExpiresAtUtc;
+
+            await authRepository.UpdateUserAsync(user, cancellationToken);
+            await passwordResetEmailService.SendPasswordResetCodeAsync(
+                new PasswordResetEmail(
+                    user.Email,
+                    user.DisplayName,
+                    resetCode,
+                    BuildPasswordResetUrl(clientBaseUrl, user.Email),
+                    resetCodeExpiresAtUtc),
+                cancellationToken);
+        }
+
+        return new PasswordResetRequestAcceptedDto("If an account exists for that email, a password reset code has been sent.");
+    }
+
+    public async Task<PasswordResetResultDto> CompletePasswordResetAsync(CompletePasswordResetRequest request, CancellationToken cancellationToken = default)
+    {
+        var normalizedEmail = NormalizeEmail(request.Email);
+        var code = request.Code.Trim();
+
+        if (string.IsNullOrWhiteSpace(normalizedEmail) || string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(request.NewPassword))
+        {
+            throw new InvalidOperationException("Email, reset code, and new password are required.");
+        }
+
+        if (request.NewPassword.Length < 8)
+        {
+            throw new InvalidOperationException("New password must be at least 8 characters.");
+        }
+
+        var user = await authRepository.GetUserByEmailAsync(normalizedEmail, cancellationToken)
+            ?? throw new InvalidOperationException("Reset code is invalid or expired.");
+
+        if (user.PasswordResetCodeExpiresAtUtc is null
+            || user.PasswordResetCodeExpiresAtUtc <= DateTime.UtcNow
+            || !VerifyActivationCode(user.PasswordResetCodeHash, code))
+        {
+            throw new InvalidOperationException("Reset code is invalid or expired.");
+        }
+
+        user.PasswordHash = HashPassword(request.NewPassword);
+        user.PasswordResetCodeHash = string.Empty;
+        user.PasswordResetCodeExpiresAtUtc = null;
+
+        await authRepository.UpdateUserAsync(user, cancellationToken);
+        return new PasswordResetResultDto(user.Email, "Password reset complete. You can sign in now.");
+    }
+
     public async Task<AuthSessionDto?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
         var normalizedEmail = NormalizeEmail(request.Email);
@@ -273,6 +341,15 @@ public sealed class AuthService(IAuthRepository authRepository, IAccountActivati
             : clientBaseUrl.Trim().TrimEnd('/');
 
         return $"{normalizedBaseUrl}/auth?mode=activate&email={Uri.EscapeDataString(email)}";
+    }
+
+    private static string BuildPasswordResetUrl(string? clientBaseUrl, string email)
+    {
+        var normalizedBaseUrl = string.IsNullOrWhiteSpace(clientBaseUrl)
+            ? "http://localhost:4200"
+            : clientBaseUrl.Trim().TrimEnd('/');
+
+        return $"{normalizedBaseUrl}/auth?mode=reset&email={Uri.EscapeDataString(email)}";
     }
 
     private static string HashPassword(string password)

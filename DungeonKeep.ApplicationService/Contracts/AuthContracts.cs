@@ -45,6 +45,14 @@ public sealed record ActivateAccountRequest(
 
 public sealed record ResendActivationCodeRequest(string Email);
 
+public sealed record RequestPasswordResetRequest(string Email);
+
+public sealed record CompletePasswordResetRequest(string Email, string Code, string NewPassword);
+
+public sealed record PasswordResetRequestAcceptedDto(string Message);
+
+public sealed record PasswordResetResultDto(string Email, string Message);
+
 public sealed record UpdateProfileRequest(string DisplayName, string Email);
 
 public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
@@ -66,6 +74,14 @@ public sealed record AccountActivationEmail(
     string RecipientDisplayName,
     string ActivationCode,
     string ActivationUrl,
+    DateTime ExpiresAtUtc
+);
+
+public sealed record PasswordResetEmail(
+    string RecipientEmail,
+    string RecipientDisplayName,
+    string ResetCode,
+    string ResetUrl,
     DateTime ExpiresAtUtc
 );
 

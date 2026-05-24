@@ -43,11 +43,13 @@ public static class ServiceCollectionExtensions
         if (emailOptions.IsEnabled)
         {
             services.AddScoped<IAccountActivationEmailService, SmtpAccountActivationEmailService>();
+            services.AddScoped<IPasswordResetEmailService, SmtpPasswordResetEmailService>();
             services.AddScoped<ICampaignInviteEmailService, SmtpCampaignInviteEmailService>();
         }
         else
         {
             services.AddScoped<IAccountActivationEmailService, NoOpAccountActivationEmailService>();
+            services.AddScoped<IPasswordResetEmailService, NoOpPasswordResetEmailService>();
             services.AddScoped<ICampaignInviteEmailService, NoOpCampaignInviteEmailService>();
         }
 

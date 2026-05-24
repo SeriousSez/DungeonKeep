@@ -9,6 +9,8 @@ public sealed class AppUser
     public bool IsEmailVerified { get; set; }
     public string ActivationCodeHash { get; set; } = string.Empty;
     public DateTime? ActivationCodeExpiresAtUtc { get; set; }
+    public string PasswordResetCodeHash { get; set; } = string.Empty;
+    public DateTime? PasswordResetCodeExpiresAtUtc { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public string NpcLibraryJson { get; set; } = "[]";
     public string CustomTableLibraryJson { get; set; } = "[]";

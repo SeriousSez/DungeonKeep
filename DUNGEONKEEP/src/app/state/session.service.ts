@@ -45,6 +45,24 @@ export class SessionService {
         }
     }
 
+    async requestPasswordReset(email: string): Promise<{ ok: boolean; message?: string; error?: string }> {
+        try {
+            const result = await this.api.requestPasswordReset({ email });
+            return { ok: true, message: result.message };
+        } catch (error) {
+            return { ok: false, error: extractApiError(error, 'Unable to request a password reset right now.') };
+        }
+    }
+
+    async resetPassword(email: string, code: string, newPassword: string): Promise<{ ok: boolean; email?: string; message?: string; error?: string }> {
+        try {
+            const result = await this.api.resetPassword({ email, code, newPassword });
+            return { ok: true, email: result.email, message: result.message };
+        } catch (error) {
+            return { ok: false, error: extractApiError(error, 'Unable to reset password right now.') };
+        }
+    }
+
     async login(email: string, password: string): Promise<{ ok: boolean; activationRequired?: boolean; error?: string }> {
         try {
             const session = await this.api.login({ email, password });
