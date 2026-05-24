@@ -83,16 +83,29 @@ jobs:
           SMTP_REPLY_TO_NAME: ${{ secrets.SMTP_REPLY_TO_NAME }}
           SMTP_SECURE_SOCKET_OPTION: ${{ secrets.SMTP_SECURE_SOCKET_OPTION }}
         run: |
+          $smtpHost = if ($null -eq $env:SMTP_HOST) { "" } else { $env:SMTP_HOST.Trim() }
+          $smtpUsername = if ($null -eq $env:SMTP_USERNAME) { "" } else { $env:SMTP_USERNAME.Trim() }
+          $smtpPassword = if ($null -eq $env:SMTP_PASSWORD) { "" } else { $env:SMTP_PASSWORD.Trim() }
+          $smtpFromAddress = if ($null -eq $env:SMTP_FROM_ADDRESS) { "" } else { $env:SMTP_FROM_ADDRESS.Trim() }
+          $smtpFromName = if ($null -eq $env:SMTP_FROM_NAME) { "" } else { $env:SMTP_FROM_NAME.Trim() }
+          $smtpReplyToAddress = if ($null -eq $env:SMTP_REPLY_TO_ADDRESS) { "" } else { $env:SMTP_REPLY_TO_ADDRESS.Trim() }
+          $smtpReplyToName = if ($null -eq $env:SMTP_REPLY_TO_NAME) { "" } else { $env:SMTP_REPLY_TO_NAME.Trim() }
+          $smtpSecureSocketOption = if ($null -eq $env:SMTP_SECURE_SOCKET_OPTION) { "" } else { $env:SMTP_SECURE_SOCKET_OPTION.Trim() }
+
           $smtpPort = 587
 
           if (-not [string]::IsNullOrWhiteSpace($env:SMTP_PORT)) {
             $parsedPort = 0
-            if ([int]::TryParse($env:SMTP_PORT, [ref]$parsedPort)) {
+            if ([int]::TryParse($env:SMTP_PORT.Trim(), [ref]$parsedPort)) {
               $smtpPort = $parsedPort
             }
           }
 
-          $emailEnabled = (-not [string]::IsNullOrWhiteSpace($env:SMTP_HOST)) -and (-not [string]::IsNullOrWhiteSpace($env:SMTP_FROM_ADDRESS))
+          $emailEnabled =
+            (-not [string]::IsNullOrWhiteSpace($smtpHost)) -and
+            (-not [string]::IsNullOrWhiteSpace($smtpFromAddress)) -and
+            (-not [string]::IsNullOrWhiteSpace($smtpUsername)) -and
+            (-not [string]::IsNullOrWhiteSpace($smtpPassword))
 
           $config = @{
             Database = @{
@@ -122,15 +135,15 @@ jobs:
             }
             Email = @{
               Enabled = $emailEnabled
-              Host = $env:SMTP_HOST
+              Host = $smtpHost
               Port = $smtpPort
-              Username = $env:SMTP_USERNAME
-              Password = $env:SMTP_PASSWORD
-              FromAddress = $env:SMTP_FROM_ADDRESS
-              FromName = if ([string]::IsNullOrWhiteSpace($env:SMTP_FROM_NAME)) { "DungeonKeep" } else { $env:SMTP_FROM_NAME }
-              ReplyToAddress = $env:SMTP_REPLY_TO_ADDRESS
-              ReplyToName = if ([string]::IsNullOrWhiteSpace($env:SMTP_REPLY_TO_NAME)) { "DungeonKeep" } else { $env:SMTP_REPLY_TO_NAME }
-              SecureSocketOption = if ([string]::IsNullOrWhiteSpace($env:SMTP_SECURE_SOCKET_OPTION)) { "StartTlsWhenAvailable" } else { $env:SMTP_SECURE_SOCKET_OPTION }
+              Username = $smtpUsername
+              Password = $smtpPassword
+              FromAddress = $smtpFromAddress
+              FromName = if ([string]::IsNullOrWhiteSpace($smtpFromName)) { "DungeonKeep" } else { $smtpFromName }
+              ReplyToAddress = $smtpReplyToAddress
+              ReplyToName = if ([string]::IsNullOrWhiteSpace($smtpReplyToName)) { "DungeonKeep" } else { $smtpReplyToName }
+              SecureSocketOption = if ([string]::IsNullOrWhiteSpace($smtpSecureSocketOption)) { "StartTlsWhenAvailable" } else { $smtpSecureSocketOption }
             }
             AllowedHosts = '*'
           }
