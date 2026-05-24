@@ -176,22 +176,42 @@ public sealed class AuthService(
         }
 
         var user = await authRepository.GetUserByEmailAsync(normalizedEmail, cancellationToken);
-        if (user is not null && user.IsEmailVerified)
+        if (user is not null)
         {
-            var resetCode = CreateActivationCode();
-            var resetCodeExpiresAtUtc = DateTime.UtcNow.Add(PasswordResetCodeLifetime);
-            user.PasswordResetCodeHash = HashActivationCode(resetCode);
-            user.PasswordResetCodeExpiresAtUtc = resetCodeExpiresAtUtc;
+            if (user.IsEmailVerified)
+            {
+                var resetCode = CreateActivationCode();
+                var resetCodeExpiresAtUtc = DateTime.UtcNow.Add(PasswordResetCodeLifetime);
+                user.PasswordResetCodeHash = HashActivationCode(resetCode);
+                user.PasswordResetCodeExpiresAtUtc = resetCodeExpiresAtUtc;
 
-            await authRepository.UpdateUserAsync(user, cancellationToken);
-            await passwordResetEmailService.SendPasswordResetCodeAsync(
-                new PasswordResetEmail(
-                    user.Email,
-                    user.DisplayName,
-                    resetCode,
-                    BuildPasswordResetUrl(clientBaseUrl, user.Email),
-                    resetCodeExpiresAtUtc),
-                cancellationToken);
+                await authRepository.UpdateUserAsync(user, cancellationToken);
+                await passwordResetEmailService.SendPasswordResetCodeAsync(
+                    new PasswordResetEmail(
+                        user.Email,
+                        user.DisplayName,
+                        resetCode,
+                        BuildPasswordResetUrl(clientBaseUrl, user.Email),
+                        resetCodeExpiresAtUtc),
+                    cancellationToken);
+            }
+            else
+            {
+                var activationCode = CreateActivationCode();
+                var activationExpiresAtUtc = DateTime.UtcNow.Add(ActivationCodeLifetime);
+                user.ActivationCodeHash = HashActivationCode(activationCode);
+                user.ActivationCodeExpiresAtUtc = activationExpiresAtUtc;
+
+                await authRepository.UpdateUserAsync(user, cancellationToken);
+                await accountActivationEmailService.SendActivationCodeAsync(
+                    new AccountActivationEmail(
+                        user.Email,
+                        user.DisplayName,
+                        activationCode,
+                        BuildActivationUrl(clientBaseUrl, user.Email),
+                        activationExpiresAtUtc),
+                    cancellationToken);
+            }
         }
 
         return new PasswordResetRequestAcceptedDto("If an account exists for that email, a password reset code has been sent.");

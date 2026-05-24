@@ -17,6 +17,8 @@ builder.Configuration.AddJsonFile(
 );
 
 var databaseProvider = DatabaseConfiguration.GetProvider(builder.Configuration);
+var emailEnabled = builder.Configuration.GetSection("Email").GetValue<bool?>("Enabled") ?? false;
+var emailHost = builder.Configuration.GetSection("Email").GetValue<string>("Host") ?? string.Empty;
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ??
 [
@@ -65,6 +67,11 @@ else
 {
     app.Logger.LogInformation("Using MySQL database provider for DungeonKeep API startup.");
 }
+
+app.Logger.LogInformation(
+    "Email delivery mode on startup: Enabled={EmailEnabled}, Host={EmailHost}",
+    emailEnabled,
+    string.IsNullOrWhiteSpace(emailHost) ? "(empty)" : emailHost);
 
 if (args.Contains("--migrate-sqlite-to-mysql", StringComparer.OrdinalIgnoreCase))
 {
