@@ -12,8 +12,8 @@ public sealed class SmtpPasswordResetEmailService(
     ILogger<SmtpPasswordResetEmailService> logger) : IPasswordResetEmailService
 {
     private static readonly HtmlEncoder HtmlEncoder = HtmlEncoder.Default;
-  private static readonly object SmtpDiagnosticsLock = new();
-  private static readonly string SmtpDiagnosticsPath = Path.Combine(AppContext.BaseDirectory, "logs", "smtp-diagnostics.log");
+    private static readonly object SmtpDiagnosticsLock = new();
+    private static readonly string SmtpDiagnosticsPath = Path.Combine(AppContext.BaseDirectory, "logs", "smtp-diagnostics.log");
 
     public async Task SendPasswordResetCodeAsync(PasswordResetEmail passwordResetEmail, CancellationToken cancellationToken = default)
     {
@@ -30,7 +30,7 @@ public sealed class SmtpPasswordResetEmailService(
         }
         catch (Exception exception)
         {
-          WriteSmtpDiagnostic("connect_failed", passwordResetEmail.RecipientEmail, exception);
+            WriteSmtpDiagnostic("connect_failed", passwordResetEmail.RecipientEmail, exception);
             logger.LogError(
                 exception,
                 "Failed to connect to SMTP server {Host}:{Port} using {SecureSocketOption} for password reset delivery.",
@@ -48,7 +48,7 @@ public sealed class SmtpPasswordResetEmailService(
             }
             catch (Exception exception)
             {
-            WriteSmtpDiagnostic("authenticate_failed", passwordResetEmail.RecipientEmail, exception);
+                WriteSmtpDiagnostic("authenticate_failed", passwordResetEmail.RecipientEmail, exception);
                 logger.LogError(
                     exception,
                     "Failed to authenticate to SMTP server {Host}:{Port} as {Username} for password reset delivery.",
@@ -65,7 +65,7 @@ public sealed class SmtpPasswordResetEmailService(
         }
         catch (Exception exception)
         {
-          WriteSmtpDiagnostic("send_failed", passwordResetEmail.RecipientEmail, exception);
+            WriteSmtpDiagnostic("send_failed", passwordResetEmail.RecipientEmail, exception);
             logger.LogError(
                 exception,
                 "Failed to send password reset email through SMTP server {Host}:{Port} to {RecipientEmail}.",
@@ -83,31 +83,31 @@ public sealed class SmtpPasswordResetEmailService(
         WriteSmtpDiagnostic("send_succeeded", passwordResetEmail.RecipientEmail, null);
     }
 
-      private static void WriteSmtpDiagnostic(string stage, string recipientEmail, Exception? exception)
-      {
+    private static void WriteSmtpDiagnostic(string stage, string recipientEmail, Exception? exception)
+    {
         try
         {
-          var logDirectory = Path.GetDirectoryName(SmtpDiagnosticsPath);
-          if (!string.IsNullOrWhiteSpace(logDirectory))
-          {
-            Directory.CreateDirectory(logDirectory);
-          }
+            var logDirectory = Path.GetDirectoryName(SmtpDiagnosticsPath);
+            if (!string.IsNullOrWhiteSpace(logDirectory))
+            {
+                Directory.CreateDirectory(logDirectory);
+            }
 
-          var line = $"[{DateTime.UtcNow:O}] stage={stage}; recipient={recipientEmail}; " +
-            (exception is null
-              ? "result=ok"
-              : $"result=error; errorType={exception.GetType().Name}; errorMessage={exception.Message}");
+            var line = $"[{DateTime.UtcNow:O}] stage={stage}; recipient={recipientEmail}; " +
+              (exception is null
+                ? "result=ok"
+                : $"result=error; errorType={exception.GetType().Name}; errorMessage={exception.Message}");
 
-          lock (SmtpDiagnosticsLock)
-          {
-            File.AppendAllText(SmtpDiagnosticsPath, line + Environment.NewLine);
-          }
+            lock (SmtpDiagnosticsLock)
+            {
+                File.AppendAllText(SmtpDiagnosticsPath, line + Environment.NewLine);
+            }
         }
         catch
         {
-          // Never throw from diagnostics logging.
+            // Never throw from diagnostics logging.
         }
-      }
+    }
 
     private MimeMessage BuildMessage(PasswordResetEmail passwordResetEmail)
     {
