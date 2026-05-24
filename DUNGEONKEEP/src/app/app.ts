@@ -14,6 +14,7 @@ import { CompactModeService } from './state/compact-mode.service';
 import { NotificationBadgeService } from './state/notification-badge.service';
 import { UserHubService } from './state/user-hub.service';
 import { rulesBrowseLinks, rulesResourceLinks } from './data/rules-links';
+import { AppUpdateService } from './state/app-update.service';
 
 const LIVE_NOTIFICATION_ICONS: Record<string, string> = {
   CampaignInvite: 'scroll',
@@ -37,6 +38,7 @@ export class App {
   private readonly campaignRealtime = inject(CampaignRealtimeService);
   private readonly api = inject(DungeonApiService);
   private readonly userHub = inject(UserHubService);
+  readonly appUpdate = inject(AppUpdateService);
   private readonly theme = inject(ThemeService);
   private readonly compactMode = inject(CompactModeService);
   readonly notificationBadge = inject(NotificationBadgeService);
