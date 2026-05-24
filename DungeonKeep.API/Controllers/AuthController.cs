@@ -2,12 +2,13 @@ using DungeonKeep.ApplicationService.Contracts;
 using DungeonKeep.ApplicationService.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
+using Microsoft.Extensions.Logging;
 
 namespace DungeonKeep.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public sealed class AuthController(IAuthService authService) : ControllerBase
+public sealed class AuthController(IAuthService authService, ILogger<AuthController> logger) : ControllerBase
 {
     [HttpPost("signup")]
     public async Task<ActionResult<SignupPendingActivationDto>> Signup([FromBody] SignupRequest request, CancellationToken cancellationToken)
@@ -62,6 +63,12 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
         catch (InvalidOperationException exception)
         {
             return BadRequest(exception.Message);
+        }
+        catch (Exception exception)
+        {
+            // Keep response generic to avoid account enumeration and avoid surfacing transient infrastructure failures.
+            logger.LogError(exception, "Password reset request failed unexpectedly for {Email}.", request.Email);
+            return Ok(new PasswordResetRequestAcceptedDto("If an account exists for that email, a password reset code has been sent."));
         }
     }
 
