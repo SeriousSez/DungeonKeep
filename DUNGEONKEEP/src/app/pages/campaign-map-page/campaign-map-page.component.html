@@ -250,7 +250,7 @@
                     <p class="sidebar-note">NPCs will appear here once they are part of this campaign.</p>
                     }
                     <label class="field-label" for="map-token-monster">Monster token</label>
-                    <app-dropdown id="map-token-monster" ariaLabel="Monster token" [value]="tokenPlacementMonsterId()" [options]="monsterTokenOptions()" [minWidth]="220" [disabled]="isEditorLocked()" (changed)="updateTokenPlacementMonster($event)"></app-dropdown>
+                    <app-dropdown id="map-token-monster" ariaLabel="Monster token" [value]="tokenPlacementMonsterId()" [options]="monsterTokenOptions()" [minWidth]="220" [disabled]="isEditorLocked()" [searchable]="true" (changed)="updateTokenPlacementMonster($event)"></app-dropdown>
                     @if (monsterTokenOptions().length === 1) {
                     <p class="sidebar-note">Create or import monsters in Monster Library to place monster tokens from your collection.</p>
                     }
@@ -1476,12 +1476,23 @@
                 </button>
             </div>
 
+            <div class="encounter-combat-controls">
+                <div class="encounter-combat-status">
+                    <span class="encounter-round-chip">Round {{ encounterRound() }}</span>
+                    @if (encounterActiveEntry(); as activeEntry) {
+                    <span class="encounter-active-chip">Turn: {{ activeEntry.name }}</span>
+                    } @else {
+                    <span class="encounter-active-chip is-muted">Turn: Unset</span>
+                    }
+                </div>
+            </div>
+
             @if (encounterEntries().length === 0) {
             <p class="sidebar-note">No tokens on the map yet. Place character, NPC, or monster tokens to track the encounter.</p>
             } @else {
             <div class="encounter-entry-list">
                 @for (entry of encounterEntries(); track entry.token.id) {
-                <div class="encounter-entry" [class.encounter-entry--hidden]="entry.isHiddenFromPlayers && canEdit()">
+                <div class="encounter-entry" [class.encounter-entry--hidden]="entry.isHiddenFromPlayers && canEdit()" [class.encounter-entry--active]="encounterActiveTokenId() === entry.token.id">
                     <div class="encounter-entry-main">
                         <label class="encounter-initiative-field">
                             <span class="encounter-initiative-label">Init</span>
@@ -1489,6 +1500,11 @@
                                 aria-label="Initiative for {{ entry.name }}" />
                         </label>
                         <span class="encounter-entry-name">{{ entry.name }}</span>
+                        @if (canEdit()) {
+                        <button type="button" class="ghost-button compact-action encounter-active-btn" (click)="setEncounterActiveToken(entry.token.id)" [disabled]="encounterActiveTokenId() === entry.token.id">
+                            {{ encounterActiveTokenId() === entry.token.id ? 'Active' : 'Set Turn' }}
+                        </button>
+                        }
                         @if (!entry.isCharacter) {
                         <span class="status-chip" [class.is-warning]="entry.isHiddenFromPlayers" [class.is-success]="!entry.isHiddenFromPlayers">
                             {{ entry.isHiddenFromPlayers ? 'Hidden' : 'Revealed' }}
@@ -1522,6 +1538,23 @@
                 </div>
                 }
             </div>
+
+            @if (canEdit()) {
+            <div class="encounter-combat-footer">
+                <div class="encounter-combat-actions encounter-combat-actions--footer">
+                    <button type="button" class="ghost-button compact-action encounter-combat-btn" (click)="startEncounter()" [disabled]="encounterEntries().length === 0">Start</button>
+                    <button type="button" class="ghost-button compact-action encounter-combat-btn" (click)="previousEncounterTurn()" [disabled]="encounterEntries().length === 0">
+                        <i class="fa-duotone fa-thin fa-chevron-left"></i>
+                        Prev
+                    </button>
+                    <button type="button" class="ghost-button compact-action encounter-combat-btn" (click)="nextEncounterTurn()" [disabled]="encounterEntries().length === 0">
+                        Next
+                        <i class="fa-duotone fa-thin fa-chevron-right"></i>
+                    </button>
+                    <button type="button" class="ghost-button compact-action encounter-combat-btn" (click)="endEncounter()" [disabled]="encounterEntries().length === 0">End</button>
+                </div>
+            </div>
+            }
             }
         </div>
         }

@@ -171,38 +171,60 @@ public sealed class AuthRepository(DungeonKeepDbContext dbContext) : IAuthReposi
 
     private void EnsureSqliteColumnExists(string tableName, string columnName, string columnDefinition)
     {
-        using var connection = dbContext.Database.GetDbConnection();
-        if (connection.State != System.Data.ConnectionState.Open)
+        var connection = dbContext.Database.GetDbConnection();
+        var openedHere = connection.State != System.Data.ConnectionState.Open;
+        if (openedHere)
         {
             connection.Open();
         }
 
-        using var existsCommand = connection.CreateCommand();
-        existsCommand.CommandText = $"SELECT 1 FROM pragma_table_info('{tableName}') WHERE name = '{columnName}' LIMIT 1;";
-        if (existsCommand.ExecuteScalar() is not null)
+        try
         {
-            return;
-        }
+            using var existsCommand = connection.CreateCommand();
+            existsCommand.CommandText = $"SELECT 1 FROM pragma_table_info('{tableName}') WHERE name = '{columnName}' LIMIT 1;";
+            if (existsCommand.ExecuteScalar() is not null)
+            {
+                return;
+            }
 
-        dbContext.Database.ExecuteSqlRaw("ALTER TABLE \"" + tableName + "\" ADD COLUMN \"" + columnName + "\" " + columnDefinition + ";");
+            dbContext.Database.ExecuteSqlRaw("ALTER TABLE \"" + tableName + "\" ADD COLUMN \"" + columnName + "\" " + columnDefinition + ";");
+        }
+        finally
+        {
+            if (openedHere)
+            {
+                connection.Close();
+            }
+        }
     }
 
     private void EnsureMySqlColumnExists(string tableName, string columnName, string columnDefinition)
     {
-        using var connection = dbContext.Database.GetDbConnection();
-        if (connection.State != System.Data.ConnectionState.Open)
+        var connection = dbContext.Database.GetDbConnection();
+        var openedHere = connection.State != System.Data.ConnectionState.Open;
+        if (openedHere)
         {
             connection.Open();
         }
 
-        using var existsCommand = connection.CreateCommand();
-        existsCommand.CommandText = $"SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{tableName}' AND COLUMN_NAME = '{columnName}' LIMIT 1;";
-        if (existsCommand.ExecuteScalar() is not null)
+        try
         {
-            return;
-        }
+            using var existsCommand = connection.CreateCommand();
+            existsCommand.CommandText = $"SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{tableName}' AND COLUMN_NAME = '{columnName}' LIMIT 1;";
+            if (existsCommand.ExecuteScalar() is not null)
+            {
+                return;
+            }
 
-        dbContext.Database.ExecuteSqlRaw("ALTER TABLE `" + tableName + "` ADD COLUMN `" + columnName + "` " + columnDefinition + ";");
+            dbContext.Database.ExecuteSqlRaw("ALTER TABLE `" + tableName + "` ADD COLUMN `" + columnName + "` " + columnDefinition + ";");
+        }
+        finally
+        {
+            if (openedHere)
+            {
+                connection.Close();
+            }
+        }
     }
 
     private void EnsureLegacyUsersCanSignIn()

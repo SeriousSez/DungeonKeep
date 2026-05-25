@@ -164,7 +164,10 @@ public sealed record CampaignMapDto(
     CampaignMapLayersDto Layers,
     IReadOnlyList<CampaignMapVisionMemoryDto> VisionMemory,
     bool VisionEnabled = true,
-    bool MembersCanViewAnytime = false
+    bool MembersCanViewAnytime = false,
+    int? EncounterRound = null,
+    Guid? EncounterActiveTokenId = null,
+    DateTimeOffset? EncounterStartedAtUtc = null
 );
 
 public sealed record CampaignMapBoardDto(
@@ -186,7 +189,10 @@ public sealed record CampaignMapBoardDto(
     CampaignMapLayersDto Layers,
     IReadOnlyList<CampaignMapVisionMemoryDto> VisionMemory,
     bool VisionEnabled = true,
-    bool MembersCanViewAnytime = false
+    bool MembersCanViewAnytime = false,
+    int? EncounterRound = null,
+    Guid? EncounterActiveTokenId = null,
+    DateTimeOffset? EncounterStartedAtUtc = null
 );
 
 public sealed record CampaignMapLibraryDto(

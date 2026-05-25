@@ -96,6 +96,7 @@ try
     }
     else if (databaseProvider == DatabaseProvider.MySql)
     {
+        EnsureCurrentMySqlAuthSchema(dbContext);
         EnsureNotificationsAndMessagesSchemaMySQL(dbContext);
     }
 
@@ -352,31 +353,82 @@ static void EnsureIndexExists(DungeonKeepDbContext dbContext, string indexName, 
 
 static void EnsureMySqlLongTextColumnExists(DungeonKeepDbContext dbContext, string tableName, string columnName)
 {
-    using var connection = dbContext.Database.GetDbConnection();
-    if (connection.State != ConnectionState.Open)
+    var connection = dbContext.Database.GetDbConnection();
+    var openedHere = connection.State != ConnectionState.Open;
+    if (openedHere)
     {
         connection.Open();
     }
 
-    using var checkCommand = connection.CreateCommand();
-    checkCommand.CommandText = $"SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{tableName}' AND COLUMN_NAME = '{columnName}' AND TABLE_SCHEMA = DATABASE() LIMIT 1;";
-    var dataType = checkCommand.ExecuteScalar() as string;
-    if (string.Equals(dataType, "longtext", StringComparison.OrdinalIgnoreCase))
+    try
     {
-        return;
+        using var checkCommand = connection.CreateCommand();
+        checkCommand.CommandText = $"SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{tableName}' AND COLUMN_NAME = '{columnName}' AND TABLE_SCHEMA = DATABASE() LIMIT 1;";
+        var dataType = checkCommand.ExecuteScalar() as string;
+        if (string.Equals(dataType, "longtext", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (dataType is null)
+        {
+#pragma warning disable EF1002
+            dbContext.Database.ExecuteSqlRaw($"ALTER TABLE `{tableName}` ADD COLUMN `{columnName}` longtext NOT NULL DEFAULT '';");
+#pragma warning restore EF1002
+            return;
+        }
+
+#pragma warning disable EF1002
+        dbContext.Database.ExecuteSqlRaw($"ALTER TABLE `{tableName}` MODIFY COLUMN `{columnName}` longtext NOT NULL;");
+#pragma warning restore EF1002
+    }
+    finally
+    {
+        if (openedHere)
+        {
+            connection.Close();
+        }
+    }
+}
+
+static void EnsureCurrentMySqlAuthSchema(DungeonKeepDbContext dbContext)
+{
+    EnsureMySqlColumnExists(dbContext, "AppUsers", "IsEmailVerified", "TINYINT(1) NOT NULL DEFAULT 0");
+    EnsureMySqlColumnExists(dbContext, "AppUsers", "ActivationCodeHash", "TEXT NOT NULL");
+    EnsureMySqlColumnExists(dbContext, "AppUsers", "ActivationCodeExpiresAtUtc", "DATETIME(6) NULL");
+    EnsureMySqlColumnExists(dbContext, "AppUsers", "PasswordResetCodeHash", "TEXT NOT NULL");
+    EnsureMySqlColumnExists(dbContext, "AppUsers", "PasswordResetCodeExpiresAtUtc", "DATETIME(6) NULL");
+}
+
+static void EnsureMySqlColumnExists(DungeonKeepDbContext dbContext, string tableName, string columnName, string columnDefinition)
+{
+    var connection = dbContext.Database.GetDbConnection();
+    var openedHere = connection.State != ConnectionState.Open;
+    if (openedHere)
+    {
+        connection.Open();
     }
 
-    if (dataType is null)
+    try
     {
-#pragma warning disable EF1002
-        dbContext.Database.ExecuteSqlRaw($"ALTER TABLE `{tableName}` ADD COLUMN `{columnName}` longtext NOT NULL DEFAULT '';");
-#pragma warning restore EF1002
-        return;
-    }
+        using var existsCommand = connection.CreateCommand();
+        existsCommand.CommandText = $"SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{tableName}' AND COLUMN_NAME = '{columnName}' LIMIT 1;";
+        if (existsCommand.ExecuteScalar() is not null)
+        {
+            return;
+        }
 
 #pragma warning disable EF1002
-    dbContext.Database.ExecuteSqlRaw($"ALTER TABLE `{tableName}` MODIFY COLUMN `{columnName}` longtext NOT NULL;");
+        dbContext.Database.ExecuteSqlRaw($"ALTER TABLE `{tableName}` ADD COLUMN `{columnName}` {columnDefinition};");
 #pragma warning restore EF1002
+    }
+    finally
+    {
+        if (openedHere)
+        {
+            connection.Close();
+        }
+    }
 }
 static void EnsureNotificationsAndMessagesSchemaMySQL(DungeonKeepDbContext dbContext)
 {

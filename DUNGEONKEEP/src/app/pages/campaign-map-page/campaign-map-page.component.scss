@@ -2738,6 +2738,75 @@ app-dropdown {
     margin: 0;
 }
 
+.encounter-combat-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 8px;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 84%, var(--accent-primary) 16%);
+}
+
+.encounter-combat-status {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.encounter-round-chip,
+.encounter-active-chip {
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-main);
+    background: color-mix(in srgb, var(--surface-raised-solid) 88%, transparent);
+}
+
+.encounter-active-chip.is-muted {
+    color: var(--text-soft);
+}
+
+.encounter-combat-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.encounter-combat-footer {
+    position: sticky;
+    bottom: 0;
+    margin-top: 2px;
+    padding-top: 4px;
+    background: linear-gradient(180deg, rgba(245, 237, 225, 0), color-mix(in srgb, var(--surface-raised-solid) 94%, transparent) 28%);
+}
+
+.encounter-combat-actions--footer {
+    justify-content: space-between;
+    padding: 6px 8px;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 92%, var(--accent-primary) 8%);
+}
+
+.encounter-combat-btn {
+    min-height: 30px;
+    padding: 4px 8px;
+    border-radius: 9px;
+    font-size: 0.74rem;
+    line-height: 1;
+    gap: 4px;
+}
+
+.encounter-combat-btn i {
+    font-size: 0.7rem;
+}
+
 .encounter-entry-list {
     display: grid;
     gap: 8px;
@@ -2761,6 +2830,11 @@ app-dropdown {
     border-style: dashed;
 }
 
+.encounter-entry--active {
+    border-color: color-mix(in srgb, var(--accent-primary) 60%, var(--panel-border) 40%);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-primary) 34%, transparent);
+}
+
 .encounter-entry-main {
     display: flex;
     align-items: center;
@@ -2778,6 +2852,10 @@ app-dropdown {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.encounter-active-btn {
+    flex-shrink: 0;
 }
 
 .encounter-initiative-field {

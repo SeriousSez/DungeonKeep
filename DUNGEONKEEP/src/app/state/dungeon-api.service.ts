@@ -143,6 +143,9 @@ export interface ApiCampaignMapDto {
     labels: ApiCampaignMapLabelDto[];
     layers: ApiCampaignMapLayersDto;
     visionMemory: ApiCampaignMapVisionMemoryDto[];
+    encounterRound?: number;
+    encounterActiveTokenId?: string | null;
+    encounterStartedAtUtc?: string | null;
 }
 
 export interface ApiCampaignMapBoardDto extends ApiCampaignMapDto {

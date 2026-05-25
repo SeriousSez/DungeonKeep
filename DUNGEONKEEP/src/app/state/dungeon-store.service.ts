@@ -1846,7 +1846,12 @@ export class DungeonStoreService {
                 lastPolygonHash: entry.lastPolygonHash?.trim() || '',
                 revision: this.normalizeMapVisionRevision(entry.revision)
             })).filter((entry) => !!entry.key && entry.polygons.length > 0),
-            visionEnabled: map?.visionEnabled ?? true
+            visionEnabled: map?.visionEnabled ?? true,
+            encounterRound: typeof map?.encounterRound === 'number' && Number.isFinite(map.encounterRound) && map.encounterRound > 0
+                ? Math.trunc(map.encounterRound)
+                : 1,
+            encounterActiveTokenId: map?.encounterActiveTokenId?.trim() || null,
+            encounterStartedAtUtc: map?.encounterStartedAtUtc?.trim() || null
         };
     }
 
@@ -1993,7 +1998,12 @@ export class DungeonStoreService {
                 lastPolygonHash: entry.lastPolygonHash,
                 revision: this.normalizeMapVisionRevision(entry.revision)
             })).filter((entry) => !!entry.key && entry.polygons.length > 0),
-            visionEnabled: map.visionEnabled
+            visionEnabled: map.visionEnabled,
+            encounterRound: typeof map.encounterRound === 'number' && Number.isFinite(map.encounterRound) && map.encounterRound > 0
+                ? Math.trunc(map.encounterRound)
+                : 1,
+            encounterActiveTokenId: map.encounterActiveTokenId?.trim() || null,
+            encounterStartedAtUtc: map.encounterStartedAtUtc?.trim() || null
         };
     }
 

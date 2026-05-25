@@ -28,8 +28,8 @@ public sealed class CampaignService(
     private const string DefaultMapGridColor = "#745338";
     private const double DefaultMapGridOffsetX = 0d;
     private const double DefaultMapGridOffsetY = 0d;
-    private static readonly CampaignMapDto DefaultCampaignMap = new("Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], [], new CampaignMapLayersDto([], [], []), [], true, true);
-    private static readonly CampaignMapBoardDto DefaultCampaignMapBoard = new(Guid.Parse("11111111-1111-1111-1111-111111111111"), "Main Map", "Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], [], new CampaignMapLayersDto([], [], []), [], true, true);
+    private static readonly CampaignMapDto DefaultCampaignMap = new("Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], [], new CampaignMapLayersDto([], [], []), [], true, true, 1, null, null);
+    private static readonly CampaignMapBoardDto DefaultCampaignMapBoard = new(Guid.Parse("11111111-1111-1111-1111-111111111111"), "Main Map", "Parchment", string.Empty, DefaultMapGridColumns, DefaultMapGridRows, DefaultMapGridColor, DefaultMapGridOffsetX, DefaultMapGridOffsetY, [], [], [], [], [], [], new CampaignMapLayersDto([], [], []), [], true, true, 1, null, null);
 
     public async Task<IReadOnlyList<CampaignSummaryDto>> GetAllSummariesAsync(Guid userId, CancellationToken cancellationToken = default)
     {
@@ -488,7 +488,12 @@ public sealed class CampaignService(
                     request.Map.Decorations,
                     request.Map.Labels,
                     request.Map.Layers,
-                    request.Map.VisionMemory)]))
+                    request.Map.VisionMemory,
+                    request.Map.VisionEnabled,
+                    request.Map.MembersCanViewAnytime,
+                    request.Map.EncounterRound,
+                    request.Map.EncounterActiveTokenId,
+                    request.Map.EncounterStartedAtUtc)]))
                 : null;
 
         if (library is null)
@@ -1148,7 +1153,7 @@ public sealed class CampaignService(
             ParseLootItems(campaign.LootJson),
             ParseOpenThreads(campaign.OpenThreadsJson),
             visibleWorldNotes,
-            new CampaignMapDto(activeMap.Background, activeMap.BackgroundImageUrl, activeMap.GridColumns, activeMap.GridRows, activeMap.GridColor, activeMap.GridOffsetX, activeMap.GridOffsetY, activeMap.Strokes, activeMap.Walls, activeMap.Icons, activeMap.Tokens, activeMap.Decorations, activeMap.Labels, activeMap.Layers, activeMap.VisionMemory, activeMap.VisionEnabled, activeMap.MembersCanViewAnytime),
+            new CampaignMapDto(activeMap.Background, activeMap.BackgroundImageUrl, activeMap.GridColumns, activeMap.GridRows, activeMap.GridColor, activeMap.GridOffsetX, activeMap.GridOffsetY, activeMap.Strokes, activeMap.Walls, activeMap.Icons, activeMap.Tokens, activeMap.Decorations, activeMap.Labels, activeMap.Layers, activeMap.VisionMemory, activeMap.VisionEnabled, activeMap.MembersCanViewAnytime, activeMap.EncounterRound, activeMap.EncounterActiveTokenId, activeMap.EncounterStartedAtUtc),
             visibleMaps,
             activeMap.Id,
             currentUserRole,
@@ -1470,7 +1475,10 @@ public sealed class CampaignService(
                     legacyMap.Layers,
                     legacyMap.VisionMemory,
                     legacyMap.VisionEnabled,
-                    legacyMap.MembersCanViewAnytime)]));
+                    legacyMap.MembersCanViewAnytime,
+                    legacyMap.EncounterRound,
+                    legacyMap.EncounterActiveTokenId,
+                    legacyMap.EncounterStartedAtUtc)]));
             }
         }
         catch
@@ -1719,9 +1727,13 @@ public sealed class CampaignService(
             normalizedTokens,
             normalizedDecorations,
             normalizedLabels,
-                normalizedLayers,
-                normalizedVisionMemory,
-                map.VisionEnabled);
+            normalizedLayers,
+            normalizedVisionMemory,
+            map.VisionEnabled,
+            map.MembersCanViewAnytime,
+            map.EncounterRound is > 0 ? map.EncounterRound : 1,
+            map.EncounterActiveTokenId,
+            map.EncounterStartedAtUtc);
     }
 
     private static CampaignMapBoardDto NormalizeCampaignMapBoard(CampaignMapBoardDto map)
@@ -1742,7 +1754,11 @@ public sealed class CampaignService(
             map.Labels,
             map.Layers,
             map.VisionMemory,
-            map.VisionEnabled));
+            map.VisionEnabled,
+            map.MembersCanViewAnytime,
+            map.EncounterRound,
+            map.EncounterActiveTokenId,
+            map.EncounterStartedAtUtc));
 
         return new CampaignMapBoardDto(
             map.Id == Guid.Empty ? Guid.NewGuid() : map.Id,
@@ -1762,8 +1778,11 @@ public sealed class CampaignService(
             normalized.Labels,
             normalized.Layers,
             normalized.VisionMemory,
-                map.VisionEnabled,
-                map.MembersCanViewAnytime);
+            normalized.VisionEnabled,
+            normalized.MembersCanViewAnytime,
+            normalized.EncounterRound,
+            normalized.EncounterActiveTokenId,
+            normalized.EncounterStartedAtUtc);
     }
 
     private static CampaignMapLibraryDto NormalizeCampaignMapLibrary(CampaignMapLibraryDto library)
@@ -1794,7 +1813,10 @@ public sealed class CampaignService(
                 DefaultCampaignMapBoard.Layers,
                 DefaultCampaignMapBoard.VisionMemory,
                 DefaultCampaignMapBoard.VisionEnabled,
-                DefaultCampaignMapBoard.MembersCanViewAnytime));
+                DefaultCampaignMapBoard.MembersCanViewAnytime,
+                DefaultCampaignMapBoard.EncounterRound,
+                DefaultCampaignMapBoard.EncounterActiveTokenId,
+                DefaultCampaignMapBoard.EncounterStartedAtUtc));
         }
 
         var activeMapId = library.ActiveMapId != Guid.Empty && maps.Any(map => map.Id == library.ActiveMapId)

@@ -45,6 +45,7 @@ interface EncounterEntry {
     maxHp: number | null;
     isHiddenFromPlayers: boolean;
     isOwnToken: boolean;
+    sortName: string;
 }
 
 interface MapVisionMemoryEntryState {
@@ -500,18 +501,35 @@ export class CampaignMapPageComponent {
                 currentHp,
                 maxHp,
                 isHiddenFromPlayers: isHidden,
-                isOwnToken
+                isOwnToken,
+                sortName: token.name.trim().toLocaleLowerCase()
             });
         }
 
-        return entries.sort((a, b) => {
-            const ai = a.initiative;
-            const bi = b.initiative;
-            if (ai === null && bi === null) return 0;
-            if (ai === null) return 1;
-            if (bi === null) return -1;
-            return bi - ai;
-        });
+        return entries.sort((left, right) => this.compareEncounterEntries(left, right));
+    });
+
+    readonly encounterRound = computed(() => {
+        const round = this.workingMap().encounterRound;
+        return typeof round === 'number' && Number.isFinite(round) && round > 0 ? Math.trunc(round) : 1;
+    });
+
+    readonly encounterActiveTokenId = computed(() => {
+        const tokenId = this.workingMap().encounterActiveTokenId ?? null;
+        if (!tokenId) {
+            return null;
+        }
+
+        return this.encounterEntries().some((entry) => entry.token.id === tokenId) ? tokenId : null;
+    });
+
+    readonly encounterActiveEntry = computed(() => {
+        const tokenId = this.encounterActiveTokenId();
+        if (!tokenId) {
+            return null;
+        }
+
+        return this.encounterEntries().find((entry) => entry.token.id === tokenId) ?? null;
     });
 
     readonly worldNoteOptions = computed<DropdownOption[]>(() => {
@@ -1870,8 +1888,115 @@ export class CampaignMapPageComponent {
             map.tokens = map.tokens.map((token) =>
                 token.id === tokenId ? { ...token, initiative: this.parseNumericInput(value) } : token
             );
+
+            if (map.encounterActiveTokenId && !map.tokens.some((token) => token.id === map.encounterActiveTokenId)) {
+                map.encounterActiveTokenId = null;
+            }
         });
         this.markDirty('Initiative updated.');
+    }
+
+    startEncounter(): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
+        const firstEntry = this.encounterEntries()[0] ?? null;
+        this.mutateMap((map) => {
+            map.encounterRound = 1;
+            map.encounterStartedAtUtc = new Date().toISOString();
+            map.encounterActiveTokenId = firstEntry?.token.id ?? null;
+        });
+        this.markDirty('Encounter started.');
+    }
+
+    endEncounter(): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
+        this.mutateMap((map) => {
+            map.encounterRound = 1;
+            map.encounterActiveTokenId = null;
+            map.encounterStartedAtUtc = null;
+        });
+        this.markDirty('Encounter ended.');
+    }
+
+    nextEncounterTurn(): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
+        const entries = this.encounterEntries();
+        if (!entries.length) {
+            return;
+        }
+
+        const activeTokenId = this.encounterActiveTokenId();
+        const currentIndex = activeTokenId
+            ? entries.findIndex((entry) => entry.token.id === activeTokenId)
+            : -1;
+        const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % entries.length;
+        const wrapped = currentIndex >= 0 && nextIndex === 0;
+
+        this.mutateMap((map) => {
+            map.encounterActiveTokenId = entries[nextIndex]?.token.id ?? null;
+            map.encounterRound = wrapped ? Math.max(1, this.encounterRound() + 1) : this.encounterRound();
+            if (!map.encounterStartedAtUtc) {
+                map.encounterStartedAtUtc = new Date().toISOString();
+            }
+        });
+
+        this.markDirty('Turn advanced.');
+    }
+
+    previousEncounterTurn(): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
+        const entries = this.encounterEntries();
+        if (!entries.length) {
+            return;
+        }
+
+        const activeTokenId = this.encounterActiveTokenId();
+        const currentIndex = activeTokenId
+            ? entries.findIndex((entry) => entry.token.id === activeTokenId)
+            : -1;
+        const previousIndex = currentIndex < 0
+            ? 0
+            : (currentIndex - 1 + entries.length) % entries.length;
+        const wrapped = currentIndex >= 0 && currentIndex === 0 && entries.length > 1;
+
+        this.mutateMap((map) => {
+            map.encounterActiveTokenId = entries[previousIndex]?.token.id ?? null;
+            map.encounterRound = wrapped ? Math.max(1, this.encounterRound() - 1) : this.encounterRound();
+            if (!map.encounterStartedAtUtc) {
+                map.encounterStartedAtUtc = new Date().toISOString();
+            }
+        });
+
+        this.markDirty('Turn moved back.');
+    }
+
+    setEncounterActiveToken(tokenId: string): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
+        if (!this.encounterEntries().some((entry) => entry.token.id === tokenId)) {
+            return;
+        }
+
+        this.mutateMap((map) => {
+            map.encounterActiveTokenId = tokenId;
+            if (!map.encounterStartedAtUtc) {
+                map.encounterStartedAtUtc = new Date().toISOString();
+            }
+        });
+        this.markDirty('Active turn updated.');
     }
 
     toggleTokenEncounterHidden(tokenId: string): void {
@@ -5913,17 +6038,72 @@ export class CampaignMapPageComponent {
     }
 
     private mergeTokenStateIntoBoard(localMap: CampaignMapBoard, realtimeMap: CampaignMapBoard): CampaignMapBoard {
+        const hasRealtimeEncounterActiveTokenId = Object.prototype.hasOwnProperty.call(realtimeMap, 'encounterActiveTokenId');
+        const hasRealtimeEncounterStartedAtUtc = Object.prototype.hasOwnProperty.call(realtimeMap, 'encounterStartedAtUtc');
+
         return {
             ...localMap,
+            encounterRound: typeof realtimeMap.encounterRound === 'number' && Number.isFinite(realtimeMap.encounterRound) && realtimeMap.encounterRound > 0
+                ? Math.trunc(realtimeMap.encounterRound)
+                : localMap.encounterRound,
+            encounterActiveTokenId: hasRealtimeEncounterActiveTokenId
+                ? (typeof realtimeMap.encounterActiveTokenId === 'string' || realtimeMap.encounterActiveTokenId === null
+                    ? realtimeMap.encounterActiveTokenId
+                    : localMap.encounterActiveTokenId)
+                : localMap.encounterActiveTokenId,
+            encounterStartedAtUtc: hasRealtimeEncounterStartedAtUtc
+                ? (typeof realtimeMap.encounterStartedAtUtc === 'string' || realtimeMap.encounterStartedAtUtc === null
+                    ? realtimeMap.encounterStartedAtUtc
+                    : localMap.encounterStartedAtUtc)
+                : localMap.encounterStartedAtUtc,
             tokens: this.mergeTokens(localMap.tokens, realtimeMap.tokens)
         };
     }
 
     private mergeTokenStateIntoMap(localMap: CampaignMap, realtimeMap: CampaignMapBoard): CampaignMap {
+        const hasRealtimeEncounterActiveTokenId = Object.prototype.hasOwnProperty.call(realtimeMap, 'encounterActiveTokenId');
+        const hasRealtimeEncounterStartedAtUtc = Object.prototype.hasOwnProperty.call(realtimeMap, 'encounterStartedAtUtc');
+
         return {
             ...this.cloneMap(localMap),
+            encounterRound: typeof realtimeMap.encounterRound === 'number' && Number.isFinite(realtimeMap.encounterRound) && realtimeMap.encounterRound > 0
+                ? Math.trunc(realtimeMap.encounterRound)
+                : localMap.encounterRound,
+            encounterActiveTokenId: hasRealtimeEncounterActiveTokenId
+                ? (typeof realtimeMap.encounterActiveTokenId === 'string' || realtimeMap.encounterActiveTokenId === null
+                    ? realtimeMap.encounterActiveTokenId
+                    : localMap.encounterActiveTokenId)
+                : localMap.encounterActiveTokenId,
+            encounterStartedAtUtc: hasRealtimeEncounterStartedAtUtc
+                ? (typeof realtimeMap.encounterStartedAtUtc === 'string' || realtimeMap.encounterStartedAtUtc === null
+                    ? realtimeMap.encounterStartedAtUtc
+                    : localMap.encounterStartedAtUtc)
+                : localMap.encounterStartedAtUtc,
             tokens: this.mergeTokens(localMap.tokens, realtimeMap.tokens)
         };
+    }
+
+    private compareEncounterEntries(left: EncounterEntry, right: EncounterEntry): number {
+        const leftInitiative = left.initiative;
+        const rightInitiative = right.initiative;
+
+        if (leftInitiative === null && rightInitiative !== null) {
+            return 1;
+        }
+
+        if (leftInitiative !== null && rightInitiative === null) {
+            return -1;
+        }
+
+        if (leftInitiative !== null && rightInitiative !== null && leftInitiative !== rightInitiative) {
+            return rightInitiative - leftInitiative;
+        }
+
+        if (left.sortName !== right.sortName) {
+            return left.sortName.localeCompare(right.sortName);
+        }
+
+        return left.token.id.localeCompare(right.token.id);
     }
 
     private mergeTokens(localTokens: CampaignMapToken[], realtimeTokens: CampaignMapToken[]): CampaignMapToken[] {
@@ -6035,7 +6215,12 @@ export class CampaignMapPageComponent {
                 lastOrigin: entry.lastOrigin ? { ...entry.lastOrigin } : null,
                 lastPolygonHash: entry.lastPolygonHash,
                 revision: Number.isFinite(entry.revision) ? Math.max(0, Math.trunc(entry.revision)) : 0
-            }))
+            })),
+            encounterRound: typeof map.encounterRound === 'number' && Number.isFinite(map.encounterRound) && map.encounterRound > 0
+                ? Math.trunc(map.encounterRound)
+                : 1,
+            encounterActiveTokenId: map.encounterActiveTokenId ?? null,
+            encounterStartedAtUtc: map.encounterStartedAtUtc ?? null
         };
     }
 
@@ -6061,7 +6246,10 @@ export class CampaignMapPageComponent {
                 mountainChains: [],
                 forestBelts: []
             },
-            visionMemory: []
+            visionMemory: [],
+            encounterRound: 1,
+            encounterActiveTokenId: null,
+            encounterStartedAtUtc: null
         };
     }
 

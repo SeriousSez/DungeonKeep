@@ -34,7 +34,10 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         new CampaignMapLayersDto([], [], []),
         [],
         true,
-        true);
+        true,
+        1,
+        null,
+        null);
     private readonly bool campaignSchemaReady = dbContext.Database.IsSqlite() ? EnsureCampaignSchema(dbContext) : true;
 
     public async Task<IReadOnlyList<CampaignSummaryRecord>> GetAllSummariesForUserAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -973,9 +976,12 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                     legacyMap.Decorations,
                     legacyMap.Labels,
                     legacyMap.Layers,
-                        legacyMap.VisionMemory,
-                        legacyMap.VisionEnabled,
-                        legacyMap.MembersCanViewAnytime)]));
+                    legacyMap.VisionMemory,
+                    legacyMap.VisionEnabled,
+                    legacyMap.MembersCanViewAnytime,
+                    legacyMap.EncounterRound,
+                    legacyMap.EncounterActiveTokenId,
+                    legacyMap.EncounterStartedAtUtc)]));
             }
         }
         catch
@@ -1238,7 +1244,10 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                 NormalizeMapDecorationCollection(map.Layers?.ForestBelts)),
             [],
             map.VisionEnabled,
-            map.MembersCanViewAnytime);
+            map.MembersCanViewAnytime,
+            map.EncounterRound is > 0 ? map.EncounterRound : 1,
+            map.EncounterActiveTokenId,
+            map.EncounterStartedAtUtc);
     }
 
     private static CampaignMapBoardDto NormalizeCampaignMapBoard(CampaignMapBoardDto map)
@@ -1260,7 +1269,10 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             map.Layers,
             map.VisionMemory,
             map.VisionEnabled,
-            map.MembersCanViewAnytime));
+            map.MembersCanViewAnytime,
+            map.EncounterRound,
+            map.EncounterActiveTokenId,
+            map.EncounterStartedAtUtc));
 
         return new CampaignMapBoardDto(
             map.Id == Guid.Empty ? Guid.NewGuid() : map.Id,
@@ -1281,7 +1293,10 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             normalized.Layers,
             normalized.VisionMemory,
             map.VisionEnabled,
-            map.MembersCanViewAnytime);
+            map.MembersCanViewAnytime,
+            normalized.EncounterRound,
+            normalized.EncounterActiveTokenId,
+            normalized.EncounterStartedAtUtc);
     }
 
     private static CampaignMapLibraryDto NormalizeCampaignMapLibrary(CampaignMapLibraryDto library)
@@ -1312,7 +1327,10 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                 DefaultCampaignMapBoard.Layers,
                 DefaultCampaignMapBoard.VisionMemory,
                 DefaultCampaignMapBoard.VisionEnabled,
-                DefaultCampaignMapBoard.MembersCanViewAnytime));
+                DefaultCampaignMapBoard.MembersCanViewAnytime,
+                DefaultCampaignMapBoard.EncounterRound,
+                DefaultCampaignMapBoard.EncounterActiveTokenId,
+                DefaultCampaignMapBoard.EncounterStartedAtUtc));
         }
 
         var activeMapId = library.ActiveMapId != Guid.Empty && maps.Any(map => map.Id == library.ActiveMapId)

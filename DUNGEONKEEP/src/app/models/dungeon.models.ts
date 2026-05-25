@@ -203,6 +203,9 @@ export interface CampaignMap {
     labels: CampaignMapLabel[];
     layers: CampaignMapLayers;
     visionMemory: CampaignMapVisionMemoryEntry[];
+    encounterRound?: number;
+    encounterActiveTokenId?: string | null;
+    encounterStartedAtUtc?: string | null;
 }
 
 export interface CampaignMapBoard extends CampaignMap {
