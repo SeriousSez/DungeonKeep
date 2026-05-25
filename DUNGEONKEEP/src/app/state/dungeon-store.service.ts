@@ -321,12 +321,18 @@ export class DungeonStoreService {
             const existingCampaign = existingIndex >= 0 ? campaigns[existingIndex] : null;
             const mapped = this.mapCampaignFromApi(updated, partyCharacterIds);
             const incomingMapsAreCompact = mapped.maps.length > 0 && mapped.maps.every((map) => this.isCompactMapBoardPayload(map));
+            const mergedMaps = existingCampaign
+                ? this.mergeMapBoardsWithExistingTokenEncounterState(existingCampaign.maps, mapped.maps, updated.maps)
+                : mapped.maps;
+            const mergedPrimaryMap = existingCampaign
+                ? this.mergeMapWithExistingTokenEncounterState(existingCampaign.map, mapped.map, updated.map)
+                : mapped.map;
             const normalized = existingCampaign
                 ? {
                     ...mapped,
                     currentUserRole: existingCampaign.currentUserRole ?? mapped.currentUserRole,
-                    maps: incomingMapsAreCompact ? existingCampaign.maps : mapped.maps,
-                    map: incomingMapsAreCompact ? existingCampaign.map : mapped.map,
+                    maps: incomingMapsAreCompact ? existingCampaign.maps : mergedMaps,
+                    map: incomingMapsAreCompact ? existingCampaign.map : mergedPrimaryMap,
                     activeMapId: incomingMapsAreCompact ? existingCampaign.activeMapId : mapped.activeMapId
                 }
                 : mapped;
@@ -355,6 +361,66 @@ export class DungeonStoreService {
             && map.layers.mountainChains.length === 0
             && map.layers.forestBelts.length === 0
             && map.visionMemory.length === 0;
+    }
+
+    private mergeMapBoardsWithExistingTokenEncounterState(existingMaps: CampaignMapBoard[], incomingMaps: CampaignMapBoard[], sourceMaps: ApiCampaignMapBoardDto[]): CampaignMapBoard[] {
+        const existingById = new Map(existingMaps.map((map) => [map.id, map]));
+        const sourceById = new Map(sourceMaps.map((map) => [map.id, map]));
+
+        return incomingMaps.map((incomingMap) => this.mergeMapWithExistingTokenEncounterState(
+            existingById.get(incomingMap.id) ?? null,
+            incomingMap,
+            sourceById.get(incomingMap.id) ?? null
+        ));
+    }
+
+    private mergeMapWithExistingTokenEncounterState<TMap extends { tokens: CampaignMapToken[] }>(
+        existingMap: TMap | null,
+        incomingMap: TMap,
+        sourceMap: { tokens: ApiCampaignMapTokenDto[] } | null
+    ): TMap {
+        if (!existingMap) {
+            return incomingMap;
+        }
+
+        const existingTokenById = new Map(existingMap.tokens.map((token) => [token.id, token]));
+        const sourceTokenById = new Map((sourceMap?.tokens ?? []).map((token) => [token.id, token]));
+
+        return {
+            ...incomingMap,
+            tokens: incomingMap.tokens.map((incomingToken) => {
+                const existingToken = existingTokenById.get(incomingToken.id) ?? null;
+                if (!existingToken) {
+                    return incomingToken;
+                }
+
+                const sourceToken = sourceTokenById.get(incomingToken.id) ?? null;
+                return this.mergeTokenEncounterStateFromSource(existingToken, incomingToken, sourceToken);
+            })
+        };
+    }
+
+    private mergeTokenEncounterStateFromSource(
+        existingToken: CampaignMapToken,
+        incomingToken: CampaignMapToken,
+        sourceToken: ApiCampaignMapTokenDto | null
+    ): CampaignMapToken {
+        const hasInitiative = sourceToken ? Object.prototype.hasOwnProperty.call(sourceToken, 'initiative') : true;
+        const hasEncounterHidden = sourceToken ? Object.prototype.hasOwnProperty.call(sourceToken, 'encounterHidden') : true;
+        const hasCurrentHp = sourceToken ? Object.prototype.hasOwnProperty.call(sourceToken, 'currentHp') : true;
+        const hasMaxHp = sourceToken ? Object.prototype.hasOwnProperty.call(sourceToken, 'maxHp') : true;
+        const hasArmorClass = sourceToken ? Object.prototype.hasOwnProperty.call(sourceToken, 'armorClass') : true;
+        const hasConditions = sourceToken ? Object.prototype.hasOwnProperty.call(sourceToken, 'conditions') : true;
+
+        return {
+            ...incomingToken,
+            initiative: hasInitiative ? incomingToken.initiative : existingToken.initiative,
+            encounterHidden: hasEncounterHidden ? incomingToken.encounterHidden : existingToken.encounterHidden,
+            currentHp: hasCurrentHp ? incomingToken.currentHp : existingToken.currentHp,
+            maxHp: hasMaxHp ? incomingToken.maxHp : existingToken.maxHp,
+            armorClass: hasArmorClass ? incomingToken.armorClass : existingToken.armorClass,
+            conditions: hasConditions ? incomingToken.conditions : existingToken.conditions
+        };
     }
 
     applyCampaignMapTokenMoved(event: ApiCampaignMapTokenMovedDto): void {

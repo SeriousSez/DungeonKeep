@@ -50,6 +50,8 @@ interface EncounterEntry {
     sortName: string;
 }
 
+type EncounterEntryKind = 'Character' | 'Npc' | 'Monster';
+
 interface MapVisionMemoryEntryState {
     key: string;
     polygons: CampaignMapPoint[][];
@@ -433,6 +435,7 @@ export class CampaignMapPageComponent {
     readonly encounterPopoverOpen = signal(false);
     readonly encounterPopoverPosition = signal(this.readStoredEncounterPopoverPosition());
     readonly encounterPopoverDragging = signal(false);
+    readonly encounterInspectorTokenId = signal<string | null>(null);
     readonly encounterConditionOptionGroups: MultiSelectOptionGroup[] = [
         {
             label: 'Conditions',
@@ -557,6 +560,39 @@ export class CampaignMapPageComponent {
         }
 
         return this.encounterEntries().find((entry) => entry.token.id === tokenId) ?? null;
+    });
+
+    readonly encounterInspectorEntry = computed(() => {
+        const tokenId = this.encounterInspectorTokenId();
+        if (!tokenId) {
+            return null;
+        }
+
+        return this.encounterEntries().find((entry) => entry.token.id === tokenId) ?? null;
+    });
+
+    readonly encounterInspectorPopoverPosition = computed(() => {
+        const inspector = this.encounterInspectorEntry();
+        if (!this.encounterPopoverOpen() || !this.encounterInspectorTokenId() || !inspector) {
+            return null;
+        }
+
+        const viewportWidth = globalThis.innerWidth || 1366;
+        const popoverWidth = Math.min(360, viewportWidth - 24);
+        const margin = 12;
+        const anchor = this.encounterPopoverPosition();
+
+        let left = anchor.x;
+        const top = anchor.y;
+
+        if (left + popoverWidth > viewportWidth - margin) {
+            left = viewportWidth - margin - popoverWidth;
+        }
+
+        return {
+            x: Math.max(margin, left),
+            y: Math.max(margin, top)
+        };
     });
 
     readonly worldNoteOptions = computed<DropdownOption[]>(() => {
@@ -1849,6 +1885,10 @@ export class CampaignMapPageComponent {
     toggleEncounterPopover(): void {
         const shouldOpen = !this.encounterPopoverOpen();
         this.encounterPopoverOpen.set(shouldOpen);
+        if (!shouldOpen) {
+            this.encounterInspectorTokenId.set(null);
+        }
+
         if (shouldOpen) {
             this.measurePopoverOpen.set(false);
             this.voicePopoverOpen.set(false);
@@ -1921,6 +1961,106 @@ export class CampaignMapPageComponent {
             }
         });
         this.markDirty('Initiative updated.');
+    }
+
+    toggleEncounterInspector(tokenId: string): void {
+        this.encounterInspectorTokenId.update((current) => current === tokenId ? null : tokenId);
+    }
+
+    closeEncounterInspector(): void {
+        this.encounterInspectorTokenId.set(null);
+    }
+
+    encounterEntryKind(entry: EncounterEntry): EncounterEntryKind {
+        if (entry.isCharacter) {
+            return 'Character';
+        }
+
+        const tokenName = entry.name.trim().toLocaleLowerCase();
+        const hasNpcMatch = this.campaignNpcs().some((npc) => npc.name.trim().toLocaleLowerCase() === tokenName);
+        return hasNpcMatch ? 'Npc' : 'Monster';
+    }
+
+    encounterInspectorArmorClass(entry: EncounterEntry): number | null {
+        return entry.armorClass ?? this.parseTokenNoteArmorClass(entry.token.note);
+    }
+
+    encounterInspectorCurrentHp(entry: EncounterEntry): number | null {
+        const fallbackHp = this.parseTokenNoteHp(entry.token.note);
+        return entry.currentHp ?? fallbackHp?.current ?? null;
+    }
+
+    encounterInspectorMaxHp(entry: EncounterEntry): number | null {
+        const fallbackHp = this.parseTokenNoteHp(entry.token.note);
+        return entry.maxHp ?? fallbackHp?.max ?? fallbackHp?.current ?? null;
+    }
+
+    private parseTokenNoteArmorClass(note: string): number | null {
+        const trimmed = note.trim();
+        if (!trimmed) {
+            return null;
+        }
+
+        const armorPatterns = [
+            /\bAC\b\s*[:=-]?\s*(\d+)/i,
+            /\bArmor\s*Class\b\s*[:=-]?\s*(\d+)/i,
+            /(\d+)\s*AC\b/i
+        ];
+
+        for (const pattern of armorPatterns) {
+            const match = trimmed.match(pattern);
+            if (match) {
+                return this.parseTokenNoteNumber(match[1]);
+            }
+        }
+
+        return null;
+    }
+
+    private parseTokenNoteHp(note: string): { current: number | null; max: number | null } | null {
+        const trimmed = note.trim();
+        if (!trimmed) {
+            return null;
+        }
+
+        const hpWithValueFirst = trimmed.match(/\b(?:HP|Hit\s*Points?)\b\s*[:=-]?\s*(\d+)\s*\/\s*(\d+)/i);
+        if (hpWithValueFirst) {
+            return {
+                current: this.parseTokenNoteNumber(hpWithValueFirst[1]),
+                max: this.parseTokenNoteNumber(hpWithValueFirst[2])
+            };
+        }
+
+        const hpWithLabelLast = trimmed.match(/\b(\d+)\s*\/\s*(\d+)\s*(?:HP|Hit\s*Points?)\b/i);
+        if (hpWithLabelLast) {
+            return {
+                current: this.parseTokenNoteNumber(hpWithLabelLast[1]),
+                max: this.parseTokenNoteNumber(hpWithLabelLast[2])
+            };
+        }
+
+        const hpSingleValue = [
+            /\b(?:HP|Hit\s*Points?)\b\s*[:=-]?\s*(\d+)/i,
+            /\b(\d+)\s*(?:HP|Hit\s*Points?)\b/i
+        ];
+
+        for (const pattern of hpSingleValue) {
+            const match = trimmed.match(pattern);
+            if (match) {
+                const parsed = this.parseTokenNoteNumber(match[1]);
+                return {
+                    current: parsed,
+                    max: parsed
+                };
+            }
+        }
+
+        return null;
+    }
+
+    private parseTokenNoteNumber(value: string): number | null {
+        const parsed = parseInt(value, 10);
+        return Number.isFinite(parsed) ? parsed : null;
     }
 
     startEncounter(): void {
@@ -4496,6 +4636,11 @@ export class CampaignMapPageComponent {
         if (this.hasPendingTokenPlacement()) {
             const snappedPoint = this.snapTokenPointToGrid(point, this.tokenPlacementSize());
             const shouldStartHiddenInEncounter = !!this.tokenPlacementNpcId() || !!this.tokenPlacementMonsterId();
+            const selectedMonster = this.tokenPlacementMonsterId()
+                ? this.tokenMonsterPresetByValue().get(this.tokenPlacementMonsterId()) ?? null
+                : null;
+            const parsedHp = this.parseTokenNoteHp(this.tokenPlacementNoteDraft());
+            const parsedArmorClass = this.parseTokenNoteArmorClass(this.tokenPlacementNoteDraft());
             const token: CampaignMapToken = {
                 id: this.createId(),
                 name: this.tokenPlacementNameDraft().trim() || 'Token',
@@ -4506,6 +4651,9 @@ export class CampaignMapPageComponent {
                 note: this.tokenPlacementNoteDraft().trim(),
                 assignedUserId: this.tokenPlacementAssignedUserId(),
                 assignedCharacterId: this.tokenPlacementAssignedCharacterId(),
+                currentHp: selectedMonster?.hitPoints ?? parsedHp?.current ?? null,
+                maxHp: selectedMonster?.hitPoints ?? parsedHp?.max ?? parsedHp?.current ?? null,
+                armorClass: selectedMonster?.armorClass ?? parsedArmorClass ?? null,
                 encounterHidden: shouldStartHiddenInEncounter,
                 moveRevision: 0
             };
