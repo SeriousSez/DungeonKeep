@@ -2837,6 +2837,65 @@ app-dropdown {
     gap: 10px;
 }
 
+.map-voice-self-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.map-voice-self-actions .compact-action {
+    width: 34px;
+    height: 34px;
+    min-height: 34px;
+    padding: 0;
+    border-radius: 11px;
+    background: var(--surface-raised);
+    border-color: var(--panel-border);
+    color: var(--text-main);
+    box-shadow: none;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+}
+
+.map-voice-self-actions .compact-action i {
+    font-size: 1rem;
+    color: inherit;
+}
+
+.map-voice-deafen-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.map-voice-deafen-icon.is-deafened::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 1.5rem;
+    height: 2px;
+    border-radius: 999px;
+    background: currentColor;
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.map-voice-self-actions .compact-action:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--panel-border) 70%, var(--accent-primary) 30%);
+    transform: translateY(-1px);
+}
+
+.map-voice-self-actions .compact-action.is-active {
+    border-color: color-mix(in srgb, var(--panel-border) 42%, var(--color-danger) 58%);
+    color: var(--color-danger);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-danger) 14%, transparent);
+}
+
+.map-voice-self-actions .compact-action.is-active i {
+    color: inherit;
+}
+
 .map-voice-self-row p {
     margin: 4px 0 0;
 }
@@ -2858,6 +2917,15 @@ app-dropdown {
     background: color-mix(in srgb, var(--surface-raised-solid) 88%, var(--accent-primary) 12%);
 }
 
+.map-voice-participant-card.is-speaking {
+    border-color: color-mix(in srgb, #3cb371 72%, var(--panel-border) 28%);
+    box-shadow: 0 0 0 1px color-mix(in srgb, #3cb371 26%, transparent);
+}
+
+.map-voice-participant-card.is-speaking .map-voice-participant-header strong {
+    color: color-mix(in srgb, #3cb371 82%, var(--text-main) 18%);
+}
+
 .map-voice-participant-header {
     display: flex;
     align-items: center;
@@ -2871,11 +2939,42 @@ app-dropdown {
     gap: 6px;
 }
 
+.voice-status-icon {
+    min-width: 28px;
+    min-height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+}
+
+.voice-status-icon i {
+    font-size: 0.74rem;
+}
+
 .map-voice-participant-controls {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
     gap: 10px;
+}
+
+.map-voice-participant-controls .voice-local-mute-toggle {
+    width: 34px;
+    height: 34px;
+    min-height: 34px;
+    padding: 0;
+    border-radius: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.map-voice-participant-controls .voice-local-mute-toggle.is-active {
+    border-color: color-mix(in srgb, var(--panel-border) 42%, var(--color-danger) 58%);
+    color: var(--color-danger);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-danger) 14%, transparent);
 }
 
 .map-voice-volume-field {

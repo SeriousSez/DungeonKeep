@@ -42,7 +42,8 @@ public sealed class VoiceHub(IAuthService authService, ICampaignRepository campa
             MapId: mapId,
             UserId: user.Id.ToString(),
             DisplayName: string.IsNullOrWhiteSpace(user.DisplayName) ? "Player" : user.DisplayName,
-            MicrophoneMuted: false
+            MicrophoneMuted: false,
+            Deafened: false
         );
 
         Connections[connectionId] = state;
@@ -71,6 +72,20 @@ public sealed class VoiceHub(IAuthService authService, ICampaignRepository campa
 
         await Clients.GroupExcept(BuildRoomKey(nextState.CampaignId, nextState.MapId), [nextState.ConnectionId])
             .SendAsync("VoiceParticipantMicrophoneUpdated", new VoiceParticipantMicrophoneUpdated(nextState.ConnectionId, muted), Context.ConnectionAborted);
+    }
+
+    public async Task UpdateDeafened(bool deafened)
+    {
+        if (!Connections.TryGetValue(Context.ConnectionId, out var state))
+        {
+            return;
+        }
+
+        var nextState = state with { Deafened = deafened };
+        Connections[Context.ConnectionId] = nextState;
+
+        await Clients.GroupExcept(BuildRoomKey(nextState.CampaignId, nextState.MapId), [nextState.ConnectionId])
+            .SendAsync("VoiceParticipantDeafenedUpdated", new VoiceParticipantDeafenedUpdated(nextState.ConnectionId, deafened), Context.ConnectionAborted);
     }
 
     public async Task SendVoiceOffer(string targetConnectionId, string sdp)
@@ -191,15 +206,17 @@ public sealed class VoiceHub(IAuthService authService, ICampaignRepository campa
         string MapId,
         string UserId,
         string DisplayName,
-        bool MicrophoneMuted)
+        bool MicrophoneMuted,
+        bool Deafened)
     {
-        public VoiceParticipantDto ToDto() => new(ConnectionId, UserId, DisplayName, MicrophoneMuted);
+        public VoiceParticipantDto ToDto() => new(ConnectionId, UserId, DisplayName, MicrophoneMuted, Deafened);
     }
 
-    public sealed record VoiceParticipantDto(string ConnectionId, string UserId, string DisplayName, bool MicrophoneMuted);
+    public sealed record VoiceParticipantDto(string ConnectionId, string UserId, string DisplayName, bool MicrophoneMuted, bool Deafened);
     public sealed record VoiceJoinResult(string ConnectionId, IReadOnlyList<VoiceParticipantDto> Participants);
     public sealed record VoiceParticipantLeft(string ConnectionId);
     public sealed record VoiceParticipantMicrophoneUpdated(string ConnectionId, bool MicrophoneMuted);
+    public sealed record VoiceParticipantDeafenedUpdated(string ConnectionId, bool Deafened);
     public sealed record VoiceOfferPayload(string FromConnectionId, string Sdp);
     public sealed record VoiceAnswerPayload(string FromConnectionId, string Sdp);
     public sealed record VoiceIceCandidatePayload(string FromConnectionId, string Candidate, string? SdpMid, int? SdpMLineIndex);

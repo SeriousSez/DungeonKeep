@@ -573,6 +573,7 @@ export class CampaignMapPageComponent {
     readonly voiceConnectionState = this.voiceChat.connectionState;
     readonly voiceErrorMessage = this.voiceChat.errorMessage;
     readonly voiceMicrophoneMuted = this.voiceChat.microphoneMuted;
+    readonly voiceDeafened = this.voiceChat.deafened;
     readonly voiceJoined = computed(() => this.voiceConnectionState() === 'connected');
     readonly voiceConnecting = computed(() => this.voiceConnectionState() === 'connecting');
     readonly audioScenePresets = signal<MapAudioPreset[]>([]);
@@ -2117,8 +2118,6 @@ export class CampaignMapPageComponent {
         this.measurePopoverOpen.set(shouldOpen);
         if (shouldOpen) {
             this.voicePopoverOpen.set(false);
-            this.encounterPopoverOpen.set(false);
-            this.audioPopoverOpen.set(false);
         }
     }
 
@@ -2127,8 +2126,6 @@ export class CampaignMapPageComponent {
         this.voicePopoverOpen.set(shouldOpen);
         if (shouldOpen) {
             this.measurePopoverOpen.set(false);
-            this.encounterPopoverOpen.set(false);
-            this.audioPopoverOpen.set(false);
         }
     }
 
@@ -2138,7 +2135,6 @@ export class CampaignMapPageComponent {
         if (shouldOpen) {
             this.measurePopoverOpen.set(false);
             this.voicePopoverOpen.set(false);
-            this.encounterPopoverOpen.set(false);
             this.normalizeAudioPopoverPosition();
         }
     }
@@ -2178,7 +2174,6 @@ export class CampaignMapPageComponent {
         if (shouldOpen) {
             this.measurePopoverOpen.set(false);
             this.voicePopoverOpen.set(false);
-            this.audioPopoverOpen.set(false);
             this.normalizeEncounterPopoverPosition();
         }
     }
@@ -2901,6 +2896,11 @@ export class CampaignMapPageComponent {
 
     async toggleVoiceMicrophoneMuted(): Promise<void> {
         await this.voiceChat.toggleMicrophoneMuted();
+        this.cdr.detectChanges();
+    }
+
+    async toggleVoiceDeafened(): Promise<void> {
+        await this.voiceChat.toggleDeafened();
         this.cdr.detectChanges();
     }
 
@@ -3815,7 +3815,6 @@ export class CampaignMapPageComponent {
         this.measureEnabled.set(true);
         this.measurePopoverOpen.set(true);
         this.voicePopoverOpen.set(false);
-        this.audioPopoverOpen.set(false);
 
         this.clearCtrlPolylineDraft();
         this.pendingIconType.set(null);

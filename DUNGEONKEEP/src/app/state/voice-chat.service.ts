@@ -9,6 +9,7 @@ interface VoiceParticipantDto {
     userId: string;
     displayName: string;
     microphoneMuted: boolean;
+    deafened: boolean;
 }
 
 interface VoiceJoinResult {
@@ -42,9 +43,21 @@ interface VoiceParticipantMicrophoneUpdated {
     microphoneMuted: boolean;
 }
 
+interface VoiceParticipantDeafenedUpdated {
+    connectionId: string;
+    deafened: boolean;
+}
+
 interface VoiceLocalPreference {
     muted: boolean;
     volume: number;
+}
+
+interface SpeakingMonitorState {
+    source: MediaStreamAudioSourceNode;
+    analyser: AnalyserNode;
+    samples: Uint8Array<ArrayBuffer>;
+    speakingUntilMs: number;
 }
 
 export interface VoiceParticipant {
@@ -52,6 +65,8 @@ export interface VoiceParticipant {
     userId: string;
     displayName: string;
     microphoneMuted: boolean;
+    deafened: boolean;
+    isSpeaking: boolean;
 }
 
 const VOICE_PREFS_STORAGE_KEY = 'dungeonkeep.voice.local-preferences';
@@ -67,10 +82,15 @@ export class VoiceChatService {
     private localStream: MediaStream | null = null;
     private readonly peerConnections = new Map<string, RTCPeerConnection>();
     private readonly remoteAudioElements = new Map<string, HTMLAudioElement>();
+    private readonly speakingStates = new Map<string, boolean>();
+    private readonly speakingMonitors = new Map<string, SpeakingMonitorState>();
+    private speakingMonitorFrameId: number | null = null;
+    private audioContext: AudioContext | null = null;
 
     readonly participants = signal<VoiceParticipant[]>([]);
     readonly connectionState = signal<'idle' | 'connecting' | 'connected' | 'error'>('idle');
     readonly microphoneMuted = signal(false);
+    readonly deafened = signal(false);
     readonly errorMessage = signal('');
     readonly localPreferences = signal<Record<string, VoiceLocalPreference>>(this.readStoredPreferences());
     readonly isJoined = computed(() => this.connectionState() === 'connected' && this.joinedCampaignId.length > 0 && this.joinedMapId.length > 0);
@@ -122,8 +142,13 @@ export class VoiceChatService {
             this.selfConnectionId = result.connectionId;
             this.joinedCampaignId = campaignId;
             this.joinedMapId = mapId;
+            this.attachSpeakingMonitor(this.selfConnectionId, this.localStream);
             this.participants.set(this.sortParticipants(result.participants));
             this.applyMicrophoneMutedState();
+            this.syncLocalParticipantState();
+
+            await this.connection.invoke('UpdateMicrophoneMuted', this.microphoneMuted());
+            await this.connection.invoke('UpdateDeafened', this.deafened());
             this.connectionState.set('connected');
 
             for (const participant of result.participants) {
@@ -158,10 +183,14 @@ export class VoiceChatService {
         this.connectionState.set('idle');
         this.errorMessage.set('');
         this.participants.set([]);
+        this.deafened.set(false);
+        this.speakingStates.clear();
         this.joinedCampaignId = '';
         this.joinedMapId = '';
         this.selfConnectionId = '';
 
+        this.stopSpeakingMonitorLoop();
+        this.teardownSpeakingMonitors();
         this.teardownPeers();
         this.stopLocalStream();
 
@@ -185,18 +214,54 @@ export class VoiceChatService {
     }
 
     async toggleMicrophoneMuted(): Promise<void> {
-        const nextMuted = !this.microphoneMuted();
+        const previousMuted = this.microphoneMuted();
+        const previousDeafened = this.deafened();
+        const isEffectivelyMuted = previousMuted || previousDeafened;
+        const nextMuted = isEffectivelyMuted ? false : true;
+        const nextDeafened = isEffectivelyMuted ? false : previousDeafened;
+
         this.microphoneMuted.set(nextMuted);
+        this.deafened.set(nextDeafened);
         this.applyMicrophoneMutedState();
+        this.applyPreferencesToAllRemoteAudio();
+        this.syncLocalParticipantState();
+
+        if (!this.connection || this.connection.state !== HubConnectionState.Connected || !this.isJoined()) {
+            return;
+        }
+
+        if (previousMuted !== nextMuted) {
+            try {
+                await this.connection.invoke('UpdateMicrophoneMuted', nextMuted);
+            } catch {
+                this.errorMessage.set('Could not update microphone status for other participants.');
+            }
+        }
+
+        if (previousDeafened !== nextDeafened) {
+            try {
+                await this.connection.invoke('UpdateDeafened', nextDeafened);
+            } catch {
+                this.errorMessage.set('Could not update deafened status for other participants.');
+            }
+        }
+    }
+
+    async toggleDeafened(): Promise<void> {
+        const nextDeafened = !this.deafened();
+        this.deafened.set(nextDeafened);
+        this.applyMicrophoneMutedState();
+        this.applyPreferencesToAllRemoteAudio();
+        this.syncLocalParticipantState();
 
         if (!this.connection || this.connection.state !== HubConnectionState.Connected || !this.isJoined()) {
             return;
         }
 
         try {
-            await this.connection.invoke('UpdateMicrophoneMuted', nextMuted);
+            await this.connection.invoke('UpdateDeafened', nextDeafened);
         } catch {
-            this.errorMessage.set('Could not update microphone status for other participants.');
+            this.errorMessage.set('Could not update deafened status for other participants.');
         }
     }
 
@@ -257,7 +322,7 @@ export class VoiceChatService {
             return;
         }
 
-        const enabled = !this.microphoneMuted();
+        const enabled = !this.microphoneMuted() && !this.deafened();
         for (const track of stream.getAudioTracks()) {
             track.enabled = enabled;
         }
@@ -287,6 +352,10 @@ export class VoiceChatService {
 
             connection.on('VoiceParticipantMicrophoneUpdated', (event: VoiceParticipantMicrophoneUpdated) => {
                 this.updateParticipantMicrophoneState(event.connectionId, event.microphoneMuted);
+            });
+
+            connection.on('VoiceParticipantDeafenedUpdated', (event: VoiceParticipantDeafenedUpdated) => {
+                this.updateParticipantDeafenedState(event.connectionId, event.deafened);
             });
 
             connection.on('VoiceOfferReceived', (payload: VoiceOfferPayload) => {
@@ -345,7 +414,9 @@ export class VoiceChatService {
         try {
             const result = await this.connection.invoke<VoiceJoinResult>('JoinVoiceRoom', campaignId, mapId, token);
             this.selfConnectionId = result.connectionId;
+            this.attachSpeakingMonitor(this.selfConnectionId, this.localStream);
             this.participants.set(this.sortParticipants(result.participants));
+            this.syncLocalParticipantState();
             this.connectionState.set('connected');
             this.applyMicrophoneMutedState();
 
@@ -388,13 +459,36 @@ export class VoiceChatService {
             : participant));
     }
 
+    private updateParticipantDeafenedState(connectionId: string, deafened: boolean): void {
+        this.participants.update((participants) => participants.map((participant) => participant.connectionId === connectionId
+            ? { ...participant, deafened }
+            : participant));
+    }
+
     private normalizeParticipant(participant: VoiceParticipantDto): VoiceParticipant {
         return {
             connectionId: participant.connectionId,
             userId: participant.userId,
             displayName: participant.displayName,
-            microphoneMuted: participant.microphoneMuted
+            microphoneMuted: participant.microphoneMuted === true,
+            deafened: participant.deafened === true,
+            isSpeaking: this.speakingStates.get(participant.connectionId) === true
         };
+    }
+
+    private syncLocalParticipantState(): void {
+        const selfConnectionId = this.selfConnectionId;
+        if (!selfConnectionId) {
+            return;
+        }
+
+        this.participants.update((participants) => participants.map((participant) => participant.connectionId === selfConnectionId
+            ? {
+                ...participant,
+                microphoneMuted: this.microphoneMuted(),
+                deafened: this.deafened()
+            }
+            : participant));
     }
 
     private sortParticipants(participants: VoiceParticipantDto[] | VoiceParticipant[]): VoiceParticipant[] {
@@ -488,6 +582,7 @@ export class VoiceChatService {
                 return;
             }
 
+            this.attachSpeakingMonitor(connectionId, stream);
             const audio = this.getOrCreateRemoteAudioElement(connectionId);
             audio.srcObject = stream;
             this.applyPreferencesToAudioElement(connectionId, audio);
@@ -537,6 +632,11 @@ export class VoiceChatService {
             return;
         }
 
+        if (this.deafened()) {
+            audio.volume = 0;
+            return;
+        }
+
         const preference = this.localPreferences()[participant.userId] ?? { muted: false, volume: 1 };
         audio.volume = preference.muted ? 0 : Math.max(0, Math.min(1, preference.volume));
     }
@@ -565,6 +665,8 @@ export class VoiceChatService {
             audio.remove();
             this.remoteAudioElements.delete(connectionId);
         }
+
+        this.detachSpeakingMonitor(connectionId);
     }
 
     private stopLocalStream(): void {
@@ -578,6 +680,159 @@ export class VoiceChatService {
         for (const track of stream.getTracks()) {
             track.stop();
         }
+    }
+
+    private attachSpeakingMonitor(connectionId: string, stream: MediaStream | null): void {
+        if (!connectionId || !stream) {
+            return;
+        }
+
+        const audioContext = this.ensureAudioContext();
+        if (!audioContext) {
+            return;
+        }
+
+        this.detachSpeakingMonitor(connectionId);
+
+        let source: MediaStreamAudioSourceNode;
+        try {
+            source = audioContext.createMediaStreamSource(stream);
+        } catch {
+            return;
+        }
+
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.78;
+        source.connect(analyser);
+
+        this.speakingMonitors.set(connectionId, {
+            source,
+            analyser,
+            samples: new Uint8Array(analyser.fftSize) as Uint8Array<ArrayBuffer>,
+            speakingUntilMs: 0
+        });
+
+        this.startSpeakingMonitorLoop();
+        void audioContext.resume().catch(() => {
+            // Ignore resume failures; the analyser can still activate once the context runs.
+        });
+    }
+
+    private detachSpeakingMonitor(connectionId: string): void {
+        const monitor = this.speakingMonitors.get(connectionId);
+        if (!monitor) {
+            return;
+        }
+
+        try {
+            monitor.source.disconnect();
+        } catch {
+            // Ignore disconnect failures.
+        }
+
+        try {
+            monitor.analyser.disconnect();
+        } catch {
+            // Ignore disconnect failures.
+        }
+
+        this.speakingMonitors.delete(connectionId);
+        this.speakingStates.delete(connectionId);
+        this.syncSpeakingStateForConnection(connectionId, false);
+    }
+
+    private teardownSpeakingMonitors(): void {
+        for (const connectionId of Array.from(this.speakingMonitors.keys())) {
+            this.detachSpeakingMonitor(connectionId);
+        }
+    }
+
+    private ensureAudioContext(): AudioContext | null {
+        if (this.audioContext) {
+            return this.audioContext;
+        }
+
+        const AudioContextCtor = globalThis.AudioContext;
+        if (!AudioContextCtor) {
+            return null;
+        }
+
+        try {
+            this.audioContext = new AudioContextCtor();
+        } catch {
+            this.audioContext = null;
+            return null;
+        }
+
+        return this.audioContext;
+    }
+
+    private startSpeakingMonitorLoop(): void {
+        if (this.speakingMonitorFrameId !== null) {
+            return;
+        }
+
+        const step = () => {
+            this.speakingMonitorFrameId = null;
+            if (this.speakingMonitors.size === 0) {
+                return;
+            }
+
+            const now = performance.now();
+            let participantsChanged = false;
+            const nextParticipants = [...this.participants()];
+
+            for (const [connectionId, monitor] of this.speakingMonitors.entries()) {
+                monitor.analyser.getByteTimeDomainData(monitor.samples);
+
+                let sum = 0;
+                for (const sample of monitor.samples) {
+                    const normalizedSample = (sample - 128) / 128;
+                    sum += normalizedSample * normalizedSample;
+                }
+
+                const rms = Math.sqrt(sum / monitor.samples.length);
+                const isSpeakingNow = rms >= 0.024;
+                monitor.speakingUntilMs = isSpeakingNow ? now + 220 : monitor.speakingUntilMs;
+                const resolvedSpeaking = isSpeakingNow || now < monitor.speakingUntilMs;
+
+                if (this.speakingStates.get(connectionId) !== resolvedSpeaking) {
+                    this.speakingStates.set(connectionId, resolvedSpeaking);
+                    const participantIndex = nextParticipants.findIndex((participant) => participant.connectionId === connectionId);
+                    if (participantIndex >= 0) {
+                        nextParticipants[participantIndex] = {
+                            ...nextParticipants[participantIndex],
+                            isSpeaking: resolvedSpeaking
+                        };
+                        participantsChanged = true;
+                    }
+                }
+            }
+
+            if (participantsChanged) {
+                this.participants.set(this.sortParticipants(nextParticipants));
+            }
+
+            this.speakingMonitorFrameId = globalThis.requestAnimationFrame(step);
+        };
+
+        this.speakingMonitorFrameId = globalThis.requestAnimationFrame(step);
+    }
+
+    private stopSpeakingMonitorLoop(): void {
+        if (this.speakingMonitorFrameId === null) {
+            return;
+        }
+
+        globalThis.cancelAnimationFrame(this.speakingMonitorFrameId);
+        this.speakingMonitorFrameId = null;
+    }
+
+    private syncSpeakingStateForConnection(connectionId: string, isSpeaking: boolean): void {
+        this.participants.update((participants) => participants.map((participant) => participant.connectionId === connectionId
+            ? { ...participant, isSpeaking }
+            : participant));
     }
 
     private readStoredPreferences(): Record<string, VoiceLocalPreference> {

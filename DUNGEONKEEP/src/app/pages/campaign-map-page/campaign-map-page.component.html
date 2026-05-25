@@ -1446,30 +1446,55 @@
                         <strong>{{ currentUserDisplayName() }}</strong>
                         <p class="sidebar-note">{{ voiceMicrophoneMuted() ? 'Microphone muted for everyone.' : 'Microphone is live for everyone in this voice room.' }}</p>
                     </div>
-                    <button type="button" class="ghost-button compact-action" (click)="toggleVoiceMicrophoneMuted()">{{ voiceMicrophoneMuted() ? 'Unmute Mic' : 'Mute Mic' }}</button>
+                    <div class="map-voice-self-actions">
+                        <button type="button" class="ghost-button compact-action" [class.is-active]="voiceMicrophoneMuted() || voiceDeafened()" (click)="toggleVoiceMicrophoneMuted()" [attr.aria-label]="voiceMicrophoneMuted() || voiceDeafened() ? 'Unmute microphone' : 'Mute microphone'"
+                            [appTooltip]="voiceMicrophoneMuted() || voiceDeafened() ? 'Unmute microphone' : 'Mute microphone'">
+                            <i class="fa-duotone fa-thin" [class.fa-microphone-slash]="voiceMicrophoneMuted() || voiceDeafened()" [class.fa-microphone]="!voiceMicrophoneMuted() && !voiceDeafened()"></i>
+                        </button>
+                        <button type="button" class="ghost-button compact-action" [class.is-active]="voiceDeafened()" (click)="toggleVoiceDeafened()" [attr.aria-label]="voiceDeafened() ? 'Undeafen' : 'Deafen'" [appTooltip]="voiceDeafened() ? 'Undeafen' : 'Deafen'">
+                            <span class="map-voice-deafen-icon" [class.is-deafened]="voiceDeafened()">
+                                <i class="fa-duotone fa-thin fa-headphones-simple"></i>
+                            </span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="map-measure-section-divider"></div>
 
                 <div class="map-voice-participants">
                     @for (participant of voiceParticipants(); track participant.connectionId) {
-                    <div class="map-voice-participant-card">
+                    <div class="map-voice-participant-card" [class.is-speaking]="participant.isSpeaking">
                         <div class="map-voice-participant-header">
                             <strong>{{ participant.displayName }}</strong>
                             <div class="map-voice-participant-tags">
                                 @if (isCurrentUserVoiceParticipant(participant)) {
                                 <span class="status-chip">You</span>
                                 }
-                                @if (participant.microphoneMuted) {
-                                <span class="status-chip is-error">Mic muted</span>
+                                @if (participant.microphoneMuted || participant.deafened) {
+                                <span class="status-chip voice-status-icon is-error" appTooltip="Microphone muted for everyone" aria-label="Microphone muted for everyone">
+                                    <i class="fa-duotone fa-thin fa-microphone-slash"></i>
+                                </span>
+                                }
+                                @if (participant.deafened) {
+                                <span class="status-chip voice-status-icon is-error" appTooltip="Deafened" aria-label="Deafened">
+                                    <span class="map-voice-deafen-icon is-deafened">
+                                        <i class="fa-duotone fa-thin fa-headphones-simple"></i>
+                                    </span>
+                                </span>
+                                }
+                                @if (!isCurrentUserVoiceParticipant(participant) && voiceParticipantMutedLocally(participant.userId)) {
+                                <span class="status-chip voice-status-icon is-error" appTooltip="Muted locally" aria-label="Muted locally">
+                                    <i class="fa-duotone fa-thin fa-volume-xmark"></i>
+                                </span>
                                 }
                             </div>
                         </div>
 
                         @if (!isCurrentUserVoiceParticipant(participant)) {
                         <div class="map-voice-participant-controls">
-                            <button type="button" class="ghost-button compact-action" (click)="setVoiceParticipantMuted(participant.userId, !voiceParticipantMutedLocally(participant.userId))">
-                                {{ voiceParticipantMutedLocally(participant.userId) ? 'Unmute Locally' : 'Mute Locally' }}
+                            <button type="button" class="ghost-button compact-action voice-local-mute-toggle" [class.is-active]="voiceParticipantMutedLocally(participant.userId)" (click)="setVoiceParticipantMuted(participant.userId, !voiceParticipantMutedLocally(participant.userId))"
+                                [attr.aria-label]="voiceParticipantMutedLocally(participant.userId) ? 'Unmute locally' : 'Mute locally'" [appTooltip]="voiceParticipantMutedLocally(participant.userId) ? 'Unmute locally' : 'Mute locally'">
+                                <i class="fa-duotone fa-thin" [class.fa-volume-xmark]="voiceParticipantMutedLocally(participant.userId)" [class.fa-volume]="!voiceParticipantMutedLocally(participant.userId)"></i>
                             </button>
                             <label class="map-voice-volume-field">
                                 <span>Volume {{ voiceParticipantVolumePercent(participant.userId) }}%</span>
