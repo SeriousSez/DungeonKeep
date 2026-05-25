@@ -2896,10 +2896,10 @@ app-dropdown {
 }
 
 .map-audio-popover {
-    position: absolute;
-    left: calc(100% + 12px);
-    top: 50%;
-    transform: translateY(-50%);
+    position: fixed;
+    left: 72px;
+    top: 96px;
+    z-index: 205;
     width: min(420px, calc(100vw - 92px));
     max-height: min(80vh, 830px);
     overflow: auto;
@@ -2912,6 +2912,89 @@ app-dropdown {
     box-shadow: 0 16px 30px rgba(26, 19, 13, 0.22);
     backdrop-filter: blur(14px);
     font-size: 0.9rem;
+}
+
+.map-audio-popover.is-dragging {
+    user-select: none;
+}
+
+.map-audio-popover.is-minimized {
+    width: min(320px, calc(100vw - 92px));
+    max-height: none;
+    overflow: hidden;
+    gap: 6px;
+    padding: 10px;
+    border-radius: 14px;
+}
+
+.map-audio-popover.is-minimized .map-audio-popover-header {
+    gap: 6px;
+}
+
+.map-audio-popover.is-minimized h3 {
+    font-size: 1.08rem;
+    line-height: 1.05;
+}
+
+.map-audio-popover.is-minimized .map-audio-popover-header-actions {
+    gap: 4px;
+}
+
+.map-audio-popover.is-minimized .compact-action {
+    min-height: 34px;
+    min-width: 34px;
+    padding: 0;
+}
+
+.map-audio-popover-header {
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+}
+
+.map-audio-popover-header-actions {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.map-audio-popover.is-dragging .map-audio-popover-header {
+    cursor: grabbing;
+}
+
+.map-audio-minimized-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+}
+
+.map-audio-popover.is-minimized .map-audio-minimized-row {
+    gap: 6px;
+}
+
+.map-audio-minimized-summary {
+    font-size: 0.82rem;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.map-audio-popover.is-minimized .map-audio-minimized-summary {
+    font-size: 0.76rem;
+    line-height: 1.2;
+}
+
+.map-audio-minimized-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.map-audio-popover.is-minimized .map-audio-minimized-actions {
+    gap: 4px;
 }
 
 .map-audio-popover h3 {
@@ -2928,8 +3011,17 @@ app-dropdown {
 .map-audio-scene-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto auto;
-    align-items: center;
+    align-items: stretch;
     gap: 8px;
+}
+
+.map-audio-scene-row .compact-action {
+    min-height: 44px;
+    height: 44px;
+    align-self: stretch;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .map-audio-upload-row {
@@ -3031,13 +3123,18 @@ app-dropdown {
     color: var(--text-main);
 }
 
-.map-audio-inline-input input {
+.map-audio-inline-input input[type='text'] {
     width: 100%;
+    height: auto;
+    min-height: 0;
+    padding: 0;
     border: 0;
     outline: none;
     background: transparent;
     color: inherit;
     font: inherit;
+    line-height: 1.2;
+    box-shadow: none;
 }
 
 .map-audio-url-grid {
@@ -3105,8 +3202,12 @@ app-dropdown {
 
 @media (max-width: 720px) {
     .map-audio-popover {
-        width: min(92vw, 420px);
+        width: min(94vw, 420px);
         max-height: min(72vh, 620px);
+    }
+
+    .map-audio-popover.is-minimized {
+        width: min(90vw, 320px);
     }
 
     .map-audio-name-grid,

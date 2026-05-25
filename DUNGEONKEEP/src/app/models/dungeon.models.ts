@@ -191,6 +191,17 @@ export interface CampaignMapVisionMemoryEntry {
     revision: number;
 }
 
+export interface CampaignMapSharedAudio {
+    sceneName: string;
+    ambientUrl: string;
+    musicUrl: string;
+    ambientVolume: number;
+    musicVolume: number;
+    fadeInMs: number;
+    fadeOutMs: number;
+    isPlaying: boolean;
+}
+
 export interface CampaignMap {
     background: CampaignMapBackground;
     backgroundImageUrl: string;
@@ -212,6 +223,7 @@ export interface CampaignMap {
     encounterRound?: number;
     encounterActiveTokenId?: string | null;
     encounterStartedAtUtc?: string | null;
+    sharedAudio?: CampaignMapSharedAudio | null;
 }
 
 export interface CampaignMapBoard extends CampaignMap {

@@ -147,6 +147,7 @@ export interface ApiCampaignMapDto {
     encounterRound?: number;
     encounterActiveTokenId?: string | null;
     encounterStartedAtUtc?: string | null;
+    sharedAudio?: ApiCampaignMapSharedAudioDto | null;
 }
 
 export interface ApiCampaignMapBoardDto extends ApiCampaignMapDto {
@@ -215,6 +216,17 @@ export interface ApiCampaignMapVisionUpdatedDto {
     mapId: string;
     initiatedByUserId: string;
     memory: ApiCampaignMapVisionMemoryDto;
+}
+
+export interface ApiCampaignMapSharedAudioDto {
+    sceneName: string;
+    ambientUrl: string;
+    musicUrl: string;
+    ambientVolume: number;
+    musicVolume: number;
+    fadeInMs: number;
+    fadeOutMs: number;
+    isPlaying: boolean;
 }
 
 export interface ApiCampaignMapIconDto {

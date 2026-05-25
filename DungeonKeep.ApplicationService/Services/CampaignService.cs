@@ -493,7 +493,8 @@ public sealed class CampaignService(
                     request.Map.MembersCanViewAnytime,
                     request.Map.EncounterRound,
                     request.Map.EncounterActiveTokenId,
-                    request.Map.EncounterStartedAtUtc)]))
+                    request.Map.EncounterStartedAtUtc,
+                    request.Map.SharedAudio)]))
                 : null;
 
         if (library is null)
@@ -1153,7 +1154,7 @@ public sealed class CampaignService(
             ParseLootItems(campaign.LootJson),
             ParseOpenThreads(campaign.OpenThreadsJson),
             visibleWorldNotes,
-            new CampaignMapDto(activeMap.Background, activeMap.BackgroundImageUrl, activeMap.GridColumns, activeMap.GridRows, activeMap.GridColor, activeMap.GridOffsetX, activeMap.GridOffsetY, activeMap.Strokes, activeMap.Walls, activeMap.Icons, activeMap.Tokens, activeMap.Decorations, activeMap.Labels, activeMap.Layers, activeMap.VisionMemory, activeMap.VisionEnabled, activeMap.MembersCanViewAnytime, activeMap.EncounterRound, activeMap.EncounterActiveTokenId, activeMap.EncounterStartedAtUtc),
+            new CampaignMapDto(activeMap.Background, activeMap.BackgroundImageUrl, activeMap.GridColumns, activeMap.GridRows, activeMap.GridColor, activeMap.GridOffsetX, activeMap.GridOffsetY, activeMap.Strokes, activeMap.Walls, activeMap.Icons, activeMap.Tokens, activeMap.Decorations, activeMap.Labels, activeMap.Layers, activeMap.VisionMemory, activeMap.VisionEnabled, activeMap.MembersCanViewAnytime, activeMap.EncounterRound, activeMap.EncounterActiveTokenId, activeMap.EncounterStartedAtUtc, activeMap.SharedAudio),
             visibleMaps,
             activeMap.Id,
             currentUserRole,
@@ -1478,7 +1479,8 @@ public sealed class CampaignService(
                     legacyMap.MembersCanViewAnytime,
                     legacyMap.EncounterRound,
                     legacyMap.EncounterActiveTokenId,
-                    legacyMap.EncounterStartedAtUtc)]));
+                    legacyMap.EncounterStartedAtUtc,
+                    legacyMap.SharedAudio)]));
             }
         }
         catch
@@ -1734,7 +1736,8 @@ public sealed class CampaignService(
             map.MembersCanViewAnytime,
             map.EncounterRound is > 0 ? map.EncounterRound : 1,
             map.EncounterActiveTokenId,
-            map.EncounterStartedAtUtc);
+            map.EncounterStartedAtUtc,
+            NormalizeMapSharedAudio(map.SharedAudio));
     }
 
     private static CampaignMapBoardDto NormalizeCampaignMapBoard(CampaignMapBoardDto map)
@@ -1759,7 +1762,8 @@ public sealed class CampaignService(
             map.MembersCanViewAnytime,
             map.EncounterRound,
             map.EncounterActiveTokenId,
-            map.EncounterStartedAtUtc));
+            map.EncounterStartedAtUtc,
+            map.SharedAudio));
 
         return new CampaignMapBoardDto(
             map.Id == Guid.Empty ? Guid.NewGuid() : map.Id,
@@ -1783,7 +1787,8 @@ public sealed class CampaignService(
             normalized.MembersCanViewAnytime,
             normalized.EncounterRound,
             normalized.EncounterActiveTokenId,
-            normalized.EncounterStartedAtUtc);
+            normalized.EncounterStartedAtUtc,
+            normalized.SharedAudio);
     }
 
     private static CampaignMapLibraryDto NormalizeCampaignMapLibrary(CampaignMapLibraryDto library)
@@ -1817,7 +1822,8 @@ public sealed class CampaignService(
                 DefaultCampaignMapBoard.MembersCanViewAnytime,
                 DefaultCampaignMapBoard.EncounterRound,
                 DefaultCampaignMapBoard.EncounterActiveTokenId,
-                DefaultCampaignMapBoard.EncounterStartedAtUtc));
+                DefaultCampaignMapBoard.EncounterStartedAtUtc,
+                DefaultCampaignMapBoard.SharedAudio));
         }
 
         var activeMapId = library.ActiveMapId != Guid.Empty && maps.Any(map => map.Id == library.ActiveMapId)
@@ -2277,6 +2283,29 @@ public sealed class CampaignService(
         }
 
         return Math.Max(0, value.Value);
+    }
+
+    private static CampaignMapSharedAudioDto? NormalizeMapSharedAudio(CampaignMapSharedAudioDto? sharedAudio)
+    {
+        if (sharedAudio is null)
+        {
+            return null;
+        }
+
+        var sceneName = string.IsNullOrWhiteSpace(sharedAudio.SceneName) ? string.Empty : sharedAudio.SceneName.Trim();
+        var ambientUrl = string.IsNullOrWhiteSpace(sharedAudio.AmbientUrl) ? string.Empty : sharedAudio.AmbientUrl.Trim();
+        var musicUrl = string.IsNullOrWhiteSpace(sharedAudio.MusicUrl) ? string.Empty : sharedAudio.MusicUrl.Trim();
+        var hasPlayableSource = !string.IsNullOrWhiteSpace(ambientUrl) || !string.IsNullOrWhiteSpace(musicUrl);
+
+        return new CampaignMapSharedAudioDto(
+            sceneName,
+            ambientUrl,
+            musicUrl,
+            Math.Clamp(sharedAudio.AmbientVolume, 0, 100),
+            Math.Clamp(sharedAudio.MusicVolume, 0, 100),
+            Math.Clamp(sharedAudio.FadeInMs, 0, 15000),
+            Math.Clamp(sharedAudio.FadeOutMs, 0, 15000),
+            hasPlayableSource && sharedAudio.IsPlaying);
     }
 
     private static IReadOnlyList<CampaignMapTokenConditionDto> NormalizeMapTokenConditions(IReadOnlyList<CampaignMapTokenConditionDto>? conditions)

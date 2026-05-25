@@ -4,8 +4,8 @@ import { Injectable, computed, effect, inject, signal } from '@angular/core';
 
 import { CampaignNpc } from '../models/campaign-npc.models';
 import { raceMap } from '../data/races';
-import { AbilityScores, Campaign, CampaignDraft, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecorationType, CampaignMapIconType, CampaignMapLabelStyle, CampaignMapLabelTone, CampaignMapToken, CampaignMapTokenCondition, CampaignThreadVisibility, CampaignWorldNoteCategory, Character, CharacterDraft, CharacterStatus, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS, SkillProficiencies, ThreatLevel } from '../models/dungeon.models';
-import { ApiCampaignDto, ApiCampaignMapBoardDto, ApiCampaignMapDecorationDto, ApiCampaignMapDto, ApiCampaignMapLabelDto, ApiCampaignMapLabelStyleDto, ApiCampaignMapLibraryDto, ApiCampaignMapTokenDto, ApiCampaignMapTokenMovedDto, ApiCampaignMapVisionMemoryDto, ApiCampaignMapVisionUpdatedDto, ApiCampaignNpcDto, ApiCampaignSummaryDto, ApiCampaignWorldNoteDto, ApiCharacterDto, DungeonApiService, UserLibrariesDto } from './dungeon-api.service';
+import { AbilityScores, Campaign, CampaignDraft, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecorationType, CampaignMapIconType, CampaignMapLabelStyle, CampaignMapLabelTone, CampaignMapSharedAudio, CampaignMapToken, CampaignMapTokenCondition, CampaignThreadVisibility, CampaignWorldNoteCategory, Character, CharacterDraft, CharacterStatus, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS, SkillProficiencies, ThreatLevel } from '../models/dungeon.models';
+import { ApiCampaignDto, ApiCampaignMapBoardDto, ApiCampaignMapDecorationDto, ApiCampaignMapDto, ApiCampaignMapLabelDto, ApiCampaignMapLabelStyleDto, ApiCampaignMapLibraryDto, ApiCampaignMapSharedAudioDto, ApiCampaignMapTokenDto, ApiCampaignMapTokenMovedDto, ApiCampaignMapVisionMemoryDto, ApiCampaignMapVisionUpdatedDto, ApiCampaignNpcDto, ApiCampaignSummaryDto, ApiCampaignWorldNoteDto, ApiCharacterDto, DungeonApiService, UserLibrariesDto } from './dungeon-api.service';
 import { SessionService } from './session.service';
 
 @Injectable({ providedIn: 'root' })
@@ -1950,7 +1950,8 @@ export class DungeonStoreService {
                 ? Math.trunc(map.encounterRound)
                 : 1,
             encounterActiveTokenId: map?.encounterActiveTokenId?.trim() || null,
-            encounterStartedAtUtc: map?.encounterStartedAtUtc?.trim() || null
+            encounterStartedAtUtc: map?.encounterStartedAtUtc?.trim() || null,
+            sharedAudio: this.normalizeMapSharedAudioFromApi(map?.sharedAudio)
         };
     }
 
@@ -2106,8 +2107,63 @@ export class DungeonStoreService {
                 ? Math.trunc(map.encounterRound)
                 : 1,
             encounterActiveTokenId: map.encounterActiveTokenId?.trim() || null,
-            encounterStartedAtUtc: map.encounterStartedAtUtc?.trim() || null
+            encounterStartedAtUtc: map.encounterStartedAtUtc?.trim() || null,
+            sharedAudio: this.normalizeMapSharedAudioToApi(map.sharedAudio)
         };
+    }
+
+    private normalizeMapSharedAudioFromApi(sharedAudio?: ApiCampaignMapSharedAudioDto | null): CampaignMapSharedAudio | null {
+        if (!sharedAudio) {
+            return null;
+        }
+
+        const sceneName = sharedAudio.sceneName?.trim() ?? '';
+        const ambientUrl = sharedAudio.ambientUrl?.trim() ?? '';
+        const musicUrl = sharedAudio.musicUrl?.trim() ?? '';
+
+        return {
+            sceneName,
+            ambientUrl,
+            musicUrl,
+            ambientVolume: this.clampAudioPercentage(sharedAudio.ambientVolume, 65),
+            musicVolume: this.clampAudioPercentage(sharedAudio.musicVolume, 55),
+            fadeInMs: this.clampAudioDuration(sharedAudio.fadeInMs, 1800),
+            fadeOutMs: this.clampAudioDuration(sharedAudio.fadeOutMs, 1200),
+            isPlaying: sharedAudio.isPlaying === true
+        };
+    }
+
+    private normalizeMapSharedAudioToApi(sharedAudio?: CampaignMapSharedAudio | null): ApiCampaignMapSharedAudioDto | null {
+        if (!sharedAudio) {
+            return null;
+        }
+
+        return {
+            sceneName: sharedAudio.sceneName?.trim() ?? '',
+            ambientUrl: sharedAudio.ambientUrl?.trim() ?? '',
+            musicUrl: sharedAudio.musicUrl?.trim() ?? '',
+            ambientVolume: this.clampAudioPercentage(sharedAudio.ambientVolume, 65),
+            musicVolume: this.clampAudioPercentage(sharedAudio.musicVolume, 55),
+            fadeInMs: this.clampAudioDuration(sharedAudio.fadeInMs, 1800),
+            fadeOutMs: this.clampAudioDuration(sharedAudio.fadeOutMs, 1200),
+            isPlaying: sharedAudio.isPlaying === true
+        };
+    }
+
+    private clampAudioPercentage(value: number | undefined, fallback: number): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return fallback;
+        }
+
+        return Math.max(0, Math.min(100, Math.trunc(value)));
+    }
+
+    private clampAudioDuration(value: number | undefined, fallback: number): number {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return fallback;
+        }
+
+        return Math.max(0, Math.min(15000, Math.trunc(value)));
     }
 
     private mapCampaignMapBoardToApi(map: CampaignMapBoard): ApiCampaignMapBoardDto {

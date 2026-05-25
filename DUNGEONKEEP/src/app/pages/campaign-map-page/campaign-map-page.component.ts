@@ -12,7 +12,7 @@ import { loadCampaignNpcDrafts } from '../../data/campaign-npc.storage';
 import { monsterCatalog } from '../../data/monster-catalog.generated';
 import { sanitizeCustomMonster } from '../../data/monster-library.helpers';
 import { CampaignNpc } from '../../models/campaign-npc.models';
-import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelFontFamily, CampaignMapLabelTone, CampaignMapPoint, CampaignMapStroke, CampaignMapToken, CampaignMapTokenCondition, CampaignMapWall, CampaignTone, Character, CharacterDraft, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS } from '../../models/dungeon.models';
+import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelFontFamily, CampaignMapLabelTone, CampaignMapPoint, CampaignMapSharedAudio, CampaignMapStroke, CampaignMapToken, CampaignMapTokenCondition, CampaignMapWall, CampaignTone, Character, CharacterDraft, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS } from '../../models/dungeon.models';
 import { CustomMonster, MonsterCatalogEntry } from '../../models/monster-reference.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { TooltipDirective } from '../../shared/tooltip.directive';
@@ -189,6 +189,9 @@ const MAP_GRID_CONTROLS_EXPANDED_STORAGE_KEY = 'dungeonkeep.campaign-map.grid-co
 const MAP_PLACEMENT_HINT_VISIBILITY_STORAGE_KEY = 'dungeonkeep.campaign-map.show-placement-hint';
 const MAP_ENCOUNTER_POPOVER_POSITION_STORAGE_KEY = 'dungeonkeep.campaign-map.encounter-popover-position';
 const MAP_ENCOUNTER_POPOVER_VIEWPORT_MARGIN = 12;
+const MAP_AUDIO_POPOVER_POSITION_STORAGE_KEY = 'dungeonkeep.campaign-map.audio-popover-position';
+const MAP_AUDIO_POPOVER_MINIMIZED_STORAGE_KEY = 'dungeonkeep.campaign-map.audio-popover-minimized';
+const MAP_AUDIO_POPOVER_VIEWPORT_MARGIN = 12;
 const MAP_AUTOSAVE_DELAY_MS = 450;
 const MAP_VISION_MEMORY_LIMIT = 40;
 const MAP_VISION_FEET_PER_GRID_SQUARE = 5;
@@ -433,6 +436,7 @@ export class CampaignMapPageComponent {
     private readonly mapBoard = viewChild<ElementRef<HTMLDivElement>>('mapBoard');
     private readonly mapBoardShell = viewChild<ElementRef<HTMLDivElement>>('mapBoardShell');
     private readonly mapGuidePanel = viewChild<ElementRef<HTMLElement>>('mapGuidePanel');
+    private readonly audioPopoverElement = viewChild<ElementRef<HTMLDivElement>>('audioPopoverElement');
     private readonly encounterPopoverElement = viewChild<ElementRef<HTMLDivElement>>('encounterPopoverElement');
 
     readonly campaignId = signal('');
@@ -510,6 +514,9 @@ export class CampaignMapPageComponent {
     readonly measurePopoverOpen = signal(false);
     readonly voicePopoverOpen = signal(false);
     readonly audioPopoverOpen = signal(false);
+    readonly audioPopoverPosition = signal(this.readStoredAudioPopoverPosition());
+    readonly audioPopoverDragging = signal(false);
+    readonly audioPopoverMinimized = signal(this.readStoredAudioPopoverMinimized());
     readonly encounterPopoverOpen = signal(false);
     readonly encounterPopoverPosition = signal(this.readStoredEncounterPopoverPosition());
     readonly encounterPopoverDragging = signal(false);
@@ -1610,6 +1617,9 @@ export class CampaignMapPageComponent {
     private encounterPopoverDragPointerId: number | null = null;
     private encounterPopoverDragOffsetX = 0;
     private encounterPopoverDragOffsetY = 0;
+    private audioPopoverDragPointerId: number | null = null;
+    private audioPopoverDragOffsetX = 0;
+    private audioPopoverDragOffsetY = 0;
     private mapOverlayHintRefreshFrameId: number | null = null;
     private lastMapOverlayHintSourceKey = '';
     private pendingMonsterPortraitRegenerationSlug: string | null = null;
@@ -1618,8 +1628,10 @@ export class CampaignMapPageComponent {
     private audioFadeIntervalId: ReturnType<typeof setInterval> | null = null;
     private audioDuckTimerId: ReturnType<typeof setTimeout> | null = null;
     private activeAudioPresetId: string | null = null;
+    private activeAudioPreset: MapAudioPreset | null = null;
     private fadingOutAmbientAudioElement: HTMLAudioElement | null = null;
     private fadingOutMusicAudioElement: HTMLAudioElement | null = null;
+    private lastAppliedSharedAudioSignature = '';
     private loadedAudioSceneStorageKey = '';
     private loadedAudioLibraryUserId = '';
 
@@ -1952,6 +1964,17 @@ export class CampaignMapPageComponent {
         });
 
         effect(() => {
+            const sharedAudio = this.workingMap().sharedAudio ?? null;
+            const mapId = this.currentMapId();
+
+            if (!mapId || this.canEdit()) {
+                return;
+            }
+
+            this.applySharedAudioStateFromMap(sharedAudio);
+        });
+
+        effect(() => {
             const selectedPreset = this.selectedAudioScene();
             this.audioMasterVolume();
             this.audioMuted();
@@ -1966,6 +1989,10 @@ export class CampaignMapPageComponent {
             }
 
             if (this.activeAudioPresetId === selectedPreset.id) {
+                this.activeAudioPreset = {
+                    ...selectedPreset,
+                    sfxUrls: [...selectedPreset.sfxUrls]
+                };
                 this.applyCurrentAudioVolumes();
                 return;
             }
@@ -2112,7 +2139,33 @@ export class CampaignMapPageComponent {
             this.measurePopoverOpen.set(false);
             this.voicePopoverOpen.set(false);
             this.encounterPopoverOpen.set(false);
+            this.normalizeAudioPopoverPosition();
         }
+    }
+
+    toggleAudioPopoverMinimized(): void {
+        const nextValue = !this.audioPopoverMinimized();
+        this.audioPopoverMinimized.set(nextValue);
+        this.storeAudioPopoverMinimized(nextValue);
+        this.normalizeAudioPopoverPosition();
+    }
+
+    startAudioPopoverDrag(event: PointerEvent): void {
+        if (event.button !== 0 || !this.audioPopoverOpen()) {
+            return;
+        }
+
+        const target = event.target as HTMLElement | null;
+        if (target?.closest('button, input, textarea, select, a, label')) {
+            return;
+        }
+
+        const position = this.audioPopoverPosition();
+        this.audioPopoverDragPointerId = event.pointerId;
+        this.audioPopoverDragOffsetX = event.clientX - position.x;
+        this.audioPopoverDragOffsetY = event.clientY - position.y;
+        this.audioPopoverDragging.set(true);
+        event.preventDefault();
     }
 
     toggleEncounterPopover(): void {
@@ -2150,34 +2203,87 @@ export class CampaignMapPageComponent {
 
     @HostListener('document:pointermove', ['$event'])
     handleEncounterPopoverPointerMove(event: PointerEvent): void {
-        if (this.encounterPopoverDragPointerId === null || event.pointerId !== this.encounterPopoverDragPointerId) {
+        if (this.encounterPopoverDragPointerId !== null && event.pointerId === this.encounterPopoverDragPointerId) {
+            const nextPosition = this.clampEncounterPopoverPosition(
+                event.clientX - this.encounterPopoverDragOffsetX,
+                event.clientY - this.encounterPopoverDragOffsetY
+            );
+
+            this.encounterPopoverPosition.set(nextPosition);
             return;
         }
 
-        const nextPosition = this.clampEncounterPopoverPosition(
-            event.clientX - this.encounterPopoverDragOffsetX,
-            event.clientY - this.encounterPopoverDragOffsetY
+        if (this.audioPopoverDragPointerId === null || event.pointerId !== this.audioPopoverDragPointerId) {
+            return;
+        }
+
+        const nextPosition = this.clampAudioPopoverPosition(
+            event.clientX - this.audioPopoverDragOffsetX,
+            event.clientY - this.audioPopoverDragOffsetY
         );
 
-        this.encounterPopoverPosition.set(nextPosition);
+        this.audioPopoverPosition.set(nextPosition);
     }
 
     @HostListener('document:pointerup', ['$event'])
     handleEncounterPopoverPointerUp(event: PointerEvent): void {
-        if (this.encounterPopoverDragPointerId === null || event.pointerId !== this.encounterPopoverDragPointerId) {
+        if (this.encounterPopoverDragPointerId !== null && event.pointerId === this.encounterPopoverDragPointerId) {
+            this.finishEncounterPopoverDrag();
             return;
         }
 
-        this.finishEncounterPopoverDrag();
+        if (this.audioPopoverDragPointerId === null || event.pointerId !== this.audioPopoverDragPointerId) {
+            return;
+        }
+
+        this.finishAudioPopoverDrag();
     }
 
     @HostListener('document:pointercancel', ['$event'])
     handleEncounterPopoverPointerCancel(event: PointerEvent): void {
-        if (this.encounterPopoverDragPointerId === null || event.pointerId !== this.encounterPopoverDragPointerId) {
+        if (this.encounterPopoverDragPointerId !== null && event.pointerId === this.encounterPopoverDragPointerId) {
+            this.finishEncounterPopoverDrag();
             return;
         }
 
-        this.finishEncounterPopoverDrag();
+        if (this.audioPopoverDragPointerId === null || event.pointerId !== this.audioPopoverDragPointerId) {
+            return;
+        }
+
+        this.finishAudioPopoverDrag();
+    }
+
+    audioPopoverSummary(): string {
+        if (!this.canEdit()) {
+            const sharedAudio = this.workingMap().sharedAudio ?? null;
+            const sceneName = sharedAudio?.sceneName?.trim() || 'No scene selected';
+
+            if (!sharedAudio?.isPlaying) {
+                return `Paused: ${sceneName}`;
+            }
+
+            if (this.audioMuted()) {
+                return `Playing muted: ${sceneName}`;
+            }
+
+            return `Playing: ${sceneName}`;
+        }
+
+        const activePreset = this.activeAudioPresetId
+            ? this.audioScenePresets().find((preset) => preset.id === this.activeAudioPresetId) ?? null
+            : null;
+        const summaryPreset = activePreset ?? this.selectedAudioScene();
+        const sceneName = summaryPreset?.name ?? 'No scene selected';
+
+        if (!this.audioPlaying()) {
+            return `Paused: ${sceneName}`;
+        }
+
+        if (this.audioMuted()) {
+            return `Playing muted: ${sceneName}`;
+        }
+
+        return `Playing: ${sceneName}`;
     }
 
     updateTokenInitiative(tokenId: string, value: string): void {
@@ -2194,7 +2300,7 @@ export class CampaignMapPageComponent {
                 map.encounterActiveTokenId = null;
             }
         });
-        this.markDirty('Initiative updated.');
+        this.markDirtyAndSyncEncounterRealtime('Initiative updated.');
     }
 
     toggleEncounterInspector(tokenId: string): void {
@@ -2364,13 +2470,13 @@ export class CampaignMapPageComponent {
             return;
         }
 
-        const firstEntry = this.encounterEntries()[0] ?? null;
+        const firstEntry = this.encounterTurnEntries()[0] ?? null;
         this.mutateMap((map) => {
             map.encounterRound = 1;
             map.encounterStartedAtUtc = new Date().toISOString();
             map.encounterActiveTokenId = firstEntry?.token.id ?? null;
         });
-        this.markDirty('Encounter started.');
+        this.markDirtyAndSyncEncounterRealtime('Encounter started.');
     }
 
     endEncounter(): void {
@@ -2383,7 +2489,7 @@ export class CampaignMapPageComponent {
             map.encounterActiveTokenId = null;
             map.encounterStartedAtUtc = null;
         });
-        this.markDirty('Encounter ended.');
+        this.markDirtyAndSyncEncounterRealtime('Encounter ended.');
     }
 
     nextEncounterTurn(): void {
@@ -2391,7 +2497,7 @@ export class CampaignMapPageComponent {
             return;
         }
 
-        const entries = this.encounterEntries();
+        const entries = this.encounterTurnEntries();
         if (!entries.length) {
             return;
         }
@@ -2418,7 +2524,7 @@ export class CampaignMapPageComponent {
             }
         });
 
-        this.markDirty('Turn advanced.');
+        this.markDirtyAndSyncEncounterRealtime('Turn advanced.');
     }
 
     previousEncounterTurn(): void {
@@ -2426,7 +2532,7 @@ export class CampaignMapPageComponent {
             return;
         }
 
-        const entries = this.encounterEntries();
+        const entries = this.encounterTurnEntries();
         if (!entries.length) {
             return;
         }
@@ -2448,7 +2554,7 @@ export class CampaignMapPageComponent {
             }
         });
 
-        this.markDirty('Turn moved back.');
+        this.markDirtyAndSyncEncounterRealtime('Turn moved back.');
     }
 
     setEncounterActiveToken(tokenId: string): void {
@@ -2466,7 +2572,7 @@ export class CampaignMapPageComponent {
                 map.encounterStartedAtUtc = new Date().toISOString();
             }
         });
-        this.markDirty('Active turn updated.');
+        this.markDirtyAndSyncEncounterRealtime('Active turn updated.');
     }
 
     toggleTokenEncounterHidden(tokenId: string): void {
@@ -2484,7 +2590,7 @@ export class CampaignMapPageComponent {
                 t.id === tokenId ? { ...t, encounterHidden: !t.encounterHidden } : t
             );
         });
-        this.markDirty('Encounter visibility updated.');
+        this.markDirtyAndSyncEncounterRealtime('Encounter visibility updated.');
     }
 
     updateTokenCurrentHp(tokenId: string, value: string): void {
@@ -2501,7 +2607,7 @@ export class CampaignMapPageComponent {
         });
 
         this.syncCharacterHpFromEncounterToken(tokenId, nextCurrentHp);
-        this.markDirty('HP updated.');
+        this.markDirtyAndSyncEncounterRealtime('HP updated.');
     }
 
     updateTokenMaxHp(tokenId: string, value: string): void {
@@ -2519,7 +2625,7 @@ export class CampaignMapPageComponent {
                 token.id === tokenId ? { ...token, maxHp: this.parseNumericInput(value) } : token
             );
         });
-        this.markDirty('Max HP updated.');
+        this.markDirtyAndSyncEncounterRealtime('Max HP updated.');
     }
 
     updateTokenArmorClass(tokenId: string, value: string): void {
@@ -2537,7 +2643,7 @@ export class CampaignMapPageComponent {
                 token.id === tokenId ? { ...token, armorClass: this.parseNumericInput(value) } : token
             );
         });
-        this.markDirty('AC updated.');
+        this.markDirtyAndSyncEncounterRealtime('AC updated.');
     }
 
     updateEncounterTokenConditionsSelection(tokenId: string, selectedConditionNames: string[]): void {
@@ -2568,7 +2674,7 @@ export class CampaignMapPageComponent {
             });
         });
 
-        this.markDirty('Condition updated.');
+        this.markDirtyAndSyncEncounterRealtime('Condition updated.');
     }
 
     updateEncounterConditionRemainingRounds(tokenId: string, conditionName: string, value: string): void {
@@ -2594,7 +2700,7 @@ export class CampaignMapPageComponent {
             });
         });
 
-        this.markDirty('Condition rounds updated.');
+        this.markDirtyAndSyncEncounterRealtime('Condition rounds updated.');
     }
 
     removeEncounterCondition(tokenId: string, conditionName: string): void {
@@ -2616,7 +2722,23 @@ export class CampaignMapPageComponent {
             });
         });
 
-        this.markDirty('Condition removed.');
+        this.markDirtyAndSyncEncounterRealtime('Condition removed.');
+    }
+
+    private encounterTurnEntries(): EncounterEntry[] {
+        const entries = this.encounterEntries();
+        const visibleEntries = entries.filter((entry) => !entry.isHiddenFromPlayers);
+        return visibleEntries.length > 0 ? visibleEntries : entries;
+    }
+
+    private markDirtyAndSyncEncounterRealtime(message: string): void {
+        this.markDirty(message);
+
+        if (!this.canPersistMapChanges() || this.persistInFlight || !this.hasUnsavedChanges()) {
+            return;
+        }
+
+        void this.persistWorkingMap();
     }
 
     private parseNumericInput(value: string): number | null {
@@ -2961,9 +3083,14 @@ export class CampaignMapPageComponent {
     }
 
     toggleAudioPlayback(): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
         if (this.audioPlaying()) {
             this.audioPlaying.set(false);
             this.pauseLoopAudioChannelsWithFade(this.selectedAudioScene()?.fadeOutMs ?? 0);
+            this.syncSharedMapAudioState(this.selectedAudioScene(), false);
             return;
         }
 
@@ -2977,10 +3104,12 @@ export class CampaignMapPageComponent {
         if (this.activeAudioPresetId === selectedPreset.id && (this.ambientAudioElement || this.musicAudioElement)) {
             this.resumeLoopAudioChannels();
             this.applyCurrentAudioVolumes();
+            this.syncSharedMapAudioState(selectedPreset, true);
             return;
         }
 
         this.transitionToAudioPreset(selectedPreset, selectedPreset.fadeInMs);
+        this.syncSharedMapAudioState(selectedPreset, true);
     }
 
     toggleAudioMute(): void {
@@ -2992,17 +3121,33 @@ export class CampaignMapPageComponent {
     }
 
     selectAudioSceneFromDropdown(value: string | number): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
         const selectedId = typeof value === 'string' ? value : String(value);
         this.audioSelectedSceneId.set(selectedId);
+
+        if (this.audioPlaying()) {
+            this.syncSharedMapAudioState(this.selectedAudioScene(), true);
+        }
     }
 
     addAudioScenePreset(): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
         const preset = this.createAudioScenePreset(`Scene ${this.audioScenePresets().length + 1}`, 'calm');
         this.audioScenePresets.update((presets) => [...presets, preset]);
         this.audioSelectedSceneId.set(preset.id);
     }
 
     duplicateSelectedAudioScenePreset(): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
         const selectedPreset = this.selectedAudioScene();
         if (!selectedPreset) {
             return;
@@ -3020,6 +3165,10 @@ export class CampaignMapPageComponent {
     }
 
     deleteSelectedAudioScenePreset(): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
         const selectedPreset = this.selectedAudioScene();
         if (!selectedPreset) {
             return;
@@ -3155,6 +3304,10 @@ export class CampaignMapPageComponent {
     }
 
     playAudioSceneSfx(url: string): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
         const trimmedUrl = url.trim();
         const selectedPreset = this.selectedAudioScene();
         if (!trimmedUrl || !selectedPreset) {
@@ -3182,6 +3335,10 @@ export class CampaignMapPageComponent {
     }
 
     crossfadeSelectedAudioScene(): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
         const selectedPreset = this.selectedAudioScene();
         if (!selectedPreset || !this.audioPlaying()) {
             return;
@@ -3190,7 +3347,126 @@ export class CampaignMapPageComponent {
         this.transitionToAudioPreset(selectedPreset, selectedPreset.crossfadeMs);
     }
 
+    private syncSharedMapAudioState(preset: MapAudioPreset | null, isPlaying: boolean): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
+        const nextSharedAudio = this.buildSharedAudioState(preset, isPlaying);
+        const currentSignature = this.sharedAudioSignature(this.workingMap().sharedAudio ?? null);
+        const nextSignature = this.sharedAudioSignature(nextSharedAudio);
+
+        if (currentSignature === nextSignature) {
+            return;
+        }
+
+        this.mutateMap((map) => {
+            map.sharedAudio = nextSharedAudio;
+        });
+
+        this.markDirtyAndPersistImmediately(isPlaying ? 'Map audio playback updated.' : 'Map audio paused.');
+    }
+
+    private applySharedAudioStateFromMap(sharedAudio: CampaignMapSharedAudio | null): void {
+        const signature = this.sharedAudioSignature(sharedAudio);
+        if (signature === this.lastAppliedSharedAudioSignature) {
+            return;
+        }
+
+        this.lastAppliedSharedAudioSignature = signature;
+
+        if (!sharedAudio?.isPlaying) {
+            if (this.audioPlaying()) {
+                this.audioPlaying.set(false);
+                this.pauseLoopAudioChannelsWithFade(sharedAudio?.fadeOutMs ?? 0);
+            }
+
+            return;
+        }
+
+        const sharedPreset = this.buildSharedAudioPreset(sharedAudio);
+        if (!sharedPreset) {
+            this.audioPlaying.set(false);
+            this.pauseLoopAudioChannelsWithFade(sharedAudio.fadeOutMs);
+            return;
+        }
+
+        this.audioPlaying.set(true);
+
+        if (this.activeAudioPresetId === sharedPreset.id && (this.ambientAudioElement || this.musicAudioElement)) {
+            this.resumeLoopAudioChannels();
+            this.applyCurrentAudioVolumes();
+            return;
+        }
+
+        this.transitionToAudioPreset(sharedPreset, sharedPreset.fadeInMs);
+    }
+
+    private buildSharedAudioState(preset: MapAudioPreset | null, isPlaying: boolean): CampaignMapSharedAudio | null {
+        const fallbackPreset = preset ?? this.activeAudioPreset;
+        if (!fallbackPreset) {
+            return null;
+        }
+
+        return {
+            sceneName: fallbackPreset.name.trim() || 'Untitled Scene',
+            ambientUrl: fallbackPreset.ambientUrl.trim(),
+            musicUrl: fallbackPreset.musicUrl.trim(),
+            ambientVolume: this.clampAudioValue(fallbackPreset.ambientVolume, 0, 100),
+            musicVolume: this.clampAudioValue(fallbackPreset.musicVolume, 0, 100),
+            fadeInMs: this.clampAudioValue(fallbackPreset.fadeInMs, 0, 15000),
+            fadeOutMs: this.clampAudioValue(fallbackPreset.fadeOutMs, 0, 15000),
+            isPlaying: isPlaying && (!!fallbackPreset.ambientUrl.trim() || !!fallbackPreset.musicUrl.trim())
+        };
+    }
+
+    private buildSharedAudioPreset(sharedAudio: CampaignMapSharedAudio): MapAudioPreset | null {
+        const ambientUrl = sharedAudio.ambientUrl?.trim() ?? '';
+        const musicUrl = sharedAudio.musicUrl?.trim() ?? '';
+        if (!ambientUrl && !musicUrl) {
+            return null;
+        }
+
+        return this.normalizeAudioScenePreset({
+            id: `shared-map-audio:${this.currentMapId()}`,
+            name: sharedAudio.sceneName?.trim() || 'Map Scene',
+            mood: 'calm',
+            ambientUrl,
+            musicUrl,
+            sfxUrls: [],
+            ambientVolume: sharedAudio.ambientVolume,
+            musicVolume: sharedAudio.musicVolume,
+            sfxVolume: 0,
+            fadeInMs: sharedAudio.fadeInMs,
+            fadeOutMs: sharedAudio.fadeOutMs,
+            crossfadeMs: sharedAudio.fadeInMs,
+            autoDuck: false
+        });
+    }
+
+    private sharedAudioSignature(sharedAudio: CampaignMapSharedAudio | null): string {
+        if (!sharedAudio) {
+            return 'none';
+        }
+
+        return JSON.stringify(sharedAudio);
+    }
+
+    private markDirtyAndPersistImmediately(message: string): void {
+        this.markDirty(message);
+
+        if (!this.canPersistMapChanges() || this.persistInFlight || !this.hasUnsavedChanges()) {
+            return;
+        }
+
+        void this.persistWorkingMap();
+    }
+
     private patchSelectedAudioScene(changes: Partial<MapAudioPreset>): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
         const selectedId = this.audioSelectedSceneId();
         this.audioScenePresets.update((presets) => presets.map((preset) => {
             if (preset.id !== selectedId) {
@@ -3202,6 +3478,10 @@ export class CampaignMapPageComponent {
                 ...changes
             });
         }));
+
+        if (this.audioPlaying()) {
+            this.syncSharedMapAudioState(this.selectedAudioScene(), true);
+        }
     }
 
     private parseAudioUrlList(value: string): string[] {
@@ -3354,8 +3634,8 @@ export class CampaignMapPageComponent {
     }
 
     private applyCurrentAudioVolumes(): void {
-        const selectedPreset = this.selectedAudioScene();
-        if (!selectedPreset || !this.audioPlaying()) {
+        const activePreset = this.activeAudioPreset ?? this.selectedAudioScene();
+        if (!activePreset || !this.audioPlaying()) {
             if (this.ambientAudioElement) {
                 this.ambientAudioElement.volume = 0;
             }
@@ -3367,11 +3647,11 @@ export class CampaignMapPageComponent {
         }
 
         if (this.ambientAudioElement) {
-            this.ambientAudioElement.volume = this.targetAudioVolume(selectedPreset.ambientVolume);
+            this.ambientAudioElement.volume = this.targetAudioVolume(activePreset.ambientVolume);
         }
 
         if (this.musicAudioElement) {
-            this.musicAudioElement.volume = this.targetAudioVolume(selectedPreset.musicVolume);
+            this.musicAudioElement.volume = this.targetAudioVolume(activePreset.musicVolume);
         }
     }
 
@@ -3398,6 +3678,10 @@ export class CampaignMapPageComponent {
         this.ambientAudioElement = nextAmbient;
         this.musicAudioElement = nextMusic;
         this.activeAudioPresetId = preset.id;
+        this.activeAudioPreset = {
+            ...preset,
+            sfxUrls: [...preset.sfxUrls]
+        };
 
         if (nextAmbient) {
             void nextAmbient.play().catch(() => {
@@ -3494,6 +3778,7 @@ export class CampaignMapPageComponent {
         }
 
         this.activeAudioPresetId = null;
+        this.activeAudioPreset = null;
     }
 
     private clearAudioFadeInterval(): void {
@@ -3701,6 +3986,7 @@ export class CampaignMapPageComponent {
 
     @HostListener('window:resize')
     handleWindowResize(): void {
+        this.normalizeAudioPopoverPosition();
         this.normalizeEncounterPopoverPosition();
     }
 
@@ -3976,10 +4262,12 @@ export class CampaignMapPageComponent {
             return;
         }
 
+        const npcImageUrl = this.resolveNpcImageUrl(npc);
+
         this.tokenPlacementNpcId.set(npc.id);
         this.tokenPlacementCharacterId.set('');
         this.tokenPlacementMonsterId.set('');
-        this.tokenPlacementImageUrl.set(npc.imageUrl?.trim() ?? '');
+        this.tokenPlacementImageUrl.set(npcImageUrl);
         this.pendingTokenImageLoadFailed.set(false);
         this.tokenPlacementNameDraft.set(npc.name);
         const npcStatSource = this.buildNpcStatSource(npc);
@@ -3994,7 +4282,7 @@ export class CampaignMapPageComponent {
         this.tokenPlacementAssignedCharacterId.set(null);
         this.tokenPlacementAssignedUserId.set(null);
         this.tokenPlacementSize.set(1);
-        this.tokenUploadFeedback.set(`${npc.name} is ready to place as an NPC token.${npc.imageUrl?.trim() ? '' : ' The token will use initials until a portrait is added.'}`);
+        this.tokenUploadFeedback.set(`${npc.name} is ready to place as an NPC token.${npcImageUrl ? '' : ' The token will use initials until a portrait is added.'}`);
         this.selectTokenTool();
         this.cdr.detectChanges();
     }
@@ -4419,7 +4707,7 @@ export class CampaignMapPageComponent {
         }
 
         const matchedNpc = this.campaignNpcs().find((npc) => npc.name.trim().toLocaleLowerCase() === normalizedTokenName) ?? null;
-        return matchedNpc?.imageUrl?.trim() ?? '';
+        return this.resolveNpcImageUrl(matchedNpc);
     }
 
     tokenHasRenderableImage(token: CampaignMapToken): boolean {
@@ -4440,6 +4728,22 @@ export class CampaignMapPageComponent {
         this.failedTokenImages.update((current) => current[token.id] === imageUrl
             ? current
             : { ...current, [token.id]: imageUrl });
+    }
+
+    private resolveNpcImageUrl(npc: CampaignNpc | null): string {
+        if (!npc) {
+            return '';
+        }
+
+        const imageUrl = npc.imageUrl?.trim() ?? '';
+        if (imageUrl) {
+            return imageUrl;
+        }
+
+        const legacyNpc = npc as CampaignNpc & { image?: string };
+        const legacyImageUrl = legacyNpc.image?.trim() ?? '';
+
+        return legacyImageUrl;
     }
 
     tokenInitials(name: string): string {
@@ -4892,6 +5196,36 @@ export class CampaignMapPageComponent {
         }
     }
 
+    private readStoredAudioPopoverPosition(): { x: number; y: number } {
+        const viewportWidth = Number.isFinite(globalThis.innerWidth) && globalThis.innerWidth > 0 ? globalThis.innerWidth : 1280;
+        const fallbackX = Math.max(MAP_AUDIO_POPOVER_VIEWPORT_MARGIN, viewportWidth - 460);
+        const fallbackY = this.defaultAudioPopoverY();
+
+        try {
+            const raw = globalThis.localStorage?.getItem(MAP_AUDIO_POPOVER_POSITION_STORAGE_KEY);
+            if (!raw) {
+                return this.clampAudioPopoverPosition(fallbackX, fallbackY);
+            }
+
+            const parsed = JSON.parse(raw) as Partial<{ x: number; y: number }>;
+            if (typeof parsed.x !== 'number' || typeof parsed.y !== 'number' || !Number.isFinite(parsed.x) || !Number.isFinite(parsed.y)) {
+                return this.clampAudioPopoverPosition(fallbackX, fallbackY);
+            }
+
+            return this.clampAudioPopoverPosition(parsed.x, parsed.y);
+        } catch {
+            return this.clampAudioPopoverPosition(fallbackX, fallbackY);
+        }
+    }
+
+    private readStoredAudioPopoverMinimized(): boolean {
+        try {
+            return globalThis.localStorage?.getItem(MAP_AUDIO_POPOVER_MINIMIZED_STORAGE_KEY) === 'true';
+        } catch {
+            return false;
+        }
+    }
+
     private defaultEncounterPopoverY(): number {
         const viewportHeight = globalThis.innerHeight;
         if (!Number.isFinite(viewportHeight) || viewportHeight <= 0) {
@@ -4906,6 +5240,22 @@ export class CampaignMapPageComponent {
             globalThis.localStorage?.setItem(MAP_ENCOUNTER_POPOVER_POSITION_STORAGE_KEY, JSON.stringify(position));
         } catch {
             // Ignore storage failures and keep drag placement working in-memory.
+        }
+    }
+
+    private storeAudioPopoverPosition(position: { x: number; y: number }): void {
+        try {
+            globalThis.localStorage?.setItem(MAP_AUDIO_POPOVER_POSITION_STORAGE_KEY, JSON.stringify(position));
+        } catch {
+            // Ignore storage failures and keep drag placement working in-memory.
+        }
+    }
+
+    private storeAudioPopoverMinimized(value: boolean): void {
+        try {
+            globalThis.localStorage?.setItem(MAP_AUDIO_POPOVER_MINIMIZED_STORAGE_KEY, String(value));
+        } catch {
+            // Ignore storage failures and keep minimize state working in-memory.
         }
     }
 
@@ -4926,10 +5276,33 @@ export class CampaignMapPageComponent {
         this.storeEncounterPopoverPosition(normalized);
     }
 
+    private normalizeAudioPopoverPosition(): void {
+        const normalized = this.clampAudioPopoverPosition(
+            this.audioPopoverPosition().x,
+            this.audioPopoverPosition().y
+        );
+
+        if (
+            normalized.x === this.audioPopoverPosition().x
+            && normalized.y === this.audioPopoverPosition().y
+        ) {
+            return;
+        }
+
+        this.audioPopoverPosition.set(normalized);
+        this.storeAudioPopoverPosition(normalized);
+    }
+
     private finishEncounterPopoverDrag(): void {
         this.encounterPopoverDragPointerId = null;
         this.encounterPopoverDragging.set(false);
         this.storeEncounterPopoverPosition(this.encounterPopoverPosition());
+    }
+
+    private finishAudioPopoverDrag(): void {
+        this.audioPopoverDragPointerId = null;
+        this.audioPopoverDragging.set(false);
+        this.storeAudioPopoverPosition(this.audioPopoverPosition());
     }
 
     private clampEncounterPopoverPosition(x: number, y: number): { x: number; y: number } {
@@ -4947,6 +5320,37 @@ export class CampaignMapPageComponent {
         const minY = MAP_ENCOUNTER_POPOVER_VIEWPORT_MARGIN;
         const maxX = Math.max(minX, viewportWidth - popoverWidth - MAP_ENCOUNTER_POPOVER_VIEWPORT_MARGIN);
         const maxY = Math.max(minY, viewportHeight - popoverHeight - MAP_ENCOUNTER_POPOVER_VIEWPORT_MARGIN);
+
+        return {
+            x: Math.round(Math.min(Math.max(x, minX), maxX)),
+            y: Math.round(Math.min(Math.max(y, minY), maxY))
+        };
+    }
+
+    private defaultAudioPopoverY(): number {
+        const viewportHeight = globalThis.innerHeight;
+        if (!Number.isFinite(viewportHeight) || viewportHeight <= 0) {
+            return 96;
+        }
+
+        return Math.max(MAP_AUDIO_POPOVER_VIEWPORT_MARGIN, Math.round((viewportHeight * 0.5) - 280));
+    }
+
+    private clampAudioPopoverPosition(x: number, y: number): { x: number; y: number } {
+        const viewportWidth = Number.isFinite(globalThis.innerWidth) && globalThis.innerWidth > 0
+            ? globalThis.innerWidth
+            : 1280;
+        const viewportHeight = Number.isFinite(globalThis.innerHeight) && globalThis.innerHeight > 0
+            ? globalThis.innerHeight
+            : 720;
+
+        const popoverElement = this.audioPopoverElement()?.nativeElement;
+        const popoverWidth = popoverElement?.offsetWidth ?? 420;
+        const popoverHeight = popoverElement?.offsetHeight ?? 540;
+        const minX = MAP_AUDIO_POPOVER_VIEWPORT_MARGIN;
+        const minY = MAP_AUDIO_POPOVER_VIEWPORT_MARGIN;
+        const maxX = Math.max(minX, viewportWidth - popoverWidth - MAP_AUDIO_POPOVER_VIEWPORT_MARGIN);
+        const maxY = Math.max(minY, viewportHeight - popoverHeight - MAP_AUDIO_POPOVER_VIEWPORT_MARGIN);
 
         return {
             x: Math.round(Math.min(Math.max(x, minX), maxX)),
@@ -7750,7 +8154,8 @@ export class CampaignMapPageComponent {
                 ? Math.trunc(map.encounterRound)
                 : 1,
             encounterActiveTokenId: map.encounterActiveTokenId ?? null,
-            encounterStartedAtUtc: map.encounterStartedAtUtc ?? null
+            encounterStartedAtUtc: map.encounterStartedAtUtc ?? null,
+            sharedAudio: map.sharedAudio ? { ...map.sharedAudio } : null
         };
     }
 
@@ -7779,7 +8184,8 @@ export class CampaignMapPageComponent {
             visionMemory: [],
             encounterRound: 1,
             encounterActiveTokenId: null,
-            encounterStartedAtUtc: null
+            encounterStartedAtUtc: null,
+            sharedAudio: null
         };
     }
 

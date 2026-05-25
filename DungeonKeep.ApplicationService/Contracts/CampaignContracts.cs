@@ -167,7 +167,8 @@ public sealed record CampaignMapDto(
     bool MembersCanViewAnytime = false,
     int? EncounterRound = null,
     Guid? EncounterActiveTokenId = null,
-    DateTimeOffset? EncounterStartedAtUtc = null
+    DateTimeOffset? EncounterStartedAtUtc = null,
+    CampaignMapSharedAudioDto? SharedAudio = null
 );
 
 public sealed record CampaignMapBoardDto(
@@ -192,7 +193,19 @@ public sealed record CampaignMapBoardDto(
     bool MembersCanViewAnytime = false,
     int? EncounterRound = null,
     Guid? EncounterActiveTokenId = null,
-    DateTimeOffset? EncounterStartedAtUtc = null
+    DateTimeOffset? EncounterStartedAtUtc = null,
+    CampaignMapSharedAudioDto? SharedAudio = null
+);
+
+public sealed record CampaignMapSharedAudioDto(
+    string SceneName,
+    string AmbientUrl,
+    string MusicUrl,
+    int AmbientVolume,
+    int MusicVolume,
+    int FadeInMs,
+    int FadeOutMs,
+    bool IsPlaying
 );
 
 public sealed record CampaignMapLibraryDto(
