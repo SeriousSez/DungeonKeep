@@ -2835,6 +2835,10 @@ app-dropdown {
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-primary) 34%, transparent);
 }
 
+.encounter-entry--collapsed {
+    gap: 0;
+}
+
 .encounter-entry-main {
     display: flex;
     align-items: center;
@@ -2865,6 +2869,46 @@ app-dropdown {
 
 .encounter-entry-name-btn:hover {
     color: var(--accent-primary);
+}
+
+.encounter-collapse-caret {
+    width: 18px;
+    height: 18px;
+    margin-left: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-soft);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.encounter-collapse-caret:hover {
+    color: var(--text-main);
+}
+
+.encounter-collapse-caret:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--accent-primary) 70%, transparent);
+    outline-offset: 2px;
+}
+
+.encounter-collapse-caret i {
+    font-size: 0.72rem;
+}
+
+.encounter-visibility-chip {
+    appearance: none;
+    border: 0;
+    cursor: pointer;
+}
+
+.encounter-visibility-chip:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--accent-primary) 70%, transparent);
+    outline-offset: 2px;
 }
 
 .encounter-inspector-backdrop {

@@ -436,6 +436,7 @@ export class CampaignMapPageComponent {
     readonly encounterPopoverPosition = signal(this.readStoredEncounterPopoverPosition());
     readonly encounterPopoverDragging = signal(false);
     readonly encounterInspectorTokenId = signal<string | null>(null);
+    readonly expandedEncounterTokenIds = signal<string[]>([]);
     readonly encounterConditionOptionGroups: MultiSelectOptionGroup[] = [
         {
             label: 'Conditions',
@@ -493,6 +494,7 @@ export class CampaignMapPageComponent {
     readonly encounterEntries = computed<EncounterEntry[]>(() => {
         const tokens = this.workingMap().tokens;
         const characters = this.campaignCharacters();
+        const npcs = this.campaignNpcs();
         const isOwner = this.canEdit();
         const currentUserId = this.currentUserId();
         const entries: EncounterEntry[] = [];
@@ -511,15 +513,24 @@ export class CampaignMapPageComponent {
                 continue;
             }
 
+            const noteHp = this.parseTokenNoteHp(token.note);
+            const noteArmorClass = this.parseTokenNoteArmorClass(token.note);
+            const npcMatch = !isCharacter
+                ? npcs.find((npc) => npc.name.trim().toLocaleLowerCase() === token.name.trim().toLocaleLowerCase()) ?? null
+                : null;
+            const npcStatSource = npcMatch ? this.buildNpcStatSource(npcMatch) : '';
+            const npcHp = npcStatSource ? this.parseTokenNoteHp(npcStatSource) : null;
+            const npcArmorClass = npcStatSource ? this.parseTokenNoteArmorClass(npcStatSource) : null;
+
             const armorClass = isCharacter
                 ? (token.armorClass ?? character.armorClass ?? null)
-                : (token.armorClass ?? null);
+                : (token.armorClass ?? noteArmorClass ?? npcArmorClass ?? null);
             const currentHp = isCharacter
                 ? (token.currentHp ?? character.hitPoints ?? null)
-                : (token.currentHp ?? null);
+                : (token.currentHp ?? noteHp?.current ?? npcHp?.current ?? null);
             const maxHp = isCharacter
                 ? (token.maxHp ?? character.maxHitPoints ?? null)
-                : (token.maxHp ?? null);
+                : (token.maxHp ?? noteHp?.max ?? noteHp?.current ?? npcHp?.max ?? npcHp?.current ?? null);
 
             entries.push({
                 token,
@@ -1964,11 +1975,32 @@ export class CampaignMapPageComponent {
     }
 
     toggleEncounterInspector(tokenId: string): void {
+        this.expandEncounterEntry(tokenId);
         this.encounterInspectorTokenId.update((current) => current === tokenId ? null : tokenId);
     }
 
     closeEncounterInspector(): void {
         this.encounterInspectorTokenId.set(null);
+    }
+
+    toggleEncounterEntryCollapsed(tokenId: string): void {
+        this.expandedEncounterTokenIds.update((current) => {
+            if (current.includes(tokenId)) {
+                return current.filter((value) => value !== tokenId);
+            }
+
+            return [...current, tokenId];
+        });
+    }
+
+    isEncounterEntryCollapsed(tokenId: string): boolean {
+        return !this.expandedEncounterTokenIds().includes(tokenId);
+    }
+
+    private expandEncounterEntry(tokenId: string): void {
+        this.expandedEncounterTokenIds.update((current) => current.includes(tokenId)
+            ? current
+            : [...current, tokenId]);
     }
 
     encounterEntryKind(entry: EncounterEntry): EncounterEntryKind {

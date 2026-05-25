@@ -1492,7 +1492,7 @@
             } @else {
             <div class="encounter-entry-list">
                 @for (entry of encounterEntries(); track entry.token.id) {
-                <div class="encounter-entry" [class.encounter-entry--hidden]="entry.isHiddenFromPlayers && canEdit()" [class.encounter-entry--active]="encounterActiveTokenId() === entry.token.id">
+                <div class="encounter-entry" [class.encounter-entry--hidden]="entry.isHiddenFromPlayers && canEdit()" [class.encounter-entry--active]="encounterActiveTokenId() === entry.token.id" [class.encounter-entry--collapsed]="isEncounterEntryCollapsed(entry.token.id)">
                     <div class="encounter-entry-main">
                         <label class="encounter-initiative-field">
                             <span class="encounter-initiative-label">Init</span>
@@ -1502,19 +1502,23 @@
                         <button type="button" class="encounter-entry-name encounter-entry-name-btn" (click)="toggleEncounterInspector(entry.token.id)">
                             {{ entry.name }}
                         </button>
-                        @if (canEdit()) {
-                        <button type="button" class="ghost-button compact-action encounter-active-btn" (click)="setEncounterActiveToken(entry.token.id)" [disabled]="encounterActiveTokenId() === entry.token.id">
-                            {{ encounterActiveTokenId() === entry.token.id ? 'Active' : 'Set Turn' }}
+                        @if (!entry.isCharacter && canEdit()) {
+                        <button type="button" class="status-chip encounter-visibility-chip" [class.is-warning]="entry.isHiddenFromPlayers" [class.is-success]="!entry.isHiddenFromPlayers" (click)="toggleTokenEncounterHidden(entry.token.id)"
+                            [title]="entry.isHiddenFromPlayers ? 'Reveal to players' : 'Hide from players'">
+                            {{ entry.isHiddenFromPlayers ? 'Hidden' : 'Revealed' }}
                         </button>
-                        }
-                        @if (!entry.isCharacter) {
+                        } @else if (!entry.isCharacter) {
                         <span class="status-chip" [class.is-warning]="entry.isHiddenFromPlayers" [class.is-success]="!entry.isHiddenFromPlayers">
                             {{ entry.isHiddenFromPlayers ? 'Hidden' : 'Revealed' }}
                         </span>
                         }
+                        <button type="button" class="encounter-collapse-caret" (click)="toggleEncounterEntryCollapsed(entry.token.id)" [attr.aria-expanded]="!isEncounterEntryCollapsed(entry.token.id)" [attr.aria-label]="isEncounterEntryCollapsed(entry.token.id) ? 'Expand entry' : 'Collapse entry'"
+                            [title]="isEncounterEntryCollapsed(entry.token.id) ? 'Expand entry' : 'Collapse entry'">
+                            <i class="fa-duotone fa-thin" [class.fa-chevron-right]="isEncounterEntryCollapsed(entry.token.id)" [class.fa-chevron-down]="!isEncounterEntryCollapsed(entry.token.id)"></i>
+                        </button>
                     </div>
 
-                    @if (canEdit() || (entry.isOwnToken && entry.isCharacter)) {
+                    @if (!isEncounterEntryCollapsed(entry.token.id) && (canEdit() || (entry.isOwnToken && entry.isCharacter))) {
                     <div class="encounter-entry-stats">
                         <label class="encounter-stat-field">
                             <span class="encounter-stat-label">HP</span>
@@ -1531,7 +1535,7 @@
                     </div>
                     }
 
-                    @if (entry.conditions.length > 0 || canEdit() || entry.isOwnToken) {
+                    @if (!isEncounterEntryCollapsed(entry.token.id) && (entry.conditions.length > 0 || canEdit() || entry.isOwnToken)) {
                     <div class="encounter-conditions">
                         @if (entry.conditions.length > 0) {
                         <div class="encounter-condition-chip-list">
@@ -1563,12 +1567,6 @@
                     </div>
                     }
 
-                    @if (canEdit() && !entry.isCharacter) {
-                    <button type="button" class="encounter-visibility-btn ghost-button compact-action" (click)="toggleTokenEncounterHidden(entry.token.id)" [title]="entry.isHiddenFromPlayers ? 'Reveal to players' : 'Hide from players'">
-                        <i class="fa-duotone fa-thin" [class.fa-eye-slash]="entry.isHiddenFromPlayers" [class.fa-eye]="!entry.isHiddenFromPlayers"></i>
-                        {{ entry.isHiddenFromPlayers ? 'Reveal' : 'Hide' }}
-                    </button>
-                    }
                 </div>
                 }
             </div>
