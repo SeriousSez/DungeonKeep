@@ -255,6 +255,7 @@ static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)
     EnsureColumnExists(dbContext, "AppUsers", "ActivationCodeExpiresAtUtc", "TEXT NULL");
     EnsureColumnExists(dbContext, "AppUsers", "PasswordResetCodeHash", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "AppUsers", "PasswordResetCodeExpiresAtUtc", "TEXT NULL");
+    EnsureColumnExists(dbContext, "AppUsers", "AudioLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
 
     EnsureColumnExists(dbContext, "CampaignMemberships", "UserId", "TEXT NULL");
     EnsureColumnExists(dbContext, "CampaignMemberships", "Email", "TEXT NOT NULL DEFAULT ''");

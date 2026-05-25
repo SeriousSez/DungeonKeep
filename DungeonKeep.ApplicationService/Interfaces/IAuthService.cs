@@ -18,4 +18,5 @@ public interface IAuthService
     Task<UserLibrariesDto> SaveUserCustomTableLibraryAsync(Guid userId, string json, CancellationToken cancellationToken = default);
     Task<UserLibrariesDto> SaveUserMonsterLibraryAsync(Guid userId, string json, CancellationToken cancellationToken = default);
     Task<UserLibrariesDto> SaveUserMonsterReferenceAsync(Guid userId, string json, CancellationToken cancellationToken = default);
+    Task<UserLibrariesDto> SaveUserAudioLibraryAsync(Guid userId, string json, CancellationToken cancellationToken = default);
 }

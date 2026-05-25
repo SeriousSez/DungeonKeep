@@ -64,7 +64,7 @@ public sealed class AccountController(IAuthService authService, ILogger<AccountC
         catch (Exception exception)
         {
             logger.LogError(exception, "Failed to load user libraries for user {UserId}. Returning empty libraries.", user.Id);
-            return Ok(new UserLibrariesDto("[]", "[]", "[]", "[]"));
+            return Ok(new UserLibrariesDto("[]", "[]", "[]", "[]", "[]"));
         }
     }
 
@@ -117,6 +117,19 @@ public sealed class AccountController(IAuthService authService, ILogger<AccountC
         }
 
         var libraries = await authService.SaveUserMonsterReferenceAsync(user.Id, request.Json, cancellationToken);
+        return Ok(libraries);
+    }
+
+    [HttpPut("audio-library")]
+    public async Task<ActionResult<UserLibrariesDto>> SaveAudioLibrary([FromBody] SaveUserAudioLibraryRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var libraries = await authService.SaveUserAudioLibraryAsync(user.Id, request.Json, cancellationToken);
         return Ok(libraries);
     }
 

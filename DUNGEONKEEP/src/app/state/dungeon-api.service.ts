@@ -90,6 +90,7 @@ export interface UserLibrariesDto {
     customTableLibraryJson: string;
     monsterLibraryJson: string;
     monsterReferenceJson: string;
+    audioLibraryJson: string;
 }
 
 export interface ApiMonsterPortraitOverrideDto {
@@ -1290,6 +1291,10 @@ export class DungeonApiService {
 
     async saveUserMonsterReference(json: string): Promise<UserLibrariesDto> {
         return await firstValueFrom(this.http.put<UserLibrariesDto>(`${this.baseUrl}/account/monster-reference`, { json }));
+    }
+
+    async saveUserAudioLibrary(json: string): Promise<UserLibrariesDto> {
+        return await firstValueFrom(this.http.put<UserLibrariesDto>(`${this.baseUrl}/account/audio-library`, { json }));
     }
 
     async getMonsterPortraitOverrides(): Promise<ApiMonsterPortraitOverrideDto[]> {

@@ -1300,6 +1300,9 @@
                 <button type="button" class="map-toolbar-btn" [class.is-active]="voicePopoverOpen()" [appTooltip]="voiceJoined() ? 'Voice chat connected' : 'Voice chat disconnected'" (click)="toggleVoicePopover()">
                     <i class="fa-duotone fa-thin" [class.fa-headset]="voiceJoined()" [class.fa-headphones-simple]="!voiceJoined()"></i>
                 </button>
+                <button type="button" class="map-toolbar-btn" [class.is-active]="audioPopoverOpen()" appTooltip="Audio Scenes" (click)="toggleAudioPopover()">
+                    <i class="fa-duotone fa-thin" [class.fa-waveform-lines]="audioPlaying()" [class.fa-music]="!audioPlaying()"></i>
+                </button>
                 <button type="button" class="map-toolbar-btn" [class.is-active]="encounterPopoverOpen()" appTooltip="Encounter Tracker" (click)="toggleEncounterPopover()">
                     <i class="fa-duotone fa-thin fa-swords"></i>
                 </button>
@@ -1481,6 +1484,167 @@
                 <div class="map-measure-popover-actions">
                     <button type="button" class="ghost-button danger-button" (click)="leaveVoiceChat()">Leave Voice</button>
                 </div>
+                }
+            </div>
+            }
+            @if (audioPopoverOpen()) {
+            <div class="map-audio-popover">
+                <div class="section-heading compact-heading map-measure-popover-header">
+                    <h3>Audio Scenes</h3>
+                    <button type="button" class="ghost-button compact-action" (click)="toggleAudioPopover()" aria-label="Close audio scene panel">
+                        <i class="fa-duotone fa-thin fa-chevrons-left"></i>
+                    </button>
+                </div>
+
+                <p class="sidebar-note">Build map-specific ambient and music scene presets, then switch with smooth crossfades during play.</p>
+
+                <div class="map-audio-upload-row">
+                    <label class="ghost-button compact-action map-audio-upload-btn" [class.is-disabled]="userAudioUploadBusy()">
+                        <input type="file" accept="audio/*" [disabled]="userAudioUploadBusy()" (change)="handleUserAudioLibraryUpload($event)" />
+                        <i class="fa-duotone fa-thin fa-file-arrow-up"></i>
+                        <span>{{ userAudioUploadBusy() ? 'Uploading...' : 'Upload Audio' }}</span>
+                    </label>
+                    <span class="sidebar-note">Saved to your account for all campaigns and maps.</span>
+                </div>
+
+                @if (userAudioUploadFeedback()) {
+                <p class="map-audio-upload-feedback">{{ userAudioUploadFeedback() }}</p>
+                }
+
+                @if (userAudioLibraryEntries().length > 0) {
+                <div class="map-audio-uploaded-list">
+                    @for (entry of userAudioLibraryEntries(); track entry.id) {
+                    <div class="map-audio-uploaded-item">
+                        <span class="map-audio-uploaded-name">{{ entry.name }}</span>
+                        <button type="button" class="ghost-button compact-action danger-button" (click)="removeUserAudioLibraryTrack(entry.id)">
+                            <i class="fa-duotone fa-thin fa-trash"></i>
+                        </button>
+                    </div>
+                    }
+                </div>
+                }
+
+                <div class="map-audio-scene-row">
+                    <app-dropdown ariaLabel="Audio scene" [value]="audioSelectedSceneId()" [options]="audioSceneOptions()" [minWidth]="200" (changed)="selectAudioSceneFromDropdown($event)">
+                    </app-dropdown>
+                    <button type="button" class="ghost-button compact-action" appTooltip="Create scene" (click)="addAudioScenePreset()">
+                        <i class="fa-duotone fa-thin fa-plus"></i>
+                    </button>
+                    <button type="button" class="ghost-button compact-action" appTooltip="Duplicate scene" (click)="duplicateSelectedAudioScenePreset()">
+                        <i class="fa-duotone fa-thin fa-copy"></i>
+                    </button>
+                    <button type="button" class="ghost-button compact-action danger-button" appTooltip="Delete scene" (click)="deleteSelectedAudioScenePreset()">
+                        <i class="fa-duotone fa-thin fa-trash"></i>
+                    </button>
+                </div>
+
+                @if (selectedAudioScene(); as selectedAudioScene) {
+                <div class="map-measure-config-grid map-audio-name-grid">
+                    <label class="map-audio-inline-input">
+                        <i class="fa-duotone fa-thin fa-signature"></i>
+                        <input type="text" [value]="selectedAudioScene.name" maxlength="48" placeholder="Scene name" (input)="updateSelectedAudioSceneName($any($event.target).value)" />
+                    </label>
+
+                    <app-dropdown ariaLabel="Audio mood" [value]="selectedAudioScene.mood" [options]="audioMoodOptions" [minWidth]="130" (changed)="updateSelectedAudioSceneMood($event)">
+                    </app-dropdown>
+                </div>
+
+                <div class="map-audio-control-row">
+                    <button type="button" class="primary-button" (click)="toggleAudioPlayback()">
+                        <i class="fa-duotone fa-thin" [class.fa-pause]="audioPlaying()" [class.fa-play]="!audioPlaying()"></i>
+                        <span>{{ audioPlaying() ? 'Pause Scene' : 'Play Scene' }}</span>
+                    </button>
+                    <button type="button" class="ghost-button compact-action" [disabled]="!audioPlaying()" (click)="crossfadeSelectedAudioScene()">
+                        <i class="fa-duotone fa-thin fa-shuffle"></i>
+                        <span>Crossfade</span>
+                    </button>
+                    <button type="button" class="ghost-button compact-action" [class.is-active]="audioMuted()" (click)="toggleAudioMute()">
+                        <i class="fa-duotone fa-thin" [class.fa-volume-xmark]="audioMuted()" [class.fa-volume]="!audioMuted()"></i>
+                        <span>{{ audioMuted() ? 'Muted' : 'Mute' }}</span>
+                    </button>
+                </div>
+
+                <label class="map-audio-volume-field">
+                    <span>Master Volume {{ audioMasterVolume() }}%</span>
+                    <input type="range" min="0" max="100" step="1" [value]="audioMasterVolume()" (input)="setAudioMasterVolume(+$any($event.target).value)" />
+                </label>
+
+                <div class="map-measure-section-divider"></div>
+
+                <div class="map-audio-url-grid">
+                    <label class="map-audio-stack-field">
+                        <span>Ambient Loop URL</span>
+                        <div class="map-audio-selector-row">
+                            <app-dropdown ariaLabel="Ambient library track" [value]="''" [options]="audioLibraryOptions()" [minWidth]="220" (changed)="pickSelectedAudioSceneAmbientLibraryTrack($event)"></app-dropdown>
+                            <button type="button" class="ghost-button compact-action" [disabled]="!selectedAudioScene.ambientUrl" (click)="clearSelectedAudioSceneAmbientUrl()">Clear</button>
+                        </div>
+                        <input type="url" [value]="selectedAudioScene.ambientUrl" placeholder="/assets/sounds/ambience/..." (input)="updateSelectedAudioSceneAmbientUrl($any($event.target).value)" />
+                    </label>
+
+                    <label class="map-audio-stack-field">
+                        <span>Music Loop URL</span>
+                        <div class="map-audio-selector-row">
+                            <app-dropdown ariaLabel="Music library track" [value]="''" [options]="audioLibraryOptions()" [minWidth]="220" (changed)="pickSelectedAudioSceneMusicLibraryTrack($event)"></app-dropdown>
+                            <button type="button" class="ghost-button compact-action" [disabled]="!selectedAudioScene.musicUrl" (click)="clearSelectedAudioSceneMusicUrl()">Clear</button>
+                        </div>
+                        <input type="url" [value]="selectedAudioScene.musicUrl" placeholder="/assets/sounds/ambience/..." (input)="updateSelectedAudioSceneMusicUrl($any($event.target).value)" />
+                    </label>
+
+                    <label class="map-audio-stack-field">
+                        <span>One-shot SFX URLs (comma or newline separated)</span>
+                        <div class="map-audio-selector-row">
+                            <app-dropdown ariaLabel="SFX library track" [value]="''" [options]="audioLibraryOptions()" [minWidth]="220" (changed)="addSelectedAudioSceneSfxLibraryTrack($event)"></app-dropdown>
+                            <button type="button" class="ghost-button compact-action" [disabled]="selectedAudioScene.sfxUrls.length === 0" (click)="clearSelectedAudioSceneSfxUrls()">Clear</button>
+                        </div>
+                        <textarea rows="3" [value]="selectedAudioSceneSfxDraft()" placeholder="/assets/sounds/ambience/..." (input)="updateSelectedAudioSceneSfxUrls($any($event.target).value)"></textarea>
+                    </label>
+                </div>
+
+                <div class="map-audio-level-grid">
+                    <label class="map-audio-volume-field">
+                        <span>Ambient {{ selectedAudioScene.ambientVolume }}%</span>
+                        <input type="range" min="0" max="100" step="1" [value]="selectedAudioScene.ambientVolume" (input)="updateSelectedAudioSceneAmbientVolume(+$any($event.target).value)" />
+                    </label>
+                    <label class="map-audio-volume-field">
+                        <span>Music {{ selectedAudioScene.musicVolume }}%</span>
+                        <input type="range" min="0" max="100" step="1" [value]="selectedAudioScene.musicVolume" (input)="updateSelectedAudioSceneMusicVolume(+$any($event.target).value)" />
+                    </label>
+                    <label class="map-audio-volume-field">
+                        <span>SFX {{ selectedAudioScene.sfxVolume }}%</span>
+                        <input type="range" min="0" max="100" step="1" [value]="selectedAudioScene.sfxVolume" (input)="updateSelectedAudioSceneSfxVolume(+$any($event.target).value)" />
+                    </label>
+                </div>
+
+                <div class="map-audio-fade-grid">
+                    <label class="map-audio-stack-field compact">
+                        <span>Fade In (ms)</span>
+                        <input type="number" min="0" max="15000" step="100" [value]="selectedAudioScene.fadeInMs" (input)="updateSelectedAudioSceneFadeIn(+$any($event.target).value)" />
+                    </label>
+                    <label class="map-audio-stack-field compact">
+                        <span>Fade Out (ms)</span>
+                        <input type="number" min="0" max="15000" step="100" [value]="selectedAudioScene.fadeOutMs" (input)="updateSelectedAudioSceneFadeOut(+$any($event.target).value)" />
+                    </label>
+                    <label class="map-audio-stack-field compact">
+                        <span>Crossfade (ms)</span>
+                        <input type="number" min="0" max="15000" step="100" [value]="selectedAudioScene.crossfadeMs" (input)="updateSelectedAudioSceneCrossfade(+$any($event.target).value)" />
+                    </label>
+                </div>
+
+                <button type="button" class="map-measure-toggle-row" [class.is-on]="selectedAudioScene.autoDuck" (click)="toggleSelectedAudioSceneAutoDuck()">
+                    <span>Auto-duck music while SFX plays</span>
+                    <span class="map-measure-switch" aria-hidden="true"></span>
+                </button>
+
+                @if (selectedAudioSceneSfxUrls().length > 0) {
+                <div class="map-audio-sfx-actions">
+                    @for (sfxUrl of selectedAudioSceneSfxUrls(); track sfxUrl; let sfxIndex = $index) {
+                    <button type="button" class="ghost-button compact-action" (click)="playAudioSceneSfx(sfxUrl)">
+                        <i class="fa-duotone fa-thin fa-bell"></i>
+                        <span>SFX {{ sfxIndex + 1 }}</span>
+                    </button>
+                    }
+                </div>
+                }
                 }
             </div>
             }

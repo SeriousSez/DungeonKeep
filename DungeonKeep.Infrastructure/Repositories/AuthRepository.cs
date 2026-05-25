@@ -99,6 +99,9 @@ public sealed class AuthRepository(DungeonKeepDbContext dbContext) : IAuthReposi
             case nameof(AppUser.MonsterReferenceJson):
                 user.MonsterReferenceJson = normalizedJson;
                 break;
+            case nameof(AppUser.AudioLibraryJson):
+                user.AudioLibraryJson = normalizedJson;
+                break;
             default:
                 throw new InvalidOperationException($"Unsupported user library field '{field}'.");
         }
@@ -140,6 +143,7 @@ public sealed class AuthRepository(DungeonKeepDbContext dbContext) : IAuthReposi
             EnsureColumnExists("AppUsers", "CustomTableLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
             EnsureColumnExists("AppUsers", "MonsterLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
             EnsureColumnExists("AppUsers", "MonsterReferenceJson", "TEXT NOT NULL DEFAULT '[]'");
+            EnsureColumnExists("AppUsers", "AudioLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
 
             EnsureLegacyUsersCanSignIn();
             userSchemaEnsured = true;

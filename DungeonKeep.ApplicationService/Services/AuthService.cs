@@ -448,7 +448,7 @@ public sealed class AuthService(
         var user = await authRepository.GetUserByIdAsync(userId, cancellationToken);
         if (user is null)
         {
-            return new UserLibrariesDto("[]", "[]", "[]", "[]");
+            return new UserLibrariesDto("[]", "[]", "[]", "[]", "[]");
         }
 
         return MapLibraries(user);
@@ -482,13 +482,21 @@ public sealed class AuthService(
         return MapLibraries(user);
     }
 
+    public async Task<UserLibrariesDto> SaveUserAudioLibraryAsync(Guid userId, string json, CancellationToken cancellationToken = default)
+    {
+        var user = await authRepository.UpdateUserLibraryAsync(userId, nameof(AppUser.AudioLibraryJson), json, cancellationToken)
+            ?? throw new InvalidOperationException("User not found.");
+        return MapLibraries(user);
+    }
+
     private static UserLibrariesDto MapLibraries(AppUser user)
     {
         return new UserLibrariesDto(
             string.IsNullOrWhiteSpace(user.NpcLibraryJson) ? "[]" : user.NpcLibraryJson,
             string.IsNullOrWhiteSpace(user.CustomTableLibraryJson) ? "[]" : user.CustomTableLibraryJson,
             string.IsNullOrWhiteSpace(user.MonsterLibraryJson) ? "[]" : user.MonsterLibraryJson,
-            string.IsNullOrWhiteSpace(user.MonsterReferenceJson) ? "[]" : user.MonsterReferenceJson
+            string.IsNullOrWhiteSpace(user.MonsterReferenceJson) ? "[]" : user.MonsterReferenceJson,
+            string.IsNullOrWhiteSpace(user.AudioLibraryJson) ? "[]" : user.AudioLibraryJson
         );
     }
 }

@@ -61,13 +61,15 @@ public sealed record UserLibrariesDto(
     string NpcLibraryJson,
     string CustomTableLibraryJson,
     string MonsterLibraryJson,
-    string MonsterReferenceJson
+    string MonsterReferenceJson,
+    string AudioLibraryJson
 );
 
 public sealed record SaveUserNpcLibraryRequest(string Json);
 public sealed record SaveUserCustomTableLibraryRequest(string Json);
 public sealed record SaveUserMonsterLibraryRequest(string Json);
 public sealed record SaveUserMonsterReferenceRequest(string Json);
+public sealed record SaveUserAudioLibraryRequest(string Json);
 
 public sealed record AccountActivationEmail(
     string RecipientEmail,

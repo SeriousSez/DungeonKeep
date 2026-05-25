@@ -33,6 +33,7 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
             entity.Property(user => user.CustomTableLibraryJson).HasColumnType("longtext").IsRequired();
             entity.Property(user => user.MonsterLibraryJson).HasColumnType("longtext").IsRequired();
             entity.Property(user => user.MonsterReferenceJson).HasColumnType("longtext").IsRequired();
+            entity.Property(user => user.AudioLibraryJson).HasColumnType("longtext").IsRequired();
 
             entity.HasIndex(user => user.Email).IsUnique();
         });

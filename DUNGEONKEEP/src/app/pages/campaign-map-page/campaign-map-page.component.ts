@@ -33,6 +33,7 @@ type MeasureConeShape = 'flat' | 'rounded';
 type MapConfirmAction = 'clear-map' | 'delete-icon' | 'delete-token' | 'delete-label' | 'delete-stroke' | 'delete-wall' | 'delete-map' | null;
 type MapLineKind = 'drawing' | 'wall';
 type MapAnchorProminence = 'major' | 'minor';
+type AudioSceneMood = 'calm' | 'tense' | 'mystery' | 'combat';
 type SettlementScale = 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis';
 type ParchmentLayout = 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular';
 type CavernLayout = 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes';
@@ -141,6 +142,37 @@ interface TokenMonsterPreset {
     imageUrl: string;
 }
 
+interface MapAudioPreset {
+    id: string;
+    name: string;
+    mood: AudioSceneMood;
+    ambientUrl: string;
+    musicUrl: string;
+    sfxUrls: string[];
+    ambientVolume: number;
+    musicVolume: number;
+    sfxVolume: number;
+    fadeInMs: number;
+    fadeOutMs: number;
+    crossfadeMs: number;
+    autoDuck: boolean;
+}
+
+interface StoredMapAudioSceneState {
+    selectedPresetId: string;
+    masterVolume: number;
+    muted: boolean;
+    presets: MapAudioPreset[];
+}
+
+interface UserAudioLibraryEntry {
+    id: string;
+    name: string;
+    mimeType: string;
+    dataUrl: string;
+    uploadedAtUtc: string;
+}
+
 type MapLabelCatalog = Record<CampaignMapIconType, readonly string[]>;
 
 const TOKEN_SIZE_OPTIONS: DropdownOption[] = [
@@ -164,8 +196,13 @@ const MAP_VISION_MEMORY_ORIGIN_THRESHOLD = 0.02;
 const MAP_VISION_MEMORY_PERSIST_DELAY_MS = 1200;
 const MAP_VISION_MEMORY_PENDING_STORAGE_KEY = 'dungeonkeep.campaign-map.pending-vision-memory';
 const MAP_VISION_MEMORY_PENDING_STORAGE_MAX_AGE_MS = 1000 * 60 * 30;
+const MAP_AUDIO_SCENE_STORAGE_KEY_PREFIX = 'dungeonkeep.campaign-map.audio-scenes';
 const MAP_ART_STORAGE_MAX_DIMENSION = 1600;
 const MAP_ART_STORAGE_TARGET_DATA_URL_LENGTH = 450_000;
+const MAP_AUDIO_DUCK_DURATION_MS = 1400;
+const MAP_AUDIO_DUCK_MUSIC_RATIO = 0.35;
+const MAP_USER_AUDIO_UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
+const MAP_USER_AUDIO_LIBRARY_MAX_ENTRIES = 80;
 
 const MAP_BACKGROUND_OPTIONS: DropdownOption[] = [
     { value: 'Parchment', label: 'Parchment', description: 'Warm paper tones for hand-drawn lines, sketches, and lore maps.' },
@@ -261,6 +298,45 @@ const MEASURE_RULES_MODE_OPTIONS: DropdownOption[] = [
     { value: 'dnd5e4e', label: 'D&D 5E/4E Compatible', description: 'Diagonal movement counts as one square on grid distance.' },
     { value: 'euclidean', label: 'Exact Euclidean', description: 'Uses true geometric distance for diagonals.' }
 ];
+
+const AUDIO_SCENE_MOOD_OPTIONS: DropdownOption[] = [
+    { value: 'calm', label: 'Calm', description: 'Quiet exploration and social scenes.' },
+    { value: 'tense', label: 'Tense', description: 'Suspense and looming danger.' },
+    { value: 'mystery', label: 'Mystery', description: 'Arcane, eerie, or investigative mood.' },
+    { value: 'combat', label: 'Combat', description: 'Fast-paced battle intensity.' }
+];
+
+const AMBIENCE_LIBRARY_TRACKS = [
+    { url: '/assets/sounds/ambience/campfire-in-the-woods.mp3', label: 'Campfire in the Woods', mood: 'calm' as AudioSceneMood },
+    { url: '/assets/sounds/ambience/campfire-by-the-sea.mp3', label: 'Campfire by the Sea', mood: 'calm' as AudioSceneMood },
+    { url: '/assets/sounds/ambience/sea-waves.mp3', label: 'Sea Waves', mood: 'calm' as AudioSceneMood },
+    { url: '/assets/sounds/ambience/tavern-ambience-with-openfire.mp3', label: 'Tavern with Open Fire', mood: 'calm' as AudioSceneMood },
+    { url: '/assets/sounds/ambience/medieval_village_atmosphere.mp3', label: 'Medieval Village Atmosphere', mood: 'calm' as AudioSceneMood },
+    { url: '/assets/sounds/ambience/night-ambience.mp3', label: 'Night Ambience', mood: 'mystery' as AudioSceneMood },
+    { url: '/assets/sounds/ambience/ancient-ruins.mp3', label: 'Ancient Ruins', mood: 'mystery' as AudioSceneMood },
+    { url: '/assets/sounds/ambience/relaxing-rain.mp3', label: 'Relaxing Rain', mood: 'tense' as AudioSceneMood },
+    { url: '/assets/sounds/ambience/storm.mp3', label: 'Storm', mood: 'combat' as AudioSceneMood }
+] as const;
+
+const AUDIO_LIBRARY_NONE_OPTION: DropdownOption = {
+    value: '',
+    label: 'Pick from ambience folder',
+    description: 'Use bundled ambience or your uploaded audio library.'
+};
+
+const DEFAULT_AUDIO_SCENE_AMBIENT_BY_MOOD: Record<AudioSceneMood, string> = {
+    calm: '/assets/sounds/ambience/campfire-in-the-woods.mp3',
+    tense: '/assets/sounds/ambience/relaxing-rain.mp3',
+    mystery: '/assets/sounds/ambience/ancient-ruins.mp3',
+    combat: '/assets/sounds/ambience/storm.mp3'
+};
+
+const DEFAULT_AUDIO_SCENE_MUSIC_BY_MOOD: Record<AudioSceneMood, string> = {
+    calm: '/assets/sounds/ambience/tavern-ambience-with-openfire.mp3',
+    tense: '/assets/sounds/ambience/night-ambience.mp3',
+    mystery: '/assets/sounds/ambience/ancient-ruins.mp3',
+    combat: '/assets/sounds/ambience/storm.mp3'
+};
 
 const MAP_LABELS_BY_BACKGROUND: Record<CampaignMapBackground, MapLabelCatalog> = {
     Parchment: {
@@ -433,6 +509,7 @@ export class CampaignMapPageComponent {
     readonly measureLine = signal<{ start: CampaignMapPoint; end: CampaignMapPoint } | null>(null);
     readonly measurePopoverOpen = signal(false);
     readonly voicePopoverOpen = signal(false);
+    readonly audioPopoverOpen = signal(false);
     readonly encounterPopoverOpen = signal(false);
     readonly encounterPopoverPosition = signal(this.readStoredEncounterPopoverPosition());
     readonly encounterPopoverDragging = signal(false);
@@ -491,6 +568,43 @@ export class CampaignMapPageComponent {
     readonly voiceMicrophoneMuted = this.voiceChat.microphoneMuted;
     readonly voiceJoined = computed(() => this.voiceConnectionState() === 'connected');
     readonly voiceConnecting = computed(() => this.voiceConnectionState() === 'connecting');
+    readonly audioScenePresets = signal<MapAudioPreset[]>([]);
+    readonly audioSelectedSceneId = signal('');
+    readonly audioMasterVolume = signal(75);
+    readonly audioMuted = signal(false);
+    readonly audioPlaying = signal(false);
+    readonly userAudioLibraryEntries = signal<UserAudioLibraryEntry[]>([]);
+    readonly userAudioUploadBusy = signal(false);
+    readonly userAudioUploadFeedback = signal('');
+    readonly audioMoodOptions = AUDIO_SCENE_MOOD_OPTIONS;
+    readonly audioLibraryOptions = computed<DropdownOption[]>(() => {
+        const bundled = AMBIENCE_LIBRARY_TRACKS.map((track) => ({
+            value: track.url,
+            label: track.label,
+            description: this.audioMoodLabel(track.mood),
+            group: 'Bundled'
+        } satisfies DropdownOption));
+        const uploaded = this.userAudioLibraryEntries().map((entry) => ({
+            value: entry.dataUrl,
+            label: entry.name,
+            description: 'Uploaded by you',
+            group: 'My Uploads'
+        } satisfies DropdownOption));
+
+        return [AUDIO_LIBRARY_NONE_OPTION, ...bundled, ...uploaded];
+    });
+    readonly selectedAudioScene = computed(() => {
+        const selectedId = this.audioSelectedSceneId();
+        const presets = this.audioScenePresets();
+        return presets.find((preset) => preset.id === selectedId) ?? presets[0] ?? null;
+    });
+    readonly audioSceneOptions = computed<DropdownOption[]>(() =>
+        this.audioScenePresets().map((preset) => ({
+            value: preset.id,
+            label: preset.name,
+            description: this.audioMoodLabel(preset.mood)
+        }))
+    );
 
     readonly encounterEntries = computed<EncounterEntry[]>(() => {
         const tokens = this.workingMap().tokens;
@@ -1499,6 +1613,15 @@ export class CampaignMapPageComponent {
     private mapOverlayHintRefreshFrameId: number | null = null;
     private lastMapOverlayHintSourceKey = '';
     private pendingMonsterPortraitRegenerationSlug: string | null = null;
+    private ambientAudioElement: HTMLAudioElement | null = null;
+    private musicAudioElement: HTMLAudioElement | null = null;
+    private audioFadeIntervalId: ReturnType<typeof setInterval> | null = null;
+    private audioDuckTimerId: ReturnType<typeof setTimeout> | null = null;
+    private activeAudioPresetId: string | null = null;
+    private fadingOutAmbientAudioElement: HTMLAudioElement | null = null;
+    private fadingOutMusicAudioElement: HTMLAudioElement | null = null;
+    private loadedAudioSceneStorageKey = '';
+    private loadedAudioLibraryUserId = '';
 
     constructor() {
         this.destroyRef.onDestroy(() => {
@@ -1506,6 +1629,7 @@ export class CampaignMapPageComponent {
             this.clearMapNoticeTimer();
             this.clearVisionMemoryPersistTimer();
             this.clearMapOverlayHintRefreshFrame();
+            this.stopAudioPlaybackEngine();
             void this.voiceChat.leave();
         });
 
@@ -1764,6 +1888,90 @@ export class CampaignMapPageComponent {
 
             void this.voiceChat.syncRoom(campaignId, mapId);
         });
+
+        effect(() => {
+            const userId = this.currentUserId();
+            if (!userId) {
+                this.loadedAudioLibraryUserId = '';
+                this.userAudioLibraryEntries.set([]);
+                this.userAudioUploadFeedback.set('');
+                return;
+            }
+
+            if (this.loadedAudioLibraryUserId === userId) {
+                return;
+            }
+
+            this.loadedAudioLibraryUserId = userId;
+            void this.loadUserAudioLibrary();
+        });
+
+        effect(() => {
+            const campaignId = this.campaignId();
+            const mapId = this.currentMapId();
+            if (!campaignId || !mapId) {
+                this.loadedAudioSceneStorageKey = '';
+                this.audioScenePresets.set(this.defaultAudioScenePresets());
+                const fallbackPreset = this.defaultAudioScenePresets()[0] ?? null;
+                this.audioSelectedSceneId.set(fallbackPreset?.id ?? '');
+                this.audioMasterVolume.set(75);
+                this.audioMuted.set(false);
+                this.audioPlaying.set(false);
+                this.stopAudioPlaybackEngine();
+                return;
+            }
+
+            const storageKey = this.audioSceneStorageKey(campaignId, mapId);
+            if (storageKey === this.loadedAudioSceneStorageKey) {
+                return;
+            }
+
+            this.loadedAudioSceneStorageKey = storageKey;
+            const loaded = this.readStoredAudioSceneState(campaignId, mapId);
+            this.audioScenePresets.set(loaded.presets);
+            this.audioSelectedSceneId.set(loaded.selectedPresetId);
+            this.audioMasterVolume.set(loaded.masterVolume);
+            this.audioMuted.set(loaded.muted);
+            this.audioPlaying.set(false);
+            this.stopAudioPlaybackEngine();
+        });
+
+        effect(() => {
+            const campaignId = this.campaignId();
+            const mapId = this.currentMapId();
+            if (!campaignId || !mapId) {
+                return;
+            }
+
+            this.storeAudioSceneState(campaignId, mapId, {
+                selectedPresetId: this.audioSelectedSceneId(),
+                masterVolume: this.audioMasterVolume(),
+                muted: this.audioMuted(),
+                presets: this.audioScenePresets()
+            });
+        });
+
+        effect(() => {
+            const selectedPreset = this.selectedAudioScene();
+            this.audioMasterVolume();
+            this.audioMuted();
+
+            if (!selectedPreset) {
+                return;
+            }
+
+            if (!this.audioPlaying()) {
+                this.applyCurrentAudioVolumes();
+                return;
+            }
+
+            if (this.activeAudioPresetId === selectedPreset.id) {
+                this.applyCurrentAudioVolumes();
+                return;
+            }
+
+            this.transitionToAudioPreset(selectedPreset, selectedPreset.crossfadeMs);
+        });
         void this.loadSharedMonsterPortraitOverrides();
     }
 
@@ -1870,6 +2078,7 @@ export class CampaignMapPageComponent {
             if (isOpen) {
                 this.measurePopoverOpen.set(false);
                 this.voicePopoverOpen.set(false);
+                this.audioPopoverOpen.set(false);
             }
 
             return !isOpen;
@@ -1882,6 +2091,7 @@ export class CampaignMapPageComponent {
         if (shouldOpen) {
             this.voicePopoverOpen.set(false);
             this.encounterPopoverOpen.set(false);
+            this.audioPopoverOpen.set(false);
         }
     }
 
@@ -1890,6 +2100,17 @@ export class CampaignMapPageComponent {
         this.voicePopoverOpen.set(shouldOpen);
         if (shouldOpen) {
             this.measurePopoverOpen.set(false);
+            this.encounterPopoverOpen.set(false);
+            this.audioPopoverOpen.set(false);
+        }
+    }
+
+    toggleAudioPopover(): void {
+        const shouldOpen = !this.audioPopoverOpen();
+        this.audioPopoverOpen.set(shouldOpen);
+        if (shouldOpen) {
+            this.measurePopoverOpen.set(false);
+            this.voicePopoverOpen.set(false);
             this.encounterPopoverOpen.set(false);
         }
     }
@@ -1904,6 +2125,7 @@ export class CampaignMapPageComponent {
         if (shouldOpen) {
             this.measurePopoverOpen.set(false);
             this.voicePopoverOpen.set(false);
+            this.audioPopoverOpen.set(false);
             this.normalizeEncounterPopoverPosition();
         }
     }
@@ -2580,6 +2802,723 @@ export class CampaignMapPageComponent {
         return participant.userId === this.currentUserId();
     }
 
+    audioMoodLabel(mood: AudioSceneMood): string {
+        switch (mood) {
+            case 'tense':
+                return 'Tense';
+            case 'mystery':
+                return 'Mystery';
+            case 'combat':
+                return 'Combat';
+            default:
+                return 'Calm';
+        }
+    }
+
+    handleUserAudioLibraryUpload(event: Event): void {
+        const input = event.target as HTMLInputElement | null;
+        const file = input?.files?.[0] ?? null;
+        if (!file) {
+            return;
+        }
+
+        if (!file.type.startsWith('audio/')) {
+            this.userAudioUploadFeedback.set('Choose an audio file.');
+            if (input) {
+                input.value = '';
+            }
+            return;
+        }
+
+        if (file.size > MAP_USER_AUDIO_UPLOAD_MAX_BYTES) {
+            this.userAudioUploadFeedback.set('Audio file is too large. Keep files under 8 MB.');
+            if (input) {
+                input.value = '';
+            }
+            return;
+        }
+
+        this.userAudioUploadBusy.set(true);
+        this.userAudioUploadFeedback.set('');
+        const reader = new FileReader();
+
+        reader.onload = () => {
+            const dataUrl = typeof reader.result === 'string' ? reader.result.trim() : '';
+            if (!dataUrl.startsWith('data:audio/')) {
+                this.userAudioUploadBusy.set(false);
+                this.userAudioUploadFeedback.set('Unable to read audio file.');
+                this.cdr.detectChanges();
+                return;
+            }
+
+            const entry: UserAudioLibraryEntry = {
+                id: this.createId(),
+                name: this.sanitizeUserAudioFileName(file.name),
+                mimeType: file.type || 'audio/mpeg',
+                dataUrl,
+                uploadedAtUtc: new Date().toISOString()
+            };
+
+            const deduped = this.userAudioLibraryEntries().filter((existing) => existing.dataUrl !== entry.dataUrl);
+            const nextEntries = [entry, ...deduped].slice(0, MAP_USER_AUDIO_LIBRARY_MAX_ENTRIES);
+            this.userAudioLibraryEntries.set(nextEntries);
+            this.userAudioUploadBusy.set(false);
+            this.userAudioUploadFeedback.set('Audio uploaded to your library.');
+            void this.persistUserAudioLibraryEntries(nextEntries);
+            this.cdr.detectChanges();
+        };
+
+        reader.onerror = () => {
+            this.userAudioUploadBusy.set(false);
+            this.userAudioUploadFeedback.set('Unable to read audio file.');
+            this.cdr.detectChanges();
+        };
+
+        reader.readAsDataURL(file);
+
+        if (input) {
+            input.value = '';
+        }
+    }
+
+    removeUserAudioLibraryTrack(entryId: string): void {
+        const nextEntries = this.userAudioLibraryEntries().filter((entry) => entry.id !== entryId);
+        this.userAudioLibraryEntries.set(nextEntries);
+        this.userAudioUploadFeedback.set('Removed audio from your library.');
+        void this.persistUserAudioLibraryEntries(nextEntries);
+    }
+
+    private sanitizeUserAudioFileName(fileName: string): string {
+        const trimmed = fileName.trim();
+        if (!trimmed) {
+            return 'Uploaded Audio';
+        }
+
+        return trimmed.length > 80 ? trimmed.slice(0, 80) : trimmed;
+    }
+
+    private async loadUserAudioLibrary(): Promise<void> {
+        try {
+            const libraries = await this.api.getUserLibraries();
+            this.userAudioLibraryEntries.set(this.parseUserAudioLibraryEntries(libraries.audioLibraryJson));
+            this.userAudioUploadFeedback.set('');
+        } catch {
+            this.userAudioLibraryEntries.set([]);
+            this.userAudioUploadFeedback.set('Could not load your audio library.');
+        }
+
+        this.cdr.detectChanges();
+    }
+
+    private async persistUserAudioLibraryEntries(entries: UserAudioLibraryEntry[]): Promise<void> {
+        try {
+            await this.api.saveUserAudioLibrary(JSON.stringify(entries));
+        } catch {
+            this.userAudioUploadFeedback.set('Could not save your audio library right now.');
+            this.cdr.detectChanges();
+        }
+    }
+
+    private parseUserAudioLibraryEntries(rawJson: string): UserAudioLibraryEntry[] {
+        try {
+            const parsed = JSON.parse(rawJson) as unknown;
+            if (!Array.isArray(parsed)) {
+                return [];
+            }
+
+            return parsed
+                .map((entry) => this.normalizeUserAudioLibraryEntry(entry))
+                .filter((entry): entry is UserAudioLibraryEntry => entry !== null)
+                .slice(0, MAP_USER_AUDIO_LIBRARY_MAX_ENTRIES);
+        } catch {
+            return [];
+        }
+    }
+
+    private normalizeUserAudioLibraryEntry(entry: unknown): UserAudioLibraryEntry | null {
+        if (!entry || typeof entry !== 'object') {
+            return null;
+        }
+
+        const candidate = entry as Partial<UserAudioLibraryEntry>;
+        if (typeof candidate.dataUrl !== 'string' || !candidate.dataUrl.startsWith('data:audio/')) {
+            return null;
+        }
+
+        const name = typeof candidate.name === 'string' && candidate.name.trim().length > 0
+            ? candidate.name.trim()
+            : 'Uploaded Audio';
+
+        return {
+            id: typeof candidate.id === 'string' && candidate.id.trim().length > 0 ? candidate.id : this.createId(),
+            name: name.length > 80 ? name.slice(0, 80) : name,
+            mimeType: typeof candidate.mimeType === 'string' && candidate.mimeType.trim().length > 0 ? candidate.mimeType : 'audio/mpeg',
+            dataUrl: candidate.dataUrl,
+            uploadedAtUtc: typeof candidate.uploadedAtUtc === 'string' && candidate.uploadedAtUtc.trim().length > 0
+                ? candidate.uploadedAtUtc
+                : new Date().toISOString()
+        };
+    }
+
+    toggleAudioPlayback(): void {
+        if (this.audioPlaying()) {
+            this.audioPlaying.set(false);
+            this.pauseLoopAudioChannelsWithFade(this.selectedAudioScene()?.fadeOutMs ?? 0);
+            return;
+        }
+
+        const selectedPreset = this.selectedAudioScene();
+        if (!selectedPreset) {
+            return;
+        }
+
+        this.audioPlaying.set(true);
+
+        if (this.activeAudioPresetId === selectedPreset.id && (this.ambientAudioElement || this.musicAudioElement)) {
+            this.resumeLoopAudioChannels();
+            this.applyCurrentAudioVolumes();
+            return;
+        }
+
+        this.transitionToAudioPreset(selectedPreset, selectedPreset.fadeInMs);
+    }
+
+    toggleAudioMute(): void {
+        this.audioMuted.update((muted) => !muted);
+    }
+
+    setAudioMasterVolume(value: number): void {
+        this.audioMasterVolume.set(this.clampAudioValue(value, 0, 100));
+    }
+
+    selectAudioSceneFromDropdown(value: string | number): void {
+        const selectedId = typeof value === 'string' ? value : String(value);
+        this.audioSelectedSceneId.set(selectedId);
+    }
+
+    addAudioScenePreset(): void {
+        const preset = this.createAudioScenePreset(`Scene ${this.audioScenePresets().length + 1}`, 'calm');
+        this.audioScenePresets.update((presets) => [...presets, preset]);
+        this.audioSelectedSceneId.set(preset.id);
+    }
+
+    duplicateSelectedAudioScenePreset(): void {
+        const selectedPreset = this.selectedAudioScene();
+        if (!selectedPreset) {
+            return;
+        }
+
+        const duplicate: MapAudioPreset = {
+            ...selectedPreset,
+            id: this.createId(),
+            name: `${selectedPreset.name} Copy`,
+            sfxUrls: [...selectedPreset.sfxUrls]
+        };
+
+        this.audioScenePresets.update((presets) => [...presets, duplicate]);
+        this.audioSelectedSceneId.set(duplicate.id);
+    }
+
+    deleteSelectedAudioScenePreset(): void {
+        const selectedPreset = this.selectedAudioScene();
+        if (!selectedPreset) {
+            return;
+        }
+
+        const remaining = this.audioScenePresets().filter((preset) => preset.id !== selectedPreset.id);
+        if (remaining.length === 0) {
+            const fallbackPreset = this.createAudioScenePreset('Scene 1', 'calm');
+            this.audioScenePresets.set([fallbackPreset]);
+            this.audioSelectedSceneId.set(fallbackPreset.id);
+            if (this.audioPlaying()) {
+                this.transitionToAudioPreset(fallbackPreset, fallbackPreset.fadeInMs);
+            }
+            return;
+        }
+
+        this.audioScenePresets.set(remaining);
+        const nextPreset = remaining[0];
+        if (this.audioSelectedSceneId() === selectedPreset.id) {
+            this.audioSelectedSceneId.set(nextPreset.id);
+        }
+    }
+
+    updateSelectedAudioSceneName(value: string): void {
+        this.patchSelectedAudioScene({ name: value.trim() || 'Untitled Scene' });
+    }
+
+    updateSelectedAudioSceneMood(value: string | number): void {
+        const nextMood = typeof value === 'string' ? value : String(value);
+        const mood: AudioSceneMood = nextMood === 'tense' || nextMood === 'mystery' || nextMood === 'combat' ? nextMood : 'calm';
+        this.patchSelectedAudioScene({ mood });
+    }
+
+    updateSelectedAudioSceneAmbientUrl(value: string): void {
+        this.patchSelectedAudioScene({ ambientUrl: value.trim() });
+    }
+
+    updateSelectedAudioSceneMusicUrl(value: string): void {
+        this.patchSelectedAudioScene({ musicUrl: value.trim() });
+    }
+
+    pickSelectedAudioSceneAmbientLibraryTrack(value: string | number): void {
+        const url = typeof value === 'string' ? value.trim() : String(value);
+        if (!url) {
+            return;
+        }
+
+        this.patchSelectedAudioScene({ ambientUrl: url });
+    }
+
+    clearSelectedAudioSceneAmbientUrl(): void {
+        this.patchSelectedAudioScene({ ambientUrl: '' });
+    }
+
+    pickSelectedAudioSceneMusicLibraryTrack(value: string | number): void {
+        const url = typeof value === 'string' ? value.trim() : String(value);
+        if (!url) {
+            return;
+        }
+
+        this.patchSelectedAudioScene({ musicUrl: url });
+    }
+
+    clearSelectedAudioSceneMusicUrl(): void {
+        this.patchSelectedAudioScene({ musicUrl: '' });
+    }
+
+    addSelectedAudioSceneSfxLibraryTrack(value: string | number): void {
+        const url = typeof value === 'string' ? value.trim() : String(value);
+        if (!url) {
+            return;
+        }
+
+        const selectedPreset = this.selectedAudioScene();
+        if (!selectedPreset) {
+            return;
+        }
+
+        if (selectedPreset.sfxUrls.includes(url)) {
+            return;
+        }
+
+        this.patchSelectedAudioScene({ sfxUrls: [...selectedPreset.sfxUrls, url] });
+    }
+
+    clearSelectedAudioSceneSfxUrls(): void {
+        this.patchSelectedAudioScene({ sfxUrls: [] });
+    }
+
+    updateSelectedAudioSceneSfxUrls(value: string): void {
+        this.patchSelectedAudioScene({ sfxUrls: this.parseAudioUrlList(value) });
+    }
+
+    updateSelectedAudioSceneAmbientVolume(value: number): void {
+        this.patchSelectedAudioScene({ ambientVolume: this.clampAudioValue(value, 0, 100) });
+    }
+
+    updateSelectedAudioSceneMusicVolume(value: number): void {
+        this.patchSelectedAudioScene({ musicVolume: this.clampAudioValue(value, 0, 100) });
+    }
+
+    updateSelectedAudioSceneSfxVolume(value: number): void {
+        this.patchSelectedAudioScene({ sfxVolume: this.clampAudioValue(value, 0, 100) });
+    }
+
+    updateSelectedAudioSceneFadeIn(value: number): void {
+        this.patchSelectedAudioScene({ fadeInMs: this.clampAudioValue(value, 0, 15000) });
+    }
+
+    updateSelectedAudioSceneFadeOut(value: number): void {
+        this.patchSelectedAudioScene({ fadeOutMs: this.clampAudioValue(value, 0, 15000) });
+    }
+
+    updateSelectedAudioSceneCrossfade(value: number): void {
+        this.patchSelectedAudioScene({ crossfadeMs: this.clampAudioValue(value, 0, 15000) });
+    }
+
+    toggleSelectedAudioSceneAutoDuck(): void {
+        const selectedPreset = this.selectedAudioScene();
+        if (!selectedPreset) {
+            return;
+        }
+
+        this.patchSelectedAudioScene({ autoDuck: !selectedPreset.autoDuck });
+    }
+
+    selectedAudioSceneSfxDraft(): string {
+        return this.selectedAudioScene()?.sfxUrls.join('\n') ?? '';
+    }
+
+    selectedAudioSceneSfxUrls(): string[] {
+        return this.selectedAudioScene()?.sfxUrls ?? [];
+    }
+
+    playAudioSceneSfx(url: string): void {
+        const trimmedUrl = url.trim();
+        const selectedPreset = this.selectedAudioScene();
+        if (!trimmedUrl || !selectedPreset) {
+            return;
+        }
+
+        const oneShot = new Audio(trimmedUrl);
+        oneShot.preload = 'auto';
+        oneShot.volume = this.targetAudioVolume(selectedPreset.sfxVolume);
+        void oneShot.play().catch(() => {
+            this.showMapNotice('Unable to play SFX. Confirm the URL supports direct audio playback.');
+        });
+
+        if (selectedPreset.autoDuck && this.musicAudioElement && this.audioPlaying()) {
+            this.musicAudioElement.volume = this.targetAudioVolume(selectedPreset.musicVolume) * MAP_AUDIO_DUCK_MUSIC_RATIO;
+            if (this.audioDuckTimerId) {
+                globalThis.clearTimeout(this.audioDuckTimerId);
+            }
+
+            this.audioDuckTimerId = globalThis.setTimeout(() => {
+                this.audioDuckTimerId = null;
+                this.applyCurrentAudioVolumes();
+            }, MAP_AUDIO_DUCK_DURATION_MS);
+        }
+    }
+
+    crossfadeSelectedAudioScene(): void {
+        const selectedPreset = this.selectedAudioScene();
+        if (!selectedPreset || !this.audioPlaying()) {
+            return;
+        }
+
+        this.transitionToAudioPreset(selectedPreset, selectedPreset.crossfadeMs);
+    }
+
+    private patchSelectedAudioScene(changes: Partial<MapAudioPreset>): void {
+        const selectedId = this.audioSelectedSceneId();
+        this.audioScenePresets.update((presets) => presets.map((preset) => {
+            if (preset.id !== selectedId) {
+                return preset;
+            }
+
+            return this.normalizeAudioScenePreset({
+                ...preset,
+                ...changes
+            });
+        }));
+    }
+
+    private parseAudioUrlList(value: string): string[] {
+        return value
+            .split(/[\n,]/)
+            .map((entry) => entry.trim())
+            .filter((entry) => entry.length > 0);
+    }
+
+    private createAudioScenePreset(name: string, mood: AudioSceneMood): MapAudioPreset {
+        return {
+            id: this.createId(),
+            name,
+            mood,
+            ambientUrl: DEFAULT_AUDIO_SCENE_AMBIENT_BY_MOOD[mood],
+            musicUrl: DEFAULT_AUDIO_SCENE_MUSIC_BY_MOOD[mood],
+            sfxUrls: [],
+            ambientVolume: 65,
+            musicVolume: 55,
+            sfxVolume: 75,
+            fadeInMs: 1800,
+            fadeOutMs: 1200,
+            crossfadeMs: 2200,
+            autoDuck: true
+        };
+    }
+
+    private defaultAudioScenePresets(): MapAudioPreset[] {
+        return [
+            this.createAudioScenePreset('Campfire Watch', 'calm'),
+            this.createAudioScenePreset('Ancient Ruins', 'mystery'),
+            this.createAudioScenePreset('Ambush at Dawn', 'combat')
+        ];
+    }
+
+    private normalizeAudioScenePreset(preset: Partial<MapAudioPreset>): MapAudioPreset {
+        return {
+            id: typeof preset.id === 'string' && preset.id.trim() ? preset.id.trim() : this.createId(),
+            name: typeof preset.name === 'string' && preset.name.trim() ? preset.name.trim() : 'Untitled Scene',
+            mood: preset.mood === 'tense' || preset.mood === 'mystery' || preset.mood === 'combat' ? preset.mood : 'calm',
+            ambientUrl: typeof preset.ambientUrl === 'string' ? preset.ambientUrl.trim() : '',
+            musicUrl: typeof preset.musicUrl === 'string' ? preset.musicUrl.trim() : '',
+            sfxUrls: Array.isArray(preset.sfxUrls)
+                ? preset.sfxUrls.map((url) => String(url).trim()).filter((url) => url.length > 0)
+                : [],
+            ambientVolume: this.clampAudioValue(preset.ambientVolume ?? 65, 0, 100),
+            musicVolume: this.clampAudioValue(preset.musicVolume ?? 55, 0, 100),
+            sfxVolume: this.clampAudioValue(preset.sfxVolume ?? 75, 0, 100),
+            fadeInMs: this.clampAudioValue(preset.fadeInMs ?? 1800, 0, 15000),
+            fadeOutMs: this.clampAudioValue(preset.fadeOutMs ?? 1200, 0, 15000),
+            crossfadeMs: this.clampAudioValue(preset.crossfadeMs ?? 2200, 0, 15000),
+            autoDuck: preset.autoDuck !== false
+        };
+    }
+
+    private clampAudioValue(value: number, min: number, max: number): number {
+        if (!Number.isFinite(value)) {
+            return min;
+        }
+
+        return Math.round(Math.min(Math.max(value, min), max));
+    }
+
+    private targetAudioVolume(channelVolume: number): number {
+        if (this.audioMuted()) {
+            return 0;
+        }
+
+        const normalizedMaster = this.clampAudioValue(this.audioMasterVolume(), 0, 100) / 100;
+        const normalizedChannel = this.clampAudioValue(channelVolume, 0, 100) / 100;
+        return Math.max(0, Math.min(1, normalizedMaster * normalizedChannel));
+    }
+
+    private createLoopAudioElement(url: string): HTMLAudioElement {
+        const element = new Audio(url);
+        element.loop = true;
+        element.preload = 'auto';
+        element.volume = 0;
+        return element;
+    }
+
+    private resumeLoopAudioChannels(): void {
+        if (this.ambientAudioElement) {
+            void this.ambientAudioElement.play().catch(() => undefined);
+        }
+
+        if (this.musicAudioElement) {
+            void this.musicAudioElement.play().catch(() => undefined);
+        }
+    }
+
+    private pauseLoopAudioChannels(): void {
+        this.clearAudioFadeInterval();
+        this.stopFadingOutAudioElements();
+        if (this.audioDuckTimerId) {
+            globalThis.clearTimeout(this.audioDuckTimerId);
+            this.audioDuckTimerId = null;
+        }
+
+        if (this.ambientAudioElement) {
+            this.ambientAudioElement.pause();
+        }
+
+        if (this.musicAudioElement) {
+            this.musicAudioElement.pause();
+        }
+    }
+
+    private pauseLoopAudioChannelsWithFade(fadeOutMs: number): void {
+        const ambient = this.ambientAudioElement;
+        const music = this.musicAudioElement;
+        if (!ambient && !music) {
+            return;
+        }
+
+        const clampedFadeMs = this.clampAudioValue(fadeOutMs, 0, 15000);
+        if (clampedFadeMs === 0) {
+            this.pauseLoopAudioChannels();
+            return;
+        }
+
+        this.clearAudioFadeInterval();
+        this.stopFadingOutAudioElements();
+        const startingAmbientVolume = ambient?.volume ?? 0;
+        const startingMusicVolume = music?.volume ?? 0;
+        const startedAt = Date.now();
+
+        this.audioFadeIntervalId = globalThis.setInterval(() => {
+            const elapsed = Date.now() - startedAt;
+            const progress = Math.max(0, Math.min(1, elapsed / clampedFadeMs));
+            const ratio = 1 - progress;
+
+            if (ambient) {
+                ambient.volume = startingAmbientVolume * ratio;
+            }
+            if (music) {
+                music.volume = startingMusicVolume * ratio;
+            }
+
+            if (progress >= 1) {
+                this.clearAudioFadeInterval();
+                if (ambient) {
+                    ambient.pause();
+                }
+                if (music) {
+                    music.pause();
+                }
+            }
+        }, 30);
+    }
+
+    private applyCurrentAudioVolumes(): void {
+        const selectedPreset = this.selectedAudioScene();
+        if (!selectedPreset || !this.audioPlaying()) {
+            if (this.ambientAudioElement) {
+                this.ambientAudioElement.volume = 0;
+            }
+
+            if (this.musicAudioElement) {
+                this.musicAudioElement.volume = 0;
+            }
+            return;
+        }
+
+        if (this.ambientAudioElement) {
+            this.ambientAudioElement.volume = this.targetAudioVolume(selectedPreset.ambientVolume);
+        }
+
+        if (this.musicAudioElement) {
+            this.musicAudioElement.volume = this.targetAudioVolume(selectedPreset.musicVolume);
+        }
+    }
+
+    private transitionToAudioPreset(preset: MapAudioPreset, fadeMs: number): void {
+        const nextAmbient = preset.ambientUrl ? this.createLoopAudioElement(preset.ambientUrl) : null;
+        const nextMusic = preset.musicUrl ? this.createLoopAudioElement(preset.musicUrl) : null;
+
+        if (!nextAmbient && !nextMusic) {
+            this.audioPlaying.set(false);
+            this.showMapNotice('Add an ambient or music URL to play this scene.');
+            return;
+        }
+
+        const previousAmbient = this.ambientAudioElement;
+        const previousMusic = this.musicAudioElement;
+        const previousAmbientVolume = previousAmbient?.volume ?? 0;
+        const previousMusicVolume = previousMusic?.volume ?? 0;
+
+        this.clearAudioFadeInterval();
+        this.stopFadingOutAudioElements();
+        this.fadingOutAmbientAudioElement = previousAmbient;
+        this.fadingOutMusicAudioElement = previousMusic;
+
+        this.ambientAudioElement = nextAmbient;
+        this.musicAudioElement = nextMusic;
+        this.activeAudioPresetId = preset.id;
+
+        if (nextAmbient) {
+            void nextAmbient.play().catch(() => {
+                this.showMapNotice('Ambient track could not be started. Check the URL and browser audio permissions.');
+            });
+        }
+
+        if (nextMusic) {
+            void nextMusic.play().catch(() => {
+                this.showMapNotice('Music track could not be started. Check the URL and browser audio permissions.');
+            });
+        }
+
+        const targetAmbientVolume = this.targetAudioVolume(preset.ambientVolume);
+        const targetMusicVolume = this.targetAudioVolume(preset.musicVolume);
+
+        const clampedFadeMs = this.clampAudioValue(fadeMs, 0, 15000);
+        if (clampedFadeMs === 0) {
+            if (nextAmbient) {
+                nextAmbient.volume = targetAmbientVolume;
+            }
+            if (nextMusic) {
+                nextMusic.volume = targetMusicVolume;
+            }
+            if (previousAmbient) {
+                previousAmbient.pause();
+                previousAmbient.src = '';
+            }
+            if (previousMusic) {
+                previousMusic.pause();
+                previousMusic.src = '';
+            }
+            this.fadingOutAmbientAudioElement = null;
+            this.fadingOutMusicAudioElement = null;
+            return;
+        }
+
+        const startedAt = Date.now();
+        this.audioFadeIntervalId = globalThis.setInterval(() => {
+            const elapsed = Date.now() - startedAt;
+            const progress = Math.max(0, Math.min(1, elapsed / clampedFadeMs));
+
+            if (nextAmbient) {
+                nextAmbient.volume = targetAmbientVolume * progress;
+            }
+            if (nextMusic) {
+                nextMusic.volume = targetMusicVolume * progress;
+            }
+            if (previousAmbient) {
+                previousAmbient.volume = previousAmbientVolume * (1 - progress);
+            }
+            if (previousMusic) {
+                previousMusic.volume = previousMusicVolume * (1 - progress);
+            }
+
+            if (progress >= 1) {
+                this.clearAudioFadeInterval();
+                if (previousAmbient) {
+                    previousAmbient.pause();
+                    previousAmbient.src = '';
+                }
+                if (previousMusic) {
+                    previousMusic.pause();
+                    previousMusic.src = '';
+                }
+                if (this.fadingOutAmbientAudioElement === previousAmbient) {
+                    this.fadingOutAmbientAudioElement = null;
+                }
+                if (this.fadingOutMusicAudioElement === previousMusic) {
+                    this.fadingOutMusicAudioElement = null;
+                }
+            }
+        }, 30);
+    }
+
+    private stopAudioPlaybackEngine(): void {
+        this.clearAudioFadeInterval();
+        this.stopFadingOutAudioElements();
+        if (this.audioDuckTimerId) {
+            globalThis.clearTimeout(this.audioDuckTimerId);
+            this.audioDuckTimerId = null;
+        }
+
+        if (this.ambientAudioElement) {
+            this.ambientAudioElement.pause();
+            this.ambientAudioElement.src = '';
+            this.ambientAudioElement = null;
+        }
+
+        if (this.musicAudioElement) {
+            this.musicAudioElement.pause();
+            this.musicAudioElement.src = '';
+            this.musicAudioElement = null;
+        }
+
+        this.activeAudioPresetId = null;
+    }
+
+    private clearAudioFadeInterval(): void {
+        if (!this.audioFadeIntervalId) {
+            return;
+        }
+
+        globalThis.clearInterval(this.audioFadeIntervalId);
+        this.audioFadeIntervalId = null;
+    }
+
+    private stopFadingOutAudioElements(): void {
+        if (this.fadingOutAmbientAudioElement) {
+            this.fadingOutAmbientAudioElement.pause();
+            this.fadingOutAmbientAudioElement.src = '';
+            this.fadingOutAmbientAudioElement = null;
+        }
+
+        if (this.fadingOutMusicAudioElement) {
+            this.fadingOutMusicAudioElement.pause();
+            this.fadingOutMusicAudioElement.src = '';
+            this.fadingOutMusicAudioElement = null;
+        }
+    }
+
     selectMouseToolbarMode(): void {
         this.measureEnabled.set(false);
         this.measurePopoverOpen.set(false);
@@ -2591,6 +3530,7 @@ export class CampaignMapPageComponent {
         this.measureEnabled.set(true);
         this.measurePopoverOpen.set(true);
         this.voicePopoverOpen.set(false);
+        this.audioPopoverOpen.set(false);
 
         this.clearCtrlPolylineDraft();
         this.pendingIconType.set(null);
@@ -3816,6 +4756,72 @@ export class CampaignMapPageComponent {
         }
 
         globalThis.setTimeout(scrollToGuide, 0);
+    }
+
+    private audioSceneStorageKey(campaignId: string, mapId: string): string {
+        return `${MAP_AUDIO_SCENE_STORAGE_KEY_PREFIX}:${campaignId}:${mapId}`;
+    }
+
+    private readStoredAudioSceneState(campaignId: string, mapId: string): StoredMapAudioSceneState {
+        const fallbackPresets = this.defaultAudioScenePresets();
+        const fallbackSelectedPresetId = fallbackPresets[0]?.id ?? '';
+        const fallbackState: StoredMapAudioSceneState = {
+            selectedPresetId: fallbackSelectedPresetId,
+            masterVolume: 75,
+            muted: false,
+            presets: fallbackPresets
+        };
+
+        try {
+            const raw = globalThis.localStorage?.getItem(this.audioSceneStorageKey(campaignId, mapId));
+            if (!raw) {
+                return fallbackState;
+            }
+
+            const parsed = JSON.parse(raw) as Partial<StoredMapAudioSceneState>;
+            const parsedPresets = Array.isArray(parsed.presets)
+                ? parsed.presets.map((preset) => this.normalizeAudioScenePreset(preset))
+                : fallbackPresets;
+
+            const selectedPresetId = typeof parsed.selectedPresetId === 'string'
+                ? parsed.selectedPresetId
+                : parsedPresets[0]?.id ?? fallbackSelectedPresetId;
+            const selectedPresetExists = parsedPresets.some((preset) => preset.id === selectedPresetId);
+
+            return {
+                selectedPresetId: selectedPresetExists
+                    ? selectedPresetId
+                    : parsedPresets[0]?.id ?? fallbackSelectedPresetId,
+                masterVolume: this.clampAudioValue(parsed.masterVolume ?? 75, 0, 100),
+                muted: parsed.muted === true,
+                presets: parsedPresets.length > 0 ? parsedPresets : fallbackPresets
+            };
+        } catch {
+            return fallbackState;
+        }
+    }
+
+    private storeAudioSceneState(campaignId: string, mapId: string, state: StoredMapAudioSceneState): void {
+        const normalizedPresets = state.presets.length > 0
+            ? state.presets.map((preset) => this.normalizeAudioScenePreset(preset))
+            : this.defaultAudioScenePresets();
+
+        const selectedPresetId = normalizedPresets.some((preset) => preset.id === state.selectedPresetId)
+            ? state.selectedPresetId
+            : normalizedPresets[0]?.id ?? '';
+
+        const payload: StoredMapAudioSceneState = {
+            selectedPresetId,
+            masterVolume: this.clampAudioValue(state.masterVolume, 0, 100),
+            muted: state.muted,
+            presets: normalizedPresets
+        };
+
+        try {
+            globalThis.localStorage?.setItem(this.audioSceneStorageKey(campaignId, mapId), JSON.stringify(payload));
+        } catch {
+            // Ignore storage failures and keep in-memory audio scene state available.
+        }
     }
 
     private readStoredGridVisibility(): boolean {

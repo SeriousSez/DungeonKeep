@@ -2895,6 +2895,228 @@ app-dropdown {
     font-size: 0.84rem;
 }
 
+.map-audio-popover {
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: min(420px, calc(100vw - 92px));
+    max-height: min(80vh, 830px);
+    overflow: auto;
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 16px;
+    border: 1px solid var(--panel-border);
+    background: color-mix(in srgb, var(--surface-raised-solid) 95%, transparent);
+    box-shadow: 0 16px 30px rgba(26, 19, 13, 0.22);
+    backdrop-filter: blur(14px);
+    font-size: 0.9rem;
+}
+
+.map-audio-popover h3 {
+    font-size: 1.45rem;
+}
+
+.map-audio-popover .sidebar-note,
+.map-audio-popover .ghost-button,
+.map-audio-popover .primary-button,
+.map-audio-popover .app-dropdown {
+    font-size: 0.84rem;
+}
+
+.map-audio-scene-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    align-items: center;
+    gap: 8px;
+}
+
+.map-audio-upload-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+}
+
+.map-audio-upload-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.map-audio-upload-btn input[type='file'] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.map-audio-upload-btn.is-disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.map-audio-upload-feedback {
+    margin: 0;
+    color: var(--text-soft);
+    font-size: 0.78rem;
+}
+
+.map-audio-uploaded-list {
+    display: grid;
+    gap: 6px;
+    max-height: 132px;
+    overflow: auto;
+}
+
+.map-audio-uploaded-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 88%, var(--accent-primary) 12%);
+    padding: 6px 8px;
+}
+
+.map-audio-uploaded-name {
+    font-size: 0.78rem;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.map-audio-name-grid {
+    grid-template-columns: 1.3fr 0.7fr;
+}
+
+.map-audio-control-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.map-audio-control-row .ghost-button,
+.map-audio-control-row .primary-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.map-audio-volume-field {
+    display: grid;
+    gap: 4px;
+    color: var(--text-main);
+    font-size: 0.82rem;
+}
+
+.map-audio-volume-field input {
+    width: 100%;
+}
+
+.map-audio-inline-input {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 7px 10px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 90%, transparent);
+    color: var(--text-main);
+}
+
+.map-audio-inline-input input {
+    width: 100%;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+}
+
+.map-audio-url-grid {
+    display: grid;
+    gap: 8px;
+}
+
+.map-audio-stack-field {
+    display: grid;
+    gap: 4px;
+    font-size: 0.8rem;
+    color: var(--text-main);
+}
+
+.map-audio-selector-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 8px;
+}
+
+.map-audio-selector-row .ghost-button {
+    align-self: start;
+    margin-top: 2px;
+}
+
+.map-audio-stack-field input,
+.map-audio-stack-field textarea {
+    width: 100%;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 90%, transparent);
+    color: var(--text-main);
+    font: inherit;
+    padding: 8px 10px;
+    resize: vertical;
+}
+
+.map-audio-stack-field textarea {
+    min-height: 72px;
+}
+
+.map-audio-level-grid,
+.map-audio-fade-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.map-audio-stack-field.compact input {
+    padding-block: 7px;
+}
+
+.map-audio-sfx-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.map-audio-sfx-actions .ghost-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+@media (max-width: 720px) {
+    .map-audio-popover {
+        width: min(92vw, 420px);
+        max-height: min(72vh, 620px);
+    }
+
+    .map-audio-name-grid,
+    .map-audio-level-grid,
+    .map-audio-fade-grid,
+    .map-audio-upload-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
 // ── Encounter Tracker Popover ────────────────────────────────────────────
 
 .map-encounter-popover {

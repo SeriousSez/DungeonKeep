@@ -16,6 +16,7 @@ public sealed class AppUser
     public string CustomTableLibraryJson { get; set; } = "[]";
     public string MonsterLibraryJson { get; set; } = "[]";
     public string MonsterReferenceJson { get; set; } = "[]";
+    public string AudioLibraryJson { get; set; } = "[]";
 
     public List<AuthSession> Sessions { get; set; } = [];
     public List<CampaignMembership> CampaignMemberships { get; set; } = [];
