@@ -246,7 +246,13 @@ public sealed record CampaignMapTokenDto(
     bool? EncounterHidden = null,
     int? CurrentHp = null,
     int? MaxHp = null,
-    int? ArmorClass = null
+    int? ArmorClass = null,
+    IReadOnlyList<CampaignMapTokenConditionDto>? Conditions = null
+);
+
+public sealed record CampaignMapTokenConditionDto(
+    string Name,
+    int? RemainingRounds = null
 );
 
 public sealed record CampaignMapTokenMovedDto(

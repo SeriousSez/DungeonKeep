@@ -2969,6 +2969,125 @@ app-dropdown {
     max-width: 100%;
 }
 
+.encounter-conditions {
+    display: grid;
+    gap: 6px;
+    padding-top: 4px;
+    border-top: 1px dashed color-mix(in srgb, var(--panel-border) 74%, transparent);
+}
+
+.encounter-condition-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.encounter-condition-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border: 1px solid var(--panel-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 90%, var(--accent-primary) 10%);
+    color: var(--text-main);
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+.encounter-condition-chip em {
+    font-style: normal;
+    color: var(--text-soft);
+    font-size: 0.64rem;
+}
+
+.encounter-condition-chip-rounds {
+    width: 34px;
+    padding: 1px 4px;
+    border: 1px solid var(--panel-border);
+    border-radius: 5px;
+    background: color-mix(in srgb, var(--surface-raised-solid) 94%, transparent);
+    color: var(--text-main);
+    font: inherit;
+    font-size: 0.64rem;
+    text-align: center;
+}
+
+.encounter-condition-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-soft);
+    cursor: pointer;
+}
+
+.encounter-condition-remove:hover {
+    color: var(--text-main);
+}
+
+.encounter-condition-editor {
+    min-width: 0;
+}
+
+.encounter-condition-select {
+    display: block;
+    width: 100%;
+
+    ::ng-deep .msd-trigger {
+        min-height: 32px;
+        padding: 0 8px;
+        font-size: 0.76rem;
+        border-radius: 7px;
+    }
+
+    ::ng-deep .msd-trigger-copy {
+        gap: 0;
+    }
+
+    ::ng-deep .msd-trigger-meta {
+        font-size: 0.64rem;
+    }
+
+    ::ng-deep .msd-panel {
+        max-height: 240px;
+    }
+
+    ::ng-deep .msd-search-shell {
+        padding: 6px 8px;
+    }
+
+    ::ng-deep .msd-search-input {
+        min-height: 30px;
+        padding: 0 8px;
+        font-size: 0.76rem;
+    }
+
+    ::ng-deep .msd-group {
+        padding: 4px 0;
+    }
+
+    ::ng-deep .msd-group-label {
+        padding: 3px 10px 4px;
+        font-size: 0.62rem;
+    }
+
+    ::ng-deep .msd-option {
+        min-height: 32px;
+        padding: 6px 10px;
+        font-size: 0.78rem;
+    }
+
+    ::ng-deep .msd-checkbox {
+        width: 14px;
+        height: 14px;
+    }
+}
+
 .is-warning {
     background: color-mix(in srgb, var(--color-warning) 18%, var(--surface-raised-solid) 82%);
     border-color: color-mix(in srgb, var(--color-warning) 40%, var(--panel-border) 60%);

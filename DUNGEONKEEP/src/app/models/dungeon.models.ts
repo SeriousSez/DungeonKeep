@@ -123,6 +123,12 @@ export interface CampaignMapToken {
     currentHp?: number | null;
     maxHp?: number | null;
     armorClass?: number | null;
+    conditions?: CampaignMapTokenCondition[];
+}
+
+export interface CampaignMapTokenCondition {
+    name: string;
+    remainingRounds?: number | null;
 }
 
 export interface CampaignMapDecoration {

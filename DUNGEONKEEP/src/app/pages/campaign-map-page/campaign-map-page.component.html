@@ -1529,6 +1529,38 @@
                     </div>
                     }
 
+                    @if (entry.conditions.length > 0 || canEdit() || entry.isOwnToken) {
+                    <div class="encounter-conditions">
+                        @if (entry.conditions.length > 0) {
+                        <div class="encounter-condition-chip-list">
+                            @for (condition of entry.conditions; track condition.name) {
+                            <span class="encounter-condition-chip">
+                                {{ condition.name }}
+                                @if (canEdit() || entry.isOwnToken) {
+                                <input type="number" class="encounter-condition-chip-rounds" [value]="condition.remainingRounds ?? ''" placeholder="R" min="1" (change)="updateEncounterConditionRemainingRounds(entry.token.id, condition.name, $any($event.target).value)"
+                                    aria-label="Rounds remaining for {{ condition.name }} on {{ entry.name }}" />
+                                } @else if (condition.remainingRounds !== null) {
+                                <em>{{ condition.remainingRounds }}r</em>
+                                }
+                                @if (canEdit() || entry.isOwnToken) {
+                                <button type="button" class="encounter-condition-remove" (click)="removeEncounterCondition(entry.token.id, condition.name)" aria-label="Remove condition">
+                                    <i class="fa-duotone fa-thin fa-xmark"></i>
+                                </button>
+                                }
+                            </span>
+                            }
+                        </div>
+                        }
+
+                        @if (canEdit() || entry.isOwnToken) {
+                        <div class="encounter-condition-editor">
+                            <app-multi-select-dropdown class="encounter-condition-select" [groups]="encounterConditionOptionGroups" [value]="encounterConditionSelectionForToken(entry.token.id)" [searchable]="true" placeholder="Conditions"
+                                (changed)="updateEncounterTokenConditionsSelection(entry.token.id, $event)"></app-multi-select-dropdown>
+                        </div>
+                        }
+                    </div>
+                    }
+
                     @if (canEdit() && !entry.isCharacter) {
                     <button type="button" class="encounter-visibility-btn ghost-button compact-action" (click)="toggleTokenEncounterHidden(entry.token.id)" [title]="entry.isHiddenFromPlayers ? 'Reveal to players' : 'Hide from players'">
                         <i class="fa-duotone fa-thin" [class.fa-eye-slash]="entry.isHiddenFromPlayers" [class.fa-eye]="!entry.isHiddenFromPlayers"></i>

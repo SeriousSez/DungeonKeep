@@ -1212,7 +1212,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
                     token.EncounterHidden == true,
                     NormalizeMapTokenStat(token.CurrentHp),
                     NormalizeMapTokenStat(token.MaxHp),
-                    NormalizeMapTokenStat(token.ArmorClass)))
+                    NormalizeMapTokenStat(token.ArmorClass),
+                    NormalizeMapTokenConditions(token.Conditions)))
                 .ToList(),
             (map.Decorations ?? [])
                 .Select(decoration => new CampaignMapDecorationDto(
@@ -1745,6 +1746,17 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         }
 
         return Math.Max(0, value.Value);
+    }
+
+    private static IReadOnlyList<CampaignMapTokenConditionDto> NormalizeMapTokenConditions(IReadOnlyList<CampaignMapTokenConditionDto>? conditions)
+    {
+        return (conditions ?? [])
+            .Where(condition => !string.IsNullOrWhiteSpace(condition.Name))
+            .Select(condition => new CampaignMapTokenConditionDto(
+                condition.Name.Trim(),
+                condition.RemainingRounds is > 0 ? condition.RemainingRounds : null))
+            .DistinctBy(condition => condition.Name)
+            .ToList();
     }
 
     private static double NormalizeMapGridCount(double value, double fallback)

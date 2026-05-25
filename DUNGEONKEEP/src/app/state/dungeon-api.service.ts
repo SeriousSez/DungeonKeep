@@ -242,6 +242,12 @@ export interface ApiCampaignMapTokenDto {
     currentHp?: number | null;
     maxHp?: number | null;
     armorClass?: number | null;
+    conditions?: ApiCampaignMapTokenConditionDto[] | null;
+}
+
+export interface ApiCampaignMapTokenConditionDto {
+    name: string;
+    remainingRounds?: number | null;
 }
 
 export interface ApiCampaignMapTokenMovedDto {

@@ -1678,7 +1678,8 @@ public sealed class CampaignService(
                 token.EncounterHidden == true,
                 NormalizeMapTokenStat(token.CurrentHp),
                 NormalizeMapTokenStat(token.MaxHp),
-                NormalizeMapTokenStat(token.ArmorClass)))
+                NormalizeMapTokenStat(token.ArmorClass),
+                NormalizeMapTokenConditions(token.Conditions)))
             .ToList();
 
         var normalizedDecorations = (map.Decorations ?? [])
@@ -2276,6 +2277,17 @@ public sealed class CampaignService(
         }
 
         return Math.Max(0, value.Value);
+    }
+
+    private static IReadOnlyList<CampaignMapTokenConditionDto> NormalizeMapTokenConditions(IReadOnlyList<CampaignMapTokenConditionDto>? conditions)
+    {
+        return (conditions ?? [])
+            .Where(condition => !string.IsNullOrWhiteSpace(condition.Name))
+            .Select(condition => new CampaignMapTokenConditionDto(
+                condition.Name.Trim(),
+                condition.RemainingRounds is > 0 ? condition.RemainingRounds : null))
+            .DistinctBy(condition => condition.Name)
+            .ToList();
     }
 
     private static long NormalizeMapVisionRevision(long value)

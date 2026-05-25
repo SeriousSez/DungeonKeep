@@ -4,7 +4,7 @@ import { Injectable, computed, effect, inject, signal } from '@angular/core';
 
 import { CampaignNpc } from '../models/campaign-npc.models';
 import { raceMap } from '../data/races';
-import { AbilityScores, Campaign, CampaignDraft, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecorationType, CampaignMapIconType, CampaignMapLabelStyle, CampaignMapLabelTone, CampaignMapToken, CampaignThreadVisibility, CampaignWorldNoteCategory, Character, CharacterDraft, CharacterStatus, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS, SkillProficiencies, ThreatLevel } from '../models/dungeon.models';
+import { AbilityScores, Campaign, CampaignDraft, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecorationType, CampaignMapIconType, CampaignMapLabelStyle, CampaignMapLabelTone, CampaignMapToken, CampaignMapTokenCondition, CampaignThreadVisibility, CampaignWorldNoteCategory, Character, CharacterDraft, CharacterStatus, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS, SkillProficiencies, ThreatLevel } from '../models/dungeon.models';
 import { ApiCampaignDto, ApiCampaignMapBoardDto, ApiCampaignMapDecorationDto, ApiCampaignMapDto, ApiCampaignMapLabelDto, ApiCampaignMapLabelStyleDto, ApiCampaignMapLibraryDto, ApiCampaignMapTokenDto, ApiCampaignMapTokenMovedDto, ApiCampaignMapVisionMemoryDto, ApiCampaignMapVisionUpdatedDto, ApiCampaignNpcDto, ApiCampaignSummaryDto, ApiCampaignWorldNoteDto, ApiCharacterDto, DungeonApiService, UserLibrariesDto } from './dungeon-api.service';
 import { SessionService } from './session.service';
 
@@ -359,6 +359,7 @@ export class DungeonStoreService {
 
     applyCampaignMapTokenMoved(event: ApiCampaignMapTokenMovedDto): void {
         const mappedToken = this.mapCampaignTokenFromApi(event.token);
+        const tokenPatch = event.token;
         const requestKey = this.tokenMoveRequestKey(event.campaignId, event.mapId, mappedToken.id);
         this.latestKnownTokenMoveRevision.set(
             requestKey,
@@ -373,7 +374,7 @@ export class DungeonStoreService {
             const maps = campaign.maps.map((map) => map.id === event.mapId
                 ? {
                     ...map,
-                    tokens: this.upsertMapToken(map.tokens, mappedToken)
+                    tokens: this.upsertMapToken(map.tokens, mappedToken, tokenPatch)
                 }
                 : map);
             const shouldUpdatePrimaryMap = campaign.maps.length === 0 || campaign.activeMapId === event.mapId;
@@ -383,7 +384,7 @@ export class DungeonStoreService {
                 map: shouldUpdatePrimaryMap
                     ? {
                         ...campaign.map,
-                        tokens: this.upsertMapToken(campaign.map.tokens, mappedToken)
+                        tokens: this.upsertMapToken(campaign.map.tokens, mappedToken, tokenPatch)
                     }
                     : campaign.map,
                 maps
@@ -1637,7 +1638,22 @@ export class DungeonStoreService {
             note: token.note?.trim() || '',
             assignedUserId: token.assignedUserId?.trim() || null,
             assignedCharacterId: token.assignedCharacterId?.trim() || null,
-            moveRevision: this.normalizeMapTokenMoveRevision(token.moveRevision)
+            moveRevision: this.normalizeMapTokenMoveRevision(token.moveRevision),
+            worldNoteId: token.worldNoteId?.trim() || null,
+            initiative: typeof token.initiative === 'number' && Number.isFinite(token.initiative)
+                ? Math.trunc(token.initiative)
+                : null,
+            encounterHidden: token.encounterHidden === true,
+            currentHp: typeof token.currentHp === 'number' && Number.isFinite(token.currentHp)
+                ? Math.max(0, Math.trunc(token.currentHp))
+                : null,
+            maxHp: typeof token.maxHp === 'number' && Number.isFinite(token.maxHp)
+                ? Math.max(0, Math.trunc(token.maxHp))
+                : null,
+            armorClass: typeof token.armorClass === 'number' && Number.isFinite(token.armorClass)
+                ? Math.max(0, Math.trunc(token.armorClass))
+                : null,
+            conditions: this.normalizeMapTokenConditions(token.conditions)
         };
     }
 
@@ -1661,7 +1677,7 @@ export class DungeonStoreService {
         };
     }
 
-    private upsertMapToken(tokens: CampaignMapToken[], updatedToken: CampaignMapToken): CampaignMapToken[] {
+    private upsertMapToken(tokens: CampaignMapToken[], updatedToken: CampaignMapToken, sourceToken?: ApiCampaignMapTokenDto): CampaignMapToken[] {
         const existingIndex = tokens.findIndex((token) => token.id === updatedToken.id);
         if (existingIndex === -1) {
             return [...tokens, updatedToken];
@@ -1672,8 +1688,24 @@ export class DungeonStoreService {
             return tokens;
         }
 
+        const hasInitiative = sourceToken ? Object.prototype.hasOwnProperty.call(sourceToken, 'initiative') : true;
+        const hasEncounterHidden = sourceToken ? Object.prototype.hasOwnProperty.call(sourceToken, 'encounterHidden') : true;
+        const hasCurrentHp = sourceToken ? Object.prototype.hasOwnProperty.call(sourceToken, 'currentHp') : true;
+        const hasMaxHp = sourceToken ? Object.prototype.hasOwnProperty.call(sourceToken, 'maxHp') : true;
+        const hasArmorClass = sourceToken ? Object.prototype.hasOwnProperty.call(sourceToken, 'armorClass') : true;
+        const hasConditions = sourceToken ? Object.prototype.hasOwnProperty.call(sourceToken, 'conditions') : true;
+
         const next = [...tokens];
-        next[existingIndex] = updatedToken;
+        next[existingIndex] = {
+            ...existingToken,
+            ...updatedToken,
+            initiative: hasInitiative ? updatedToken.initiative : existingToken.initiative,
+            encounterHidden: hasEncounterHidden ? updatedToken.encounterHidden : existingToken.encounterHidden,
+            currentHp: hasCurrentHp ? updatedToken.currentHp : existingToken.currentHp,
+            maxHp: hasMaxHp ? updatedToken.maxHp : existingToken.maxHp,
+            armorClass: hasArmorClass ? updatedToken.armorClass : existingToken.armorClass,
+            conditions: hasConditions ? updatedToken.conditions : existingToken.conditions
+        };
         return next;
     }
 
@@ -1775,7 +1807,8 @@ export class DungeonStoreService {
                     : null,
                 armorClass: typeof token.armorClass === 'number' && Number.isFinite(token.armorClass)
                     ? Math.max(0, Math.trunc(token.armorClass))
-                    : null
+                    : null,
+                conditions: this.normalizeMapTokenConditions(token.conditions)
             })),
             decorations: (map?.decorations ?? []).map((decoration) => ({
                 id: decoration.id,
@@ -1925,7 +1958,11 @@ export class DungeonStoreService {
                     : null,
                 armorClass: typeof token.armorClass === 'number' && Number.isFinite(token.armorClass)
                     ? Math.max(0, Math.trunc(token.armorClass))
-                    : null
+                    : null,
+                conditions: this.normalizeMapTokenConditions(token.conditions).map((condition) => ({
+                    name: condition.name,
+                    remainingRounds: condition.remainingRounds ?? null
+                }))
             })),
             decorations: map.decorations.map((decoration) => ({
                 id: decoration.id,
@@ -2695,6 +2732,26 @@ export class DungeonStoreService {
         }
 
         return Math.max(0, Math.trunc(value));
+    }
+
+    private normalizeMapTokenConditions(value: { name?: string | null; remainingRounds?: number | null }[] | null | undefined): CampaignMapTokenCondition[] {
+        return (value ?? [])
+            .map((condition) => {
+                const name = typeof condition?.name === 'string' ? condition.name.trim() : '';
+                if (!name) {
+                    return null;
+                }
+
+                const remainingRounds = typeof condition.remainingRounds === 'number' && Number.isFinite(condition.remainingRounds)
+                    ? Math.max(1, Math.trunc(condition.remainingRounds))
+                    : null;
+
+                return {
+                    name,
+                    remainingRounds
+                };
+            })
+            .filter((condition): condition is { name: string; remainingRounds: number | null } => condition !== null);
     }
 
     private normalizeMapVisionRevision(value: number | undefined): number {

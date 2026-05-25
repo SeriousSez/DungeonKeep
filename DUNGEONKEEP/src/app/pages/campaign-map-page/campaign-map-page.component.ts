@@ -6,12 +6,13 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MapArtBattlemapLocale, MapArtGenerationModalComponent, MapArtGenerationOptions, MapArtLighting } from '../../components/map-art-generation-modal/map-art-generation-modal.component';
 import { TokenImageCropModalComponent } from '../../components/token-image-crop-modal/token-image-crop-modal.component';
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
+import { MultiSelectDropdownComponent, MultiSelectOptionGroup } from '../../components/multi-select-dropdown/multi-select-dropdown.component';
 import { mergeCampaignNpcSources } from '../../data/campaign-npc.helpers';
 import { loadCampaignNpcDrafts } from '../../data/campaign-npc.storage';
 import { monsterCatalog } from '../../data/monster-catalog.generated';
 import { sanitizeCustomMonster } from '../../data/monster-library.helpers';
 import { CampaignNpc } from '../../models/campaign-npc.models';
-import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelFontFamily, CampaignMapLabelTone, CampaignMapPoint, CampaignMapStroke, CampaignMapToken, CampaignMapWall, CampaignTone, Character, CharacterDraft, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS } from '../../models/dungeon.models';
+import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelFontFamily, CampaignMapLabelTone, CampaignMapPoint, CampaignMapStroke, CampaignMapToken, CampaignMapTokenCondition, CampaignMapWall, CampaignTone, Character, CharacterDraft, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS } from '../../models/dungeon.models';
 import { CustomMonster, MonsterCatalogEntry } from '../../models/monster-reference.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { CampaignMapTokenMovedEvent, CampaignMapVisionUpdatedEvent, CampaignRealtimeService } from '../../state/campaign-realtime.service';
@@ -45,6 +46,7 @@ interface EncounterEntry {
     maxHp: number | null;
     isHiddenFromPlayers: boolean;
     isOwnToken: boolean;
+    conditions: CampaignMapTokenCondition[];
     sortName: string;
 }
 
@@ -310,10 +312,28 @@ const MAP_LABELS_BY_BACKGROUND: Record<CampaignMapBackground, MapLabelCatalog> =
     }
 };
 
+const ENCOUNTER_CONDITION_OPTIONS: ReadonlyArray<string> = [
+    'Blinded',
+    'Charmed',
+    'Deafened',
+    'Exhaustion',
+    'Frightened',
+    'Grappled',
+    'Incapacitated',
+    'Invisible',
+    'Paralyzed',
+    'Petrified',
+    'Poisoned',
+    'Prone',
+    'Restrained',
+    'Stunned',
+    'Unconscious'
+];
+
 @Component({
     selector: 'app-campaign-map-page',
     standalone: true,
-    imports: [CommonModule, RouterLink, DropdownComponent, ConfirmModalComponent, MapArtGenerationModalComponent, TokenImageCropModalComponent],
+    imports: [CommonModule, RouterLink, DropdownComponent, MultiSelectDropdownComponent, ConfirmModalComponent, MapArtGenerationModalComponent, TokenImageCropModalComponent],
     templateUrl: './campaign-map-page.component.html',
     styleUrl: './campaign-map-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -413,6 +433,12 @@ export class CampaignMapPageComponent {
     readonly encounterPopoverOpen = signal(false);
     readonly encounterPopoverPosition = signal(this.readStoredEncounterPopoverPosition());
     readonly encounterPopoverDragging = signal(false);
+    readonly encounterConditionOptionGroups: MultiSelectOptionGroup[] = [
+        {
+            label: 'Conditions',
+            options: [...ENCOUNTER_CONDITION_OPTIONS]
+        }
+    ];
     readonly leftToolbarOpen = signal(true);
     readonly hasUnsavedChanges = signal(false);
     readonly confirmAction = signal<MapConfirmAction>(null);
@@ -502,6 +528,7 @@ export class CampaignMapPageComponent {
                 maxHp,
                 isHiddenFromPlayers: isHidden,
                 isOwnToken,
+                conditions: this.normalizeEncounterTokenConditions(token.conditions),
                 sortName: token.name.trim().toLocaleLowerCase()
             });
         }
@@ -1946,6 +1973,13 @@ export class CampaignMapPageComponent {
             if (!map.encounterStartedAtUtc) {
                 map.encounterStartedAtUtc = new Date().toISOString();
             }
+
+            if (wrapped) {
+                map.tokens = map.tokens.map((token) => ({
+                    ...token,
+                    conditions: this.decrementTokenConditionRounds(token.conditions)
+                }));
+            }
         });
 
         this.markDirty('Turn advanced.');
@@ -2070,6 +2104,85 @@ export class CampaignMapPageComponent {
         this.markDirty('AC updated.');
     }
 
+    updateEncounterTokenConditionsSelection(tokenId: string, selectedConditionNames: string[]): void {
+        if (!this.canEdit() && !this.isOwnTokenById(tokenId)) {
+            return;
+        }
+
+        const normalizedSelectedNames = selectedConditionNames
+            .map((name) => name.trim())
+            .filter((name) => name.length > 0);
+
+        this.mutateMap((map) => {
+            map.tokens = map.tokens.map((token) => {
+                if (token.id !== tokenId) {
+                    return token;
+                }
+
+                const existingConditions = this.normalizeEncounterTokenConditions(token.conditions);
+                const existingByName = new Map(existingConditions.map((condition) => [condition.name, condition]));
+
+                return {
+                    ...token,
+                    conditions: normalizedSelectedNames.map((conditionName) => ({
+                        name: conditionName,
+                        remainingRounds: existingByName.get(conditionName)?.remainingRounds ?? null
+                    }))
+                };
+            });
+        });
+
+        this.markDirty('Condition updated.');
+    }
+
+    updateEncounterConditionRemainingRounds(tokenId: string, conditionName: string, value: string): void {
+        if (!this.canEdit() && !this.isOwnTokenById(tokenId)) {
+            return;
+        }
+
+        const nextRounds = this.parseEncounterConditionRoundsInput(value);
+
+        this.mutateMap((map) => {
+            map.tokens = map.tokens.map((token) => {
+                if (token.id !== tokenId) {
+                    return token;
+                }
+
+                return {
+                    ...token,
+                    conditions: this.normalizeEncounterTokenConditions(token.conditions)
+                        .map((condition) => condition.name === conditionName
+                            ? { ...condition, remainingRounds: nextRounds }
+                            : condition)
+                };
+            });
+        });
+
+        this.markDirty('Condition rounds updated.');
+    }
+
+    removeEncounterCondition(tokenId: string, conditionName: string): void {
+        if (!this.canEdit() && !this.isOwnTokenById(tokenId)) {
+            return;
+        }
+
+        this.mutateMap((map) => {
+            map.tokens = map.tokens.map((token) => {
+                if (token.id !== tokenId) {
+                    return token;
+                }
+
+                const existingConditions = this.normalizeEncounterTokenConditions(token.conditions);
+                return {
+                    ...token,
+                    conditions: existingConditions.filter((condition) => condition.name !== conditionName)
+                };
+            });
+        });
+
+        this.markDirty('Condition removed.');
+    }
+
     private parseNumericInput(value: string): number | null {
         if (value.trim() === '') {
             return null;
@@ -2077,6 +2190,56 @@ export class CampaignMapPageComponent {
 
         const parsed = parseInt(value, 10);
         return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    private parseEncounterConditionRoundsInput(value: string): number | null {
+        if (value.trim() === '') {
+            return null;
+        }
+
+        const parsed = parseInt(value, 10);
+        if (!Number.isFinite(parsed)) {
+            return null;
+        }
+
+        return Math.max(1, parsed);
+    }
+
+    encounterConditionSelectionForToken(tokenId: string): string[] {
+        const token = this.workingMap().tokens.find((entry) => entry.id === tokenId) ?? null;
+        if (!token) {
+            return [];
+        }
+
+        return this.normalizeEncounterTokenConditions(token.conditions).map((condition) => condition.name);
+    }
+
+    private normalizeEncounterTokenConditions(value: CampaignMapToken['conditions']): CampaignMapTokenCondition[] {
+        return (value ?? [])
+            .filter((condition) => typeof condition.name === 'string' && condition.name.trim().length > 0)
+            .map((condition) => ({
+                name: condition.name.trim(),
+                remainingRounds: typeof condition.remainingRounds === 'number' && Number.isFinite(condition.remainingRounds)
+                    ? Math.max(1, Math.trunc(condition.remainingRounds))
+                    : null
+            }));
+    }
+
+    private decrementTokenConditionRounds(value: CampaignMapToken['conditions']): CampaignMapTokenCondition[] {
+        return this.normalizeEncounterTokenConditions(value)
+            .map((condition) => {
+                if (condition.remainingRounds == null) {
+                    return condition;
+                }
+
+                const currentRounds = condition.remainingRounds;
+
+                return {
+                    ...condition,
+                    remainingRounds: currentRounds - 1
+                };
+            })
+            .filter((condition) => condition.remainingRounds == null || condition.remainingRounds > 0);
     }
 
     private syncCharacterHpFromEncounterToken(tokenId: string, nextCurrentHp: number | null): void {
@@ -7947,12 +8110,16 @@ export class CampaignMapPageComponent {
             return [...tokens, incomingToken];
         }
 
-        if ((tokens[existingIndex].moveRevision ?? 0) > incomingToken.moveRevision) {
+        const existingToken = tokens[existingIndex];
+        if ((existingToken.moveRevision ?? 0) > incomingToken.moveRevision) {
             return tokens;
         }
 
         const next = [...tokens];
-        next[existingIndex] = incomingToken;
+        next[existingIndex] = {
+            ...existingToken,
+            ...incomingToken
+        };
         return next;
     }
 
