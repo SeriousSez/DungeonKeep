@@ -27,7 +27,7 @@
         } @else {
         <div class="step-rail" role="tablist" aria-label="Character Builder Steps">
             @for (step of standardSteps; track step.key) {
-            <a class="step-pill" [class.active]="activeStandardStep() === step.key" [attr.aria-selected]="activeStandardStep() === step.key" [routerLink]="getBuilderStepRoute(step.key)" [state]="getBuilderRouteState()" queryParamsHandling="preserve" [attr.title]="step.label">
+            <a class="step-pill" [class.active]="activeStandardStep() === step.key" [attr.aria-selected]="activeStandardStep() === step.key" [routerLink]="getBuilderStepRoute(step.key)" [state]="getBuilderRouteState()" queryParamsHandling="preserve" [appTooltip]="step.label">
                 <span class="step-pill-desktop">{{ step.label }}</span>
                 <span class="step-pill-mobile">{{ step.shortLabel || step.label }}</span>
             </a>
@@ -175,7 +175,7 @@
                     <label [for]="'level-' + className">Level:</label>
                     <app-dropdown [id]="'level-' + className" [value]="multiclassList()[className]" [options]="levelOptions" [minWidth]="132" size="compact" (changed)="onClassLevelChanged(className, $event)"></app-dropdown>
                 </div>
-                <button type="button" class="btn-remove-class" (click)="removeClass(className)" title="Remove class">✕</button>
+                <button type="button" class="btn-remove-class" (click)="removeClass(className)" appTooltip="Remove class">✕</button>
             </div>
 
             <div class="class-subtabs" role="tablist" [attr.aria-label]="className + ' class section tabs'">
@@ -535,8 +535,8 @@
                                                 <span class="spell-name-text">
                                                     <span class="spell-name-main">
                                                         <strong>{{ spell.name }}</strong>
-                                                        @if (getSpellDetail(spell.name)?.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}
-                                                        @if (getSpellDetail(spell.name)?.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}
+                                                        @if (getSpellDetail(spell.name)?.concentration) {<span class="spell-icon spell-icon--c" appTooltip="Concentration">C</span>}
+                                                        @if (getSpellDetail(spell.name)?.ritual) {<span class="spell-icon spell-icon--r" appTooltip="Ritual">R</span>}
                                                     </span>
                                                     <span>{{ getSpellLevelLabel(spell.level) }}</span>
                                                 </span>
@@ -627,8 +627,8 @@
                                                 <span class="spell-name-text">
                                                     <span class="spell-name-main">
                                                         <strong>{{ spell.name }}</strong>
-                                                        @if (getSpellDetail(spell.name)?.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}
-                                                        @if (getSpellDetail(spell.name)?.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}
+                                                        @if (getSpellDetail(spell.name)?.concentration) {<span class="spell-icon spell-icon--c" appTooltip="Concentration">C</span>}
+                                                        @if (getSpellDetail(spell.name)?.ritual) {<span class="spell-icon spell-icon--r" appTooltip="Ritual">R</span>}
                                                     </span>
                                                     <span>{{ getSpellLevelLabel(spell.level) }}</span>
                                                 </span>
@@ -727,8 +727,8 @@
                                                 <span class="spell-name-text">
                                                     <span class="spell-name-main">
                                                         <strong>{{ spell.name }}</strong>
-                                                        @if (getSpellDetail(spell.name)?.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}
-                                                        @if (getSpellDetail(spell.name)?.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}
+                                                        @if (getSpellDetail(spell.name)?.concentration) {<span class="spell-icon spell-icon--c" appTooltip="Concentration">C</span>}
+                                                        @if (getSpellDetail(spell.name)?.ritual) {<span class="spell-icon spell-icon--r" appTooltip="Ritual">R</span>}
                                                     </span>
                                                     <span>{{ getSpellLevelLabel(spell.level) }}</span>
                                                 </span>
@@ -742,7 +742,7 @@
                                                 {{ isPreparedSpellLimitReached(className, multiclassList()[className]) ? 'Max' : 'Prepare' }}
                                             </button>
                                             }
-                                            <button type="button" class="spell-action-btn spell-action-btn--remove" (click)="removeFromSpellbook(className, spell.name)" title="Remove from spellbook">
+                                            <button type="button" class="spell-action-btn spell-action-btn--remove" (click)="removeFromSpellbook(className, spell.name)" appTooltip="Remove from spellbook">
                                                 Remove
                                             </button>
                                         </div>
@@ -825,8 +825,8 @@
                                                 <span class="spell-name-text">
                                                     <span class="spell-name-main">
                                                         <strong>{{ spell.name }}</strong>
-                                                        @if (getSpellDetail(spell.name)?.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}
-                                                        @if (getSpellDetail(spell.name)?.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}
+                                                        @if (getSpellDetail(spell.name)?.concentration) {<span class="spell-icon spell-icon--c" appTooltip="Concentration">C</span>}
+                                                        @if (getSpellDetail(spell.name)?.ritual) {<span class="spell-icon spell-icon--r" appTooltip="Ritual">R</span>}
                                                     </span>
                                                     <span>{{ getSpellLevelLabel(spell.level) }}</span>
                                                 </span>
@@ -921,8 +921,8 @@
                                                 <span class="spell-name-text">
                                                     <span class="spell-name-main">
                                                         <strong>{{ spell.name }}</strong>
-                                                        @if (getSpellDetail(spell.name)?.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}
-                                                        @if (getSpellDetail(spell.name)?.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}
+                                                        @if (getSpellDetail(spell.name)?.concentration) {<span class="spell-icon spell-icon--c" appTooltip="Concentration">C</span>}
+                                                        @if (getSpellDetail(spell.name)?.ritual) {<span class="spell-icon spell-icon--r" appTooltip="Ritual">R</span>}
                                                     </span>
                                                     <span>{{ getSpellLevelLabel(spell.level) }}</span>
                                                 </span>
@@ -1009,8 +1009,8 @@
                                                 <span class="spell-name-text">
                                                     <span class="spell-name-main">
                                                         <strong>{{ spell.name }}</strong>
-                                                        @if (getSpellDetail(spell.name)?.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}
-                                                        @if (getSpellDetail(spell.name)?.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}
+                                                        @if (getSpellDetail(spell.name)?.concentration) {<span class="spell-icon spell-icon--c" appTooltip="Concentration">C</span>}
+                                                        @if (getSpellDetail(spell.name)?.ritual) {<span class="spell-icon spell-icon--r" appTooltip="Ritual">R</span>}
                                                     </span>
                                                     <span>{{ getSpellLevelLabel(spell.level) }}</span>
                                                 </span>

@@ -1,5 +1,5 @@
 <div class="class-sort-popover">
-    <button type="button" class="class-sort-trigger" [attr.aria-label]="ariaLabel()" [attr.title]="menuLabel()" [attr.aria-expanded]="menuOpen()" (click)="toggleMenu()">
+    <button type="button" class="class-sort-trigger" [attr.aria-label]="ariaLabel()" [appTooltip]="menuLabel()" [attr.aria-expanded]="menuOpen()" (click)="toggleMenu()">
         <i class="fa-duotone fa-thin fa-bars-filter" aria-hidden="true"></i>
     </button>
     @if (menuOpen()) {

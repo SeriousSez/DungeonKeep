@@ -67,16 +67,16 @@
         <a class="spell-card" [routerLink]="['/rules/spells', spell.slug]">
             <div class="card-top">
                 <span class="level-badge">{{ levelLabel(spell.level) }}</span>
-                <span class="school-dot" [class]="schoolColor(spell.school)" [title]="spell.school"></span>
+                <span class="school-dot" [class]="schoolColor(spell.school)" [appTooltip]="spell.school"></span>
             </div>
             <h2 class="spell-name">{{ spell.name }}</h2>
             <p class="spell-school">{{ spell.school }}</p>
             <div class="spell-meta">
-                <span class="meta-item" title="Casting time">
+                <span class="meta-item" appTooltip="Casting time">
                     <i class="fa-duotone fa-thin fa-clock"></i>
                     {{ spell.castingTime }}
                 </span>
-                <span class="meta-item" title="Range">
+                <span class="meta-item" appTooltip="Range">
                     <i class="fa-duotone fa-thin fa-bullseye-arrow"></i>
                     {{ spell.range }}
                 </span>

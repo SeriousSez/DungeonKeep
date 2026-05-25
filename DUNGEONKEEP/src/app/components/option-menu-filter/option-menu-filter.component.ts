@@ -1,12 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, HostListener, inject, input, output, signal } from '@angular/core';
+import { TooltipDirective } from '../../shared/tooltip.directive';
 
 import type { DropdownOption } from '../dropdown/dropdown.component';
 
 @Component({
     selector: 'app-option-menu-filter',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, TooltipDirective],
     templateUrl: './option-menu-filter.component.html',
     styleUrl: './option-menu-filter.component.scss'
 })

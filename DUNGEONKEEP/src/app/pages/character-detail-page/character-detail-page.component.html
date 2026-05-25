@@ -69,7 +69,7 @@
                             }
                         </div>
                         @if (char.canEdit) {
-                        <button type="button" class="portrait-edit-trigger" (click)="openPortraitModal()" aria-label="Edit portrait" title="Edit portrait">
+                        <button type="button" class="portrait-edit-trigger" (click)="openPortraitModal()" aria-label="Edit portrait" appTooltip="Edit portrait">
                             <i class="fa-duotone fa-thin fa-pen-to-square"></i>
                         </button>
                         }
@@ -102,7 +102,7 @@
                             <button type="button" class="header-rest-button" [class.is-active]="activeRestPopup() === 'short'" [disabled]="!char.canEdit || isApplyingRest()" (click)="activeRestPopup() === 'short' ? closeRestPopup() : openShortRestPopup()">Short Rest</button>
                             <button type="button" class="header-rest-button" [class.is-active]="activeRestPopup() === 'long'" [disabled]="!char.canEdit || isApplyingRest()" (click)="activeRestPopup() === 'long' ? closeRestPopup() : openLongRestPopup()">Long Rest</button>
                         </div>
-                        <a class="edit-character-btn" [routerLink]="['/characters', char.id, 'builder', 'class']" aria-label="Open character builder" title="Open Character Builder">
+                        <a class="edit-character-btn" [routerLink]="['/characters', char.id, 'builder', 'class']" aria-label="Open character builder" appTooltip="Open Character Builder">
                             <i class="fa-duotone fa-thin fa-scroll"></i>
                         </a>
                     </div>
@@ -382,7 +382,7 @@
                 @for (skill of skillRows(); track skill.key) {
                 <div class="skill-row detail-trigger-row" role="button" tabindex="0" [class.proficient]="skill.proficient" [class.expertise]="skill.expertise" [class.disadvantaged]="skill.hasDisadvantage" (click)="openSkillDetail(skill)" (keydown.enter)="openSkillDetail(skill)"
                     (keydown.space)="openSkillDetail(skill)">
-                    <span class="skill-prof" [class.skill-prof--expertise]="skill.expertise" [attr.title]="skill.expertise ? 'Expertise' : (skill.proficient ? 'Proficient' : 'Not proficient')">@if (skill.expertise) { ◉ } @else if (skill.proficient) { ● } @else { ○ }</span>
+                    <span class="skill-prof" [class.skill-prof--expertise]="skill.expertise" [appTooltip]="skill.expertise ? 'Expertise' : (skill.proficient ? 'Proficient' : 'Not proficient')">@if (skill.expertise) { ◉ } @else if (skill.proficient) { ● } @else { ○ }</span>
                     <span class="skill-name">{{ skill.name }}</span>
                     @if (skill.hasDisadvantage) {
                     <span class="skill-flag">DIS</span>
@@ -405,7 +405,7 @@
                             @for (section of customDefenseSections(); track section.type) {
                             <li>
                                 <i class="fa-duotone fa-thin {{ defenseTypeIcon(section.type) }} defense-summary-icon" [class.is-resistance]="section.type === 'resistance'" [class.is-immunity]="section.type === 'immunity'" [class.is-vulnerability]="section.type === 'vulnerability'"
-                                    [class.is-condition]="section.type === 'condition-immunity'" [attr.title]="defenseTypeLabel(section.type)" [attr.aria-label]="defenseTypeLabel(section.type)"></i>
+                                    [class.is-condition]="section.type === 'condition-immunity'" [appTooltip]="defenseTypeLabel(section.type)" [attr.aria-label]="defenseTypeLabel(section.type)"></i>
                                 <span>{{ section.summaryText }}</span>
                             </li>
                             }
@@ -467,7 +467,7 @@
                             </span>
                             <span>{{ row.range }}</span>
                             <span><span class="hitdc-badge">{{ row.hitDcLabel }}</span></span>
-                            <span class="combat-damage-cell">{{ row.damage }}@if (row.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}</span>
+                            <span class="combat-damage-cell">{{ row.damage }}@if (row.concentration) {<span class="spell-icon spell-icon--c" appTooltip="Concentration">C</span>}</span>
                             <span class="combat-notes">{{ row.notes }}</span>
                         </div>
                         }
@@ -499,7 +499,7 @@
                         @for (row of actionSpellRows(); track row.name) {
                         <span class="spell-chip detail-trigger" role="button" tabindex="0" (click)="openSpellDetail(row)" (keydown.enter)="openSpellDetail(row)" (keydown.space)="openSpellDetail(row)">
                             <span class="spell-chip-name">{{ row.name }}</span>
-                            <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}</span>
+                            <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" appTooltip="Concentration">C</span>}</span>
                         </span>
                         }
                     </div>
@@ -529,7 +529,7 @@
                         @for (row of bonusActionSpellRows(); track row.name) {
                         <span class="spell-chip detail-trigger" role="button" tabindex="0" (click)="openSpellDetail(row)" (keydown.enter)="openSpellDetail(row)" (keydown.space)="openSpellDetail(row)">
                             <span class="spell-chip-name">{{ row.name }}</span>
-                            <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}</span>
+                            <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" appTooltip="Concentration">C</span>}</span>
                         </span>
                         }
                     </div>
@@ -559,7 +559,7 @@
                         @for (row of reactionSpellRows(); track row.name) {
                         <span class="spell-chip detail-trigger" role="button" tabindex="0" (click)="openSpellDetail(row)" (keydown.enter)="openSpellDetail(row)" (keydown.space)="openSpellDetail(row)">
                             <span class="spell-chip-name">{{ row.name }}</span>
-                            <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}</span>
+                            <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" appTooltip="Concentration">C</span>}</span>
                         </span>
                         }
                     </div>
@@ -618,8 +618,9 @@
                         @for (row of otherSpellRows(); track row.name) {
                         <span class="spell-chip detail-trigger" role="button" tabindex="0" (click)="openSpellDetail(row)" (keydown.enter)="openSpellDetail(row)" (keydown.space)="openSpellDetail(row)">
                             <span class="spell-chip-name">{{ row.name }}</span>
-                            <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (row.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}@if (row.ritual && isSpellPrepared(row.name))
-                                {<span class="spell-icon spell-icon--p" title="Prepared">P</span>}</span>
+                            <span class="spell-chip-meta">({{ row.subtitle }})@if (row.concentration) {<span class="spell-icon spell-icon--c" appTooltip="Concentration">C</span>}@if (row.ritual) {<span class="spell-icon spell-icon--r" appTooltip="Ritual">R</span>}@if (row.ritual &&
+                                isSpellPrepared(row.name))
+                                {<span class="spell-icon spell-icon--p" appTooltip="Prepared">P</span>}</span>
                         </span>
                         }
                     </div>
@@ -659,8 +660,8 @@
                         </div>
                         @for (spellRow of spellCantrips(); track spellRow.name) {
                         <div class="actions-row detail-trigger-row" (click)="openSpellDetail(spellRow)">
-                            <span class="spell-name-cell">{{ spellRow.name }}@if (spellRow.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (spellRow.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}@if (spellRow.ritual &&
-                                isSpellPrepared(spellRow.name)) {<span class="spell-icon spell-icon--p" title="Prepared">P</span>}</span>
+                            <span class="spell-name-cell">{{ spellRow.name }}@if (spellRow.concentration) {<span class="spell-icon spell-icon--c" appTooltip="Concentration">C</span>}@if (spellRow.ritual) {<span class="spell-icon spell-icon--r" appTooltip="Ritual">R</span>}@if (spellRow.ritual &&
+                                isSpellPrepared(spellRow.name)) {<span class="spell-icon spell-icon--p" appTooltip="Prepared">P</span>}</span>
                             <span>{{ spellRow.castingTime }}</span>
                             <span>{{ spellRow.range }}</span>
                             <span>{{ spellRow.hitDcLabel }}</span>
@@ -704,8 +705,8 @@
                         </div>
                         @for (spellRow of group.spells; track spellRow.name) {
                         <div class="actions-row detail-trigger-row" (click)="openSpellDetail(spellRow)">
-                            <span class="spell-name-cell">{{ spellRow.name }}@if (spellRow.concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}@if (spellRow.ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}@if (spellRow.ritual &&
-                                isSpellPrepared(spellRow.name)) {<span class="spell-icon spell-icon--p" title="Prepared">P</span>}</span>
+                            <span class="spell-name-cell">{{ spellRow.name }}@if (spellRow.concentration) {<span class="spell-icon spell-icon--c" appTooltip="Concentration">C</span>}@if (spellRow.ritual) {<span class="spell-icon spell-icon--r" appTooltip="Ritual">R</span>}@if (spellRow.ritual &&
+                                isSpellPrepared(spellRow.name)) {<span class="spell-icon spell-icon--p" appTooltip="Prepared">P</span>}</span>
                             <span>{{ spellRow.castingTime }}</span>
                             <span>{{ spellRow.range }}</span>
                             <span>{{ spellRow.hitDcLabel }}</span>
@@ -1405,9 +1406,9 @@
                         <span class="spell-popup-name-text">
                             <span class="spell-popup-name-main">
                                 <strong>{{ spell.name }}</strong>
-                                @if (getSpellManagerSpellDetail(spell.name).concentration) {<span class="spell-icon spell-icon--c" title="Concentration">C</span>}
-                                @if (getSpellManagerSpellDetail(spell.name).ritual) {<span class="spell-icon spell-icon--r" title="Ritual">R</span>}
-                                @if (getSpellManagerSpellDetail(spell.name).ritual && isSpellPrepared(spell.name)) {<span class="spell-icon spell-icon--p" title="Prepared">P</span>}
+                                @if (getSpellManagerSpellDetail(spell.name).concentration) {<span class="spell-icon spell-icon--c" appTooltip="Concentration">C</span>}
+                                @if (getSpellManagerSpellDetail(spell.name).ritual) {<span class="spell-icon spell-icon--r" appTooltip="Ritual">R</span>}
+                                @if (getSpellManagerSpellDetail(spell.name).ritual && isSpellPrepared(spell.name)) {<span class="spell-icon spell-icon--p" appTooltip="Prepared">P</span>}
                             </span>
                             <span class="spell-popup-meta">{{ spellLevelLabel(spell.level) }}</span>
                         </span>
@@ -2290,7 +2291,7 @@
                 <ul class="defense-summary-list">
                     <li>
                         <i class="fa-duotone fa-thin {{ defenseTypeIcon(section.type) }} defense-summary-icon" [class.is-resistance]="section.type === 'resistance'" [class.is-immunity]="section.type === 'immunity'" [class.is-vulnerability]="section.type === 'vulnerability'"
-                            [class.is-condition]="section.type === 'condition-immunity'" [attr.title]="defenseTypeLabel(section.type)" [attr.aria-label]="defenseTypeLabel(section.type)"></i>
+                            [class.is-condition]="section.type === 'condition-immunity'" [appTooltip]="defenseTypeLabel(section.type)" [attr.aria-label]="defenseTypeLabel(section.type)"></i>
                         <span class="defense-summary-value">{{ section.summaryText }}</span>
                         <span class="defense-summary-meta">(Custom)</span>
                     </li>

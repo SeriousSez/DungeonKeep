@@ -1272,7 +1272,7 @@ app-dropdown {
         touch-action: none;
     }
 
-    .map-token span {
+    .map-token .map-token-name {
         max-width: 160px;
         padding: 4px 8px;
         font-size: 0.72rem;
@@ -1922,7 +1922,7 @@ app-dropdown {
     font-size: clamp(0.7rem, 0.6rem + 0.35vw, 1.05rem);
 }
 
-.map-token span {
+.map-token .map-token-name {
     position: absolute;
     left: 50%;
     top: calc(100% + 15px);
@@ -1944,6 +1944,206 @@ app-dropdown {
     z-index: 1;
 }
 
+.map-token-condition-stack {
+    position: absolute;
+    left: 50%;
+    top: -6px;
+    transform: translate(-50%, -100%);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    pointer-events: auto;
+    z-index: 8;
+}
+
+.map-token-condition-badge {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid rgba(109, 40, 217, 0.48);
+    background: rgba(109, 40, 217, 0.2);
+    color: #4c1d95;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.56rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1;
+    box-shadow: 0 6px 12px rgba(39, 25, 16, 0.3);
+    text-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
+    cursor: help;
+    pointer-events: auto;
+
+    :host-context(.theme-dark) & {
+        background: rgba(167, 139, 250, 0.26);
+        color: #ddd6fe;
+        border-color: rgba(196, 181, 253, 0.62);
+        text-shadow: none;
+    }
+}
+
+.map-token-condition-badge i {
+    font-size: 0.63rem;
+    line-height: 1;
+}
+
+.map-token-condition-badge--default {
+    border-color: rgba(109, 40, 217, 0.48);
+    background: #ede9fe;
+    color: #4c1d95;
+}
+
+.map-token-condition-badge--blinded {
+    border-color: rgba(55, 65, 81, 0.55);
+    background: #e5e7eb;
+    color: #1f2937;
+}
+
+.map-token-condition-badge--charmed {
+    border-color: rgba(219, 39, 119, 0.52);
+    background: #fce7f3;
+    color: #9d174d;
+}
+
+.map-token-condition-badge--deafened {
+    border-color: rgba(20, 184, 166, 0.55);
+    background: #ccfbf1;
+    color: #0f766e;
+}
+
+.map-token-condition-badge--frightened {
+    border-color: rgba(124, 58, 237, 0.52);
+    background: #ede9fe;
+    color: #6d28d9;
+}
+
+.map-token-condition-badge--restrained {
+    border-color: rgba(161, 98, 7, 0.56);
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.map-token-condition-badge--stunned {
+    border-color: rgba(249, 115, 22, 0.56);
+    background: #ffedd5;
+    color: #c2410c;
+}
+
+.map-token-condition-badge--invisible {
+    border-color: rgba(37, 99, 235, 0.54);
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.map-token-condition-badge--petrified {
+    border-color: rgba(120, 113, 108, 0.56);
+    background: #e7e5e4;
+    color: #57534e;
+}
+
+.map-token-condition-badge--poisoned {
+    border-color: rgba(22, 163, 74, 0.54);
+    background: #dcfce7;
+    color: #166534;
+}
+
+.map-token-condition-badge--prone {
+    border-color: rgba(202, 138, 4, 0.56);
+    background: #fef9c3;
+    color: #854d0e;
+}
+
+.map-token-condition-badge--unconscious {
+    border-color: rgba(79, 70, 229, 0.54);
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.map-token-condition-badge--exhaustion {
+    border-color: rgba(220, 38, 38, 0.5);
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+:host-context(.theme-dark) .map-token-condition-badge--default {
+    border-color: rgba(196, 181, 253, 0.62);
+    background: #4c1d95;
+    color: #ddd6fe;
+}
+
+:host-context(.theme-dark) .map-token-condition-badge--blinded {
+    border-color: rgba(203, 213, 225, 0.58);
+    background: #334155;
+    color: #e2e8f0;
+}
+
+:host-context(.theme-dark) .map-token-condition-badge--charmed {
+    border-color: rgba(244, 114, 182, 0.58);
+    background: #9d174d;
+    color: #fbcfe8;
+}
+
+:host-context(.theme-dark) .map-token-condition-badge--deafened {
+    border-color: rgba(45, 212, 191, 0.6);
+    background: #0f766e;
+    color: #99f6e4;
+}
+
+:host-context(.theme-dark) .map-token-condition-badge--frightened {
+    border-color: rgba(167, 139, 250, 0.64);
+    background: #6d28d9;
+    color: #ddd6fe;
+}
+
+:host-context(.theme-dark) .map-token-condition-badge--restrained {
+    border-color: rgba(253, 224, 71, 0.62);
+    background: #92400e;
+    color: #fde68a;
+}
+
+:host-context(.theme-dark) .map-token-condition-badge--stunned {
+    border-color: rgba(251, 146, 60, 0.62);
+    background: #c2410c;
+    color: #fed7aa;
+}
+
+:host-context(.theme-dark) .map-token-condition-badge--invisible {
+    border-color: rgba(96, 165, 250, 0.62);
+    background: #1d4ed8;
+    color: #bfdbfe;
+}
+
+:host-context(.theme-dark) .map-token-condition-badge--petrified {
+    border-color: rgba(214, 211, 209, 0.58);
+    background: #57534e;
+    color: #e7e5e4;
+}
+
+:host-context(.theme-dark) .map-token-condition-badge--poisoned {
+    border-color: rgba(74, 222, 128, 0.62);
+    background: #166534;
+    color: #bbf7d0;
+}
+
+:host-context(.theme-dark) .map-token-condition-badge--prone {
+    border-color: rgba(250, 204, 21, 0.62);
+    background: #854d0e;
+    color: #fde68a;
+}
+
+:host-context(.theme-dark) .map-token-condition-badge--unconscious {
+    border-color: rgba(129, 140, 248, 0.62);
+    background: #3730a3;
+    color: #e0e7ff;
+}
+
+:host-context(.theme-dark) .map-token-condition-badge--exhaustion {
+    border-color: rgba(248, 113, 113, 0.6);
+    background: #991b1b;
+    color: #fecaca;
+}
+
 .map-token.is-selected img {
     border-color: color-mix(in srgb, var(--accent-primary) 72%, var(--panel-border) 28%);
     box-shadow: 0 16px 36px rgba(39, 25, 16, 0.36);
@@ -1954,7 +2154,7 @@ app-dropdown {
     box-shadow: 0 16px 36px rgba(39, 25, 16, 0.36);
 }
 
-.map-token.is-selected span {
+.map-token.is-selected .map-token-name {
     border-color: color-mix(in srgb, var(--accent-primary) 62%, var(--panel-border) 38%);
 }
 
@@ -2155,7 +2355,7 @@ app-dropdown {
         max-width: 110px;
     }
 
-    .map-token span {
+    .map-token .map-token-name {
         max-width: 110px;
         top: calc(100% + 15px);
         bottom: auto;
@@ -2204,7 +2404,7 @@ app-dropdown {
         padding: 10px 12px;
     }
 
-    .map-token span {
+    .map-token .map-token-name {
         max-width: 120px;
         top: calc(100% + 12px);
     }

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { TooltipDirective } from '../../shared/tooltip.directive';
 import {
     levelLabel,
     spellCatalog,
@@ -14,7 +15,7 @@ type SchoolFilter = 'all' | string;
 @Component({
     selector: 'app-rules-spells-page',
     standalone: true,
-    imports: [CommonModule, RouterLink, FormsModule],
+    imports: [CommonModule, RouterLink, FormsModule, TooltipDirective],
     templateUrl: './rules-spells-page.html',
     styleUrl: './rules-spells-page.scss',
 })

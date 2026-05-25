@@ -20,6 +20,7 @@ import { ChoiceBadgeComponent } from '../../components/choice-badge/choice-badge
 import { DropdownComponent, type DropdownOption } from '../../components/dropdown/dropdown.component';
 import { HitPointManagerModalComponent } from '../../components/hit-point-manager-modal/hit-point-manager-modal.component';
 import { MultiSelectDropdownComponent, type MultiSelectOptionGroup } from '../../components/multi-select-dropdown/multi-select-dropdown.component';
+import { TooltipDirective } from '../../shared/tooltip.directive';
 import { DungeonApiService } from '../../state/dungeon-api.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 import { SessionService } from '../../state/session.service';
@@ -249,7 +250,7 @@ interface BuilderSessionSnapshot {
 
 @Component({
     selector: 'app-new-character-standard-page',
-    imports: [CommonModule, RouterLink, NewCharacterInfoModalComponent, CharacteristicsModalComponent, DeityPickerModalComponent, ItemDetailModalComponent, ChoiceBadgeComponent, DropdownComponent, HitPointManagerModalComponent, MultiSelectDropdownComponent, OptionMenuFilterComponent, CharacterPortraitCropModalComponent],
+    imports: [CommonModule, RouterLink, NewCharacterInfoModalComponent, CharacteristicsModalComponent, DeityPickerModalComponent, ItemDetailModalComponent, ChoiceBadgeComponent, DropdownComponent, HitPointManagerModalComponent, MultiSelectDropdownComponent, OptionMenuFilterComponent, CharacterPortraitCropModalComponent, TooltipDirective],
     templateUrl: './new-character-standard-page.component.html',
     styleUrl: './new-character-standard-page.component.scss'
 })

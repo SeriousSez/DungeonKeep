@@ -9,6 +9,7 @@ import { CharacterPortraitCropModalComponent } from '../../components/character-
 import { CharacterPortraitModalComponent } from '../../components/character-portrait-modal/character-portrait-modal.component';
 import { DropdownComponent, type DropdownOption } from '../../components/dropdown/dropdown.component';
 import { MultiSelectDropdownComponent, type MultiSelectOptionGroup } from '../../components/multi-select-dropdown/multi-select-dropdown.component';
+import { TooltipDirective } from '../../shared/tooltip.directive';
 import { classLevelOneFeatures } from '../../data/class-features.data';
 import { classProgressionColumns } from '../../data/class-progression.data';
 import { monsterCatalog } from '../../data/monster-catalog.generated';
@@ -133,7 +134,7 @@ import type {
 
 @Component({
     selector: 'app-character-detail-page',
-    imports: [CommonModule, RouterLink, DropdownComponent, MultiSelectDropdownComponent, CharacterPortraitModalComponent, CharacterPortraitCropModalComponent],
+    imports: [CommonModule, RouterLink, DropdownComponent, MultiSelectDropdownComponent, CharacterPortraitModalComponent, CharacterPortraitCropModalComponent, TooltipDirective],
     templateUrl: './character-detail-page.component.html',
     styleUrl: './character-detail-page.component.scss',
     host: {

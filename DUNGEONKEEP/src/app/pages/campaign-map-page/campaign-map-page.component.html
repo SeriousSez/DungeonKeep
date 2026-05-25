@@ -325,7 +325,7 @@
                     <div class="selected-icon-header">
                         <div class="selected-token-mark">
                             @if (tokenHasRenderableImage(token)) {
-                            <img [src]="token.imageUrl" [alt]="token.name" />
+                            <img [src]="tokenImageUrl(token)" [alt]="token.name" />
                             } @else {
                             <div class="token-avatar-fallback token-avatar-fallback--panel" aria-hidden="true">{{ tokenInitials(token.name) }}</div>
                             }
@@ -686,12 +686,23 @@
                         <button type="button" class="map-token" [class.is-selected]="selectedTokenId() === token.id" [style.left.%]="token.x * 100" [style.top.%]="token.y * 100" [style.width]="tokenRenderSize(token.size)" (click)="$event.stopPropagation(); selectToken(token.id)"
                             (pointerdown)="handleTokenPointerDown($event, token.id)" (pointermove)="handleTokenPointerMove($event, token.id)" (pointerup)="handleTokenPointerUp($event, token.id)" (pointercancel)="handleTokenPointerUp($event, token.id)">
                             @if (tokenHasRenderableImage(token)) {
-                            <img [src]="token.imageUrl" [alt]="token.name" draggable="false" (error)="markTokenImageFailed(token)" />
+                            <img [src]="tokenImageUrl(token)" [alt]="token.name" draggable="false" (error)="markTokenImageFailed(token)" />
                             } @else {
                             <div class="token-avatar-fallback" aria-hidden="true">{{ tokenInitials(token.name) }}</div>
                             }
+                            <div class="map-token-condition-stack" aria-hidden="true">
+                                @for (badge of tokenConditionBadges(token); track badge.name) {
+                                <span class="map-token-condition-badge" [class]="'map-token-condition-badge ' + badge.variantClass" [appTooltip]="badge.name" [attr.aria-label]="badge.name">
+                                    @if (badge.iconClass; as iconClass) {
+                                    <i [class]="iconClass" aria-hidden="true"></i>
+                                    } @else {
+                                    {{ badge.shortName }}
+                                    }
+                                </span>
+                                }
+                            </div>
                             @if (selectedTokenId() === token.id) {
-                            <span>{{ token.name }}</span>
+                            <span class="map-token-name">{{ token.name }}</span>
                             }
                         </button>
                         }
@@ -995,9 +1006,20 @@
                     <button type="button" class="map-token map-token--viewer" [class.is-selected]="selectedTokenId() === token.id" [class.is-controllable]="canControlToken(token)" [style.left.%]="token.x * 100" [style.top.%]="token.y * 100" [style.width]="tokenRenderSize(token.size)"
                         (click)="$event.stopPropagation(); selectToken(token.id)" (pointerdown)="handleTokenPointerDown($event, token.id)" (pointermove)="handleTokenPointerMove($event, token.id)" (pointerup)="handleTokenPointerUp($event, token.id)"
                         (pointercancel)="handleTokenPointerUp($event, token.id)">
-                        <img [src]="token.imageUrl" [alt]="token.name" draggable="false" />
+                        <img [src]="tokenImageUrl(token)" [alt]="token.name" draggable="false" />
+                        <div class="map-token-condition-stack" aria-hidden="true">
+                            @for (badge of tokenConditionBadges(token); track badge.name) {
+                            <span class="map-token-condition-badge" [class]="'map-token-condition-badge ' + badge.variantClass" [appTooltip]="badge.name" [attr.aria-label]="badge.name">
+                                @if (badge.iconClass; as iconClass) {
+                                <i [class]="iconClass" aria-hidden="true"></i>
+                                } @else {
+                                {{ badge.shortName }}
+                                }
+                            </span>
+                            }
+                        </div>
                         @if (selectedTokenId() === token.id) {
-                        <span>{{ token.name }}</span>
+                        <span class="map-token-name">{{ token.name }}</span>
                         }
                     </button>
                     }
@@ -1071,7 +1093,7 @@
             <div class="selected-icon-card selected-token-card">
                 <div class="selected-icon-header">
                     <div class="selected-token-mark">
-                        <img [src]="token.imageUrl" [alt]="token.name" />
+                        <img [src]="tokenImageUrl(token)" [alt]="token.name" />
                     </div>
                     <div>
                         <strong>{{ token.name }}</strong>
@@ -1241,44 +1263,44 @@
         <div class="map-left-toolbar" [class.is-open]="leftToolbarOpen()">
             <div class="map-left-toolbar-body">
                 @if (isEditorMode() && canEdit()) {
-                <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'select'" title="Select (S)" [disabled]="isEditorLocked()" (click)="selectSelectTool()">
+                <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'select'" appTooltip="Select (S)" [disabled]="isEditorLocked()" (click)="selectSelectTool()">
                     <i class="fa-duotone fa-thin fa-arrow-pointer"></i>
                 </button>
-                <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'draw'" title="Draw (D)" [disabled]="isEditorLocked()" (click)="selectDrawTool()">
+                <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'draw'" appTooltip="Draw (D)" [disabled]="isEditorLocked()" (click)="selectDrawTool()">
                     <i class="fa-duotone fa-thin fa-paintbrush-fine"></i>
                 </button>
-                <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'wall'" title="Walls (W)" [disabled]="isEditorLocked()" (click)="selectWallTool()">
+                <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'wall'" appTooltip="Walls (W)" [disabled]="isEditorLocked()" (click)="selectWallTool()">
                     <i class="fa-duotone fa-thin fa-border-all"></i>
                 </button>
-                <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'erase'" title="Erase (E)" [disabled]="isEditorLocked()" (click)="selectEraseTool()">
+                <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'erase'" appTooltip="Erase (E)" [disabled]="isEditorLocked()" (click)="selectEraseTool()">
                     <i class="fa-duotone fa-thin fa-eraser"></i>
                 </button>
                 <div class="map-toolbar-divider"></div>
-                <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'icon'" title="Place Landmarks" [disabled]="isEditorLocked()" (click)="startLandmarkTool()">
+                <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'icon'" appTooltip="Place Landmarks" [disabled]="isEditorLocked()" (click)="startLandmarkTool()">
                     <i class="fa-duotone fa-thin fa-location-dot"></i>
                 </button>
-                <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'terrain'" title="Place Terrain" [disabled]="isEditorLocked()" (click)="selectTerrainTool('Mountain')">
+                <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'terrain'" appTooltip="Place Terrain" [disabled]="isEditorLocked()" (click)="selectTerrainTool('Mountain')">
                     <i class="fa-duotone fa-thin fa-mountain"></i>
                 </button>
-                <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'label'" title="Place Labels" [disabled]="isEditorLocked()" (click)="selectLabelTool()">
+                <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'label'" appTooltip="Place Labels" [disabled]="isEditorLocked()" (click)="selectLabelTool()">
                     <i class="fa-duotone fa-thin fa-tag"></i>
                 </button>
-                <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'token'" title="Place Tokens" [disabled]="isEditorLocked()" (click)="selectTokenTool()">
+                <button type="button" class="map-toolbar-btn" [class.is-active]="activeTool() === 'token'" appTooltip="Place Tokens" [disabled]="isEditorLocked()" (click)="selectTokenTool()">
                     <i class="fa-duotone fa-thin fa-circle-user"></i>
                 </button>
                 <div class="map-toolbar-divider"></div>
                 }
-                <button type="button" class="map-toolbar-btn" [class.is-active]="!measureEnabled()" title="Mouse" (click)="selectMouseToolbarMode()">
+                <button type="button" class="map-toolbar-btn" [class.is-active]="!measureEnabled()" appTooltip="Mouse" (click)="selectMouseToolbarMode()">
                     <i class="fa-duotone fa-thin fa-arrow-pointer"></i>
                 </button>
-                <button type="button" class="map-toolbar-btn" [class.is-active]="measureEnabled()" title="Measure (M)" (click)="selectMeasureToolbarMode()">
+                <button type="button" class="map-toolbar-btn" [class.is-active]="measureEnabled()" appTooltip="Measure (M)" (click)="selectMeasureToolbarMode()">
                     <i class="fa-duotone fa-thin fa-ruler"></i>
                 </button>
                 <div class="map-toolbar-divider"></div>
-                <button type="button" class="map-toolbar-btn" [class.is-active]="voicePopoverOpen()" [title]="voiceJoined() ? 'Voice chat connected' : 'Voice chat disconnected'" (click)="toggleVoicePopover()">
+                <button type="button" class="map-toolbar-btn" [class.is-active]="voicePopoverOpen()" [appTooltip]="voiceJoined() ? 'Voice chat connected' : 'Voice chat disconnected'" (click)="toggleVoicePopover()">
                     <i class="fa-duotone fa-thin" [class.fa-headset]="voiceJoined()" [class.fa-headphones-simple]="!voiceJoined()"></i>
                 </button>
-                <button type="button" class="map-toolbar-btn" [class.is-active]="encounterPopoverOpen()" title="Encounter Tracker" (click)="toggleEncounterPopover()">
+                <button type="button" class="map-toolbar-btn" [class.is-active]="encounterPopoverOpen()" appTooltip="Encounter Tracker" (click)="toggleEncounterPopover()">
                     <i class="fa-duotone fa-thin fa-swords"></i>
                 </button>
             </div>
@@ -1462,7 +1484,7 @@
                 }
             </div>
             }
-            <button type="button" class="map-toolbar-toggle" (click)="toggleLeftToolbar()" [title]="leftToolbarOpen() ? 'Hide toolbar' : 'Show toolbar'">
+            <button type="button" class="map-toolbar-toggle" (click)="toggleLeftToolbar()" [appTooltip]="leftToolbarOpen() ? 'Hide toolbar' : 'Show toolbar'">
                 <i class="fa-duotone fa-thin" [class.fa-chevron-left]="leftToolbarOpen()" [class.fa-chevron-right]="!leftToolbarOpen()"></i>
             </button>
         </div>
@@ -1504,7 +1526,7 @@
                         </button>
                         @if (!entry.isCharacter && canEdit()) {
                         <button type="button" class="status-chip encounter-visibility-chip" [class.is-warning]="entry.isHiddenFromPlayers" [class.is-success]="!entry.isHiddenFromPlayers" (click)="toggleTokenEncounterHidden(entry.token.id)"
-                            [title]="entry.isHiddenFromPlayers ? 'Reveal to players' : 'Hide from players'">
+                            [appTooltip]="entry.isHiddenFromPlayers ? 'Reveal to players' : 'Hide from players'">
                             {{ entry.isHiddenFromPlayers ? 'Hidden' : 'Revealed' }}
                         </button>
                         } @else if (!entry.isCharacter) {
@@ -1513,7 +1535,7 @@
                         </span>
                         }
                         <button type="button" class="encounter-collapse-caret" (click)="toggleEncounterEntryCollapsed(entry.token.id)" [attr.aria-expanded]="!isEncounterEntryCollapsed(entry.token.id)" [attr.aria-label]="isEncounterEntryCollapsed(entry.token.id) ? 'Expand entry' : 'Collapse entry'"
-                            [title]="isEncounterEntryCollapsed(entry.token.id) ? 'Expand entry' : 'Collapse entry'">
+                            [appTooltip]="isEncounterEntryCollapsed(entry.token.id) ? 'Expand entry' : 'Collapse entry'">
                             <i class="fa-duotone fa-thin" [class.fa-chevron-right]="isEncounterEntryCollapsed(entry.token.id)" [class.fa-chevron-down]="!isEncounterEntryCollapsed(entry.token.id)"></i>
                         </button>
                     </div>

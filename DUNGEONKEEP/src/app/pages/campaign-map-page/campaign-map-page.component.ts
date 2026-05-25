@@ -15,6 +15,7 @@ import { CampaignNpc } from '../../models/campaign-npc.models';
 import { Campaign, CampaignMap, CampaignMapBackground, CampaignMapBoard, CampaignMapDecoration, CampaignMapDecorationType, CampaignMapIcon, CampaignMapIconType, CampaignMapLabel, CampaignMapLabelFontFamily, CampaignMapLabelTone, CampaignMapPoint, CampaignMapStroke, CampaignMapToken, CampaignMapTokenCondition, CampaignMapWall, CampaignTone, Character, CharacterDraft, DEFAULT_CAMPAIGN_MAP_GRID_COLOR, DEFAULT_CAMPAIGN_MAP_GRID_COLUMNS, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_X, DEFAULT_CAMPAIGN_MAP_GRID_OFFSET_Y, DEFAULT_CAMPAIGN_MAP_GRID_ROWS } from '../../models/dungeon.models';
 import { CustomMonster, MonsterCatalogEntry } from '../../models/monster-reference.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
+import { TooltipDirective } from '../../shared/tooltip.directive';
 import { CampaignMapTokenMovedEvent, CampaignMapVisionUpdatedEvent, CampaignRealtimeService } from '../../state/campaign-realtime.service';
 import { DungeonApiService } from '../../state/dungeon-api.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
@@ -335,7 +336,7 @@ const ENCOUNTER_CONDITION_OPTIONS: ReadonlyArray<string> = [
 @Component({
     selector: 'app-campaign-map-page',
     standalone: true,
-    imports: [CommonModule, RouterLink, DropdownComponent, MultiSelectDropdownComponent, ConfirmModalComponent, MapArtGenerationModalComponent, TokenImageCropModalComponent],
+    imports: [CommonModule, RouterLink, DropdownComponent, MultiSelectDropdownComponent, ConfirmModalComponent, MapArtGenerationModalComponent, TokenImageCropModalComponent, TooltipDirective],
     templateUrl: './campaign-map-page.component.html',
     styleUrl: './campaign-map-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -3466,8 +3467,23 @@ export class CampaignMapPageComponent {
         return `calc(min(${horizontalCellPercent}%, ${verticalCellPercent}%) * ${span})`;
     }
 
+    tokenImageUrl(token: CampaignMapToken): string {
+        const directImageUrl = token.imageUrl.trim();
+        if (directImageUrl) {
+            return directImageUrl;
+        }
+
+        const normalizedTokenName = token.name.trim().toLocaleLowerCase();
+        if (!normalizedTokenName) {
+            return '';
+        }
+
+        const matchedNpc = this.campaignNpcs().find((npc) => npc.name.trim().toLocaleLowerCase() === normalizedTokenName) ?? null;
+        return matchedNpc?.imageUrl?.trim() ?? '';
+    }
+
     tokenHasRenderableImage(token: CampaignMapToken): boolean {
-        const imageUrl = token.imageUrl.trim();
+        const imageUrl = this.tokenImageUrl(token);
         if (!imageUrl) {
             return false;
         }
@@ -3476,7 +3492,7 @@ export class CampaignMapPageComponent {
     }
 
     markTokenImageFailed(token: CampaignMapToken): void {
-        const imageUrl = token.imageUrl.trim();
+        const imageUrl = this.tokenImageUrl(token);
         if (!imageUrl) {
             return;
         }
@@ -3493,6 +3509,117 @@ export class CampaignMapPageComponent {
         }
 
         return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
+    }
+
+    tokenConditionBadges(token: CampaignMapToken): Array<{ name: string; shortName: string; iconClass: string | null; variantClass: string }> {
+        return this.normalizeEncounterTokenConditions(token.conditions).map((condition) => ({
+            name: condition.name,
+            shortName: this.conditionBadgeInitials(condition.name),
+            iconClass: this.conditionBadgeIconClass(condition.name),
+            variantClass: this.conditionBadgeVariantClass(condition.name)
+        }));
+    }
+
+    private conditionBadgeIconClass(conditionName: string): string | null {
+        const normalized = this.normalizeConditionBadgeName(conditionName);
+
+        switch (normalized) {
+            case 'blinded':
+                return 'fa-duotone fa-thin fa-eye-low-vision';
+            case 'charmed':
+                return 'fa-duotone fa-thin fa-heart';
+            case 'deafened':
+                return 'fa-duotone fa-thin fa-ear-deaf';
+            case 'frightened':
+                return 'fa-duotone fa-thin fa-ghost';
+            case 'grappled':
+            case 'restrained':
+                return 'fa-duotone fa-thin fa-link';
+            case 'incapacitated':
+            case 'stunned':
+                return 'fa-duotone fa-thin fa-stars';
+            case 'invisible':
+                return 'fa-duotone fa-thin fa-user-secret';
+            case 'paralyzed':
+            case 'petrified':
+                return 'fa-duotone fa-thin fa-hand';
+            case 'poisoned':
+                return 'fa-duotone fa-thin fa-skull-crossbones';
+            case 'prone':
+                return 'fa-duotone fa-thin fa-person-falling';
+            case 'unconscious':
+                return 'fa-duotone fa-thin fa-bed';
+            case 'exhaustion':
+                return 'fa-duotone fa-thin fa-battery-empty';
+            default:
+                return null;
+        }
+    }
+
+    private conditionBadgeVariantClass(conditionName: string): string {
+        const normalized = this.normalizeConditionBadgeName(conditionName);
+
+        switch (normalized) {
+            case 'blinded':
+                return 'map-token-condition-badge--blinded';
+            case 'charmed':
+                return 'map-token-condition-badge--charmed';
+            case 'deafened':
+                return 'map-token-condition-badge--deafened';
+            case 'frightened':
+                return 'map-token-condition-badge--frightened';
+            case 'grappled':
+            case 'restrained':
+                return 'map-token-condition-badge--restrained';
+            case 'incapacitated':
+            case 'stunned':
+                return 'map-token-condition-badge--stunned';
+            case 'invisible':
+                return 'map-token-condition-badge--invisible';
+            case 'paralyzed':
+            case 'petrified':
+                return 'map-token-condition-badge--petrified';
+            case 'poisoned':
+                return 'map-token-condition-badge--poisoned';
+            case 'prone':
+                return 'map-token-condition-badge--prone';
+            case 'unconscious':
+                return 'map-token-condition-badge--unconscious';
+            case 'exhaustion':
+                return 'map-token-condition-badge--exhaustion';
+            default:
+                return 'map-token-condition-badge--default';
+        }
+    }
+
+    private normalizeConditionBadgeName(conditionName: string): string {
+        return conditionName
+            .trim()
+            .toLocaleLowerCase()
+            .replace(/['’]/g, '')
+            .replace(/[^a-z0-9]+/g, ' ')
+            .trim();
+    }
+
+    private conditionBadgeInitials(conditionName: string): string {
+        const parts = conditionName
+            .trim()
+            .split(/[\s-]+/)
+            .map((part) => part.replace(/[^A-Za-z0-9]/g, ''))
+            .filter((part) => part.length > 0);
+
+        if (parts.length === 0) {
+            return '?';
+        }
+
+        if (parts.length === 1) {
+            return parts[0].slice(0, 2).toUpperCase();
+        }
+
+        return parts
+            .slice(0, 2)
+            .map((part) => part[0]?.toUpperCase() ?? '')
+            .join('');
     }
 
     pendingTokenHasRenderableImage(): boolean {
@@ -5496,7 +5623,6 @@ export class CampaignMapPageComponent {
         this.selectToken(tokenId);
 
         if (this.measureEnabled()) {
-            event.stopPropagation();
             return;
         }
 
