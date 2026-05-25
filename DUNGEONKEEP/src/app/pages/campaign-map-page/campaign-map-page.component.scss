@@ -2915,15 +2915,17 @@ app-dropdown {
     border: 1px solid var(--panel-border);
     border-radius: 12px;
     background: color-mix(in srgb, var(--surface-raised-solid) 88%, var(--accent-primary) 12%);
+    transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .map-voice-participant-card.is-speaking {
-    border-color: color-mix(in srgb, #3cb371 72%, var(--panel-border) 28%);
-    box-shadow: 0 0 0 1px color-mix(in srgb, #3cb371 26%, transparent);
+    border-color: color-mix(in srgb, #4f8fb0 70%, var(--panel-border) 30%);
+    background: color-mix(in srgb, var(--surface-raised-solid) 83%, #4f8fb0 17%);
+    box-shadow: 0 0 0 1px color-mix(in srgb, #4f8fb0 22%, transparent);
 }
 
 .map-voice-participant-card.is-speaking .map-voice-participant-header strong {
-    color: color-mix(in srgb, #3cb371 82%, var(--text-main) 18%);
+    color: color-mix(in srgb, #86bfd9 74%, var(--text-main) 26%);
 }
 
 .map-voice-participant-header {
