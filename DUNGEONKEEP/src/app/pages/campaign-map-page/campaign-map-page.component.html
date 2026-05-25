@@ -1594,7 +1594,6 @@
 
         @if (encounterInspectorEntry(); as inspector) {
         @if (encounterInspectorPopoverPosition(); as inspectorPosition) {
-        <div class="encounter-inspector-backdrop" (click)="closeEncounterInspector()"></div>
         <div class="encounter-inspector-popover" [style.left.px]="inspectorPosition.x" [style.top.px]="inspectorPosition.y" (click)="$event.stopPropagation()">
             <div class="encounter-inspector-header">
                 <strong>{{ inspector.name }}</strong>

@@ -1982,17 +1982,58 @@ export class CampaignMapPageComponent {
     }
 
     encounterInspectorArmorClass(entry: EncounterEntry): number | null {
-        return entry.armorClass ?? this.parseTokenNoteArmorClass(entry.token.note);
+        const npcFallback = this.parseEncounterNpcStats(entry);
+        return entry.armorClass ?? this.parseTokenNoteArmorClass(entry.token.note) ?? npcFallback?.armorClass ?? null;
     }
 
     encounterInspectorCurrentHp(entry: EncounterEntry): number | null {
         const fallbackHp = this.parseTokenNoteHp(entry.token.note);
-        return entry.currentHp ?? fallbackHp?.current ?? null;
+        const npcFallback = this.parseEncounterNpcStats(entry);
+        return entry.currentHp ?? fallbackHp?.current ?? npcFallback?.currentHp ?? null;
     }
 
     encounterInspectorMaxHp(entry: EncounterEntry): number | null {
         const fallbackHp = this.parseTokenNoteHp(entry.token.note);
-        return entry.maxHp ?? fallbackHp?.max ?? fallbackHp?.current ?? null;
+        const npcFallback = this.parseEncounterNpcStats(entry);
+        return entry.maxHp ?? fallbackHp?.max ?? fallbackHp?.current ?? npcFallback?.maxHp ?? npcFallback?.currentHp ?? null;
+    }
+
+    private parseEncounterNpcStats(entry: EncounterEntry): { armorClass: number | null; currentHp: number | null; maxHp: number | null } | null {
+        if (entry.isCharacter) {
+            return null;
+        }
+
+        const tokenName = entry.name.trim().toLocaleLowerCase();
+        if (!tokenName) {
+            return null;
+        }
+
+        const npc = this.campaignNpcs().find((candidate) => candidate.name.trim().toLocaleLowerCase() === tokenName);
+        if (!npc) {
+            return null;
+        }
+
+        const statSource = this.buildNpcStatSource(npc);
+        const hp = this.parseTokenNoteHp(statSource);
+        const armorClass = this.parseTokenNoteArmorClass(statSource);
+        return {
+            armorClass,
+            currentHp: hp?.current ?? null,
+            maxHp: hp?.max ?? hp?.current ?? null
+        };
+    }
+
+    private buildNpcStatSource(npc: CampaignNpc): string {
+        return [
+            npc.combatNotes,
+            npc.statBlockReference,
+            npc.notes,
+            npc.classOrRole,
+            npc.title
+        ]
+            .map((value) => value.trim())
+            .filter((value) => value.length > 0)
+            .join(' | ');
     }
 
     private parseTokenNoteArmorClass(note: string): number | null {
@@ -2968,7 +3009,15 @@ export class CampaignMapPageComponent {
         this.tokenPlacementImageUrl.set(npc.imageUrl?.trim() ?? '');
         this.pendingTokenImageLoadFailed.set(false);
         this.tokenPlacementNameDraft.set(npc.name);
-        this.tokenPlacementNoteDraft.set(npc.title || npc.classOrRole || '');
+        const npcStatSource = this.buildNpcStatSource(npc);
+        const npcHp = this.parseTokenNoteHp(npcStatSource);
+        const npcArmorClass = this.parseTokenNoteArmorClass(npcStatSource);
+        const npcNoteParts = [
+            npc.title || npc.classOrRole || '',
+            (npcHp?.max ?? npcHp?.current) != null ? `HP ${npcHp?.current ?? npcHp?.max}` : '',
+            npcArmorClass != null ? `AC ${npcArmorClass}` : ''
+        ].filter((part) => part.length > 0);
+        this.tokenPlacementNoteDraft.set(npcNoteParts.join(' | '));
         this.tokenPlacementAssignedCharacterId.set(null);
         this.tokenPlacementAssignedUserId.set(null);
         this.tokenPlacementSize.set(1);
@@ -4636,9 +4685,15 @@ export class CampaignMapPageComponent {
         if (this.hasPendingTokenPlacement()) {
             const snappedPoint = this.snapTokenPointToGrid(point, this.tokenPlacementSize());
             const shouldStartHiddenInEncounter = !!this.tokenPlacementNpcId() || !!this.tokenPlacementMonsterId();
+            const selectedNpc = this.tokenPlacementNpcId()
+                ? this.campaignNpcs().find((candidate) => candidate.id === this.tokenPlacementNpcId()) ?? null
+                : null;
             const selectedMonster = this.tokenPlacementMonsterId()
                 ? this.tokenMonsterPresetByValue().get(this.tokenPlacementMonsterId()) ?? null
                 : null;
+            const npcStatSource = selectedNpc ? this.buildNpcStatSource(selectedNpc) : '';
+            const parsedNpcHp = selectedNpc ? this.parseTokenNoteHp(npcStatSource) : null;
+            const parsedNpcArmorClass = selectedNpc ? this.parseTokenNoteArmorClass(npcStatSource) : null;
             const parsedHp = this.parseTokenNoteHp(this.tokenPlacementNoteDraft());
             const parsedArmorClass = this.parseTokenNoteArmorClass(this.tokenPlacementNoteDraft());
             const token: CampaignMapToken = {
@@ -4651,9 +4706,9 @@ export class CampaignMapPageComponent {
                 note: this.tokenPlacementNoteDraft().trim(),
                 assignedUserId: this.tokenPlacementAssignedUserId(),
                 assignedCharacterId: this.tokenPlacementAssignedCharacterId(),
-                currentHp: selectedMonster?.hitPoints ?? parsedHp?.current ?? null,
-                maxHp: selectedMonster?.hitPoints ?? parsedHp?.max ?? parsedHp?.current ?? null,
-                armorClass: selectedMonster?.armorClass ?? parsedArmorClass ?? null,
+                currentHp: selectedMonster?.hitPoints ?? parsedNpcHp?.current ?? parsedHp?.current ?? null,
+                maxHp: selectedMonster?.hitPoints ?? parsedNpcHp?.max ?? parsedNpcHp?.current ?? parsedHp?.max ?? parsedHp?.current ?? null,
+                armorClass: selectedMonster?.armorClass ?? parsedNpcArmorClass ?? parsedArmorClass ?? null,
                 encounterHidden: shouldStartHiddenInEncounter,
                 moveRevision: 0
             };
