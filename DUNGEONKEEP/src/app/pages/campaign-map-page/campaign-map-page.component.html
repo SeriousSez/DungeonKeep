@@ -7,8 +7,134 @@
     </section>
 </main>
 } @else if (selectedCampaign(); as campaign) {
-<main class="page-stack" [class.page-stack--editor]="isEditorMode()">
-    @if (isEditorMode()) {
+<main class="page-stack" [class.page-stack--editor]="isEditorMode()" [class.page-stack--encounter-control]="isEncounterControlMode()">
+    @if (isEncounterControlMode()) {
+    <section class="panel encounter-control-surface">
+        <div class="encounter-control-header">
+            <div class="encounter-control-header-copy">
+                <a [routerLink]="backLink().route" class="back-link">← {{ backLink().label }}</a>
+                <p class="eyebrow">Detached Encounter Control</p>
+                <h2>{{ currentMapBoard()?.name || 'Encounter Control' }}</h2>
+                <p class="sidebar-note">Use this window on a second screen while the full map stays open elsewhere.</p>
+            </div>
+            <div class="encounter-control-header-actions">
+                @if (currentMapBoard(); as activeMap) {
+                <a [routerLink]="['/campaigns', campaign.id, 'maps', activeMap.id]" class="ghost-button compact-action">Open Map</a>
+                }
+            </div>
+        </div>
+
+        <div class="encounter-control-status-row">
+            <span class="encounter-round-chip">Round {{ encounterRound() }}</span>
+            @if (encounterActiveEntry(); as activeEntry) {
+            <span class="encounter-active-chip">Turn: {{ activeEntry.name }}</span>
+            } @else {
+            <span class="encounter-active-chip is-muted">Turn: Unset</span>
+            }
+            @if (mapNotice()) {
+            <span class="status-chip map-notice">{{ mapNotice() }}</span>
+            }
+        </div>
+
+        @if (encounterEntries().length === 0) {
+        <div class="section-empty-state" role="status" aria-live="polite">
+            <div class="section-empty-state-icon" aria-hidden="true">
+                <i class="fa-duotone fa-thin fa-swords"></i>
+            </div>
+            <h3>No tokens on this board yet</h3>
+            <p>Add character, NPC, or monster tokens on the map to start tracking the encounter here.</p>
+        </div>
+        } @else {
+        <div class="encounter-entry-list encounter-entry-list--surface">
+            @for (entry of encounterEntries(); track entry.token.id) {
+            <div class="encounter-entry encounter-entry--surface" [class.encounter-entry--hidden]="entry.isHiddenFromPlayers && canEdit()" [class.encounter-entry--active]="encounterActiveTokenId() === entry.token.id" [class.encounter-entry--collapsed]="isEncounterEntryCollapsed(entry.token.id)">
+                <div class="encounter-entry-main">
+                    <label class="encounter-initiative-field">
+                        <span class="encounter-initiative-label">Init</span>
+                        <input type="number" class="encounter-initiative-input" [value]="entry.initiative ?? ''" placeholder="—" [disabled]="!canEdit() && !entry.isOwnToken" (change)="updateTokenInitiative(entry.token.id, $any($event.target).value)" aria-label="Initiative for {{ entry.name }}" />
+                    </label>
+                    <button type="button" class="encounter-entry-name encounter-entry-name-btn" [class.is-active]="encounterActiveTokenId() === entry.token.id" (click)="canEdit() ? setEncounterActiveToken(entry.token.id) : null">
+                        {{ entry.name }}
+                    </button>
+                    <span class="status-chip">{{ encounterEntryKind(entry) }}</span>
+                    @if (!entry.isCharacter && canEdit()) {
+                    <button type="button" class="status-chip encounter-visibility-chip" [class.is-warning]="entry.isHiddenFromPlayers" [class.is-success]="!entry.isHiddenFromPlayers" (click)="toggleTokenEncounterHidden(entry.token.id)">
+                        {{ entry.isHiddenFromPlayers ? 'Hidden' : 'Revealed' }}
+                    </button>
+                    }
+                    <button type="button" class="encounter-collapse-caret" (click)="toggleEncounterEntryCollapsed(entry.token.id)" [attr.aria-expanded]="!isEncounterEntryCollapsed(entry.token.id)" [attr.aria-label]="isEncounterEntryCollapsed(entry.token.id) ? 'Expand entry' : 'Collapse entry'">
+                        <i class="fa-duotone fa-thin" [class.fa-chevron-right]="isEncounterEntryCollapsed(entry.token.id)" [class.fa-chevron-down]="!isEncounterEntryCollapsed(entry.token.id)"></i>
+                    </button>
+                </div>
+
+                @if (!isEncounterEntryCollapsed(entry.token.id)) {
+                <div class="encounter-entry-stats encounter-entry-stats--surface">
+                    <label class="encounter-stat-field">
+                        <span class="encounter-stat-label">HP</span>
+                        <input type="number" class="encounter-stat-input" [value]="entry.currentHp ?? ''" placeholder="—" [readOnly]="!canEdit() && !entry.isOwnToken" (change)="updateTokenCurrentHp(entry.token.id, $any($event.target).value)" aria-label="Current HP for {{ entry.name }}" />
+                        <span class="encounter-stat-sep">/</span>
+                        <input type="number" class="encounter-stat-input" [value]="entry.maxHp ?? ''" placeholder="—" [readOnly]="entry.isCharacter || (!canEdit() && !entry.isOwnToken)" (change)="updateTokenMaxHp(entry.token.id, $any($event.target).value)" aria-label="Max HP for {{ entry.name }}" />
+                    </label>
+                    <label class="encounter-stat-field">
+                        <span class="encounter-stat-label">AC</span>
+                        <input type="number" class="encounter-stat-input" [value]="entry.armorClass ?? ''" placeholder="—" [readOnly]="entry.isCharacter || (!canEdit() && !entry.isOwnToken)" (change)="updateTokenArmorClass(entry.token.id, $any($event.target).value)"
+                            aria-label="AC for {{ entry.name }}" />
+                    </label>
+                </div>
+
+                <div class="encounter-conditions encounter-conditions--surface">
+                    @if (entry.conditions.length > 0) {
+                    <div class="encounter-condition-chip-list">
+                        @for (condition of entry.conditions; track condition.name) {
+                        <span class="encounter-condition-chip">
+                            {{ condition.name }}
+                            @if (canEdit() || entry.isOwnToken) {
+                            <input type="number" class="encounter-condition-chip-rounds" [value]="condition.remainingRounds ?? ''" placeholder="R" min="1" (change)="updateEncounterConditionRemainingRounds(entry.token.id, condition.name, $any($event.target).value)"
+                                aria-label="Rounds remaining for {{ condition.name }} on {{ entry.name }}" />
+                            } @else if (condition.remainingRounds !== null) {
+                            <em>{{ condition.remainingRounds }}r</em>
+                            }
+                            @if (canEdit() || entry.isOwnToken) {
+                            <button type="button" class="encounter-condition-remove" (click)="removeEncounterCondition(entry.token.id, condition.name)" aria-label="Remove condition">
+                                <i class="fa-duotone fa-thin fa-xmark"></i>
+                            </button>
+                            }
+                        </span>
+                        }
+                    </div>
+                    }
+
+                    @if (canEdit() || entry.isOwnToken) {
+                    <div class="encounter-condition-editor">
+                        <app-multi-select-dropdown class="encounter-condition-select" [groups]="encounterConditionOptionGroups" [value]="encounterConditionSelectionForToken(entry.token.id)" [searchable]="true" placeholder="Conditions"
+                            (changed)="updateEncounterTokenConditionsSelection(entry.token.id, $event)"></app-multi-select-dropdown>
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+            }
+        </div>
+
+        @if (canEdit()) {
+        <div class="encounter-combat-footer encounter-combat-footer--surface">
+            <div class="encounter-combat-actions encounter-combat-actions--footer">
+                <button type="button" class="ghost-button compact-action encounter-combat-btn" (click)="startEncounter()" [disabled]="encounterEntries().length === 0">Start</button>
+                <button type="button" class="ghost-button compact-action encounter-combat-btn" (click)="previousEncounterTurn()" [disabled]="encounterEntries().length === 0">
+                    <i class="fa-duotone fa-thin fa-chevron-left"></i>
+                    Prev
+                </button>
+                <button type="button" class="ghost-button compact-action encounter-combat-btn" (click)="nextEncounterTurn()" [disabled]="encounterEntries().length === 0">
+                    Next
+                    <i class="fa-duotone fa-thin fa-chevron-right"></i>
+                </button>
+                <button type="button" class="ghost-button compact-action encounter-combat-btn" (click)="endEncounter()" [disabled]="encounterEntries().length === 0">End</button>
+            </div>
+        </div>
+        }
+        }
+    </section>
+    } @else if (isEditorMode()) {
     <section class="map-layout map-layout--editor">
         <aside class="panel map-sidebar map-sidebar--left">
             <div class="sidebar-section">
@@ -893,6 +1019,7 @@
                 }
                 <button type="button" class="ghost-button compact-action" (click)="toggleMapFullscreen()">{{ isFullscreen() ? 'Exit Fullscreen' : 'Fullscreen' }}</button>
                 <button type="button" class="ghost-button compact-action" (click)="toggleGuide()">{{ showGuide() ? 'Hide Guide' : 'Show Guide' }}</button>
+                <button type="button" class="ghost-button compact-action" (click)="openEncounterControlWindow()">Encounter Window</button>
                 @if (canSeeWallOutlines()) {
                 <button type="button" class="ghost-button compact-action" (click)="toggleWallsVisibility()">{{ showWalls() ? 'Hide Walls' : 'Show Walls' }}</button>
                 }
@@ -1727,9 +1854,14 @@
         <div #encounterPopoverElement class="map-encounter-popover" [style.left.px]="encounterPopoverPosition().x" [style.top.px]="encounterPopoverPosition().y" [class.is-dragging]="encounterPopoverDragging()">
             <div class="section-heading compact-heading map-measure-popover-header map-encounter-popover-header" (pointerdown)="startEncounterPopoverDrag($event)">
                 <h3>Encounter</h3>
-                <button type="button" class="ghost-button compact-action" (click)="toggleEncounterPopover()" aria-label="Close encounter tracker">
-                    <i class="fa-duotone fa-thin fa-chevrons-left"></i>
-                </button>
+                <div class="compact-heading-actions">
+                    <button type="button" class="ghost-button compact-action" (click)="openEncounterControlWindow()" aria-label="Open encounter control window">
+                        <i class="fa-duotone fa-thin fa-up-right-from-square"></i>
+                    </button>
+                    <button type="button" class="ghost-button compact-action" (click)="toggleEncounterPopover()" aria-label="Close encounter tracker">
+                        <i class="fa-duotone fa-thin fa-chevrons-left"></i>
+                    </button>
+                </div>
             </div>
 
             <div class="encounter-combat-controls">
@@ -1890,7 +2022,7 @@
     </ng-template>
 </main>
 
-@if (!isFullscreen()) {
+@if (!isFullscreen() && !isEncounterControlMode()) {
 <ng-container [ngTemplateOutlet]="mapToolbarTemplate"></ng-container>
 }
 

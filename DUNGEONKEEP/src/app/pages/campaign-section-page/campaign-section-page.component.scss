@@ -178,6 +178,17 @@
     margin-bottom: 16px;
 }
 
+.section-heading-copy {
+    display: grid;
+    gap: 8px;
+}
+
+.section-heading-copy p {
+    margin: 0;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
 .threads-heading-actions {
     display: flex;
     align-items: center;
@@ -258,6 +269,162 @@
 
 .section-heading--party {
     align-items: flex-start;
+}
+
+.section-heading--encounter {
+    align-items: flex-start;
+}
+
+.compact-section-heading {
+    margin-bottom: 12px;
+}
+
+.compact-section-heading h3 {
+    margin: 0;
+    font-family: var(--display-font);
+    font-size: 1.05rem;
+}
+
+.encounter-overview-grid,
+.encounter-map-list,
+.encounter-roster-list {
+    display: grid;
+    gap: 14px;
+}
+
+.encounter-overview-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    margin-bottom: 18px;
+}
+
+.encounter-summary-card,
+.encounter-roster-panel,
+.encounter-maps-panel,
+.encounter-map-card,
+.encounter-roster-card {
+    border: 1px solid var(--panel-border);
+    border-radius: 18px;
+    background: var(--surface-raised);
+}
+
+.encounter-summary-card,
+.encounter-roster-panel,
+.encounter-maps-panel,
+.encounter-map-card,
+.encounter-roster-card {
+    padding: 16px;
+}
+
+.encounter-summary-card h3,
+.encounter-map-card h4,
+.encounter-roster-card h4 {
+    margin: 0;
+    font-family: var(--display-font);
+}
+
+.encounter-summary-card p,
+.encounter-map-copy,
+.encounter-roster-copy,
+.encounter-roster-kind {
+    margin: 0;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.encounter-summary-card {
+    display: grid;
+    gap: 6px;
+}
+
+.encounter-roster-panel,
+.encounter-maps-panel {
+    margin-top: 18px;
+}
+
+.encounter-map-card,
+.encounter-roster-main {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.encounter-map-card.is-active-map,
+.encounter-roster-card.is-active {
+    border-color: color-mix(in srgb, var(--panel-border) 40%, var(--accent-primary) 60%);
+    background: color-mix(in srgb, var(--surface-raised) 86%, var(--accent-primary) 14%);
+}
+
+.encounter-roster-card {
+    transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.encounter-roster-title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.encounter-roster-side {
+    display: grid;
+    gap: 8px;
+    justify-items: end;
+}
+
+.encounter-initiative-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 72px;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--panel-border) 60%, var(--accent-primary) 40%);
+    background: color-mix(in srgb, var(--surface-raised) 82%, var(--accent-primary) 18%);
+    font-weight: 700;
+}
+
+.encounter-condition-inline-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.encounter-condition-inline-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+    background: color-mix(in srgb, var(--surface-raised) 84%, var(--panel-border) 16%);
+    color: var(--text-main);
+    font-size: 0.82rem;
+}
+
+.encounter-condition-inline-chip em {
+    font-style: normal;
+    color: var(--text-muted);
+}
+
+@media (max-width: 720px) {
+
+    .encounter-map-card,
+    .encounter-roster-main {
+        flex-direction: column;
+    }
+
+    .encounter-roster-side {
+        width: 100%;
+        justify-items: start;
+    }
+
+    .encounter-condition-inline-list {
+        justify-content: flex-start;
+    }
 }
 
 .party-section-copy,

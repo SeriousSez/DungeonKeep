@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
+import type { CampaignMapBoard } from '../../models/dungeon.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
@@ -68,6 +69,45 @@ export class CampaignDetailPageComponent {
         }
 
         return campaign.openThreads.filter((thread) => thread.visibility === 'Party');
+    });
+    readonly activeEncounterMap = computed<CampaignMapBoard | null>(() => {
+        const campaign = this.selectedCampaign();
+        if (!campaign) {
+            return null;
+        }
+
+        return campaign.maps.find((map) => map.id === campaign.activeMapId)
+            ?? campaign.maps[0]
+            ?? null;
+    });
+    readonly activeEncounterTokenCount = computed(() => this.activeEncounterMap()?.tokens.length ?? 0);
+    readonly activeEncounterConditionCount = computed(() => {
+        const map = this.activeEncounterMap();
+        if (!map) {
+            return 0;
+        }
+
+        return map.tokens.reduce((total, token) => total + (Array.isArray(token.conditions) ? token.conditions.length : 0), 0);
+    });
+    readonly activeEncounterRound = computed(() => {
+        const round = this.activeEncounterMap()?.encounterRound;
+        return typeof round === 'number' && Number.isFinite(round) && round > 0 ? Math.trunc(round) : 1;
+    });
+    readonly activeEncounterName = computed(() => {
+        const map = this.activeEncounterMap();
+        if (!map?.encounterActiveTokenId) {
+            return '';
+        }
+
+        return map.tokens.find((token) => token.id === map.encounterActiveTokenId)?.name ?? '';
+    });
+    readonly activeEncounterIsLive = computed(() => {
+        const map = this.activeEncounterMap();
+        if (!map) {
+            return false;
+        }
+
+        return Boolean(map.encounterStartedAtUtc || map.encounterActiveTokenId || (map.encounterRound ?? 1) > 1);
     });
 
     readonly confirmModalOpen = computed(() => this.confirmAction() !== null);

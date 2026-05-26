@@ -8,6 +8,82 @@
     gap: 24px;
 }
 
+.page-stack--encounter-control {
+    max-width: 760px;
+    margin: 0 auto;
+}
+
+.encounter-control-surface {
+    display: grid;
+    gap: 18px;
+    align-content: start;
+    grid-auto-rows: max-content;
+}
+
+.encounter-control-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.encounter-control-header-copy {
+    display: grid;
+    gap: 8px;
+}
+
+.encounter-control-header-copy h2,
+.encounter-control-header-copy .sidebar-note {
+    margin: 0;
+}
+
+.encounter-control-header-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.encounter-control-status-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.encounter-entry-list--surface {
+    max-height: none;
+}
+
+.encounter-entry--surface {
+    background: color-mix(in srgb, var(--surface-raised) 86%, var(--accent-primary) 14%);
+}
+
+.encounter-entry-stats--surface {
+    margin-top: 10px;
+}
+
+.encounter-conditions--surface {
+    margin-top: 10px;
+}
+
+.encounter-combat-footer--surface {
+    position: sticky;
+    bottom: 0;
+    padding-top: 8px;
+    background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--panel-bg) 92%, transparent) 22%, var(--panel-bg));
+}
+
+@media (max-width: 720px) {
+    .encounter-control-header {
+        flex-direction: column;
+    }
+
+    .encounter-control-header-actions {
+        justify-content: flex-start;
+    }
+}
+
 .page-stack--editor {
     width: min(calc(100vw - 32px), 1880px);
     max-width: none;

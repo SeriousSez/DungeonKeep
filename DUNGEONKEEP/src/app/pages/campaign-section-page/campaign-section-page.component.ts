@@ -9,12 +9,12 @@ import { DropdownComponent, DropdownOption } from '../../components/dropdown/dro
 import { ItemDetailModalComponent } from '../../components/item-detail-modal/item-detail-modal.component';
 import { equipmentCatalog } from '../../data/new-character-standard-page.data';
 import type { InventoryEntry } from '../../data/new-character-standard-page.types';
-import type { CampaignMember, CampaignWorldNote, CampaignWorldNoteCategory, Character, CharacterStatus } from '../../models/dungeon.models';
+import type { CampaignMapBoard, CampaignMapToken, CampaignMember, CampaignWorldNote, CampaignWorldNoteCategory, Character, CharacterStatus } from '../../models/dungeon.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
 import { DungeonApiService } from '../../state/dungeon-api.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
-type CampaignSection = 'party' | 'sessions' | 'npcs' | 'tables' | 'loot' | 'threads' | 'notes' | 'members';
+type CampaignSection = 'party' | 'sessions' | 'encounter' | 'npcs' | 'tables' | 'loot' | 'threads' | 'notes' | 'members';
 type ThreatLevel = 'Low' | 'Moderate' | 'High' | 'Deadly';
 type NoteEditorDraftMode = 'standard' | 'ai';
 type LootViewMode = 'flat' | 'session' | 'character';
@@ -59,6 +59,7 @@ export class CampaignSectionPageComponent {
         switch (routeSection) {
             case 'party':
             case 'sessions':
+            case 'encounter':
             case 'npcs':
             case 'tables':
             case 'loot':
@@ -162,6 +163,85 @@ export class CampaignSectionPageComponent {
     });
     readonly activePartyMembers = computed(() => this.partyMembers().filter((character) => character.status !== 'Inactive'));
     readonly inactivePartyMembers = computed(() => this.partyMembers().filter((character) => character.status === 'Inactive'));
+    readonly encounterMaps = computed(() => {
+        const campaign = this.selectedCampaign();
+        if (!campaign) {
+            return [] as CampaignMapBoard[];
+        }
+
+        return [...campaign.maps].sort((left, right) => {
+            const leftIsActive = left.id === campaign.activeMapId;
+            const rightIsActive = right.id === campaign.activeMapId;
+
+            if (leftIsActive !== rightIsActive) {
+                return leftIsActive ? -1 : 1;
+            }
+
+            return left.name.localeCompare(right.name);
+        });
+    });
+    readonly activeEncounterMap = computed(() => {
+        const campaign = this.selectedCampaign();
+        if (!campaign) {
+            return null;
+        }
+
+        return campaign.maps.find((map) => map.id === campaign.activeMapId)
+            ?? campaign.maps[0]
+            ?? null;
+    });
+    readonly encounterActiveToken = computed(() => {
+        const map = this.activeEncounterMap();
+        if (!map?.encounterActiveTokenId) {
+            return null;
+        }
+
+        return map.tokens.find((token) => token.id === map.encounterActiveTokenId) ?? null;
+    });
+    readonly encounterRoster = computed(() => {
+        const map = this.activeEncounterMap();
+        const activeTokenId = map?.encounterActiveTokenId ?? null;
+        if (!map) {
+            return [] as CampaignMapToken[];
+        }
+
+        return [...map.tokens].sort((left, right) => {
+            const leftIsActive = left.id === activeTokenId;
+            const rightIsActive = right.id === activeTokenId;
+
+            if (leftIsActive !== rightIsActive) {
+                return leftIsActive ? -1 : 1;
+            }
+
+            const leftInitiative = typeof left.initiative === 'number' ? left.initiative : null;
+            const rightInitiative = typeof right.initiative === 'number' ? right.initiative : null;
+
+            if (leftInitiative === null && rightInitiative !== null) {
+                return 1;
+            }
+
+            if (leftInitiative !== null && rightInitiative === null) {
+                return -1;
+            }
+
+            if (leftInitiative !== null && rightInitiative !== null && leftInitiative !== rightInitiative) {
+                return rightInitiative - leftInitiative;
+            }
+
+            return left.name.localeCompare(right.name);
+        });
+    });
+    readonly encounterConditionCount = computed(() => this.encounterRoster().reduce((total, token) => total + this.normalizeEncounterConditions(token.conditions).length, 0));
+    readonly hiddenEncounterTokenCount = computed(() => this.encounterRoster().filter((token) => token.encounterHidden).length);
+    readonly partyEncounterTokenCount = computed(() => this.encounterRoster().filter((token) => !!token.assignedCharacterId).length);
+    readonly encounterLive = computed(() => {
+        const map = this.activeEncounterMap();
+        if (!map) {
+            return false;
+        }
+
+        return Boolean(map.encounterStartedAtUtc || map.encounterActiveTokenId || (map.encounterRound ?? 1) > 1);
+    });
 
     readonly visibleThreads = computed(() => {
         const campaign = this.selectedCampaign();
@@ -515,6 +595,8 @@ export class CampaignSectionPageComponent {
                 return 'Party Roster';
             case 'sessions':
                 return 'Campaign Sessions';
+            case 'encounter':
+                return 'Encounter Runner';
             case 'npcs':
                 return 'Campaign NPCs';
             case 'tables':
@@ -536,6 +618,8 @@ export class CampaignSectionPageComponent {
                 return 'Track which adventurers are actively in play, keep reserve characters attached to the campaign, and manage the roster between sessions.';
             case 'sessions':
                 return 'Review prepared sessions, important locations, and the next objective waiting on the table.';
+            case 'encounter':
+                return 'Run initiative from the active map, track HP and conditions, and keep the live turn order easy to manage.';
             case 'npcs':
                 return 'Keep the campaign cast visible so important allies, patrons, rivals, and suspects stay easy to reference.';
             case 'tables':
@@ -596,6 +680,79 @@ export class CampaignSectionPageComponent {
 
     isActiveSection(section: CampaignSection): boolean {
         return this.section() === section;
+    }
+
+    openEncounterMap(mapId?: string): void {
+        const campaignId = this.campaignId();
+        const resolvedMapId = mapId?.trim() || this.activeEncounterMap()?.id || '';
+        if (!campaignId || !resolvedMapId) {
+            return;
+        }
+
+        void this.router.navigate(['/campaigns', campaignId, 'maps', resolvedMapId]);
+    }
+
+    encounterRoundDisplay(map: CampaignMapBoard | null): number {
+        const round = map?.encounterRound;
+        return typeof round === 'number' && Number.isFinite(round) && round > 0 ? Math.trunc(round) : 1;
+    }
+
+    encounterMapIsLive(map: CampaignMapBoard): boolean {
+        return Boolean(map.encounterStartedAtUtc || map.encounterActiveTokenId || this.encounterRoundDisplay(map) > 1);
+    }
+
+    encounterMapConditionCount(map: CampaignMapBoard): number {
+        return map.tokens.reduce((total, token) => total + this.normalizeEncounterConditions(token.conditions).length, 0);
+    }
+
+    encounterMapHiddenCount(map: CampaignMapBoard): number {
+        return map.tokens.filter((token) => token.encounterHidden).length;
+    }
+
+    encounterTokenKind(token: CampaignMapToken): string {
+        if (token.assignedCharacterId) {
+            return 'Party member';
+        }
+
+        return token.encounterHidden ? 'Hidden encounter token' : 'Encounter token';
+    }
+
+    encounterTokenSummary(token: CampaignMapToken): string {
+        const parts: string[] = [];
+
+        if (typeof token.currentHp === 'number' && typeof token.maxHp === 'number') {
+            parts.push(`HP ${token.currentHp}/${token.maxHp}`);
+        } else if (typeof token.currentHp === 'number') {
+            parts.push(`HP ${token.currentHp}`);
+        } else if (typeof token.maxHp === 'number') {
+            parts.push(`Max HP ${token.maxHp}`);
+        }
+
+        if (typeof token.armorClass === 'number') {
+            parts.push(`AC ${token.armorClass}`);
+        }
+
+        const conditionCount = this.normalizeEncounterConditions(token.conditions).length;
+        if (conditionCount > 0) {
+            parts.push(`${conditionCount} condition${conditionCount === 1 ? '' : 's'}`);
+        }
+
+        return parts.join(' • ') || 'No combat stats saved yet.';
+    }
+
+    normalizeEncounterConditions(value: CampaignMapToken['conditions']): Array<{ name: string; remainingRounds?: number | null }> {
+        if (!Array.isArray(value)) {
+            return [];
+        }
+
+        return value
+            .filter((condition): condition is { name: string; remainingRounds?: number | null } => typeof condition?.name === 'string' && condition.name.trim().length > 0)
+            .map((condition) => ({
+                name: condition.name.trim(),
+                remainingRounds: typeof condition.remainingRounds === 'number' && Number.isFinite(condition.remainingRounds)
+                    ? Math.max(1, Math.trunc(condition.remainingRounds))
+                    : null
+            }));
     }
 
     openSessionDetails(sessionId: string): void {

@@ -86,6 +86,11 @@ export const routes: Routes = [
         data: { title: 'Campaign Sessions', breadcrumb: 'Sessions', section: 'sessions', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }] }
     },
     {
+        path: 'campaigns/:id/encounter',
+        component: CampaignSectionPageComponent,
+        data: { title: 'Encounter Runner', breadcrumb: 'Encounter', section: 'encounter', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }] }
+    },
+    {
         path: 'campaigns/:id/sessions/new',
         component: SessionEditorPageComponent,
         data: { title: 'New Session', breadcrumb: 'New Session', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }, { label: 'Sessions', url: '/campaigns/:id/sessions' }] }
@@ -169,6 +174,11 @@ export const routes: Routes = [
         path: 'campaigns/:id/maps/:mapId',
         component: CampaignMapPageComponent,
         data: { title: 'Campaign Map', breadcrumb: 'Map', mapMode: 'view', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }, { label: 'Maps', url: '/campaigns/:id/maps' }] }
+    },
+    {
+        path: 'campaigns/:id/maps/:mapId/encounter-control',
+        component: CampaignMapPageComponent,
+        data: { title: 'Encounter Control', breadcrumb: 'Encounter Control', mapMode: 'view', surfaceMode: 'encounter-control', parentCrumbs: [{ label: 'Campaigns', url: '/campaigns' }, { label: 'Campaign', url: '/campaigns/:id' }, { label: 'Maps', url: '/campaigns/:id/maps' }] }
     },
     {
         path: 'campaigns/:id/maps/:mapId/edit',

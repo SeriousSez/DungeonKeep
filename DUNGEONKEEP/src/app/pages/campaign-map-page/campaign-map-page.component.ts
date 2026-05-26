@@ -37,6 +37,7 @@ type AudioSceneMood = 'calm' | 'tense' | 'mystery' | 'combat';
 type SettlementScale = 'Hamlet' | 'Village' | 'Town' | 'City' | 'Metropolis';
 type ParchmentLayout = 'Uniform' | 'Continent' | 'Archipelago' | 'Atoll' | 'World' | 'Equirectangular';
 type CavernLayout = 'TunnelNetwork' | 'GrandCavern' | 'VerticalChasm' | 'CrystalGrotto' | 'RuinedUndercity' | 'LavaTubes';
+type MapSurfaceMode = 'standard' | 'encounter-control';
 
 interface EncounterEntry {
     token: CampaignMapToken;
@@ -442,6 +443,7 @@ export class CampaignMapPageComponent {
     readonly campaignId = signal('');
     readonly routeMapId = signal('');
     readonly routeMode = signal<'view' | 'edit'>('view');
+    readonly routeSurfaceMode = signal<MapSurfaceMode>('standard');
     readonly workingMap = signal<CampaignMap>(this.createEmptyMap());
     readonly mapBoards = signal<CampaignMapBoard[]>([]);
     readonly currentMapId = signal('');
@@ -761,6 +763,7 @@ export class CampaignMapPageComponent {
 
         return campaign.currentUserRole === 'Owner';
     });
+    readonly isEncounterControlMode = computed(() => this.routeSurfaceMode() === 'encounter-control');
     readonly isEditorMode = computed(() => this.routeMode() === 'edit');
     readonly isEditorLocked = computed(() => this.isAiArtGenerating());
     readonly canModify = computed(() => this.canEdit() && this.isEditorMode() && !this.isEditorLocked());
@@ -1717,6 +1720,13 @@ export class CampaignMapPageComponent {
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe((data) => {
                 this.routeMode.set(data['mapMode'] === 'edit' ? 'edit' : 'view');
+                this.routeSurfaceMode.set(data['surfaceMode'] === 'encounter-control' ? 'encounter-control' : 'standard');
+                if (data['surfaceMode'] === 'encounter-control') {
+                    this.encounterPopoverOpen.set(false);
+                    this.audioPopoverOpen.set(false);
+                    this.voicePopoverOpen.set(false);
+                    this.measurePopoverOpen.set(false);
+                }
             });
 
         effect(() => {
@@ -2352,6 +2362,25 @@ export class CampaignMapPageComponent {
         const fallbackHp = this.parseTokenNoteHp(entry.token.note);
         const npcFallback = this.parseEncounterNpcStats(entry);
         return entry.maxHp ?? fallbackHp?.max ?? fallbackHp?.current ?? npcFallback?.maxHp ?? npcFallback?.currentHp ?? null;
+    }
+
+    openEncounterControlWindow(): void {
+        const campaignId = this.campaignId();
+        const mapId = this.currentMapId() || this.currentMapBoard()?.id || this.routeMapId();
+        if (!campaignId || !mapId || mapId === 'new') {
+            this.showMapNotice('Save or open a map board before opening the encounter control window.');
+            return;
+        }
+
+        const url = this.router.serializeUrl(this.router.createUrlTree(['/campaigns', campaignId, 'maps', mapId, 'encounter-control']));
+        const popup = globalThis.open(url, `dungeonkeep-encounter-${campaignId}-${mapId}`, 'popup=yes,width=520,height=920,resizable=yes,scrollbars=yes');
+
+        if (!popup) {
+            this.showMapNotice('The control window was blocked. Allow popups for this site and try again.');
+            return;
+        }
+
+        popup.focus();
     }
 
     private parseEncounterNpcStats(entry: EncounterEntry): { armorClass: number | null; currentHp: number | null; maxHp: number | null } | null {
@@ -8398,6 +8427,10 @@ export class CampaignMapPageComponent {
 
     private mapEditRoute(campaignId: string, mapId: string): string[] {
         return ['/campaigns', campaignId, 'maps', mapId, 'edit'];
+    }
+
+    private encounterControlRoute(campaignId: string, mapId: string): string[] {
+        return ['/campaigns', campaignId, 'maps', mapId, 'encounter-control'];
     }
 
     private mapRouteForCurrentMode(campaignId: string, mapId: string): string[] {

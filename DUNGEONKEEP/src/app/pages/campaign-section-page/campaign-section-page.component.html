@@ -257,6 +257,137 @@
         }
         }
 
+        @case ('encounter') {
+        <div class="section-heading section-heading--encounter">
+            <div class="section-heading-copy">
+                <h2>Encounter Runner</h2>
+                <p>DungeonKeep already tracks initiative, HP, AC, hidden enemies, and conditions on map boards. This workspace makes the active encounter easy to launch and monitor.</p>
+            </div>
+            <div class="threads-heading-actions">
+                <a class="ghost-button" [routerLink]="['/campaigns', campaign.id, 'maps']">Map Library</a>
+                @if (activeEncounterMap(); as activeMap) {
+                <button type="button" class="primary-button" (click)="openEncounterMap(activeMap.id)">Open Active Map</button>
+                }
+            </div>
+        </div>
+
+        @if (activeEncounterMap(); as activeMap) {
+        <div class="encounter-overview-grid">
+            <article class="encounter-summary-card">
+                <p class="eyebrow">Active Board</p>
+                <h3>{{ activeMap.name }}</h3>
+                <p>{{ encounterLive() ? 'Combat is currently live on the active map.' : 'The tracker is ready, but the encounter has not been started yet.' }}</p>
+            </article>
+            <article class="encounter-summary-card">
+                <p class="eyebrow">Round</p>
+                <h3>{{ encounterRoundDisplay(activeMap) }}</h3>
+                <p>{{ encounterActiveToken()?.name ? 'Current turn: ' + encounterActiveToken()!.name : 'No active turn is set yet.' }}</p>
+            </article>
+            <article class="encounter-summary-card">
+                <p class="eyebrow">Combatants</p>
+                <h3>{{ encounterRoster().length }}</h3>
+                <p>{{ partyEncounterTokenCount() }} party tokens, {{ hiddenEncounterTokenCount() }} hidden enemies, {{ encounterConditionCount() }} active conditions.</p>
+            </article>
+        </div>
+
+        @if (encounterRoster().length > 0) {
+        <section class="encounter-roster-panel">
+            <div class="section-heading compact-section-heading">
+                <h3>Turn Order Snapshot</h3>
+                <span class="count-badge">{{ encounterRoster().length }}</span>
+            </div>
+
+            <div class="encounter-roster-list">
+                @for (token of encounterRoster(); track token.id) {
+                <article class="encounter-roster-card" [class.is-active]="activeMap.encounterActiveTokenId === token.id">
+                    <div class="encounter-roster-main">
+                        <div>
+                            <div class="encounter-roster-title-row">
+                                <h4>{{ token.name }}</h4>
+                                @if (activeMap.encounterActiveTokenId === token.id) {
+                                <span class="status-chip is-success">Active Turn</span>
+                                }
+                                @if (token.encounterHidden) {
+                                <span class="status-chip is-warning">Hidden</span>
+                                }
+                            </div>
+                            <p class="encounter-roster-kind">{{ encounterTokenKind(token) }}</p>
+                            <p class="encounter-roster-copy">{{ encounterTokenSummary(token) }}</p>
+                        </div>
+                        <div class="encounter-roster-side">
+                            <span class="encounter-initiative-pill">Init {{ token.initiative ?? '—' }}</span>
+                            @if (normalizeEncounterConditions(token.conditions).length > 0) {
+                            <div class="encounter-condition-inline-list">
+                                @for (condition of normalizeEncounterConditions(token.conditions); track condition.name) {
+                                <span class="encounter-condition-inline-chip">{{ condition.name }}@if (condition.remainingRounds !== null) { <em>{{ condition.remainingRounds }}r</em> }</span>
+                                }
+                            </div>
+                            }
+                        </div>
+                    </div>
+                </article>
+                }
+            </div>
+        </section>
+        } @else {
+        <div class="section-empty-state" role="status" aria-live="polite">
+            <div class="section-empty-state-icon" aria-hidden="true">
+                <i class="fa-duotone fa-thin fa-swords"></i>
+            </div>
+            <h3>No combatants on the active map yet</h3>
+            <p>Place character, NPC, or monster tokens on the active map to begin tracking initiative and conditions.</p>
+            <button type="button" class="empty-state-cta" (click)="openEncounterMap(activeMap.id)">
+                <i class="fa-duotone fa-thin fa-location-crosshairs"></i>
+                Open Active Map
+            </button>
+        </div>
+        }
+
+        @if (encounterMaps().length > 0) {
+        <section class="encounter-maps-panel">
+            <div class="section-heading compact-section-heading">
+                <h3>Encounter Boards</h3>
+                <span class="count-badge">{{ encounterMaps().length }}</span>
+            </div>
+
+            <div class="encounter-map-list">
+                @for (map of encounterMaps(); track map.id) {
+                <article class="encounter-map-card" [class.is-active-map]="map.id === campaign.activeMapId">
+                    <div>
+                        <div class="encounter-roster-title-row">
+                            <h4>{{ map.name }}</h4>
+                            @if (map.id === campaign.activeMapId) {
+                            <span class="status-chip is-success">Active Board</span>
+                            }
+                            @if (encounterMapIsLive(map)) {
+                            <span class="status-chip">Live</span>
+                            }
+                        </div>
+                        <p class="encounter-map-copy">{{ map.tokens.length }} tokens, {{ encounterMapConditionCount(map) }} conditions, {{ encounterMapHiddenCount(map) }} hidden.</p>
+                    </div>
+                    <button type="button" class="ghost-button" (click)="openEncounterMap(map.id)">Open Map</button>
+                </article>
+                }
+            </div>
+        </section>
+        }
+        } @else {
+        <div class="section-empty-state" role="status" aria-live="polite">
+            <div class="section-empty-state-icon" aria-hidden="true">
+                <i class="fa-duotone fa-thin fa-map"></i>
+            </div>
+            <h3>No encounter board exists yet</h3>
+            <p>Create a campaign map first, then drop in party and enemy tokens to run initiative from the built-in tracker.</p>
+            @if (campaign.currentUserRole === 'Owner') {
+            <a class="empty-state-cta" [routerLink]="['/campaigns', campaign.id, 'maps', 'new']">
+                <i class="fa-duotone fa-thin fa-plus"></i>
+                Create Map
+            </a>
+            }
+        </div>
+        }
+        }
+
         @case ('npcs') {
         <div class="section-heading">
             <h2>NPCs</h2>
