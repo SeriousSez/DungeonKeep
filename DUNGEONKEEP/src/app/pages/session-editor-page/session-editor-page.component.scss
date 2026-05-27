@@ -549,6 +549,70 @@ textarea {
     padding: 12px;
 }
 
+.prep-checklist-sections {
+    display: grid;
+    gap: 14px;
+}
+
+.prep-checklist-section {
+    border: 1px solid var(--panel-border);
+    border-radius: 18px;
+    background: var(--surface-raised);
+    padding: 14px;
+    display: grid;
+    gap: 12px;
+}
+
+.prep-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.prep-section-header .field {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.prep-section-header .ghost-button {
+    flex-shrink: 0;
+}
+
+.prep-checklist-items {
+    display: grid;
+    gap: 10px;
+}
+
+.prep-checklist-item {
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--surface-raised) 92%, var(--accent-primary) 8%);
+    padding: 12px;
+    display: grid;
+    gap: 10px;
+}
+
+.prep-checklist-item-completed {
+    opacity: 0.8;
+    border-color: color-mix(in srgb, var(--accent-primary) 55%, var(--panel-border) 45%);
+}
+
+.prep-item-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.prep-item-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-main);
+    font-size: 0.84rem;
+}
+
 .notes-panel {
     position: sticky;
     top: 24px;
@@ -618,6 +682,8 @@ textarea {
 
     .editor-header,
     .generation-panel-header,
+    .prep-section-header,
+    .prep-item-top-row,
     .scene-card-header,
     .mini-section-header,
     .nested-list-header,

@@ -337,6 +337,49 @@
     gap: 8px;
 }
 
+.prep-checklist-section-stack {
+    gap: 14px;
+}
+
+.prep-checklist-section-card {
+    gap: 12px;
+}
+
+.prep-checklist-items {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.prep-checklist-item {
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--surface-raised) 90%, var(--accent-primary) 10%);
+    padding: 12px;
+    display: grid;
+    gap: 8px;
+}
+
+.prep-checklist-item-top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.prep-checklist-toggle {
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+}
+
+.prep-checklist-item-completed {
+    opacity: 0.82;
+    border-color: color-mix(in srgb, var(--panel-border) 56%, var(--accent-primary) 44%);
+}
+
 @media (max-width: 720px) {
     .session-nav-pill {
         width: auto;

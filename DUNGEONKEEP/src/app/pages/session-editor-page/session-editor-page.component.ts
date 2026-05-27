@@ -23,6 +23,8 @@ import { SESSION_EDITOR_SAMPLE_DRAFT } from '../../data/session-editor.mock';
 import { MonsterCatalogEntry } from '../../models/monster-reference.models';
 import { ThreatLevel } from '../../models/dungeon.models';
 import {
+    SessionPrepChecklistItem,
+    SessionPrepChecklistSection,
     SessionEditorDraft,
     SessionLocation,
     SessionLootItem,
@@ -33,7 +35,7 @@ import {
     SessionTextEntry
 } from '../../models/session-editor.models';
 import { ConfirmModalComponent } from '../../shared/confirm-modal.component';
-import { ApiGenerateSessionDraftResponse, DungeonApiService } from '../../state/dungeon-api.service';
+import { ApiGenerateSessionDraftResponse, ApiGenerateSessionPrepChecklistResponse, DungeonApiService } from '../../state/dungeon-api.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
 type TextEntryForm = FormGroup<{
@@ -140,6 +142,10 @@ interface SessionGenerationHints {
     additionalConstraints: string;
 }
 
+interface SessionPrepChecklistGenerationHints {
+    focus: string;
+}
+
 type SessionCreationMode = 'standard' | 'ai';
 
 @Component({
@@ -151,6 +157,8 @@ type SessionCreationMode = 'standard' | 'ai';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SessionEditorPageComponent {
+    private static readonly AUTOSAVE_DEBOUNCE_MS = 900;
+
     private readonly fb = inject(NonNullableFormBuilder);
     readonly store = inject(DungeonStoreService);
     private readonly api = inject(DungeonApiService);
@@ -168,6 +176,12 @@ export class SessionEditorPageComponent {
     readonly isSavingSession = signal(false);
     readonly generationError = signal('');
     readonly generationInProgress = signal(false);
+    readonly prepChecklistGenerationError = signal('');
+    readonly prepChecklistGenerationInProgress = signal(false);
+    readonly prepChecklist = signal<SessionPrepChecklistSection[]>([]);
+    readonly prepChecklistGenerationHints = signal<SessionPrepChecklistGenerationHints>({
+        focus: ''
+    });
     readonly generationHints = signal<SessionGenerationHints>({
         titleHint: '',
         shortDescriptionHint: '',
@@ -324,6 +338,9 @@ export class SessionEditorPageComponent {
     readonly branchingPathsArray = this.editorForm.controls.branchingPaths;
     readonly nextSessionHooksArray = this.editorForm.controls.nextSessionHooks;
 
+    private autosaveTimeout: ReturnType<typeof setTimeout> | null = null;
+    private lastAutosavedDraftJson = '';
+
     constructor() {
         this.route.paramMap
             .pipe(takeUntilDestroyed(this.destroyRef))
@@ -350,7 +367,15 @@ export class SessionEditorPageComponent {
                     sessionFocus: '',
                     additionalConstraints: ''
                 });
+                this.prepChecklistGenerationHints.set({ focus: '' });
+                this.prepChecklistGenerationError.set('');
+                this.prepChecklistGenerationInProgress.set(false);
                 this.detailsLoadRequested.set(false);
+                this.lastAutosavedDraftJson = '';
+                if (this.autosaveTimeout) {
+                    clearTimeout(this.autosaveTimeout);
+                    this.autosaveTimeout = null;
+                }
             });
 
         this.editorForm.valueChanges
@@ -360,9 +385,18 @@ export class SessionEditorPageComponent {
                     return;
                 }
 
-                this.autosaveDraft();
+                this.queueAutosave();
                 this.updateMarkdownPreview(this.notesControl.value);
             });
+
+        effect(() => {
+            this.prepChecklist();
+            if (!this.initialized()) {
+                return;
+            }
+
+            this.queueAutosave();
+        });
 
         effect(() => {
             const campaignId = this.campaignId();
@@ -472,6 +506,141 @@ export class SessionEditorPageComponent {
             this.generationInProgress.set(false);
             this.cdr.detectChanges();
         }
+    }
+
+    async generatePrepChecklist(): Promise<void> {
+        const campaign = this.currentCampaign();
+        const campaignId = this.campaignId();
+
+        if (!campaignId || campaign?.currentUserRole !== 'Owner') {
+            return;
+        }
+
+        this.prepChecklistGenerationInProgress.set(true);
+        this.prepChecklistGenerationError.set('');
+        this.saveMessage.set('');
+
+        try {
+            const draft = this.toDraft();
+            const hints = this.prepChecklistGenerationHints();
+            const generated = await this.api.generateSessionPrepChecklist(campaignId, {
+                titleHint: draft.title,
+                shortDescriptionHint: draft.shortDescription,
+                locationHint: draft.inGameLocation,
+                markdownNotesHint: draft.markdownNotes,
+                preferredNpcNames: draft.npcs.map((npc) => npc.name).filter((name) => name.trim().length > 0),
+                preferredMonsterNames: draft.monsters.map((monster) => monster.name).filter((name) => name.trim().length > 0),
+                focus: hints.focus.trim()
+            });
+
+            this.prepChecklist.set(this.mapGeneratedPrepChecklist(generated));
+            this.autosaveDraft();
+            this.saveMessage.set('Smart prep checklist generated. Edit and check off items as you prep.');
+        } catch (error) {
+            this.prepChecklistGenerationError.set(this.readApiError(error, 'Could not generate a prep checklist right now.'));
+        } finally {
+            this.prepChecklistGenerationInProgress.set(false);
+            this.cdr.detectChanges();
+        }
+    }
+
+    updatePrepChecklistFocus(value: string): void {
+        this.prepChecklistGenerationHints.update((hints) => ({ ...hints, focus: value }));
+    }
+
+    addPrepChecklistSection(): void {
+        this.prepChecklist.update((sections) => [...sections, {
+            id: this.generateId('prep-section'),
+            title: 'New Prep Section',
+            purpose: '',
+            items: []
+        }]);
+    }
+
+    updatePrepChecklistSectionTitle(sectionId: string, value: string): void {
+        this.prepChecklist.update((sections) => sections.map((section) =>
+            section.id === sectionId ? { ...section, title: value } : section));
+    }
+
+    updatePrepChecklistSectionPurpose(sectionId: string, value: string): void {
+        this.prepChecklist.update((sections) => sections.map((section) =>
+            section.id === sectionId ? { ...section, purpose: value } : section));
+    }
+
+    removePrepChecklistSection(sectionId: string): void {
+        this.prepChecklist.update((sections) => sections.filter((section) => section.id !== sectionId));
+    }
+
+    addPrepChecklistItem(sectionId: string): void {
+        this.prepChecklist.update((sections) => sections.map((section) => {
+            if (section.id !== sectionId) {
+                return section;
+            }
+
+            return {
+                ...section,
+                items: [...section.items, {
+                    id: this.generateId('prep-item'),
+                    text: '',
+                    rationale: '',
+                    source: '',
+                    isOptional: false,
+                    completed: false
+                }]
+            };
+        }));
+    }
+
+    updatePrepChecklistItem(sectionId: string, itemId: string, key: 'text' | 'rationale' | 'source', value: string): void {
+        this.prepChecklist.update((sections) => sections.map((section) => {
+            if (section.id !== sectionId) {
+                return section;
+            }
+
+            return {
+                ...section,
+                items: section.items.map((item) => item.id === itemId ? { ...item, [key]: value } : item)
+            };
+        }));
+    }
+
+    togglePrepChecklistItemOptional(sectionId: string, itemId: string): void {
+        this.prepChecklist.update((sections) => sections.map((section) => {
+            if (section.id !== sectionId) {
+                return section;
+            }
+
+            return {
+                ...section,
+                items: section.items.map((item) => item.id === itemId ? { ...item, isOptional: !item.isOptional } : item)
+            };
+        }));
+    }
+
+    togglePrepChecklistItemCompleted(sectionId: string, itemId: string): void {
+        this.prepChecklist.update((sections) => sections.map((section) => {
+            if (section.id !== sectionId) {
+                return section;
+            }
+
+            return {
+                ...section,
+                items: section.items.map((item) => item.id === itemId ? { ...item, completed: !item.completed } : item)
+            };
+        }));
+    }
+
+    removePrepChecklistItem(sectionId: string, itemId: string): void {
+        this.prepChecklist.update((sections) => sections.map((section) => {
+            if (section.id !== sectionId) {
+                return section;
+            }
+
+            return {
+                ...section,
+                items: section.items.filter((item) => item.id !== itemId)
+            };
+        }));
     }
 
     selectCreationMode(mode: SessionCreationMode): void {
@@ -834,7 +1003,8 @@ export class SessionEditorPageComponent {
             skillChecks: [],
             secrets: [],
             branchingPaths: [],
-            nextSessionHooks: []
+            nextSessionHooks: [],
+            prepChecklist: []
         };
     }
 
@@ -861,6 +1031,7 @@ export class SessionEditorPageComponent {
         this.replaceArray(this.secretsArray, draft.secrets.map((entry) => this.createTextEntryForm(entry)));
         this.replaceArray(this.branchingPathsArray, draft.branchingPaths.map((entry) => this.createTextEntryForm(entry)));
         this.replaceArray(this.nextSessionHooksArray, draft.nextSessionHooks.map((entry) => this.createTextEntryForm(entry)));
+        this.prepChecklist.set(draft.prepChecklist ?? []);
 
         this.updateMarkdownPreview(draft.markdownNotes);
     }
@@ -926,7 +1097,8 @@ export class SessionEditorPageComponent {
             })),
             secrets: this.secretsArray.controls.map((entry) => this.textEntryFromForm(entry)).filter((entry) => entry.text),
             branchingPaths: this.branchingPathsArray.controls.map((entry) => this.textEntryFromForm(entry)).filter((entry) => entry.text),
-            nextSessionHooks: this.nextSessionHooksArray.controls.map((entry) => this.textEntryFromForm(entry)).filter((entry) => entry.text)
+            nextSessionHooks: this.nextSessionHooksArray.controls.map((entry) => this.textEntryFromForm(entry)).filter((entry) => entry.text),
+            prepChecklist: this.prepChecklist()
         };
     }
 
@@ -988,7 +1160,8 @@ export class SessionEditorPageComponent {
             })),
             secrets: generated.secrets.map((entry) => ({ id: this.generateId('secret'), text: entry })),
             branchingPaths: generated.branchingPaths.map((entry) => ({ id: this.generateId('path'), text: entry })),
-            nextSessionHooks: generated.nextSessionHooks.map((entry) => ({ id: this.generateId('hook'), text: entry }))
+            nextSessionHooks: generated.nextSessionHooks.map((entry) => ({ id: this.generateId('hook'), text: entry })),
+            prepChecklist: currentDraft.prepChecklist
         };
     }
 
@@ -1033,15 +1206,34 @@ export class SessionEditorPageComponent {
 
     private autosaveDraft(): void {
         const draft = this.toDraft();
+        const draftJson = JSON.stringify(draft);
+
+        if (draftJson === this.lastAutosavedDraftJson) {
+            return;
+        }
+
         const campaignId = this.campaignId();
         const sessionId = this.sessionId();
         if (campaignId && sessionId) {
             void this.store.saveSessionDetails(campaignId, sessionId, {
-                detailsJson: JSON.stringify(draft),
+                detailsJson: draftJson,
                 lootAssignmentsJson: null
             });
         }
+
+        this.lastAutosavedDraftJson = draftJson;
         this.lastAutosavedAt.set(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    }
+
+    private queueAutosave(): void {
+        if (this.autosaveTimeout) {
+            clearTimeout(this.autosaveTimeout);
+        }
+
+        this.autosaveTimeout = setTimeout(() => {
+            this.autosaveTimeout = null;
+            this.autosaveDraft();
+        }, SessionEditorPageComponent.AUTOSAVE_DEBOUNCE_MS);
     }
 
     private parsePersistedDraft(detailsJson: string | null | undefined): SessionEditorDraft | null {
@@ -1055,10 +1247,40 @@ export class SessionEditorPageComponent {
                 return null;
             }
 
+            if (!Array.isArray(parsed.prepChecklist)) {
+                return {
+                    ...parsed,
+                    prepChecklist: []
+                };
+            }
+
             return parsed;
         } catch {
             return null;
         }
+    }
+
+    private mapGeneratedPrepChecklist(response: ApiGenerateSessionPrepChecklistResponse): SessionPrepChecklistSection[] {
+        return (response.sections ?? [])
+            .filter((section) => !!section && typeof section.title === 'string' && section.title.trim().length > 0)
+            .slice(0, 6)
+            .map((section) => ({
+                id: this.generateId('prep-section'),
+                title: section.title.trim(),
+                purpose: section.purpose?.trim() ?? '',
+                items: (section.items ?? [])
+                    .filter((item) => !!item && typeof item.text === 'string' && item.text.trim().length > 0)
+                    .slice(0, 12)
+                    .map((item) => ({
+                        id: this.generateId('prep-item'),
+                        text: item.text.trim(),
+                        rationale: item.rationale?.trim() ?? '',
+                        source: item.source?.trim() ?? '',
+                        isOptional: item.isOptional === true,
+                        completed: false
+                    }))
+            }))
+            .filter((section) => section.items.length > 0);
     }
 
     private updateMarkdownPreview(value: string): void {

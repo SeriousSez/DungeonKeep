@@ -431,6 +431,84 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         }
     }
 
+    [HttpPost("{campaignId:guid}/sessions/generate-prep-checklist")]
+    public async Task<ActionResult<GenerateSessionPrepChecklistResponse>> GenerateSessionPrepChecklist(Guid campaignId, [FromBody] GenerateSessionPrepChecklistRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var campaign = await GetCampaignContextAsync(campaignId, user.Id, cancellationToken);
+        if (campaign is null)
+        {
+            return NotFound("Campaign was not found.");
+        }
+
+        if (!string.Equals(campaign.CurrentUserRole, "Owner", StringComparison.OrdinalIgnoreCase))
+        {
+            return StatusCode(403);
+        }
+
+        if (!TryGetOpenAiConfiguration(out var apiKey, out var responsesUrl, out var model))
+        {
+            return Problem(title: "Prep checklist generation unavailable.", detail: "OpenAI API key is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(TimeSpan.FromSeconds(170));
+        var ct = timeoutCts.Token;
+
+        try
+        {
+            var text = await SendOpenAiPromptAsync(
+                apiKey,
+                responsesUrl,
+                model,
+                BuildSessionPrepChecklistPrompt(campaign, request),
+                referenceImageUrl: null,
+                temperature: 0.55,
+                maxOutputTokens: 1800,
+                textFormat: BuildSessionPrepChecklistJsonSchemaFormat(),
+                fallbackToPlainTextOnBadRequest: true,
+                cancellationToken: ct);
+
+            var generated = TryParseGeneratedSessionPrepChecklistPayload(text);
+            if (generated is null)
+            {
+                var repairedText = await RepairJsonAsync(
+                    apiKey,
+                    responsesUrl,
+                    model,
+                    BuildSessionPrepChecklistRepairPrompt(text),
+                    maxOutputTokens: 2200,
+                    ct);
+
+                generated = TryParseGeneratedSessionPrepChecklistPayload(repairedText);
+            }
+
+            if (generated is null)
+            {
+                return Problem(title: "Prep checklist generation failed.", detail: "Model output was not valid JSON.", statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            return Ok(NormalizeSessionPrepChecklist(generated));
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return Problem(title: "Prep checklist generation timed out.", detail: "Generation is taking too long. Try again or simplify your request.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+        catch (HttpRequestException exception)
+        {
+            return Problem(title: "Prep checklist generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return Problem(title: "Prep checklist generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+    }
+
     [HttpPost("{campaignId:guid}/npcs")]
     public async Task<ActionResult<CampaignDto>> AddNpc(Guid campaignId, [FromBody] CreateCampaignNpcRequest request, CancellationToken cancellationToken)
     {
@@ -2187,6 +2265,49 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         };
     }
 
+    private static object BuildSessionPrepChecklistJsonSchemaFormat()
+    {
+        return new Dictionary<string, object?>
+        {
+            ["type"] = "json_schema",
+            ["name"] = "session_prep_checklist",
+            ["strict"] = true,
+            ["schema"] = new Dictionary<string, object?>
+            {
+                ["type"] = "object",
+                ["additionalProperties"] = false,
+                ["required"] = new[] { "sections" },
+                ["properties"] = new Dictionary<string, object?>
+                {
+                    ["sections"] = BuildJsonSchemaArrayProperty(new Dictionary<string, object?>
+                    {
+                        ["type"] = "object",
+                        ["additionalProperties"] = false,
+                        ["required"] = new[] { "title", "purpose", "items" },
+                        ["properties"] = new Dictionary<string, object?>
+                        {
+                            ["title"] = BuildJsonSchemaStringProperty(),
+                            ["purpose"] = BuildJsonSchemaStringProperty(),
+                            ["items"] = BuildJsonSchemaArrayProperty(new Dictionary<string, object?>
+                            {
+                                ["type"] = "object",
+                                ["additionalProperties"] = false,
+                                ["required"] = new[] { "text", "rationale", "source", "isOptional" },
+                                ["properties"] = new Dictionary<string, object?>
+                                {
+                                    ["text"] = BuildJsonSchemaStringProperty(),
+                                    ["rationale"] = BuildJsonSchemaStringProperty(),
+                                    ["source"] = BuildJsonSchemaStringProperty("One of: campaign-summary, open-threads, session-objective, session-notes, npcs, monsters, pacing, logistics, continuity, player-agency."),
+                                    ["isOptional"] = new Dictionary<string, object?> { ["type"] = "boolean" }
+                                }
+                            })
+                        }
+                    })
+                }
+            }
+        };
+    }
+
     private static Dictionary<string, object?> BuildJsonSchemaStringProperty(string? description = null)
     {
         var property = new Dictionary<string, object?>
@@ -2969,6 +3090,63 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         ]);
     }
 
+    private static string BuildSessionPrepChecklistPrompt(CampaignDto campaign, GenerateSessionPrepChecklistRequest request)
+    {
+        var titleHint = string.IsNullOrWhiteSpace(request.TitleHint) ? "No title hint provided" : request.TitleHint.Trim();
+        var objectiveHint = string.IsNullOrWhiteSpace(request.ShortDescriptionHint) ? "No objective hint provided" : request.ShortDescriptionHint.Trim();
+        var locationHint = string.IsNullOrWhiteSpace(request.LocationHint) ? "No location hint provided" : request.LocationHint.Trim();
+        var notesHint = string.IsNullOrWhiteSpace(request.MarkdownNotesHint) ? "No notes hint provided" : request.MarkdownNotesHint.Trim();
+        var focus = string.IsNullOrWhiteSpace(request.Focus) ? "Balanced prep" : request.Focus.Trim();
+        var preferredNpcNames = request.PreferredNpcNames is { Count: > 0 } ? FormatList(request.PreferredNpcNames) : "None provided";
+        var preferredMonsterNames = request.PreferredMonsterNames is { Count: > 0 } ? FormatList(request.PreferredMonsterNames) : "None provided";
+
+        return string.Join('\n',
+        [
+            "Generate a practical DM prep checklist for a Dungeons & Dragons session in DungeonKeep.",
+            "Return only valid JSON.",
+            "Use exactly one top-level field: sections.",
+            "sections must be an array of objects with: title, purpose, items.",
+            "items must be an array of objects with: text, rationale, source, isOptional.",
+            "source should be a short tag such as campaign-summary, open-threads, session-objective, session-notes, npcs, monsters, pacing, logistics, continuity, player-agency.",
+            "Build 3-5 sections. Each section should include 3-7 actionable items.",
+            "Favor concrete prep actions a DM can complete before running the session.",
+            "Keep items concise and specific.",
+            string.Empty,
+            $"Campaign name: {campaign.Name}",
+            $"Campaign setting: {campaign.Setting}",
+            $"Campaign tone: {campaign.Tone}",
+            $"Campaign hook: {campaign.Hook}",
+            $"Campaign summary: {campaign.Summary}",
+            $"Next session note: {campaign.NextSession}",
+            $"Open threads: {FormatList(campaign.OpenThreads.Select(thread => thread.Text))}",
+            $"Known campaign NPCs: {FormatList(campaign.Npcs)}",
+            $"Recent sessions: {FormatList(campaign.Sessions.TakeLast(3).Select(session => $"{session.Title} ({session.Location})"))}",
+            string.Empty,
+            $"Session title hint: {titleHint}",
+            $"Session objective hint: {objectiveHint}",
+            $"Session location hint: {locationHint}",
+            $"Session notes hint: {notesHint}",
+            $"Focus: {focus}",
+            $"Preferred NPCs in checklist context: {preferredNpcNames}",
+            $"Preferred monsters in checklist context: {preferredMonsterNames}"
+        ]);
+    }
+
+    private static string BuildSessionPrepChecklistRepairPrompt(string invalidOutput)
+    {
+        return string.Join('\n',
+        [
+            "Convert the provided prep checklist content into valid JSON only.",
+            "Do not add markdown, explanations, or code fences.",
+            "Use exactly one top-level field: sections.",
+            "sections must be an array of objects with: title, purpose, items.",
+            "items must be an array of objects with: text, rationale, source, isOptional.",
+            string.Empty,
+            "Content to repair:",
+            invalidOutput
+        ]);
+    }
+
     private static string BuildNpcDraftPrompt(CampaignDto? campaign, GenerateNpcDraftRequest request)
     {
         var nameHint = string.IsNullOrWhiteSpace(request.NameHint) ? "No name hint provided" : request.NameHint.Trim();
@@ -3263,6 +3441,28 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         );
     }
 
+    private static GenerateSessionPrepChecklistResponse NormalizeSessionPrepChecklist(GenerateSessionPrepChecklistPayload generated)
+    {
+        var sections = (generated.Sections ?? [])
+            .Take(6)
+            .Select(section => new GenerateSessionPrepChecklistSectionResponse(
+                Title: FirstNonEmpty(section.Title, null, null, null, "Prep Section"),
+                Purpose: CleanText(section.Purpose),
+                Items: (section.Items ?? [])
+                    .Take(12)
+                    .Select(item => new GenerateSessionPrepChecklistItemResponse(
+                        Text: CleanText(item.Text),
+                        Rationale: CleanText(item.Rationale),
+                        Source: CleanText(item.Source),
+                        IsOptional: item.IsOptional ?? false))
+                    .Where(item => !string.IsNullOrWhiteSpace(item.Text))
+                    .ToArray()))
+            .Where(section => section.Items.Count > 0)
+            .ToArray();
+
+        return new GenerateSessionPrepChecklistResponse(Sections: sections);
+    }
+
     private static GenerateNpcDraftResponse NormalizeNpcDraft(GenerateNpcDraftPayload generated, GenerateNpcDraftRequest request)
     {
         var motivations = ResolveNpcMotivations(generated, request);
@@ -3525,6 +3725,26 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
             if (recovered is not null)
             {
                 return recovered;
+            }
+        }
+
+        return null;
+    }
+
+    private static GenerateSessionPrepChecklistPayload? TryParseGeneratedSessionPrepChecklistPayload(string rawText)
+    {
+        foreach (var candidate in BuildJsonCandidates(rawText))
+        {
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<GenerateSessionPrepChecklistPayload>(candidate, SerializerOptions);
+                if (parsed is not null)
+                {
+                    return parsed;
+                }
+            }
+            catch (JsonException)
+            {
             }
         }
 
@@ -5136,6 +5356,15 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         string? SessionFocus,
         string? AdditionalConstraints);
 
+    public sealed record GenerateSessionPrepChecklistRequest(
+        string? TitleHint,
+        string? ShortDescriptionHint,
+        string? LocationHint,
+        string? MarkdownNotesHint,
+        IReadOnlyList<string>? PreferredNpcNames,
+        IReadOnlyList<string>? PreferredMonsterNames,
+        string? Focus);
+
     public sealed record GenerateCampaignMapRequest(string? Background, string? MapName, IReadOnlyList<string>? ExistingLandmarkLabels, string? ReferenceImageUrl);
 
     private static string NormalizeRequestedBattlemapLocale(string? value)
@@ -5188,6 +5417,20 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         IReadOnlyList<string> Secrets,
         IReadOnlyList<string> BranchingPaths,
         IReadOnlyList<string> NextSessionHooks);
+
+    public sealed record GenerateSessionPrepChecklistResponse(
+        IReadOnlyList<GenerateSessionPrepChecklistSectionResponse> Sections);
+
+    public sealed record GenerateSessionPrepChecklistSectionResponse(
+        string Title,
+        string Purpose,
+        IReadOnlyList<GenerateSessionPrepChecklistItemResponse> Items);
+
+    public sealed record GenerateSessionPrepChecklistItemResponse(
+        string Text,
+        string Rationale,
+        string Source,
+        bool IsOptional);
 
     public sealed record GenerateNpcDraftRequest(
         Guid? CampaignId,
@@ -5293,6 +5536,20 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         List<string>? Secrets,
         List<string>? BranchingPaths,
         List<string>? NextSessionHooks);
+
+    private sealed record GenerateSessionPrepChecklistPayload(
+        List<GenerateSessionPrepChecklistSectionPayload>? Sections);
+
+    private sealed record GenerateSessionPrepChecklistSectionPayload(
+        string? Title,
+        string? Purpose,
+        List<GenerateSessionPrepChecklistItemPayload>? Items);
+
+    private sealed record GenerateSessionPrepChecklistItemPayload(
+        string? Text,
+        string? Rationale,
+        string? Source,
+        bool? IsOptional);
 
     private sealed record GenerateCampaignMapPayload(
         string? Background,

@@ -5,6 +5,22 @@ export interface SessionTextEntry {
     text: string;
 }
 
+export interface SessionPrepChecklistItem {
+    id: string;
+    text: string;
+    rationale: string;
+    source: string;
+    isOptional: boolean;
+    completed: boolean;
+}
+
+export interface SessionPrepChecklistSection {
+    id: string;
+    title: string;
+    purpose: string;
+    items: SessionPrepChecklistItem[];
+}
+
 export interface SessionScene {
     id: string;
     title: string;
@@ -78,4 +94,5 @@ export interface SessionEditorDraft {
     secrets: SessionTextEntry[];
     branchingPaths: SessionTextEntry[];
     nextSessionHooks: SessionTextEntry[];
+    prepChecklist: SessionPrepChecklistSection[];
 }

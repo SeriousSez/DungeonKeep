@@ -86,6 +86,31 @@ export const SESSION_EDITOR_SAMPLE_DRAFT: SessionEditorDraft = {
     ],
     nextSessionHooks: [
         { id: 'hook-door', text: 'The opened vault reveals a reliquary linked to the party’s patron.' }
+    ],
+    prepChecklist: [
+        {
+            id: 'prep-section-table-flow',
+            title: 'Table Flow',
+            purpose: 'Keep pacing tight and make scene transitions effortless.',
+            items: [
+                {
+                    id: 'prep-item-opening-recap',
+                    text: 'Prepare a 60-second recap and immediate opening choice.',
+                    rationale: 'A strong opening gets everyone engaged quickly.',
+                    source: 'session-summary',
+                    isOptional: false,
+                    completed: false
+                },
+                {
+                    id: 'prep-item-fallback-scenes',
+                    text: 'Note one fallback complication if the group bypasses a planned scene.',
+                    rationale: 'Maintains momentum when players skip expected beats.',
+                    source: 'scene-outline',
+                    isOptional: true,
+                    completed: false
+                }
+            ]
+        }
     ]
 };
 

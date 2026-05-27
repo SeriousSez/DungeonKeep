@@ -47,6 +47,7 @@ interface SessionDetailView {
     secrets: SessionEditorDraft['secrets'];
     branchingPaths: SessionEditorDraft['branchingPaths'];
     nextSessionHooks: SessionEditorDraft['nextSessionHooks'];
+    prepChecklist: SessionEditorDraft['prepChecklist'];
 }
 
 interface SessionPersistedInventoryEntry {
@@ -233,6 +234,13 @@ export class SessionDetailPageComponent {
             });
         }
 
+        if (detail.prepChecklist.length > 0) {
+            options.push({
+                id: 'session-smart-prep',
+                label: 'Smart Prep Checklist'
+            });
+        }
+
         if (detail.secrets.length > 0 || detail.branchingPaths.length > 0 || detail.nextSessionHooks.length > 0) {
             options.push({
                 id: 'session-loose-ends',
@@ -270,7 +278,8 @@ export class SessionDetailPageComponent {
             skillChecks: draft?.skillChecks ?? [],
             secrets: draft?.secrets ?? [],
             branchingPaths: draft?.branchingPaths ?? [],
-            nextSessionHooks: draft?.nextSessionHooks ?? []
+            nextSessionHooks: draft?.nextSessionHooks ?? [],
+            prepChecklist: draft?.prepChecklist ?? []
         };
     });
 
@@ -539,6 +548,35 @@ export class SessionDetailPageComponent {
         }
 
         this.selectedSection.set(sectionId);
+    }
+
+    togglePrepChecklistItemCompletion(sectionId: string, itemId: string): void {
+        if (!this.canEdit()) {
+            return;
+        }
+
+        const draft = this.storedDraft();
+        if (!draft) {
+            return;
+        }
+
+        const updatedDraft: SessionEditorDraft = {
+            ...draft,
+            prepChecklist: (draft.prepChecklist ?? []).map((section) => {
+                if (section.id !== sectionId) {
+                    return section;
+                }
+
+                return {
+                    ...section,
+                    items: section.items.map((item) => item.id === itemId ? { ...item, completed: !item.completed } : item)
+                };
+            })
+        };
+
+        this.storedDraft.set(updatedDraft);
+        this.persistSessionDetailsDraft(updatedDraft);
+        this.cdr.detectChanges();
     }
 
     isSectionVisible(sectionId: string): boolean {
@@ -1353,6 +1391,19 @@ export class SessionDetailPageComponent {
 
         void this.store.saveSessionDetails(campaignId, sessionId, {
             detailsJson,
+            lootAssignmentsJson: JSON.stringify(this.lootAssignments())
+        });
+    }
+
+    private persistSessionDetailsDraft(draft: SessionEditorDraft): void {
+        const campaignId = this.campaignId();
+        const sessionId = this.sessionId();
+        if (!campaignId || !sessionId) {
+            return;
+        }
+
+        void this.store.saveSessionDetails(campaignId, sessionId, {
+            detailsJson: JSON.stringify(draft),
             lootAssignmentsJson: JSON.stringify(this.lootAssignments())
         });
     }

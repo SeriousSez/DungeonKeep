@@ -817,6 +817,33 @@ export interface ApiGenerateSessionDraftResponse {
     nextSessionHooks: string[];
 }
 
+export interface ApiGenerateSessionPrepChecklistRequest {
+    titleHint: string;
+    shortDescriptionHint: string;
+    locationHint: string;
+    markdownNotesHint: string;
+    preferredNpcNames: string[];
+    preferredMonsterNames: string[];
+    focus: string;
+}
+
+export interface ApiGenerateSessionPrepChecklistItemResponse {
+    text: string;
+    rationale: string;
+    source: string;
+    isOptional: boolean;
+}
+
+export interface ApiGenerateSessionPrepChecklistSectionResponse {
+    title: string;
+    purpose: string;
+    items: ApiGenerateSessionPrepChecklistItemResponse[];
+}
+
+export interface ApiGenerateSessionPrepChecklistResponse {
+    sections: ApiGenerateSessionPrepChecklistSectionResponse[];
+}
+
 export interface ApiGenerateNpcDraftRequest {
     campaignId?: string;
     nameHint: string;
@@ -1020,6 +1047,10 @@ export class DungeonApiService {
 
     async generateSessionDraft(campaignId: string, payload: ApiGenerateSessionDraftRequest): Promise<ApiGenerateSessionDraftResponse> {
         return await firstValueFrom(this.http.post<ApiGenerateSessionDraftResponse>(`${this.baseUrl}/campaigns/${campaignId}/sessions/generate-draft`, payload));
+    }
+
+    async generateSessionPrepChecklist(campaignId: string, payload: ApiGenerateSessionPrepChecklistRequest): Promise<ApiGenerateSessionPrepChecklistResponse> {
+        return await firstValueFrom(this.http.post<ApiGenerateSessionPrepChecklistResponse>(`${this.baseUrl}/campaigns/${campaignId}/sessions/generate-prep-checklist`, payload));
     }
 
     async deleteCampaignSession(campaignId: string, sessionId: string): Promise<ApiCampaignDto> {

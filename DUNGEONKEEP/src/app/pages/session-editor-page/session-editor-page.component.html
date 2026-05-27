@@ -11,7 +11,7 @@
         <div class="header-actions">
             <span class="autosave-pill">{{ autosaveLabel() }}</span>
             <button type="button" class="ghost-button" (click)="loadSampleDraft()">Load Sample</button>
-            <button type="button" class="primary-button" [disabled]="isSavingSession()" [class.is-loading]="isSavingSession()" (click)="saveSession()">Save Session</button>
+            <button type="button" class="primary-button" [disabled]="isSavingSession()" [class.is-loading]="isSavingSession()" (click)="saveSession()"><span class="loading-label">Save Session</span></button>
         </div>
     </section>
 
@@ -46,6 +46,12 @@
     @if (generationError()) {
     <section class="panel status-panel error-panel">
         <p>{{ generationError() }}</p>
+    </section>
+    }
+
+    @if (prepChecklistGenerationError()) {
+    <section class="panel status-panel error-panel">
+        <p>{{ prepChecklistGenerationError() }}</p>
     </section>
     }
 
@@ -157,7 +163,7 @@
 
         <div class="generation-actions-row">
             <button type="button" class="ghost-button" (click)="selectCreationMode('standard')">Back to editor</button>
-            <button type="button" class="primary-button" [class.is-loading]="generationInProgress()" [disabled]="generationInProgress()" (click)="generateSessionDraft()">{{ generationInProgress() ? 'Generating...' : 'Generate session draft' }}</button>
+            <button type="button" class="primary-button" [class.is-loading]="generationInProgress()" [disabled]="generationInProgress()" (click)="generateSessionDraft()"><span class="loading-label">{{ generationInProgress() ? 'Generating...' : 'Generate session draft' }}</span></button>
         </div>
     </section>
     }
@@ -639,6 +645,93 @@
                         </div>
                         }
                     </section>
+                </div>
+            </details>
+
+            <details class="editor-section" open>
+                <summary>
+                    <div>
+                        <p class="eyebrow">Smart Prep Assistant</p>
+                        <h2>Prep Checklist</h2>
+                    </div>
+                </summary>
+
+                <div class="section-body stack-grid">
+                    <label class="field full-span">
+                        <span>Checklist Focus</span>
+                        <textarea rows="3" [value]="prepChecklistGenerationHints().focus" (input)="updatePrepChecklistFocus($any($event.target).value)" placeholder="Call out what to optimize for: pacing, social intrigue, combat speed, clue delivery, etc."></textarea>
+                    </label>
+
+                    <div class="generation-actions-row">
+                        <button type="button" class="ghost-button" (click)="addPrepChecklistSection()">Add Section</button>
+                        <button type="button" class="primary-button" [class.is-loading]="prepChecklistGenerationInProgress()" [disabled]="prepChecklistGenerationInProgress()" (click)="generatePrepChecklist()"><span class="loading-label">{{ prepChecklistGenerationInProgress() ? 'Generating...' :
+                                'Generate Smart Prep Checklist'
+                                }}</span></button>
+                    </div>
+
+                    @if (prepChecklist().length === 0) {
+                    <p class="empty-state">No prep checklist yet. Generate one from your current session draft or add sections manually.</p>
+                    } @else {
+                    <div class="prep-checklist-sections">
+                        @for (section of prepChecklist(); track section.id) {
+                        <article class="prep-checklist-section">
+                            <div class="prep-section-header">
+                                <label class="field full-span">
+                                    <span>Section Title</span>
+                                    <input type="text" [value]="section.title" (input)="updatePrepChecklistSectionTitle(section.id, $any($event.target).value)" placeholder="Section title" />
+                                </label>
+                                <button type="button" class="ghost-button" (click)="removePrepChecklistSection(section.id)">Remove Section</button>
+                            </div>
+
+                            <label class="field full-span">
+                                <span>Purpose</span>
+                                <input type="text" [value]="section.purpose" (input)="updatePrepChecklistSectionPurpose(section.id, $any($event.target).value)" placeholder="Why this section matters in prep" />
+                            </label>
+
+                            @if (section.items.length === 0) {
+                            <p class="empty-state small-empty">No checklist items in this section yet.</p>
+                            } @else {
+                            <div class="prep-checklist-items">
+                                @for (item of section.items; track item.id) {
+                                <div class="prep-checklist-item" [class.prep-checklist-item-completed]="item.completed">
+                                    <div class="prep-item-top-row">
+                                        <label class="prep-item-toggle">
+                                            <input type="checkbox" [checked]="item.completed" (change)="togglePrepChecklistItemCompleted(section.id, item.id)" />
+                                            <span>Done</span>
+                                        </label>
+                                        <button type="button" class="ghost-button" (click)="removePrepChecklistItem(section.id, item.id)">Remove</button>
+                                    </div>
+
+                                    <label class="field full-span">
+                                        <span>Task</span>
+                                        <input type="text" [value]="item.text" (input)="updatePrepChecklistItem(section.id, item.id, 'text', $any($event.target).value)" placeholder="Prep action" />
+                                    </label>
+
+                                    <div class="section-grid two-up compact-grid">
+                                        <label class="field">
+                                            <span>Rationale</span>
+                                            <input type="text" [value]="item.rationale" (input)="updatePrepChecklistItem(section.id, item.id, 'rationale', $any($event.target).value)" placeholder="Why this helps" />
+                                        </label>
+
+                                        <label class="field">
+                                            <span>Source</span>
+                                            <input type="text" [value]="item.source" (input)="updatePrepChecklistItem(section.id, item.id, 'source', $any($event.target).value)" placeholder="session-notes, npc-list, monster-list" />
+                                        </label>
+                                    </div>
+
+                                    <button type="button" class="ghost-button" (click)="togglePrepChecklistItemOptional(section.id, item.id)">
+                                        {{ item.isOptional ? 'Mark Required' : 'Mark Optional' }}
+                                    </button>
+                                </div>
+                                }
+                            </div>
+                            }
+
+                            <button type="button" class="ghost-button" (click)="addPrepChecklistItem(section.id)">Add Item</button>
+                        </article>
+                        }
+                    </div>
+                    }
                 </div>
             </details>
         </section>

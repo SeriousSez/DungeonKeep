@@ -357,6 +357,58 @@
         </section>
         }
 
+        @if (session.prepChecklist.length > 0 && isSectionVisible('session-smart-prep')) {
+        <section id="session-smart-prep" class="panel section-anchor-target">
+            <div class="section-header">
+                <div>
+                    <p class="section-kicker">Smart Prep Assistant</p>
+                    <h2>Prep Checklist</h2>
+                </div>
+            </div>
+
+            <div class="detail-stack prep-checklist-section-stack">
+                @for (section of session.prepChecklist; track section.id) {
+                <article class="detail-card prep-checklist-section-card">
+                    <h3>{{ section.title || 'Prep Section' }}</h3>
+                    @if (section.purpose) {
+                    <p class="detail-meta"><strong>Purpose:</strong> {{ section.purpose }}</p>
+                    }
+
+                    @if (section.items.length > 0) {
+                    <ul class="prep-checklist-items">
+                        @for (item of section.items; track item.id) {
+                        <li class="prep-checklist-item" [class.prep-checklist-item-completed]="item.completed">
+                            <div class="prep-checklist-item-top">
+                                @if (canEdit()) {
+                                <button type="button" class="ghost-button detail-action-button prep-checklist-toggle" (click)="togglePrepChecklistItemCompletion(section.id, item.id)">
+                                    {{ item.completed ? 'Mark Open' : 'Mark Done' }}
+                                </button>
+                                } @else {
+                                <span class="detail-inline-status" [class.detail-inline-status-muted]="!item.completed">
+                                    {{ item.completed ? 'Done' : 'Open' }}
+                                </span>
+                                }
+                                @if (item.isOptional) {
+                                <span class="detail-inline-status detail-inline-status-muted">Optional</span>
+                                }
+                            </div>
+                            <p><strong>{{ item.text }}</strong></p>
+                            @if (item.rationale) {
+                            <p><strong>Why:</strong> {{ item.rationale }}</p>
+                            }
+                            @if (item.source) {
+                            <p class="detail-meta"><strong>Source:</strong> {{ item.source }}</p>
+                            }
+                        </li>
+                        }
+                    </ul>
+                    }
+                </article>
+                }
+            </div>
+        </section>
+        }
+
         @if ((session.secrets.length > 0 || session.branchingPaths.length > 0 || session.nextSessionHooks.length > 0) && isSectionVisible('session-loose-ends')) {
         <section id="session-loose-ends" class="panel section-anchor-target">
             <div class="section-header">
