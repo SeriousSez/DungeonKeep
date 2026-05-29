@@ -39,6 +39,11 @@ DungeonKeep is a full-stack tabletop campaign companion for running D&D-style ga
 
 Run the API and frontend in separate terminals.
 
+If you are using VS Code in this workspace, you can also run:
+
+- task `backend: run` (API)
+- task `npm: start` in `DUNGEONKEEP` (frontend)
+
 ### 1. Start the API
 
 ```powershell
@@ -111,6 +116,8 @@ Relevant API endpoints include:
 - `POST /api/auth/resend-activation`
 - `POST /api/auth/login`
 - `GET /api/auth/session`
+- `POST /api/auth/request-password-reset`
+- `POST /api/auth/reset-password`
 
 ## Configuration
 
@@ -188,8 +195,17 @@ The current deploy workflow is configured for the post-migration steady state an
 The API exposes a SignalR hub at:
 
 - `/hubs/campaign`
+- `/hubs/user`
+- `/hubs/voice`
 
 The Angular client includes a SignalR client for campaign-related live updates.
+
+## API Docs (Development)
+
+When running locally in Development, Swagger UI is available at:
+
+- `http://localhost:5098/swagger`
+- `https://localhost:7269/swagger`
 
 ## Deployment
 
