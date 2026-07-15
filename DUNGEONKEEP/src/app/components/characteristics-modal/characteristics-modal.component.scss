@@ -385,3 +385,31 @@
         display: none;
     }
 }
+@media (max-width: 600px) {
+    .characteristics-modal-overlay {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .characteristics-modal {
+        margin-top: 0;
+        width: 100%;
+        max-height: 92dvh;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        border-top-left-radius: 20px;
+        border-top-right-radius: 20px;
+        animation: charSheetIn 260ms ease-out;
+    }
+
+    @keyframes charSheetIn {
+        from {
+            transform: translateY(100%);
+            opacity: 0.6;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+}

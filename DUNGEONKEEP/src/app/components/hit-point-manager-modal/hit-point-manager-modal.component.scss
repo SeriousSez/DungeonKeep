@@ -151,3 +151,41 @@
         grid-template-columns: 1fr;
     }
 }
+
+@media (max-width: 600px) {
+    .class-hp-modal-backdrop {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .class-hp-modal {
+        width: 100%;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        border-top-left-radius: 20px;
+        border-top-right-radius: 20px;
+        max-height: 90dvh;
+        animation: hpSheetIn 260ms ease-out;
+    }
+
+    @keyframes hpSheetIn {
+        from {
+            transform: translateY(100%);
+            opacity: 0.6;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .class-hp-modal__close {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .class-hp-modal__controls .score-input {
+        min-height: 48px;
+        font-size: 1rem;
+    }
+}

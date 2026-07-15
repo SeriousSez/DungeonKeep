@@ -204,6 +204,17 @@ select {
     a {
         -webkit-tap-highlight-color: transparent;
     }
+
+    // Slimmer scrollbars on touch devices
+    *::-webkit-scrollbar {
+        width: 3px;
+        height: 3px;
+    }
+
+    // Prevent accidental browser navigation swipes inside scroll areas
+    .overscroll-contain {
+        overscroll-behavior: contain;
+    }
 }
 
 // ── Mobile Responsive Improvements ────────────────────────────────────────────
@@ -227,8 +238,19 @@ select {
     }
 
     *::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+        width: 3px;
+        height: 3px;
+    }
+}
+
+// ── Touch target minimum (applies globally) ───────────────────────────────────
+@media (pointer: coarse) {
+    // Icon-only buttons get a larger click area
+    .logout-icon-btn,
+    .close-btn,
+    .icon-btn {
+        min-width: 44px;
+        min-height: 44px;
     }
 }
 

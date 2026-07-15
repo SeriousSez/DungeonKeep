@@ -2429,7 +2429,10 @@
         font-size: 0.9rem;
     }
 
-    .abilities-strip,
+    .abilities-strip {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
     .secondary-stats-strip,
     .save-list {
         grid-template-columns: repeat(2, 1fr);
@@ -2555,6 +2558,77 @@
 
     .skill-flag {
         display: none;
+    }
+}
+
+// ── Mobile sheet tab bar ───────────────────────────────────────────────────────
+.mobile-sheet-tabs {
+    display: none;
+    gap: 6px;
+    padding: 0 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+.mobile-sheet-tab {
+    flex: 1 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 14px;
+    min-height: 40px;
+    border: 1px solid var(--pill-border);
+    border-radius: 999px;
+    background: var(--pill-bg);
+    color: var(--text-soft);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+
+    i {
+        font-size: 0.9em;
+    }
+
+    &.is-active {
+        background: color-mix(in srgb, var(--color-primary) 16%, var(--pill-bg));
+        border-color: color-mix(in srgb, var(--color-primary) 40%, var(--pill-border));
+        color: var(--color-primary);
+    }
+
+    &:hover:not(.is-active) {
+        background: color-mix(in srgb, var(--color-primary) 8%, var(--pill-bg));
+        color: var(--text-main);
+    }
+}
+
+@media (max-width: 720px) {
+    .mobile-sheet-tabs {
+        display: flex;
+    }
+
+    .mobile-hidden {
+        display: none !important;
+    }
+
+    // Compact 3×2 ability score grid
+    .abilities-strip {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .mobile-sheet-tab {
+        min-height: 38px;
+        padding: 0 12px;
+        font-size: 0.78rem;
     }
 }
 
