@@ -308,17 +308,6 @@
         animation: mobileSheetIn 260ms ease-out;
     }
 
-    @keyframes mobileSheetIn {
-        from {
-            transform: translateY(100%);
-            opacity: 0.6;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
-    }
-
     .close-modal {
         width: 44px;
         height: 44px;

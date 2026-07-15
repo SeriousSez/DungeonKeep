@@ -165,18 +165,7 @@
         border-top-left-radius: 20px;
         border-top-right-radius: 20px;
         max-height: 90dvh;
-        animation: hpSheetIn 260ms ease-out;
-    }
-
-    @keyframes hpSheetIn {
-        from {
-            transform: translateY(100%);
-            opacity: 0.6;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
+        animation: mobileSheetIn 260ms ease-out;
     }
 
     .class-hp-modal__close {

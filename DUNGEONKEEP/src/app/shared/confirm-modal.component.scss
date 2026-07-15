@@ -83,15 +83,4 @@
             min-height: 48px;
         }
     }
-
-    @keyframes mobileSheetIn {
-        from {
-            transform: translateY(100%);
-            opacity: 0.6;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
-    }
 }

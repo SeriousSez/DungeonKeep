@@ -254,6 +254,20 @@ select {
     }
 }
 
+// ── Shared mobile bottom-sheet animation ──────────────────────────────────────
+// Referenced by modal components to slide up from the bottom on narrow screens.
+@keyframes mobileSheetIn {
+    from {
+        transform: translateY(100%);
+        opacity: 0.6;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
 .app-custom-tooltip {
     position: fixed;
     z-index: 5000;

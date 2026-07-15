@@ -271,17 +271,6 @@
         border-bottom-right-radius: 0;
         border-top-left-radius: 20px;
         border-top-right-radius: 20px;
-        animation: deitySheetIn 260ms ease-out;
-    }
-
-    @keyframes deitySheetIn {
-        from {
-            transform: translateY(100%);
-            opacity: 0.6;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
+        animation: mobileSheetIn 260ms ease-out;
     }
 }
