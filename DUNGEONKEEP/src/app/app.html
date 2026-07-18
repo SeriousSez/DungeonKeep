@@ -20,7 +20,7 @@
 
         <nav id="primary-nav" class="primary-nav" [class.is-open]="mobileNavOpen()">
 
-            <div class="nav-group" [class.is-open]="openDropdown() === 'campaigns'">
+            <div class="nav-group nav-mobile-hide" [class.is-open]="openDropdown() === 'campaigns'">
                 <button class="nav-group-btn" type="button" (click)="toggleDropdown('campaigns')">
                     Campaigns
                     <i class="fa-duotone fa-thin fa-chevron-down nav-chevron"></i>
@@ -38,7 +38,7 @@
                 </div>
             </div>
 
-            <div class="nav-group" [class.is-open]="openDropdown() === 'characters'">
+            <div class="nav-group nav-mobile-hide" [class.is-open]="openDropdown() === 'characters'">
                 <button class="nav-group-btn" type="button" (click)="toggleDropdown('characters')">
                     Characters
                     <i class="fa-duotone fa-thin fa-chevron-down nav-chevron"></i>
@@ -56,7 +56,7 @@
                 </div>
             </div>
 
-            <div class="nav-group" [class.is-open]="openDropdown() === 'rules'">
+            <div class="nav-group nav-mobile-hide" [class.is-open]="openDropdown() === 'rules'">
                 <button class="nav-group-btn" type="button" [class.is-active]="isRulesActive()" (click)="toggleDropdown('rules')">
                     Rules
                     <i class="fa-duotone fa-thin fa-chevron-down nav-chevron"></i>
@@ -101,6 +101,14 @@
                     </div>
                 </div>
             </div>
+
+            <a class="nav-direct nav-mobile-only" routerLink="/campaigns/new" routerLinkActive="is-active" (click)="closeMobileNav(); closeDropdown()">
+                New Campaign
+            </a>
+
+            <a class="nav-direct nav-mobile-only" routerLink="/characters/new" routerLinkActive="is-active" (click)="closeMobileNav(); closeDropdown()">
+                New Character
+            </a>
 
             <a class="nav-direct" routerLink="/npcs" routerLinkActive="is-active" (click)="closeMobileNav(); closeDropdown()">
                 NPC Library
