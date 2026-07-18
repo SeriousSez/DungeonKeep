@@ -1,3 +1,5 @@
+$mobile-bottom-nav-height: 54px;
+
 :host {
     position: fixed;
     right: 22px;
@@ -476,14 +478,14 @@
 }
 
 @media (max-width: 860px) {
-    // Raise the launcher above the bottom navigation bar (~54px) so it doesn't overlap
+    // Raise the launcher above the bottom navigation bar so it doesn't overlap
     :host {
         right: 12px;
-        bottom: calc(54px + env(safe-area-inset-bottom, 0px) + 14px);
+        bottom: calc(#{$mobile-bottom-nav-height} + env(safe-area-inset-bottom, 0px) + 14px);
     }
 
     .chat-panel {
-        bottom: calc(54px + env(safe-area-inset-bottom, 0px) + 64px);
+        bottom: calc(#{$mobile-bottom-nav-height} + env(safe-area-inset-bottom, 0px) + 64px);
     }
 }
 
