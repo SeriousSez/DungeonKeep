@@ -248,7 +248,7 @@ export class App {
       this.userMenuOpen.set(false);
     }
 
-    if (this.mobileNavOpen() && !target.closest('.topbar') && !target.closest('.bottom-nav')) {
+    if (this.mobileNavOpen() && !target.closest('.primary-nav') && !target.closest('.bottom-nav') && !target.closest('.hamburger-btn')) {
       this.closeMobileNav();
     }
   }
@@ -315,4 +315,3 @@ export class App {
     }
   }
 }
-
