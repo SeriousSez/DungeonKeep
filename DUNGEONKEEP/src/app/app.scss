@@ -1,6 +1,3 @@
-$mobile-bottom-nav-height: 54px;
-$mobile-bottom-nav-clearance: 70px;
-
 :host {
     display: block;
 }
@@ -658,7 +655,7 @@ $mobile-bottom-nav-clearance: 70px;
     justify-content: center;
     gap: 3px;
     padding: 8px 4px 6px;
-    min-height: $mobile-bottom-nav-height;
+    min-height: 54px;
     border: none;
     background: transparent;
     color: var(--text-soft);
@@ -836,7 +833,7 @@ $mobile-bottom-nav-clearance: 70px;
         position: fixed;
         top: 10px;
         right: 8px;
-        bottom: calc(#{$mobile-bottom-nav-clearance} + env(safe-area-inset-bottom, 0px));
+        bottom: calc(70px + env(safe-area-inset-bottom, 0px));
         left: auto;
         width: min(340px, calc(100vw - 16px));
         height: auto;
@@ -942,7 +939,7 @@ $mobile-bottom-nav-clearance: 70px;
 
     .shell {
         padding: 0 8px;
-        padding-bottom: $mobile-bottom-nav-clearance;
+        padding-bottom: 70px;
     }
 
     .bottom-nav {
@@ -967,7 +964,7 @@ $mobile-bottom-nav-clearance: 70px;
 
     .shell {
         padding: 0 4px;
-        padding-bottom: $mobile-bottom-nav-clearance;
+        padding-bottom: 70px;
     }
 
     .live-notification-toast {
