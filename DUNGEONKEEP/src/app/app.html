@@ -19,6 +19,9 @@
         </a>
 
         <nav id="primary-nav" class="primary-nav" [class.is-open]="mobileNavOpen()">
+            <button type="button" class="nav-mobile-close" (click)="closeMobileNav()">
+                <i class="fa-duotone fa-thin fa-xmark" aria-hidden="true"></i>
+            </button>
 
             <div class="nav-group" [class.is-open]="openDropdown() === 'campaigns'">
                 <button class="nav-group-btn" type="button" (click)="toggleDropdown('campaigns')">

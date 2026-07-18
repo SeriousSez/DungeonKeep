@@ -407,6 +407,10 @@
     line-height: 1;
 }
 
+.nav-mobile-close {
+    display: none;
+}
+
 // ── Spacer ────────────────────────────────────────────────────────────────────
 .topbar-spacer {
     flex: 1;
@@ -797,6 +801,10 @@
 
 // ── Responsive ────────────────────────────────────────────────────────────────
 @media (max-width: 860px) {
+    :host {
+        overflow-x: clip;
+    }
+
     .topbar {
         margin: 8px 8px 0;
         padding: 10px 12px;
@@ -826,27 +834,62 @@
     }
 
     .primary-nav {
-        position: absolute;
-        top: calc(100% + 10px);
-        left: 0;
-        right: 0;
-        height: auto;
-        max-height: calc(100dvh - 100px);
+        position: fixed;
+        inset: 0 0 0 auto;
+        width: min(22rem, calc(100vw - 56px));
+        max-width: calc(100vw - 12px);
+        height: 100dvh;
+        max-height: 100dvh;
         overflow-y: auto;
         background: var(--color-surface-solid);
         border: 1px solid var(--panel-border);
-        border-radius: 18px;
+        border-right: 0;
+        border-radius: 18px 0 0 18px;
         box-shadow: var(--panel-shadow);
         flex-direction: column;
         align-items: stretch;
         gap: 4px;
-        padding: 10px;
-        display: none;
-        z-index: 150;
+        padding: 78px 10px calc(74px + env(safe-area-inset-bottom, 0px));
+        display: flex;
+        z-index: 19600;
+        transform: translate3d(100%, 0, 0);
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        will-change: transform;
+        transition: transform 0.24s ease, opacity 0.24s ease, visibility 0s linear 0.24s;
     }
 
     .primary-nav.is-open {
-        display: flex;
+        transform: translate3d(0, 0, 0);
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transition-delay: 0s;
+    }
+
+    .nav-mobile-close {
+        position: absolute;
+        top: 18px;
+        right: 12px;
+        width: 36px;
+        height: 36px;
+        border-radius: 999px;
+        border: 1px solid var(--pill-border);
+        background: var(--pill-bg);
+        color: var(--text-main);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 1;
+        transition: color 0.15s, border-color 0.15s, background 0.15s;
+
+        &:hover {
+            color: var(--color-primary);
+            border-color: color-mix(in srgb, var(--color-primary) 45%, var(--pill-border));
+            background: color-mix(in srgb, var(--pill-bg) 84%, var(--accent-primary) 16%);
+        }
     }
 
     .nav-group {
@@ -937,7 +980,8 @@
     }
 
     .primary-nav {
-        max-height: calc(100dvh - 86px);
+        width: min(20.5rem, calc(100vw - 12px));
+        padding-top: 70px;
     }
 
     .shell {
