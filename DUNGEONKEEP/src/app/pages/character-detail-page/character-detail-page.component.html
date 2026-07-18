@@ -218,7 +218,22 @@
     <app-character-portrait-crop-modal [open]="portraitCropModalOpen()" [imageUrl]="portraitCropSourceImageUrl()" [characterName]="char.name" (closed)="closePortraitCropModal()" (applied)="applyPortraitCrop($event)"></app-character-portrait-crop-modal>
     }
 
-    <div class="summary-panels">
+    <div class="mobile-sheet-tabs" role="tablist" aria-label="Character sheet sections">
+        <button type="button" role="tab" class="mobile-sheet-tab" [class.is-active]="mobileSheetTab() === 'overview'" [attr.aria-selected]="mobileSheetTab() === 'overview'" (click)="setMobileSheetTab('overview')">
+            <i class="fa-duotone fa-thin fa-star" aria-hidden="true"></i>
+            Overview
+        </button>
+        <button type="button" role="tab" class="mobile-sheet-tab" [class.is-active]="mobileSheetTab() === 'sheet'" [attr.aria-selected]="mobileSheetTab() === 'sheet'" (click)="setMobileSheetTab('sheet')">
+            <i class="fa-duotone fa-thin fa-scroll" aria-hidden="true"></i>
+            Sheet
+        </button>
+        <button type="button" role="tab" class="mobile-sheet-tab" [class.is-active]="mobileSheetTab() === 'combat'" [attr.aria-selected]="mobileSheetTab() === 'combat'" (click)="setMobileSheetTab('combat')">
+            <i class="fa-duotone fa-thin fa-sword" aria-hidden="true"></i>
+            Combat
+        </button>
+    </div>
+
+    <div class="summary-panels" [class.mobile-hidden]="mobileSheetTab() !== 'overview'">
         <section class="panel summary-panel">
             <h2 class="section-title">Ability Scores</h2>
             <div class="summary-strip abilities-strip">
@@ -330,8 +345,8 @@
         </section>
     </div>
 
-    <div class="sheet-grid">
-        <section class="panel left-column">
+    <div class="sheet-grid" [attr.data-mobile-tab]="mobileSheetTab()">
+        <section class="panel left-column" [class.mobile-hidden]="mobileSheetTab() !== 'sheet'">
             <h2 class="section-title">
                 <span class="section-title-link" role="button" tabindex="0" (click)="openSavingThrowsDetail()" (keydown.enter)="openSavingThrowsDetail()" (keydown.space)="openSavingThrowsDetail()">
                     Saving Throws
@@ -376,7 +391,7 @@
             </div>
         </section>
 
-        <section class="panel middle-column">
+        <section class="panel middle-column" [class.mobile-hidden]="mobileSheetTab() !== 'sheet'">
             <h2 class="section-title">Skills</h2>
             <div class="skills-list">
                 @for (skill of skillRows(); track skill.key) {
@@ -394,7 +409,7 @@
             </div>
         </section>
 
-        <div class="right-column">
+        <div class="right-column" [class.mobile-hidden]="mobileSheetTab() !== 'combat'">
             <section class="panel">
                 <div class="defense-condition-grid">
                     <div class="detail-trigger-card" role="button" tabindex="0" (click)="openDefensesPopup()" (keydown.enter)="openDefensesPopup()" (keydown.space)="openDefensesPopup(); $event.preventDefault()">

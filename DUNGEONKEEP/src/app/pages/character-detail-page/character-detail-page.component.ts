@@ -430,6 +430,7 @@ export class CharacterDetailPageComponent {
     readonly characterId = this.route.snapshot.paramMap.get('id') || '';
     readonly initialized = computed(() => this.store.initialized());
     readonly activeCombatTab = signal<CombatTab>('actions');
+    readonly mobileSheetTab = signal<'overview' | 'sheet' | 'combat'>('overview');
     readonly activeSpellFilter = signal<SpellFilter>('all');
     readonly spellSearchTerm = signal('');
     readonly activeActionFilter = signal<ActionFilter>('all');
@@ -3771,6 +3772,10 @@ export class CharacterDetailPageComponent {
 
     setCombatTab(tab: CombatTab): void {
         this.activeCombatTab.set(tab);
+    }
+
+    setMobileSheetTab(tab: 'overview' | 'sheet' | 'combat'): void {
+        this.mobileSheetTab.set(tab);
     }
 
     closeDetailDrawer(): void {

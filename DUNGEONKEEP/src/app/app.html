@@ -19,6 +19,9 @@
         </a>
 
         <nav id="primary-nav" class="primary-nav" [class.is-open]="mobileNavOpen()">
+            <button type="button" class="nav-mobile-close" (click)="closeMobileNav()">
+                <i class="fa-duotone fa-thin fa-xmark" aria-hidden="true"></i>
+            </button>
 
             <div class="nav-group" [class.is-open]="openDropdown() === 'campaigns'">
                 <button class="nav-group-btn" type="button" (click)="toggleDropdown('campaigns')">
@@ -184,6 +187,29 @@
 <main class="shell">
     <router-outlet />
 </main>
+
+<nav class="bottom-nav" aria-label="Primary navigation">
+    <a class="bottom-nav-item" routerLink="/dashboard" [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="is-active" (click)="closeDropdown(); closeMobileNav()">
+        <i class="fa-duotone fa-thin fa-house" aria-hidden="true"></i>
+        <span>Home</span>
+    </a>
+    <a class="bottom-nav-item" routerLink="/campaigns" [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="is-active" (click)="closeDropdown(); closeMobileNav()">
+        <i class="fa-duotone fa-thin fa-scroll" aria-hidden="true"></i>
+        <span>Campaigns</span>
+    </a>
+    <a class="bottom-nav-item" routerLink="/characters" [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="is-active" (click)="closeDropdown(); closeMobileNav()">
+        <i class="fa-duotone fa-thin fa-users" aria-hidden="true"></i>
+        <span>Characters</span>
+    </a>
+    <a class="bottom-nav-item" routerLink="/rules" [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="is-active" (click)="closeDropdown(); closeMobileNav()">
+        <i class="fa-duotone fa-thin fa-books" aria-hidden="true"></i>
+        <span>Rules</span>
+    </a>
+    <button type="button" class="bottom-nav-item" [class.is-active]="mobileNavOpen()" (click)="toggleMobileNav()">
+        <i class="fa-duotone fa-thin fa-grid-2" aria-hidden="true"></i>
+        <span>More</span>
+    </button>
+</nav>
 
 @if (isLiveNotificationVisible() && liveNotification(); as notification) {
 <aside class="live-notification-toast" role="status" aria-live="polite" aria-atomic="true">

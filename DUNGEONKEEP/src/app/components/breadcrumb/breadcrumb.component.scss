@@ -59,5 +59,18 @@
     .breadcrumb-nav {
         padding: 8px 14px;
         font-size: 0.75rem;
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: none;
+
+        &::-webkit-scrollbar {
+            display: none;
+        }
+    }
+}
+
+@media (max-width: 480px) {
+    .breadcrumb-nav {
+        padding: 6px 10px;
     }
 }

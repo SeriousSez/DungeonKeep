@@ -292,3 +292,24 @@
         width: 100%;
     }
 }
+@media (max-width: 600px) {
+    .modal-backdrop {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .monster-stat-modal {
+        width: 100%;
+        max-height: 88dvh;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        border-top-left-radius: 20px;
+        border-top-right-radius: 20px;
+        animation: mobileSheetIn 260ms ease-out;
+    }
+
+    .close-modal {
+        width: 44px;
+        height: 44px;
+    }
+}

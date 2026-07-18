@@ -322,3 +322,23 @@
         grid-template-columns: 1fr;
     }
 }
+
+@media (max-width: 480px) {
+    .page-hero {
+        padding: 14px;
+        gap: 10px;
+    }
+
+    .page-hero h1 {
+        font-size: clamp(1.6rem, 7vw, 2.2rem);
+    }
+
+    .filter-bar {
+        padding: 10px 12px;
+    }
+
+    .source-filters {
+        scrollbar-width: none;
+        &::-webkit-scrollbar { display: none; }
+    }
+}
