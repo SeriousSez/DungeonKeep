@@ -475,12 +475,19 @@
     }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 860px) {
+    // Raise the launcher above the bottom navigation bar (~54px) so it doesn't overlap
     :host {
         right: 12px;
-        bottom: 14px;
+        bottom: calc(54px + env(safe-area-inset-bottom, 0px) + 14px);
     }
 
+    .chat-panel {
+        bottom: calc(54px + env(safe-area-inset-bottom, 0px) + 64px);
+    }
+}
+
+@media (max-width: 720px) {
     .chat-launcher {
         width: 52px;
         height: 52px;
@@ -489,7 +496,6 @@
     .chat-panel {
         right: -2px;
         width: min(360px, calc(100vw - 18px));
-        bottom: 64px;
         max-height: min(74vh, 580px);
         padding: 12px;
         gap: 10px;
