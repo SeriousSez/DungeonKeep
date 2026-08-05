@@ -49,7 +49,9 @@ export function createCustomMonsterFromTemplate(template: MonsterCatalogEntry): 
         reactions: cloneTextSections(template.reactions),
         legendaryActions: cloneTextSections(template.legendaryActions),
         notes: '',
-        updatedAt: nowIso()
+        updatedAt: nowIso(),
+        imageUrl: '',
+        originalImageUrl: ''
     };
 }
 
@@ -93,7 +95,9 @@ export function createBlankCustomMonster(): CustomMonster {
         reactions: [],
         legendaryActions: [],
         notes: '',
-        updatedAt: nowIso()
+        updatedAt: nowIso(),
+        imageUrl: '',
+        originalImageUrl: ''
     };
 }
 
@@ -116,7 +120,9 @@ export function duplicateCustomMonster(source: CustomMonster, namesInUse: string
         actions: cloneTextSections(source.actions),
         reactions: cloneTextSections(source.reactions),
         legendaryActions: cloneTextSections(source.legendaryActions),
-        updatedAt: nowIso()
+        updatedAt: nowIso(),
+        imageUrl: source.imageUrl ?? '',
+        originalImageUrl: source.originalImageUrl ?? source.imageUrl ?? ''
     };
 }
 
@@ -143,6 +149,8 @@ export function sanitizeCustomMonster(raw: CustomMonster): CustomMonster {
         senses: raw.senses?.trim() ?? '',
         languages: raw.languages?.trim() ?? '',
         notes: raw.notes?.trim() ?? '',
+        imageUrl: raw.imageUrl?.trim() ?? '',
+        originalImageUrl: raw.originalImageUrl?.trim() || raw.imageUrl?.trim() || '',
         abilityScores: {
             strength: raw.abilityScores?.strength ?? null,
             dexterity: raw.abilityScores?.dexterity ?? null,

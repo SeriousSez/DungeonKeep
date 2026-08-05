@@ -62,4 +62,6 @@ export interface CustomMonster extends Omit<MonsterCatalogEntry, 'id' | 'slug'> 
     updatedAt: string;
     templateSlug: string;
     notes: string;
+    imageUrl?: string;
+    originalImageUrl?: string;
 }

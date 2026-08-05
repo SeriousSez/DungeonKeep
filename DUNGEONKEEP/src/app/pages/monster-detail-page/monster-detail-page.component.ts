@@ -6,7 +6,9 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CustomMonster, MonsterTextSectionEntry } from '../../models/monster-reference.models';
 import { duplicateCustomMonster, sanitizeCustomMonster } from '../../data/monster-library.helpers';
 import { SessionEditorDraft } from '../../models/session-editor.models';
+import { DungeonApiService } from '../../state/dungeon-api.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
+import { extractApiError } from '../../state/extract-api-error';
 
 @Component({
     selector: 'app-monster-detail-page',
@@ -21,15 +23,24 @@ export class MonsterDetailPageComponent {
     private readonly router = inject(Router);
     private readonly destroyRef = inject(DestroyRef);
     private readonly cdr = inject(ChangeDetectorRef);
+    private readonly api = inject(DungeonApiService);
     readonly store = inject(DungeonStoreService);
 
     readonly monster = signal<CustomMonster | null>(null);
     readonly addToSessionOpen = signal(false);
     readonly addToSessionMessage = signal('');
+    readonly isPortraitGenerating = signal(false);
+    readonly portraitGenerationError = signal('');
+    readonly portraitLoadFailed = signal(false);
 
     readonly campaignsWithSessions = computed(() =>
         this.store.campaigns().filter((c) => c.sessions.length > 0)
     );
+    readonly showPortraitImage = computed(() => {
+        const monster = this.monster();
+        return !!monster?.imageUrl?.trim() && !this.portraitLoadFailed();
+    });
+    readonly generatePortraitButtonLabel = computed(() => this.showPortraitImage() ? 'Regenerate Portrait' : 'Generate Portrait');
 
     readonly profileTags = computed(() => {
         const monster = this.monster();
@@ -102,6 +113,8 @@ export class MonsterDetailPageComponent {
                 const library = this.store.userMonsterLibrary() ?? [];
                 const found = (library as CustomMonster[]).find((m) => m.id === id);
                 this.monster.set(found ? sanitizeCustomMonster(found) : null);
+                this.portraitGenerationError.set('');
+                this.portraitLoadFailed.set(false);
                 this.cdr.detectChanges();
             });
     }
@@ -190,6 +203,53 @@ export class MonsterDetailPageComponent {
         });
     }
 
+    async generateMonsterPortrait(): Promise<void> {
+        const monster = this.monster();
+        if (!monster || this.isPortraitGenerating()) {
+            return;
+        }
+
+        this.isPortraitGenerating.set(true);
+        this.portraitGenerationError.set('');
+        this.cdr.detectChanges();
+
+        try {
+            const response = await this.api.generateCharacterPortrait({
+                name: monster.name,
+                className: monster.creatureType || 'Monster',
+                background: 'Dungeons and Dragons custom monster token art',
+                species: monster.creatureCategory || monster.creatureType || 'Monster',
+                alignment: monster.alignment || 'unaligned',
+                gender: '',
+                additionalDirection: this.buildPortraitGenerationDirection(monster)
+            });
+
+            const updatedMonster = sanitizeCustomMonster({
+                ...monster,
+                imageUrl: response.imageUrl,
+                originalImageUrl: response.imageUrl
+            });
+
+            const saved = await this.updateMonsterInLibrary(updatedMonster);
+            if (saved) {
+                this.monster.set(updatedMonster);
+                this.portraitLoadFailed.set(false);
+            } else {
+                this.portraitGenerationError.set('Portrait generation succeeded, but saving it to your monster library failed.');
+            }
+        } catch (error: unknown) {
+            this.portraitGenerationError.set(this.buildPortraitGenerationFailureMessage(error));
+        } finally {
+            this.isPortraitGenerating.set(false);
+            this.cdr.detectChanges();
+        }
+    }
+
+    handlePortraitImageError(): void {
+        this.portraitLoadFailed.set(true);
+        this.cdr.detectChanges();
+    }
+
     toggleAddToSession(): void {
         this.addToSessionOpen.update((v) => !v);
         this.addToSessionMessage.set('');
@@ -265,6 +325,38 @@ export class MonsterDetailPageComponent {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
+    }
+
+    private async updateMonsterInLibrary(updatedMonster: CustomMonster): Promise<boolean> {
+        const library = (this.store.userMonsterLibrary() ?? []) as CustomMonster[];
+        const nextLibrary = library.map((entry) => entry.id === updatedMonster.id ? updatedMonster : entry);
+        const saved = await this.store.saveUserMonsterLibrary(nextLibrary);
+        return saved;
+    }
+
+    private buildPortraitGenerationDirection(monster: CustomMonster): string {
+        const normalizedType = `${monster.creatureType} ${monster.creatureCategory}`.toLowerCase();
+        const isHumanoid = normalizedType.includes('humanoid');
+        const details = [
+            `Challenge rating: ${monster.challengeRating || 'unknown'}`,
+            monster.creatureType ? `Type: ${monster.creatureType}` : '',
+            monster.creatureCategory ? `Category: ${monster.creatureCategory}` : '',
+            monster.alignment ? `Alignment: ${monster.alignment}` : '',
+            isHumanoid
+                ? 'Create centered monster token art with clean silhouette and transparent or neutral backdrop suitable for a tabletop token. Avoid cinematic profile-photo framing.'
+                : 'Create non-profile monster token art that clearly shows the creature form (full body or imposing silhouette), not a humanoid bust/headshot portrait, with a transparent or neutral tabletop-friendly backdrop.'
+        ].filter((detail) => detail.length > 0);
+
+        return details.join(' ');
+    }
+
+    private buildPortraitGenerationFailureMessage(error: unknown): string {
+        const apiMessage = extractApiError(error, '').toLowerCase();
+        if (apiMessage.includes('billing_hard_limit_reached') || apiMessage.includes('billing hard limit has been reached')) {
+            return 'Portrait generation is unavailable because the OpenAI billing limit has been reached.';
+        }
+
+        return 'Portrait generation is unavailable right now. Please try again in a moment.';
     }
 
     private parseDraft(detailsJson: string | null | undefined): SessionEditorDraft | null {

@@ -3,7 +3,11 @@
     <section class="panel monster-page-shell">
         <header class="monster-strip">
             <div class="monster-strip-icon" aria-hidden="true">
+                @if (showPortraitImage()) {
+                <img class="monster-strip-portrait" [src]="monster.imageUrl" [alt]="monster.name + ' portrait'" (error)="handlePortraitImageError()" />
+                } @else {
                 <i class="fa-duotone fa-thin fa-dragon"></i>
+                }
             </div>
 
             <div class="monster-strip-copy">
@@ -22,12 +26,19 @@
                     <i class="fa-duotone fa-thin fa-copy" aria-hidden="true"></i>
                     Duplicate
                 </button>
+                <button type="button" class="secondary-link-btn" [disabled]="isPortraitGenerating()" [class.is-loading]="isPortraitGenerating()" (click)="generateMonsterPortrait()">
+                    <span class="loading-label">{{ isPortraitGenerating() ? 'Generating Portrait...' : generatePortraitButtonLabel() }}</span>
+                </button>
                 <a class="primary-link-btn" [routerLink]="['/monsters', monster.id, 'edit']">
                     <i class="fa-duotone fa-thin fa-pen" aria-hidden="true"></i>
                     Edit
                 </a>
             </div>
         </header>
+
+        @if (portraitGenerationError()) {
+        <p class="monster-portrait-error" role="status">{{ portraitGenerationError() }}</p>
+        }
 
         @if (addToSessionOpen()) {
         <div class="add-to-session-panel">
