@@ -4,7 +4,7 @@
         <header class="monster-strip">
             <div class="monster-strip-icon" aria-hidden="true">
                 @if (showPortraitImage()) {
-                <img class="monster-strip-portrait" [src]="monster.imageUrl" [alt]="monster.name + ' portrait'" (error)="handlePortraitImageError()" />
+                <img class="monster-strip-portrait" [src]="monster().imageUrl" [alt]="monster().name + ' portrait'" (error)="handlePortraitImageError()" />
                 } @else {
                 <i class="fa-duotone fa-thin fa-dragon"></i>
                 }
@@ -37,7 +37,7 @@
         </header>
 
         @if (portraitGenerationError()) {
-        <p class="monster-portrait-error" role="status">{{ portraitGenerationError() }}</p>
+        <p class="monster-portrait-error" role="alert">{{ portraitGenerationError() }}</p>
         }
 
         @if (addToSessionOpen()) {
