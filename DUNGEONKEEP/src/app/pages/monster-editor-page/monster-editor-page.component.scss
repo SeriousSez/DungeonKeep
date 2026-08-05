@@ -160,6 +160,33 @@
     font-size: clamp(1.3rem, 2.5vw, 1.7rem);
 }
 
+.ai-generation-panel {
+    gap: 16px;
+}
+
+.ai-generation-hint {
+    margin: 0;
+    font-size: 0.92rem;
+    opacity: 0.75;
+}
+
+.generation-feedback {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-alt);
+    color: var(--color-text);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.generation-feedback i {
+    color: var(--color-primary);
+}
+
 .editor-error-banner {
     display: flex;
     align-items: center;
@@ -257,6 +284,12 @@
 .form-input:focus {
     outline: 2px solid var(--color-primary);
     outline-offset: 1px;
+}
+
+.form-textarea {
+    min-height: 84px;
+    resize: vertical;
+    font: inherit;
 }
 
 .form-textarea {

@@ -9,6 +9,7 @@ import { CustomMonster, MonsterCatalogEntry, MonsterTextSectionEntry } from '../
 import { monsterCatalog } from '../../data/monster-catalog.generated';
 import { createBlankCustomMonster, createCustomMonsterFromTemplate, sanitizeCustomMonster, touchCustomMonster } from '../../data/monster-library.helpers';
 import { loadMonsterLibrary, saveMonsterLibrary } from '../../data/monster-library.storage';
+import { DungeonApiService, type ApiGenerateMonsterDraftResponse } from '../../state/dungeon-api.service';
 
 const SIZE_OPTIONS: DropdownOption[] = [
     { value: 'Tiny', label: 'Tiny' },
@@ -40,6 +41,19 @@ const CATEGORY_OPTIONS: DropdownOption[] = [
 interface SectionSuggestion {
     title: string;
     text: string;
+}
+
+interface MonsterGenerationPrompt {
+    nameHint: string;
+    conceptHint: string;
+    creatureCategoryHint: string;
+    creatureTypeHint: string;
+    challengeRatingHint: string;
+    alignmentHint: string;
+    environmentHint: string;
+    combatRoleHint: string;
+    specialAbilityHint: string;
+    notesHint: string;
 }
 
 const SECTION_SUGGESTIONS: Record<SectionKey, readonly SectionSuggestion[]> = {
@@ -307,11 +321,15 @@ export class MonsterEditorPageComponent {
     private readonly destroyRef = inject(DestroyRef);
     private readonly cdr = inject(ChangeDetectorRef);
     private readonly host = inject(ElementRef<HTMLElement>);
+    private readonly api = inject(DungeonApiService);
 
     readonly isEditMode = signal(false);
     readonly monsterId = signal<string | null>(null);
     readonly isSaving = signal(false);
+    readonly isGenerating = signal(false);
     readonly saveError = signal('');
+    readonly generationError = signal('');
+    readonly generationFeedback = signal('');
     readonly showUnsavedWarning = signal(false);
     readonly confirmDiscardTarget = signal('');
 
@@ -322,6 +340,18 @@ export class MonsterEditorPageComponent {
     readonly activeTitleSuggestions = signal<{ section: SectionKey; index: number } | null>(null);
 
     readonly draft = signal<CustomMonster>(createBlankCustomMonster());
+    readonly generationPrompt = signal<MonsterGenerationPrompt>({
+        nameHint: '',
+        conceptHint: '',
+        creatureCategoryHint: '',
+        creatureTypeHint: '',
+        challengeRatingHint: '',
+        alignmentHint: '',
+        environmentHint: '',
+        combatRoleHint: '',
+        specialAbilityHint: '',
+        notesHint: ''
+    });
 
     readonly sizeOptions = SIZE_OPTIONS;
     readonly categoryOptions = CATEGORY_OPTIONS;
@@ -402,6 +432,8 @@ export class MonsterEditorPageComponent {
                     this.draft.set(createBlankCustomMonster());
                 }
 
+                this.syncGenerationPromptFromDraft();
+
                 this.cdr.detectChanges();
             });
 
@@ -413,6 +445,7 @@ export class MonsterEditorPageComponent {
                     const template = normalizedCatalog.find((entry) => entry.slug === templateSlug);
                     if (template) {
                         this.draft.set(createCustomMonsterFromTemplate(template));
+                        this.syncGenerationPromptFromDraft();
                         this.templatePickerOpen.set(false);
                     }
                 }
@@ -423,6 +456,7 @@ export class MonsterEditorPageComponent {
 
     applyTemplate(template: MonsterCatalogEntry): void {
         this.draft.set(createCustomMonsterFromTemplate(template));
+        this.syncGenerationPromptFromDraft();
         this.templatePickerOpen.set(false);
         this.templateSearch.set('');
         this.cdr.detectChanges();
@@ -434,6 +468,7 @@ export class MonsterEditorPageComponent {
             id: d.id,
             updatedAt: d.updatedAt
         }));
+        this.syncGenerationPromptFromDraft();
         this.cdr.detectChanges();
     }
 
@@ -451,6 +486,68 @@ export class MonsterEditorPageComponent {
 
     updateTemplateCrFilter(value: string | number): void {
         this.templateCrFilter.set(typeof value === 'string' ? value : String(value));
+    }
+
+    updateGenerationPrompt<K extends keyof MonsterGenerationPrompt>(field: K, value: MonsterGenerationPrompt[K]): void {
+        this.generationPrompt.update((prompt) => ({ ...prompt, [field]: value }));
+        this.generationError.set('');
+    }
+
+    async generateMonster(): Promise<void> {
+        if (this.isEditMode() || this.isGenerating()) {
+            return;
+        }
+
+        const prompt = this.generationPrompt();
+        const nameHint = prompt.nameHint.trim();
+        const conceptHint = prompt.conceptHint.trim();
+        const creatureCategoryHint = prompt.creatureCategoryHint.trim();
+        const creatureTypeHint = prompt.creatureTypeHint.trim();
+        const challengeRatingHint = prompt.challengeRatingHint.trim();
+        const alignmentHint = prompt.alignmentHint.trim();
+        const environmentHint = prompt.environmentHint.trim();
+        const combatRoleHint = prompt.combatRoleHint.trim();
+        const specialAbilityHint = prompt.specialAbilityHint.trim();
+        const notesHint = prompt.notesHint.trim();
+
+        if (!nameHint && !conceptHint && !creatureCategoryHint && !creatureTypeHint && !challengeRatingHint && !alignmentHint && !environmentHint && !combatRoleHint && !specialAbilityHint && !notesHint) {
+            this.generationError.set('Add a few monster details first.');
+            this.cdr.detectChanges();
+            return;
+        }
+
+        this.isGenerating.set(true);
+        this.generationError.set('');
+        this.generationFeedback.set('');
+
+        try {
+            const existingMonsterNames = (loadMonsterLibrary() ?? [])
+                .map((monster) => sanitizeCustomMonster(monster))
+                .filter((monster) => monster.id !== this.draft().id)
+                .map((monster) => monster.name);
+
+            const generated = await this.api.generateMonsterDraft({
+                nameHint,
+                conceptHint,
+                creatureCategoryHint,
+                creatureTypeHint,
+                challengeRatingHint,
+                alignmentHint,
+                environmentHint,
+                combatRoleHint,
+                specialAbilityHint,
+                notesHint,
+                existingMonsterNames
+            });
+
+            this.applyGeneratedMonster(generated);
+            this.generationFeedback.set('Monster draft generated. Review it and save when ready.');
+        } catch {
+            this.generationError.set('Could not generate a monster draft right now.');
+        } finally {
+            this.isGenerating.set(false);
+            this.cdr.detectChanges();
+        }
     }
 
     closeTemplatePicker(): void {
@@ -640,6 +737,66 @@ export class MonsterEditorPageComponent {
         this.cdr.detectChanges();
 
         void this.router.navigate(['/monsters']);
+    }
+
+    private syncGenerationPromptFromDraft(): void {
+        const draft = this.draft();
+        this.generationPrompt.set({
+            nameHint: draft.name,
+            conceptHint: draft.notes,
+            creatureCategoryHint: draft.creatureCategory,
+            creatureTypeHint: draft.creatureType,
+            challengeRatingHint: draft.challengeRating,
+            alignmentHint: draft.alignment,
+            environmentHint: '',
+            combatRoleHint: '',
+            specialAbilityHint: draft.traits.map((trait) => trait.title).filter(Boolean).slice(0, 3).join(', '),
+            notesHint: draft.notes
+        });
+    }
+
+    private applyGeneratedMonster(generated: ApiGenerateMonsterDraftResponse): void {
+        const current = this.draft();
+        const merged: CustomMonster = sanitizeCustomMonster({
+            ...current,
+            name: generated.name?.trim() || current.name,
+            slug: '',
+            challengeRating: generated.challengeRating?.trim() || current.challengeRating,
+            creatureType: generated.creatureType?.trim() || current.creatureType,
+            creatureCategory: generated.creatureCategory?.trim() || current.creatureCategory,
+            size: generated.size?.trim() || current.size,
+            armorClass: generated.armorClass ?? current.armorClass,
+            hitPoints: generated.hitPoints ?? current.hitPoints,
+            speed: generated.speed?.trim() || current.speed,
+            alignment: generated.alignment?.trim() || current.alignment,
+            legendary: generated.legendary,
+            sourceLabel: generated.sourceLabel?.trim() || current.sourceLabel,
+            abilityScores: {
+                strength: generated.abilityScores?.strength ?? current.abilityScores.strength,
+                dexterity: generated.abilityScores?.dexterity ?? current.abilityScores.dexterity,
+                constitution: generated.abilityScores?.constitution ?? current.abilityScores.constitution,
+                intelligence: generated.abilityScores?.intelligence ?? current.abilityScores.intelligence,
+                wisdom: generated.abilityScores?.wisdom ?? current.abilityScores.wisdom,
+                charisma: generated.abilityScores?.charisma ?? current.abilityScores.charisma
+            },
+            savingThrows: generated.savingThrows?.trim() || current.savingThrows,
+            skills: generated.skills?.trim() || current.skills,
+            damageVulnerabilities: generated.damageVulnerabilities?.trim() || current.damageVulnerabilities,
+            damageResistances: generated.damageResistances?.trim() || current.damageResistances,
+            damageImmunities: generated.damageImmunities?.trim() || current.damageImmunities,
+            conditionImmunities: generated.conditionImmunities?.trim() || current.conditionImmunities,
+            senses: generated.senses?.trim() || current.senses,
+            languages: generated.languages?.trim() || current.languages,
+            challengeXp: generated.challengeXp?.trim() || current.challengeXp,
+            traits: (generated.traits ?? []).map((entry) => ({ title: entry.name?.trim() || '', text: entry.description?.trim() || '' })),
+            actions: (generated.actions ?? []).map((entry) => ({ title: entry.name?.trim() || '', text: entry.description?.trim() || '' })),
+            reactions: (generated.reactions ?? []).map((entry) => ({ title: entry.name?.trim() || '', text: entry.description?.trim() || '' })),
+            legendaryActions: (generated.legendaryActions ?? []).map((entry) => ({ title: entry.name?.trim() || '', text: entry.description?.trim() || '' })),
+            notes: generated.notes?.trim() || current.notes
+        });
+
+        this.draft.set(merged);
+        this.syncGenerationPromptFromDraft();
     }
 
     cancel(): void {
