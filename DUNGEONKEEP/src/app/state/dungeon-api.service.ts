@@ -924,7 +924,14 @@ export interface ApiGenerateMonsterDraftResponse {
     alignment: string;
     legendary: boolean;
     sourceLabel: string;
-    abilityScores: ApiMonsterAbilityScoresDto;
+    abilityScores: {
+        strength: number | null;
+        dexterity: number | null;
+        constitution: number | null;
+        intelligence: number | null;
+        wisdom: number | null;
+        charisma: number | null;
+    };
     savingThrows: string;
     skills: string;
     damageVulnerabilities: string;
@@ -934,10 +941,10 @@ export interface ApiGenerateMonsterDraftResponse {
     senses: string;
     languages: string;
     challengeXp: string;
-    traits: ApiMonsterFeatureDto[];
-    actions: ApiMonsterFeatureDto[];
-    reactions: ApiMonsterFeatureDto[];
-    legendaryActions: ApiMonsterFeatureDto[];
+    traits: Array<{ name: string; description: string }>;
+    actions: Array<{ name: string; description: string }>;
+    reactions: Array<{ name: string; description: string }>;
+    legendaryActions: Array<{ name: string; description: string }>;
     notes: string;
 }
 

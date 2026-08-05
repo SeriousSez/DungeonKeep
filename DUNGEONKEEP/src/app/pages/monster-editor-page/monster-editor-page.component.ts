@@ -743,7 +743,7 @@ export class MonsterEditorPageComponent {
         const draft = this.draft();
         this.generationPrompt.set({
             nameHint: draft.name,
-            conceptHint: draft.notes,
+            conceptHint: '',
             creatureCategoryHint: draft.creatureCategory,
             creatureTypeHint: draft.creatureType,
             challengeRatingHint: draft.challengeRating,
@@ -769,7 +769,7 @@ export class MonsterEditorPageComponent {
             hitPoints: generated.hitPoints ?? current.hitPoints,
             speed: generated.speed?.trim() || current.speed,
             alignment: generated.alignment?.trim() || current.alignment,
-            legendary: generated.legendary,
+            legendary: generated.legendary ?? current.legendary,
             sourceLabel: generated.sourceLabel?.trim() || current.sourceLabel,
             abilityScores: {
                 strength: generated.abilityScores?.strength ?? current.abilityScores.strength,

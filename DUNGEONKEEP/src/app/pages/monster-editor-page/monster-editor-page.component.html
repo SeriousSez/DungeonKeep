@@ -94,8 +94,8 @@
                 </div>
 
                 <div class="form-field">
-                    <label>Creature Category</label>
-                    <app-dropdown [value]="generationPrompt().creatureCategoryHint" [options]="categoryOptions" [minWidth]="160" [placeholder]="'Auto'" (changed)="updateGenerationPrompt('creatureCategoryHint', String($event))"></app-dropdown>
+                    <label for="monster-ai-category">Creature Category</label>
+                    <app-dropdown id="monster-ai-category" [value]="generationPrompt().creatureCategoryHint" [options]="categoryOptions" [minWidth]="160" [placeholder]="'Auto'" (changed)="updateGenerationPrompt('creatureCategoryHint', $any($event))"></app-dropdown>
                 </div>
 
                 <div class="form-field">
