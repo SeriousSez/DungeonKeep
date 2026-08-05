@@ -217,7 +217,7 @@ export class MonsterDetailPageComponent {
             const response = await this.api.generateCharacterPortrait({
                 name: monster.name,
                 className: monster.creatureType || 'Monster',
-                background: 'Dungeons and Dragons custom monster token art',
+                background: 'Dungeons and Dragons custom monster token art', // Intentional AI prompt text; not a user-facing localized string.
                 species: monster.creatureCategory || monster.creatureType || 'Monster',
                 alignment: monster.alignment || 'unaligned',
                 gender: '',
