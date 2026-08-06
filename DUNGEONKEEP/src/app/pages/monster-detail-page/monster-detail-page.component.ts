@@ -1,8 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
+import { CharacterPortraitCropModalComponent } from '../../components/character-portrait-crop-modal/character-portrait-crop-modal.component';
+import { CharacterPortraitModalComponent } from '../../components/character-portrait-modal/character-portrait-modal.component';
 import { CustomMonster, MonsterTextSectionEntry } from '../../models/monster-reference.models';
 import { duplicateCustomMonster, sanitizeCustomMonster } from '../../data/monster-library.helpers';
 import { SessionEditorDraft } from '../../models/session-editor.models';
@@ -10,10 +12,13 @@ import { DungeonApiService } from '../../state/dungeon-api.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 import { extractApiError } from '../../state/extract-api-error';
 
+const MONSTER_PORTRAIT_STORAGE_MAX_DIMENSION = 768;
+const MONSTER_PORTRAIT_STORAGE_TARGET_DATA_URL_LENGTH = 240_000;
+
 @Component({
     selector: 'app-monster-detail-page',
     standalone: true,
-    imports: [CommonModule, RouterLink],
+    imports: [CommonModule, RouterLink, CharacterPortraitModalComponent, CharacterPortraitCropModalComponent],
     templateUrl: './monster-detail-page.component.html',
     styleUrl: './monster-detail-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -26,10 +31,17 @@ export class MonsterDetailPageComponent {
     private readonly api = inject(DungeonApiService);
     readonly store = inject(DungeonStoreService);
 
+    readonly monsterId = signal('');
     readonly monster = signal<CustomMonster | null>(null);
     readonly addToSessionOpen = signal(false);
     readonly addToSessionMessage = signal('');
+    readonly portraitModalOpen = signal(false);
+    readonly portraitCropModalOpen = signal(false);
+    readonly portraitCropSourceImageUrl = signal('');
+    readonly portraitPromptDetails = signal('');
+    readonly portraitSaveMessage = signal('');
     readonly isPortraitGenerating = signal(false);
+    readonly isSavingPortrait = signal(false);
     readonly portraitGenerationError = signal('');
     readonly portraitLoadFailed = signal(false);
 
@@ -41,6 +53,19 @@ export class MonsterDetailPageComponent {
         return !!monster?.imageUrl?.trim() && !this.portraitLoadFailed();
     });
     readonly generatePortraitButtonLabel = computed(() => this.showPortraitImage() ? 'Regenerate Portrait' : 'Generate Portrait');
+    readonly portraitInitials = computed(() => {
+        const name = this.monster()?.name.trim() ?? '';
+        if (!name) {
+            return 'MO';
+        }
+
+        return name
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part[0]?.toUpperCase() ?? '')
+            .join('') || 'MO';
+    });
 
     readonly profileTags = computed(() => {
         const monster = this.monster();
@@ -109,14 +134,31 @@ export class MonsterDetailPageComponent {
         this.route.paramMap
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe((params) => {
-                const id = (params.get('monsterId') ?? '').trim();
-                const library = this.store.userMonsterLibrary() ?? [];
-                const found = (library as CustomMonster[]).find((m) => m.id === id);
-                this.monster.set(found ? sanitizeCustomMonster(found) : null);
+                this.monsterId.set((params.get('monsterId') ?? '').trim());
+                this.portraitModalOpen.set(false);
+                this.portraitCropModalOpen.set(false);
+                this.portraitCropSourceImageUrl.set('');
+                this.portraitPromptDetails.set('');
+                this.portraitSaveMessage.set('');
                 this.portraitGenerationError.set('');
                 this.portraitLoadFailed.set(false);
                 this.cdr.detectChanges();
             });
+
+        effect(() => {
+            const id = this.monsterId();
+            const library = this.store.userMonsterLibrary() ?? [];
+
+            if (!id) {
+                this.monster.set(null);
+                this.cdr.detectChanges();
+                return;
+            }
+
+            const found = (library as CustomMonster[]).find((monster) => monster.id === id);
+            this.monster.set(found ? sanitizeCustomMonster(found) : null);
+            this.cdr.detectChanges();
+        });
     }
 
     subtitle(): string {
@@ -203,6 +245,70 @@ export class MonsterDetailPageComponent {
         });
     }
 
+    openPortraitModal(): void {
+        if (!this.monster()) {
+            return;
+        }
+
+        this.portraitModalOpen.set(true);
+        this.portraitGenerationError.set('');
+        this.portraitSaveMessage.set('');
+        this.cdr.detectChanges();
+    }
+
+    closePortraitModal(): void {
+        this.portraitModalOpen.set(false);
+        this.cdr.detectChanges();
+    }
+
+    closePortraitCropModal(): void {
+        this.portraitCropModalOpen.set(false);
+        this.portraitCropSourceImageUrl.set('');
+        this.cdr.detectChanges();
+    }
+
+    updatePortraitPromptDetails(value: string): void {
+        this.portraitPromptDetails.set(value);
+    }
+
+    openPortraitRecrop(): void {
+        const monster = this.monster();
+        const sourceImageUrl = monster?.originalImageUrl?.trim() || monster?.imageUrl?.trim() || '';
+        if (!monster || !sourceImageUrl || this.isSavingPortrait() || this.isPortraitGenerating()) {
+            return;
+        }
+
+        this.portraitGenerationError.set('');
+        this.portraitSaveMessage.set('');
+        this.portraitCropSourceImageUrl.set(sourceImageUrl);
+        this.portraitCropModalOpen.set(true);
+        this.cdr.detectChanges();
+    }
+
+    async onPortraitFileSelected(event: Event): Promise<void> {
+        const input = event.target as HTMLInputElement | null;
+        const file = input?.files?.[0] ?? null;
+        if (!file) {
+            return;
+        }
+
+        try {
+            const imageUrl = await this.optimizePortraitForStorage(await this.readPortraitFile(file));
+            this.portraitGenerationError.set('');
+            this.portraitSaveMessage.set('');
+            this.portraitCropSourceImageUrl.set(imageUrl);
+            this.portraitCropModalOpen.set(true);
+        } catch (error) {
+            this.portraitGenerationError.set(error instanceof Error ? error.message : 'Unable to use that image right now.');
+        } finally {
+            if (input) {
+                input.value = '';
+            }
+
+            this.cdr.detectChanges();
+        }
+    }
+
     async generateMonsterPortrait(): Promise<void> {
         const monster = this.monster();
         if (!monster || this.isPortraitGenerating()) {
@@ -221,28 +327,37 @@ export class MonsterDetailPageComponent {
                 species: monster.creatureCategory || monster.creatureType || 'Monster',
                 alignment: monster.alignment || 'unaligned',
                 gender: '',
-                additionalDirection: this.buildPortraitGenerationDirection(monster)
+                additionalDirection: this.buildPortraitGenerationDirection(monster, this.portraitPromptDetails().trim())
             });
 
-            const updatedMonster = sanitizeCustomMonster({
-                ...monster,
-                imageUrl: response.imageUrl,
-                originalImageUrl: response.imageUrl
-            });
-
-            const saved = await this.updateMonsterInLibrary(updatedMonster);
-            if (saved) {
-                this.monster.set(updatedMonster);
-                this.portraitLoadFailed.set(false);
-            } else {
-                this.portraitGenerationError.set('Portrait generation succeeded, but saving it to your monster library failed.');
-            }
+            const optimizedImageUrl = await this.optimizePortraitForStorage(response.imageUrl);
+            await this.persistPortrait(optimizedImageUrl, 'Portrait generated and saved.');
         } catch (error: unknown) {
             this.portraitGenerationError.set(this.buildPortraitGenerationFailureMessage(error));
         } finally {
             this.isPortraitGenerating.set(false);
             this.cdr.detectChanges();
         }
+    }
+
+    async clearPortrait(): Promise<void> {
+        if (!this.monster() || this.isSavingPortrait()) {
+            return;
+        }
+
+        await this.persistPortrait('', 'Portrait removed.');
+    }
+
+    async applyPortraitCrop(croppedImageUrl: string): Promise<void> {
+        const monster = this.monster();
+        if (!monster) {
+            return;
+        }
+
+        const optimizedImageUrl = await this.optimizePortraitForStorage(croppedImageUrl);
+        this.portraitCropModalOpen.set(false);
+        this.portraitCropSourceImageUrl.set('');
+        await this.persistPortrait(optimizedImageUrl, 'Portrait updated.');
     }
 
     handlePortraitImageError(): void {
@@ -334,7 +449,7 @@ export class MonsterDetailPageComponent {
         return saved;
     }
 
-    private buildPortraitGenerationDirection(monster: CustomMonster): string {
+    private buildPortraitGenerationDirection(monster: CustomMonster, manualDirection: string): string {
         const normalizedType = `${monster.creatureType} ${monster.creatureCategory}`.toLowerCase();
         const isHumanoid = normalizedType.includes('humanoid');
         const details = [
@@ -342,12 +457,18 @@ export class MonsterDetailPageComponent {
             monster.creatureType ? `Type: ${monster.creatureType}` : '',
             monster.creatureCategory ? `Category: ${monster.creatureCategory}` : '',
             monster.alignment ? `Alignment: ${monster.alignment}` : '',
+            monster.notes.trim() ? `Notes: ${monster.notes.trim()}` : '',
             isHumanoid
                 ? 'Create centered monster token art with clean silhouette and transparent or neutral backdrop suitable for a tabletop token. Avoid cinematic profile-photo framing.'
                 : 'Create non-profile monster token art that clearly shows the creature form (full body or imposing silhouette), not a humanoid bust/headshot portrait, with a transparent or neutral tabletop-friendly backdrop.'
         ].filter((detail) => detail.length > 0);
 
-        return details.join(' ');
+        const detailsSummary = details.join(' ');
+        if (detailsSummary && manualDirection) {
+            return `${detailsSummary}\nRequested art direction: ${manualDirection}`;
+        }
+
+        return detailsSummary || manualDirection;
     }
 
     private buildPortraitGenerationFailureMessage(error: unknown): string {
@@ -370,5 +491,133 @@ export class MonsterDetailPageComponent {
         } catch {
             return null;
         }
+    }
+
+    private async persistPortrait(imageUrl: string, successMessage: string): Promise<void> {
+        const monster = this.monster();
+        if (!monster || this.isSavingPortrait()) {
+            return;
+        }
+
+        this.isSavingPortrait.set(true);
+        this.portraitGenerationError.set('');
+        this.portraitSaveMessage.set('');
+
+        try {
+            const optimizedImageUrl = await this.optimizePortraitForStorage(imageUrl);
+            const updatedMonster = sanitizeCustomMonster({
+                ...monster,
+                imageUrl: optimizedImageUrl,
+                originalImageUrl: imageUrl ? (monster.originalImageUrl?.trim() || optimizedImageUrl) : ''
+            });
+
+            const saved = await this.updateMonsterInLibrary(updatedMonster);
+            if (!saved) {
+                this.portraitGenerationError.set('Unable to save portrait right now.');
+                return;
+            }
+
+            this.monster.set(updatedMonster);
+            this.portraitLoadFailed.set(false);
+            this.portraitSaveMessage.set(successMessage);
+        } catch {
+            this.portraitGenerationError.set('Unable to save portrait right now.');
+        } finally {
+            this.isSavingPortrait.set(false);
+            this.cdr.detectChanges();
+        }
+    }
+
+    private async optimizePortraitForStorage(imageUrl: string): Promise<string> {
+        const trimmedImageUrl = imageUrl.trim();
+        if (!trimmedImageUrl.startsWith('data:image/')) {
+            return trimmedImageUrl;
+        }
+
+        if (trimmedImageUrl.length <= MONSTER_PORTRAIT_STORAGE_TARGET_DATA_URL_LENGTH) {
+            return trimmedImageUrl;
+        }
+
+        try {
+            const image = await this.loadPortraitImage(trimmedImageUrl);
+            const longestEdge = Math.max(image.naturalWidth, image.naturalHeight);
+            const scale = longestEdge > MONSTER_PORTRAIT_STORAGE_MAX_DIMENSION
+                ? MONSTER_PORTRAIT_STORAGE_MAX_DIMENSION / longestEdge
+                : 1;
+            const width = Math.max(1, Math.round(image.naturalWidth * scale));
+            const height = Math.max(1, Math.round(image.naturalHeight * scale));
+            const canvas = globalThis.document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+
+            const context = canvas.getContext('2d');
+            if (!context) {
+                return trimmedImageUrl;
+            }
+
+            context.imageSmoothingEnabled = true;
+            context.imageSmoothingQuality = 'high';
+            context.drawImage(image, 0, 0, width, height);
+
+            let bestImageUrl = trimmedImageUrl;
+            const attempts: Array<{ type: 'image/webp' | 'image/jpeg'; quality: number }> = [
+                { type: 'image/webp', quality: 0.9 },
+                { type: 'image/jpeg', quality: 0.9 },
+                { type: 'image/webp', quality: 0.82 },
+                { type: 'image/jpeg', quality: 0.82 },
+                { type: 'image/webp', quality: 0.72 },
+                { type: 'image/jpeg', quality: 0.72 }
+            ];
+
+            for (const attempt of attempts) {
+                const candidate = canvas.toDataURL(attempt.type, attempt.quality);
+                if (candidate.length < bestImageUrl.length) {
+                    bestImageUrl = candidate;
+                }
+
+                if (bestImageUrl.length <= MONSTER_PORTRAIT_STORAGE_TARGET_DATA_URL_LENGTH) {
+                    break;
+                }
+            }
+
+            return bestImageUrl;
+        } catch {
+            return trimmedImageUrl;
+        }
+    }
+
+    private loadPortraitImage(source: string): Promise<HTMLImageElement> {
+        return new Promise((resolve, reject) => {
+            const image = new Image();
+            image.decoding = 'async';
+            image.onload = () => resolve(image);
+            image.onerror = () => reject(new Error('Portrait image failed to load for optimization.'));
+            image.src = source;
+        });
+    }
+
+    private readPortraitFile(file: File): Promise<string> {
+        if (!file.type.startsWith('image/')) {
+            return Promise.reject(new Error('Choose an image file for the portrait.'));
+        }
+
+        if (file.size > 20 * 1024 * 1024) {
+            return Promise.reject(new Error('Image must be under 20 MB. For best performance, images under 8 MB are recommended.'));
+        }
+
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const result = typeof reader.result === 'string' ? reader.result : '';
+                if (!result) {
+                    reject(new Error('Unable to read that image file.'));
+                    return;
+                }
+
+                resolve(result);
+            };
+            reader.onerror = () => reject(new Error('Unable to read that image file.'));
+            reader.readAsDataURL(file);
+        });
     }
 }

@@ -57,12 +57,17 @@ export class DropdownComponent {
     readonly opensUpward = signal(false);
     readonly panelAlignment = signal<'start' | 'end'>('start');
     readonly searchTerm = signal('');
+    readonly comboboxHasTyped = signal(false);
     readonly panelMaxHeight = signal(this.resolvePreferredPanelMaxHeight());
     readonly panelAvailableWidth = signal<number | null>(null);
 
     readonly filteredOptions = computed(() => {
         const query = this.searchTerm().trim().toLowerCase();
         const options = this.options();
+        if (this.combobox() && this.isOpen() && !this.comboboxHasTyped()) {
+            return options;
+        }
+
         if (!query) {
             return options;
         }
@@ -76,7 +81,7 @@ export class DropdownComponent {
             return selected.label;
         }
 
-        if (this.freeText() && this.value() !== '' && this.value() != null) {
+        if ((this.freeText() || this.combobox()) && this.value() !== '' && this.value() != null) {
             return String(this.value());
         }
 
@@ -85,6 +90,10 @@ export class DropdownComponent {
 
     readonly showFreeTextOption = computed(() => {
         if (!this.freeText() && !this.combobox()) {
+            return false;
+        }
+
+        if (this.combobox() && !this.comboboxHasTyped()) {
             return false;
         }
 
@@ -268,6 +277,7 @@ export class DropdownComponent {
         this.changed.emit(value);
         this.isOpen.set(false);
         this.searchTerm.set('');
+        this.comboboxHasTyped.set(false);
     }
 
     onFreeTextPicked(): void {
@@ -278,10 +288,12 @@ export class DropdownComponent {
 
         this.isOpen.set(false);
         this.searchTerm.set('');
+        this.comboboxHasTyped.set(false);
     }
 
     onComboboxFocus(): void {
         this.searchTerm.set(String(this.value() ?? ''));
+        this.comboboxHasTyped.set(false);
         if (!this.isOpen()) {
             this.isOpen.set(true);
             this.requestCloseChat();
@@ -290,6 +302,7 @@ export class DropdownComponent {
 
     onComboboxInput(value: string): void {
         this.searchTerm.set(value);
+        this.comboboxHasTyped.set(true);
         if (!this.isOpen()) {
             this.isOpen.set(true);
             this.requestCloseChat();
@@ -302,16 +315,23 @@ export class DropdownComponent {
         }
 
         const typed = this.searchTerm().trim();
-        if (typed) {
+        if (typed && this.comboboxHasTyped()) {
             this.changed.emit(typed);
         }
 
         this.isOpen.set(false);
         this.searchTerm.set('');
+        this.comboboxHasTyped.set(false);
     }
 
     onComboboxEnter(): void {
         if (!this.isOpen()) {
+            return;
+        }
+
+        if (!this.comboboxHasTyped()) {
+            this.isOpen.set(false);
+            this.searchTerm.set('');
             return;
         }
 
@@ -327,6 +347,7 @@ export class DropdownComponent {
     handleGlobalCloseRequest(): void {
         this.isOpen.set(false);
         this.searchTerm.set('');
+        this.comboboxHasTyped.set(false);
     }
 
     isOptionSelected(option: DropdownOption): boolean {
@@ -345,6 +366,7 @@ export class DropdownComponent {
 
         if (!this.hostElement.nativeElement.contains(target)) {
             this.isOpen.set(false);
+            this.comboboxHasTyped.set(false);
         }
     }
 

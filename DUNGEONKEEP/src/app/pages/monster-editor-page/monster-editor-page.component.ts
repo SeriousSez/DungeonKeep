@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, ElementRef, HostListener, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, ElementRef, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -8,8 +8,8 @@ import { DropdownComponent, DropdownOption } from '../../components/dropdown/dro
 import { CustomMonster, MonsterCatalogEntry, MonsterTextSectionEntry } from '../../models/monster-reference.models';
 import { monsterCatalog } from '../../data/monster-catalog.generated';
 import { createBlankCustomMonster, createCustomMonsterFromTemplate, sanitizeCustomMonster, touchCustomMonster } from '../../data/monster-library.helpers';
-import { loadMonsterLibrary, saveMonsterLibrary } from '../../data/monster-library.storage';
 import { DungeonApiService, type ApiGenerateMonsterDraftResponse } from '../../state/dungeon-api.service';
+import { DungeonStoreService } from '../../state/dungeon-store.service';
 
 const SIZE_OPTIONS: DropdownOption[] = [
     { value: 'Tiny', label: 'Tiny' },
@@ -38,6 +38,20 @@ const CATEGORY_OPTIONS: DropdownOption[] = [
     { value: 'Other', label: 'Other' }
 ];
 
+const ALIGNMENT_OPTIONS: DropdownOption[] = [
+    { value: 'Lawful Good', label: 'Lawful Good' },
+    { value: 'Neutral Good', label: 'Neutral Good' },
+    { value: 'Chaotic Good', label: 'Chaotic Good' },
+    { value: 'Lawful Neutral', label: 'Lawful Neutral' },
+    { value: 'Neutral', label: 'Neutral' },
+    { value: 'Chaotic Neutral', label: 'Chaotic Neutral' },
+    { value: 'Lawful Evil', label: 'Lawful Evil' },
+    { value: 'Neutral Evil', label: 'Neutral Evil' },
+    { value: 'Chaotic Evil', label: 'Chaotic Evil' },
+    { value: 'Unaligned', label: 'Unaligned' },
+    { value: 'Any Alignment', label: 'Any Alignment' }
+];
+
 interface SectionSuggestion {
     title: string;
     text: string;
@@ -55,6 +69,8 @@ interface MonsterGenerationPrompt {
     specialAbilityHint: string;
     notesHint: string;
 }
+
+type MonsterEditorMode = 'standard' | 'ai';
 
 const SECTION_SUGGESTIONS: Record<SectionKey, readonly SectionSuggestion[]> = {
     traits: [
@@ -322,11 +338,13 @@ export class MonsterEditorPageComponent {
     private readonly cdr = inject(ChangeDetectorRef);
     private readonly host = inject(ElementRef<HTMLElement>);
     private readonly api = inject(DungeonApiService);
+    readonly store = inject(DungeonStoreService);
 
     readonly isEditMode = signal(false);
     readonly monsterId = signal<string | null>(null);
     readonly isSaving = signal(false);
     readonly isGenerating = signal(false);
+    readonly editorMode = signal<MonsterEditorMode>('standard');
     readonly saveError = signal('');
     readonly generationError = signal('');
     readonly generationFeedback = signal('');
@@ -355,6 +373,31 @@ export class MonsterEditorPageComponent {
 
     readonly sizeOptions = SIZE_OPTIONS;
     readonly categoryOptions = CATEGORY_OPTIONS;
+    readonly alignmentOptions = ALIGNMENT_OPTIONS;
+    readonly creatureTypeOptions = computed<DropdownOption[]>(() => {
+        const creatureTypes = Array.from(new Set(normalizedCatalog
+            .map((entry) => entry.creatureType?.trim() ?? '')
+            .filter((creatureType) => creatureType.length > 0)))
+            .sort((left, right) => left.localeCompare(right));
+
+        return creatureTypes.map((creatureType) => ({ value: creatureType, label: creatureType }));
+    });
+    readonly challengeRatingOptions = computed<DropdownOption[]>(() => {
+        const challengeRatings = Array.from(new Set(normalizedCatalog
+            .map((entry) => entry.challengeRating?.trim() ?? '')
+            .filter((challengeRating) => challengeRating.length > 0)))
+            .sort((left, right) => {
+                const leftValue = challengeRatingSortValue(left);
+                const rightValue = challengeRatingSortValue(right);
+                if (leftValue === rightValue) {
+                    return left.localeCompare(right);
+                }
+
+                return leftValue - rightValue;
+            });
+
+        return challengeRatings.map((challengeRating) => ({ value: challengeRating, label: challengeRating }));
+    });
     readonly templateCategoryFilterOptions = computed<DropdownOption[]>(() => {
         const categories = Array.from(new Set(normalizedCatalog
             .map((entry) => entry.creatureCategory)
@@ -419,16 +462,9 @@ export class MonsterEditorPageComponent {
                 const id = params.get('monsterId');
                 this.monsterId.set(id);
                 this.isEditMode.set(!!id);
+                this.editorMode.set('standard');
 
-                if (id) {
-                    const library = loadMonsterLibrary() ?? [];
-                    const found = library.find((m) => m.id === id);
-                    if (found) {
-                        this.draft.set(sanitizeCustomMonster(found));
-                    } else {
-                        void this.router.navigate(['/monsters']);
-                    }
-                } else {
+                if (!id) {
                     this.draft.set(createBlankCustomMonster());
                 }
 
@@ -436,6 +472,26 @@ export class MonsterEditorPageComponent {
 
                 this.cdr.detectChanges();
             });
+
+        effect(() => {
+            const id = this.monsterId();
+            if (!id) {
+                return;
+            }
+
+            const library = this.readLibrary();
+            const found = library.find((monster) => monster.id === id);
+            if (found) {
+                this.draft.set(sanitizeCustomMonster(found));
+                this.syncGenerationPromptFromDraft();
+                this.cdr.detectChanges();
+                return;
+            }
+
+            if (this.store.initialized()) {
+                void this.router.navigate(['/monsters']);
+            }
+        });
 
         this.route.queryParamMap
             .pipe(takeUntilDestroyed(this.destroyRef))
@@ -493,6 +549,10 @@ export class MonsterEditorPageComponent {
         this.generationError.set('');
     }
 
+    selectEditorMode(mode: MonsterEditorMode): void {
+        this.editorMode.set(mode);
+    }
+
     async generateMonster(): Promise<void> {
         if (this.isEditMode() || this.isGenerating()) {
             return;
@@ -521,7 +581,7 @@ export class MonsterEditorPageComponent {
         this.generationFeedback.set('');
 
         try {
-            const existingMonsterNames = (loadMonsterLibrary() ?? [])
+            const existingMonsterNames = this.readLibrary()
                 .map((monster) => sanitizeCustomMonster(monster))
                 .filter((monster) => monster.id !== this.draft().id)
                 .map((monster) => monster.name);
@@ -542,6 +602,7 @@ export class MonsterEditorPageComponent {
 
             this.applyGeneratedMonster(generated);
             this.generationFeedback.set('Monster draft generated. Review it and save when ready.');
+            this.editorMode.set('standard');
         } catch {
             this.generationError.set('Could not generate a monster draft right now.');
         } finally {
@@ -707,7 +768,7 @@ export class MonsterEditorPageComponent {
         }
     }
 
-    save(): void {
+    async save(): Promise<void> {
         const current = this.draft();
         if (!current.name.trim()) {
             this.saveError.set('A name is required.');
@@ -719,7 +780,7 @@ export class MonsterEditorPageComponent {
         this.saveError.set('');
 
         const sanitized = sanitizeCustomMonster(touchCustomMonster(current));
-        const library = loadMonsterLibrary() ?? [];
+        const library = this.readLibrary();
 
         const existingIndex = library.findIndex((m) => m.id === sanitized.id);
         let updated: CustomMonster[];
@@ -731,7 +792,14 @@ export class MonsterEditorPageComponent {
             updated = [sanitized, ...library];
         }
 
-        saveMonsterLibrary(updated);
+        const saved = await this.store.saveUserMonsterLibrary(updated);
+        if (!saved) {
+            this.isSaving.set(false);
+            this.saveError.set('Could not save this monster right now. Please try again.');
+            this.cdr.detectChanges();
+            return;
+        }
+
         this.draft.set(sanitized);
         this.isSaving.set(false);
         this.cdr.detectChanges();
@@ -814,6 +882,10 @@ export class MonsterEditorPageComponent {
 
         const modifier = Math.floor((value - 10) / 2);
         return modifier >= 0 ? `(+${modifier})` : `(${modifier})`;
+    }
+
+    private readLibrary(): CustomMonster[] {
+        return (this.store.userMonsterLibrary() ?? []) as CustomMonster[];
     }
 }
 
