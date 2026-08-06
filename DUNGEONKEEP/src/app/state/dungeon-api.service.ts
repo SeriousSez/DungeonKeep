@@ -898,6 +898,56 @@ export interface ApiGenerateNpcDraftResponse {
     isImportant: boolean;
 }
 
+export interface ApiGenerateMonsterDraftRequest {
+    nameHint: string;
+    conceptHint: string;
+    creatureCategoryHint: string;
+    creatureTypeHint: string;
+    challengeRatingHint: string;
+    alignmentHint: string;
+    environmentHint: string;
+    combatRoleHint: string;
+    specialAbilityHint: string;
+    notesHint: string;
+    existingMonsterNames: string[];
+}
+
+export interface ApiGenerateMonsterDraftResponse {
+    name: string;
+    challengeRating: string;
+    creatureType: string;
+    creatureCategory: string;
+    size: string;
+    armorClass: number | null;
+    hitPoints: number | null;
+    speed: string;
+    alignment: string;
+    legendary: boolean;
+    sourceLabel: string;
+    abilityScores: {
+        strength: number | null;
+        dexterity: number | null;
+        constitution: number | null;
+        intelligence: number | null;
+        wisdom: number | null;
+        charisma: number | null;
+    };
+    savingThrows: string;
+    skills: string;
+    damageVulnerabilities: string;
+    damageResistances: string;
+    damageImmunities: string;
+    conditionImmunities: string;
+    senses: string;
+    languages: string;
+    challengeXp: string;
+    traits: Array<{ name: string; description: string }>;
+    actions: Array<{ name: string; description: string }>;
+    reactions: Array<{ name: string; description: string }>;
+    legendaryActions: Array<{ name: string; description: string }>;
+    notes: string;
+}
+
 export interface ApiGenerateTableDraftRequest {
     campaignId?: string;
     titleHint: string;
@@ -1076,6 +1126,10 @@ export class DungeonApiService {
 
     async generateNpcDraft(payload: ApiGenerateNpcDraftRequest): Promise<ApiGenerateNpcDraftResponse> {
         return await firstValueFrom(this.http.post<ApiGenerateNpcDraftResponse>(`${this.baseUrl}/campaigns/npcs/generate-draft`, payload));
+    }
+
+    async generateMonsterDraft(payload: ApiGenerateMonsterDraftRequest): Promise<ApiGenerateMonsterDraftResponse> {
+        return await firstValueFrom(this.http.post<ApiGenerateMonsterDraftResponse>(`${this.baseUrl}/account/monster-library/generate-draft`, payload));
     }
 
     async generateTableDraft(payload: ApiGenerateTableDraftRequest): Promise<ApiGenerateTableDraftResponse> {
@@ -1400,4 +1454,3 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.post<ApiMessageThreadDto>(`${this.baseUrl}/messages/compose`, { recipientUserId, body }));
     }
 }
-

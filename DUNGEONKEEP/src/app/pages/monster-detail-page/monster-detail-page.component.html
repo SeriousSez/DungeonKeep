@@ -1,9 +1,60 @@
 <main class="monster-detail-page">
-    @if (monster(); as monster) {
+    @if (!store.initialized() && !monster()) {
+    <section class="panel monster-page-shell skeleton-panel" aria-hidden="true">
+        <header class="monster-strip monster-strip--skeleton">
+            <div class="monster-strip-icon skeleton-block"></div>
+            <div class="monster-strip-copy monster-strip-copy--skeleton">
+                <div class="skeleton-line skeleton-eyebrow"></div>
+                <div class="skeleton-line skeleton-title"></div>
+                <div class="skeleton-line skeleton-copy"></div>
+            </div>
+            <div class="monster-detail-actions-skeleton">
+                <div class="skeleton-line skeleton-button"></div>
+                <div class="skeleton-line skeleton-button"></div>
+                <div class="skeleton-line skeleton-button"></div>
+            </div>
+        </header>
+
+        <div class="monster-sheet-body">
+            <div class="monster-tags-row">
+                <div class="skeleton-line skeleton-pill"></div>
+                <div class="skeleton-line skeleton-pill"></div>
+                <div class="skeleton-line skeleton-pill short"></div>
+            </div>
+
+            <hr class="sheet-divider" />
+
+            <section class="monster-facts-grid">
+                @for (slot of [1, 2, 3, 4]; track slot) {
+                <article class="monster-fact-card skeleton-card">
+                    <div class="skeleton-line skeleton-label"></div>
+                    <div class="skeleton-line skeleton-value"></div>
+                </article>
+                }
+            </section>
+
+            <hr class="sheet-divider" />
+
+            <section class="monster-abilities-grid">
+                @for (slot of [1, 2, 3, 4, 5, 6]; track slot) {
+                <article class="monster-ability-card skeleton-card">
+                    <div class="skeleton-line skeleton-label"></div>
+                    <div class="skeleton-line skeleton-value"></div>
+                    <div class="skeleton-line skeleton-mod"></div>
+                </article>
+                }
+            </section>
+        </div>
+    </section>
+    } @else if (monster(); as monster) {
     <section class="panel monster-page-shell">
         <header class="monster-strip">
             <div class="monster-strip-icon" aria-hidden="true">
+                @if (showPortraitImage()) {
+                <img class="monster-strip-portrait" [src]="monster.imageUrl" [alt]="monster.name + ' portrait'" (error)="handlePortraitImageError()" />
+                } @else {
                 <i class="fa-duotone fa-thin fa-dragon"></i>
+                }
             </div>
 
             <div class="monster-strip-copy">
@@ -22,12 +73,19 @@
                     <i class="fa-duotone fa-thin fa-copy" aria-hidden="true"></i>
                     Duplicate
                 </button>
+                <button type="button" class="secondary-link-btn" [disabled]="isPortraitGenerating() || isSavingPortrait()" [class.is-loading]="isPortraitGenerating() || isSavingPortrait()" (click)="openPortraitModal()">
+                    <span class="loading-label">{{ isPortraitGenerating() ? 'Generating Portrait...' : generatePortraitButtonLabel() }}</span>
+                </button>
                 <a class="primary-link-btn" [routerLink]="['/monsters', monster.id, 'edit']">
                     <i class="fa-duotone fa-thin fa-pen" aria-hidden="true"></i>
                     Edit
                 </a>
             </div>
         </header>
+
+        @if (portraitGenerationError()) {
+        <p class="monster-portrait-error" role="alert">{{ portraitGenerationError() }}</p>
+        }
 
         @if (addToSessionOpen()) {
         <div class="add-to-session-panel">
@@ -158,5 +216,13 @@
         <p>This monster could not be found in your library.</p>
         <a class="secondary-link-btn" routerLink="/monsters">Back to Library</a>
     </section>
+    }
+
+    @if (monster(); as monster) {
+    <app-character-portrait-modal [open]="portraitModalOpen()" [entityLabel]="'Monster'" [characterName]="monster.name || 'Monster'" [imageUrl]="monster.imageUrl ?? ''" [portraitInitials]="portraitInitials()" [promptDetails]="portraitPromptDetails()" [isSaving]="isSavingPortrait()"
+        [isGenerating]="isPortraitGenerating()" [errorMessage]="portraitGenerationError()" [saveMessage]="portraitSaveMessage()" [canRemove]="!!(monster.imageUrl ?? '').trim()" (closed)="closePortraitModal()" (promptDetailsChanged)="updatePortraitPromptDetails($event)"
+        (fileSelected)="onPortraitFileSelected($event)" (generateRequested)="generateMonsterPortrait()" (recropRequested)="openPortraitRecrop()" (removeRequested)="clearPortrait()"></app-character-portrait-modal>
+
+    <app-character-portrait-crop-modal [open]="portraitCropModalOpen()" [entityLabel]="'Monster'" [characterName]="monster.name || 'Monster'" [imageUrl]="portraitCropSourceImageUrl()" (closed)="closePortraitCropModal()" (applied)="applyPortraitCrop($event)"></app-character-portrait-crop-modal>
     }
 </main>

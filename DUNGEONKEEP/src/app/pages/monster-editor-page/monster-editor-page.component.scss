@@ -9,6 +9,10 @@
     align-items: start;
 }
 
+.editor-layout--edit-mode {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .panel {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
@@ -145,6 +149,82 @@
     gap: 16px;
 }
 
+.editor-skeleton-shell {
+    display: grid;
+    gap: 16px;
+}
+
+.skeleton-panel {
+    overflow: hidden;
+}
+
+.editor-skeleton-grid,
+.editor-skeleton-abilities {
+    display: grid;
+    gap: 12px;
+}
+
+.editor-skeleton-grid--identity {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.editor-skeleton-grid--combat {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.editor-skeleton-grid--details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.editor-skeleton-abilities {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.skeleton-line {
+    border-radius: 12px;
+    background: linear-gradient(90deg,
+            color-mix(in srgb, var(--color-surface-alt) 88%, transparent) 0%,
+            color-mix(in srgb, var(--color-surface) 96%, #fff 4%) 50%,
+            color-mix(in srgb, var(--color-surface-alt) 88%, transparent) 100%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+.skeleton-title {
+    width: min(320px, 100%);
+    height: 30px;
+}
+
+.skeleton-section-heading {
+    width: 160px;
+    height: 18px;
+}
+
+.skeleton-field {
+    width: 100%;
+    height: 44px;
+}
+
+.skeleton-field--wide {
+    grid-column: 1 / -1;
+}
+
+.skeleton-ability {
+    width: 100%;
+    height: 84px;
+    border-radius: 16px;
+}
+
+@keyframes skeleton-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
 .back-link {
     display: inline-flex;
     align-items: center;
@@ -158,6 +238,85 @@
 .editor-title-bar h1 {
     margin: 0;
     font-size: clamp(1.3rem, 2.5vw, 1.7rem);
+}
+
+.creation-mode-panel {
+    display: grid;
+    gap: 12px;
+}
+
+.creation-mode-panel h2 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.mode-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.mode-card {
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-surface-alt);
+    color: var(--color-text);
+    padding: 12px;
+    text-align: left;
+    display: grid;
+    gap: 6px;
+    cursor: pointer;
+    transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.mode-card:hover {
+    border-color: color-mix(in srgb, var(--color-border) 55%, var(--color-primary) 45%);
+    background: color-mix(in srgb, var(--color-surface-alt) 82%, var(--color-primary) 18%);
+    transform: translateY(-1px);
+}
+
+.mode-card span {
+    opacity: 0.72;
+    line-height: 1.45;
+}
+
+.mode-card-active {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.ai-generation-panel {
+    gap: 16px;
+}
+
+.ai-generation-hint {
+    margin: 0;
+    font-size: 0.92rem;
+    opacity: 0.75;
+}
+
+.generation-feedback {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-alt);
+    color: var(--color-text);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.generation-feedback i {
+    color: var(--color-primary);
+}
+
+.generation-actions-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .editor-error-banner {
@@ -260,6 +419,7 @@
 }
 
 .form-textarea {
+    min-height: 84px;
     padding: 8px 10px;
     border-radius: 9px;
     border: 1px solid var(--color-border);
@@ -269,7 +429,7 @@
     resize: vertical;
     width: 100%;
     box-sizing: border-box;
-    font-family: inherit;
+    font: inherit;
     line-height: 1.5;
 }
 
@@ -434,6 +594,20 @@
 }
 
 @media (max-width: 640px) {
+
+    .editor-skeleton-grid--identity,
+    .editor-skeleton-grid--combat,
+    .editor-skeleton-grid--details {
+        grid-template-columns: 1fr;
+    }
+
+    .editor-skeleton-abilities {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .mode-options {
+        grid-template-columns: 1fr;
+    }
 
     .form-grid--cols-2,
     .form-grid--cols-3 {

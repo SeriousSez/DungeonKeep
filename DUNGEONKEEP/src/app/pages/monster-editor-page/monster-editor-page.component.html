@@ -1,4 +1,4 @@
-<div class="editor-layout">
+<div class="editor-layout" [class.editor-layout--edit-mode]="isEditMode()">
     <!-- Sidebar: Template Picker (when new) -->
     @if (!isEditMode()) {
     <aside class="template-sidebar panel">
@@ -46,6 +46,53 @@
 
     <!-- Main form -->
     <main class="editor-main">
+        @if (isEditMode() && !store.initialized()) {
+        <div class="editor-skeleton-shell" aria-hidden="true">
+            <div class="editor-title-bar panel skeleton-panel">
+                <div class="skeleton-line skeleton-title"></div>
+            </div>
+
+            <section class="editor-section panel skeleton-panel">
+                <div class="skeleton-line skeleton-section-heading"></div>
+                <div class="editor-skeleton-grid editor-skeleton-grid--identity">
+                    <div class="skeleton-line skeleton-field skeleton-field--wide"></div>
+                    <div class="skeleton-line skeleton-field"></div>
+                    <div class="skeleton-line skeleton-field"></div>
+                    <div class="skeleton-line skeleton-field"></div>
+                    <div class="skeleton-line skeleton-field"></div>
+                    <div class="skeleton-line skeleton-field"></div>
+                    <div class="skeleton-line skeleton-field"></div>
+                </div>
+            </section>
+
+            <section class="editor-section panel skeleton-panel">
+                <div class="skeleton-line skeleton-section-heading"></div>
+                <div class="editor-skeleton-grid editor-skeleton-grid--combat">
+                    <div class="skeleton-line skeleton-field"></div>
+                    <div class="skeleton-line skeleton-field"></div>
+                    <div class="skeleton-line skeleton-field"></div>
+                </div>
+            </section>
+
+            <section class="editor-section panel skeleton-panel">
+                <div class="skeleton-line skeleton-section-heading"></div>
+                <div class="editor-skeleton-abilities">
+                    @for (slot of [1, 2, 3, 4, 5, 6]; track slot) {
+                    <div class="skeleton-line skeleton-ability"></div>
+                    }
+                </div>
+            </section>
+
+            <section class="editor-section panel skeleton-panel">
+                <div class="skeleton-line skeleton-section-heading"></div>
+                <div class="editor-skeleton-grid editor-skeleton-grid--details">
+                    @for (slot of [1, 2, 3, 4, 5, 6, 7, 8]; track slot) {
+                    <div class="skeleton-line skeleton-field"></div>
+                    }
+                </div>
+            </section>
+        </div>
+        } @else {
         <div class="editor-breadcrumb">
             <a routerLink="/monsters" class="back-link">← Monster Library</a>
         </div>
@@ -54,6 +101,110 @@
             <h1>{{ pageTitle() }}</h1>
         </div>
 
+        @if (!isEditMode()) {
+        <section class="creation-mode-panel" aria-label="Monster drafting type">
+            <h2>Choose monster drafting type</h2>
+            <div class="mode-options">
+                <button type="button" class="mode-card" [class.mode-card-active]="editorMode() === 'standard'" (click)="selectEditorMode('standard')">
+                    <strong>Standard editing</strong>
+                    <span>Build or refine the monster record manually.</span>
+                </button>
+                <button type="button" class="mode-card" [class.mode-card-active]="editorMode() === 'ai'" (click)="selectEditorMode('ai')">
+                    <strong>AI generation</strong>
+                    <span>Provide direction, then generate a draft into the editor.</span>
+                </button>
+            </div>
+        </section>
+        }
+
+        @if (!isEditMode() && editorMode() === 'ai') {
+        <section class="editor-section panel ai-generation-panel">
+            <div class="section-title-row">
+                <h2 class="section-title">
+                    <i class="fa-duotone fa-thin fa-wand-magic-sparkles" aria-hidden="true"></i>
+                    AI Generation
+                </h2>
+            </div>
+
+            <p class="ai-generation-hint">Give the AI a concept, role, or signature ability, then generate a full draft into the editor.</p>
+
+            @if (generationError()) {
+            <div class="editor-error-banner" role="alert">
+                <i class="fa-duotone fa-thin fa-circle-exclamation" aria-hidden="true"></i>
+                {{ generationError() }}
+            </div>
+            }
+
+            @if (generationFeedback()) {
+            <div class="generation-feedback" aria-live="polite">
+                <i class="fa-duotone fa-thin fa-check-circle" aria-hidden="true"></i>
+                {{ generationFeedback() }}
+            </div>
+            }
+
+            <div class="form-grid form-grid--cols-2">
+                <div class="form-field">
+                    <label for="monster-ai-name">Name Hint</label>
+                    <input id="monster-ai-name" type="text" class="form-input" [value]="generationPrompt().nameHint" (input)="updateGenerationPrompt('nameHint', $any($event.target).value)" placeholder="Ashcoil Basilisk" />
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-ai-concept">Concept</label>
+                    <input id="monster-ai-concept" type="text" class="form-input" [value]="generationPrompt().conceptHint" (input)="updateGenerationPrompt('conceptHint', $any($event.target).value)" placeholder="Petrifying tunnel predator that nests in volcanic caverns" />
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-ai-category">Creature Category</label>
+                    <app-dropdown id="monster-ai-category" [value]="generationPrompt().creatureCategoryHint" [options]="categoryOptions" [minWidth]="160" [placeholder]="'Auto'" (changed)="updateGenerationPrompt('creatureCategoryHint', $any($event))"></app-dropdown>
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-ai-type">Creature Type</label>
+                    <app-dropdown id="monster-ai-type" [combobox]="true" [value]="generationPrompt().creatureTypeHint" [options]="creatureTypeOptions()" [minWidth]="220" [placeholder]="'Choose or type creature type'" (changed)="updateGenerationPrompt('creatureTypeHint', $event + '')"></app-dropdown>
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-ai-cr">Challenge Rating</label>
+                    <app-dropdown id="monster-ai-cr" [combobox]="true" [value]="generationPrompt().challengeRatingHint" [options]="challengeRatingOptions()" [minWidth]="160" [placeholder]="'Choose or type CR'" (changed)="updateGenerationPrompt('challengeRatingHint', $event + '')"></app-dropdown>
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-ai-alignment">Alignment</label>
+                    <app-dropdown id="monster-ai-alignment" [combobox]="true" [value]="generationPrompt().alignmentHint" [options]="alignmentOptions" [minWidth]="180" [placeholder]="'Choose alignment'" (changed)="updateGenerationPrompt('alignmentHint', $event + '')"></app-dropdown>
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-ai-environment">Environment</label>
+                    <input id="monster-ai-environment" type="text" class="form-input" [value]="generationPrompt().environmentHint" (input)="updateGenerationPrompt('environmentHint', $any($event.target).value)" placeholder="Volcanic caverns, ruined mines" />
+                </div>
+
+                <div class="form-field">
+                    <label for="monster-ai-role">Combat Role</label>
+                    <input id="monster-ai-role" type="text" class="form-input" [value]="generationPrompt().combatRoleHint" (input)="updateGenerationPrompt('combatRoleHint', $any($event.target).value)" placeholder="Ambush skirmisher" />
+                </div>
+
+                <div class="form-field form-field--wide">
+                    <label for="monster-ai-special">Signature Ability</label>
+                    <input id="monster-ai-special" type="text" class="form-input" [value]="generationPrompt().specialAbilityHint" (input)="updateGenerationPrompt('specialAbilityHint', $any($event.target).value)" placeholder="Heat shimmer camouflage and a gaze that slowly turns prey to obsidian" />
+                </div>
+
+                <div class="form-field form-field--wide">
+                    <label for="monster-ai-notes">Extra Direction</label>
+                    <textarea id="monster-ai-notes" class="form-input form-textarea" rows="3" [value]="generationPrompt().notesHint" (input)="updateGenerationPrompt('notesHint', $any($event.target).value)"
+                        placeholder="Lean into subterranean horror, add one reactive defense, and make the stat block feel table-ready."></textarea>
+                </div>
+            </div>
+
+            <div class="generation-actions-row">
+                <button type="button" class="ghost-btn" (click)="selectEditorMode('standard')">Back to editor</button>
+                <button type="button" class="primary-btn" [class.is-loading]="isGenerating()" [disabled]="isGenerating()" (click)="generateMonster()">
+                    {{ isGenerating() ? 'Generating…' : 'Generate Monster' }}
+                </button>
+            </div>
+        </section>
+        }
+
+        @if (isEditMode() || editorMode() === 'standard') {
         @if (saveError()) {
         <div class="editor-error-banner" role="alert">
             <i class="fa-duotone fa-thin fa-circle-exclamation" aria-hidden="true"></i>
@@ -86,12 +237,12 @@
 
                 <div class="form-field">
                     <label for="monster-type">Creature Type</label>
-                    <input id="monster-type" type="text" class="form-input" [ngModel]="draft().creatureType" (ngModelChange)="updateField('creatureType', $event)" placeholder="e.g. Humanoid (any race)" />
+                    <app-dropdown id="monster-type" [combobox]="true" [value]="draft().creatureType" [options]="creatureTypeOptions()" [minWidth]="220" [placeholder]="'Choose or type creature type'" (changed)="updateField('creatureType', $event + '')"></app-dropdown>
                 </div>
 
                 <div class="form-field">
                     <label for="monster-cr">Challenge Rating</label>
-                    <input id="monster-cr" type="text" class="form-input" [ngModel]="draft().challengeRating" (ngModelChange)="updateField('challengeRating', $event)" placeholder="e.g. 5 or 1/2" />
+                    <app-dropdown id="monster-cr" [combobox]="true" [value]="draft().challengeRating" [options]="challengeRatingOptions()" [minWidth]="160" [placeholder]="'Choose or type CR'" (changed)="updateField('challengeRating', $event + '')"></app-dropdown>
                 </div>
 
                 <div class="form-field">
@@ -101,7 +252,7 @@
 
                 <div class="form-field">
                     <label for="monster-alignment">Alignment</label>
-                    <input id="monster-alignment" type="text" class="form-input" [ngModel]="draft().alignment" (ngModelChange)="updateField('alignment', $event)" placeholder="e.g. Chaotic Evil" />
+                    <app-dropdown id="monster-alignment" [combobox]="true" [value]="draft().alignment" [options]="alignmentOptions" [minWidth]="180" [placeholder]="'Choose alignment'" (changed)="updateField('alignment', $event + '')"></app-dropdown>
                 </div>
 
                 <div class="form-field form-field--checkbox">
@@ -404,5 +555,7 @@
                 {{ saveLabel() }}
             </button>
         </div>
+        }
+        }
     </main>
 </div>
