@@ -1,11 +1,29 @@
 using DungeonKeep.ApplicationService.Contracts;
 using DungeonKeep.ApplicationService.Interfaces;
 using DungeonKeep.Domain.Entities;
+using System.Text.Json;
 
 namespace DungeonKeep.ApplicationService.Services;
 
-public sealed class CharacterService(ICampaignRepository campaignRepository, ICharacterRepository characterRepository, IBackstoryGenerator backstoryGenerator, ICharacterPortraitGenerator characterPortraitGenerator) : ICharacterService
+public sealed class CharacterService(ICampaignRepository campaignRepository, ICharacterRepository characterRepository, IAuthRepository authRepository, IBackstoryGenerator backstoryGenerator, ICharacterPortraitGenerator characterPortraitGenerator) : ICharacterService
 {
+    private static readonly HashSet<string> OfficialClassNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Artificer", "Barbarian", "Blood Hunter", "Bard", "Cleric", "Druid", "Fighter",
+        "Monk", "Paladin", "Ranger", "Rogue", "Sorcerer", "Warlock", "Wizard"
+    };
+
+    private static readonly HashSet<string> OfficialSpeciesNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Aasimar", "Dragonborn", "Dwarf", "Elf", "Gnome", "Goliath", "Halfling", "Human", "Orc", "Tiefling",
+        "Firbolg", "Genasi (Air)", "Genasi (Earth)", "Genasi (Fire)", "Genasi (Water)", "Tortle", "Aarakocra",
+        "Bugbear", "Centaur", "Changeling", "Deep Gnome", "Duergar", "Eladrin", "Fairy", "Githyanki", "Githzerai",
+        "Goblin", "Grung", "Harengon", "Hobgoblin", "Kenku", "Kobold", "Lizardfolk", "Locathah", "Minotaur",
+        "Owlin", "Satyr", "Sea Elf", "Shadar-Kai", "Shifter", "Tabaxi", "Triton", "Verdan", "Yuan-Ti",
+        "Astral Elf", "Autognome", "Dhampir", "Giff", "Hadozee", "Hexblood", "Kalashtar", "Kender", "Leonin",
+        "Loxodon", "Plasmoid", "Reborn", "Simic Hybrid", "Thri-Kreen", "Warforged"
+    };
+
     public async Task<IReadOnlyList<CharacterDto>> GetAccessibleAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var characters = await characterRepository.GetAccessibleByUserIdAsync(userId, cancellationToken);
@@ -60,7 +78,13 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
     public async Task<CharacterDto> CreateAsync(Guid? campaignId, CreateCharacterRequest request, AuthenticatedUser user, CancellationToken cancellationToken = default)
     {
         var normalizedCampaignIds = NormalizeCampaignIds(request.CampaignIds, campaignId ?? request.CampaignId);
-        await ValidateCampaignIdsAsync(normalizedCampaignIds, user.Id, cancellationToken);
+        var validatedCampaigns = await ValidateCampaignIdsAsync(normalizedCampaignIds, user.Id, cancellationToken);
+        await ValidateClassAndSpeciesForCampaignsAsync(
+            user.Id,
+            request.ClassName,
+            request.Species,
+            validatedCampaigns,
+            cancellationToken);
         var primaryCampaignId = normalizedCampaignIds.FirstOrDefault();
 
         var character = new Character
@@ -134,7 +158,13 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
         }
 
         var normalizedCampaignIds = NormalizeCampaignIds(request.CampaignIds, request.CampaignId);
-        await ValidateCampaignIdsAsync(normalizedCampaignIds, userId, cancellationToken);
+        var validatedCampaigns = await ValidateCampaignIdsAsync(normalizedCampaignIds, userId, cancellationToken);
+        await ValidateClassAndSpeciesForCampaignsAsync(
+            existing.OwnerUserId ?? userId,
+            request.ClassName,
+            request.Species ?? existing.Species,
+            validatedCampaigns,
+            cancellationToken);
 
         var updated = await characterRepository.UpdateAsync(
             characterId,
@@ -193,7 +223,13 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
         }
 
         var normalizedCampaignIds = NormalizeCampaignIds(request.CampaignIds, request.CampaignId);
-        await ValidateCampaignIdsAsync(normalizedCampaignIds, userId, cancellationToken);
+        var validatedCampaigns = await ValidateCampaignIdsAsync(normalizedCampaignIds, userId, cancellationToken);
+        await ValidateClassAndSpeciesForCampaignsAsync(
+            existing.OwnerUserId ?? userId,
+            existing.ClassName,
+            existing.Species,
+            validatedCampaigns,
+            cancellationToken);
 
         var removedCampaignIds = previousCampaignIds
             .Except(normalizedCampaignIds)
@@ -375,8 +411,10 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
         );
     }
 
-    private async Task ValidateCampaignIdsAsync(IReadOnlyCollection<Guid> campaignIds, Guid userId, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<Campaign>> ValidateCampaignIdsAsync(IReadOnlyCollection<Guid> campaignIds, Guid userId, CancellationToken cancellationToken)
     {
+        var campaigns = new List<Campaign>();
+
         foreach (var campaignId in campaignIds)
         {
             var isMember = await campaignRepository.IsActiveMemberAsync(campaignId, userId, cancellationToken);
@@ -385,11 +423,142 @@ public sealed class CharacterService(ICampaignRepository campaignRepository, ICh
                 throw new UnauthorizedAccessException("You are not a member of this campaign.");
             }
 
-            if (await campaignRepository.GetByIdAsync(campaignId, cancellationToken) is null)
+            var campaign = await campaignRepository.GetByIdAsync(campaignId, cancellationToken);
+            if (campaign is null)
             {
-                throw new InvalidOperationException("Campaign not found.");
+                throw new InvalidOperationException($"Campaign {campaignId} was not found.");
+            }
+
+            campaigns.Add(campaign);
+        }
+
+        return campaigns;
+    }
+
+    private async Task ValidateClassAndSpeciesForCampaignsAsync(
+        Guid libraryUserId,
+        string? className,
+        string? species,
+        IReadOnlyList<Campaign> assignedCampaigns,
+        CancellationToken cancellationToken)
+    {
+        var normalizedClassName = className?.Trim() ?? string.Empty;
+        var normalizedSpecies = species?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(normalizedClassName))
+        {
+            throw new InvalidOperationException("Character class is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(normalizedSpecies))
+        {
+            throw new InvalidOperationException("Character species is required.");
+        }
+
+        var user = await authRepository.GetUserByIdAsync(libraryUserId, cancellationToken);
+        var userCustomClasses = ParseCustomOptionNames(user?.ClassLibraryJson);
+        var userCustomSpecies = ParseCustomOptionNames(user?.SpeciesLibraryJson);
+        var allowedClassByCampaignId = assignedCampaigns.ToDictionary(
+            campaign => campaign.Id,
+            campaign => ParseCustomOptionNames(campaign.AllowedCustomClassesJson));
+        var allowedSpeciesByCampaignId = assignedCampaigns.ToDictionary(
+            campaign => campaign.Id,
+            campaign => ParseCustomOptionNames(campaign.AllowedCustomSpeciesJson));
+
+        ValidateOptionAgainstCampaignPolicy(
+            optionType: "class",
+            optionValue: normalizedClassName,
+            isOfficial: OfficialClassNames.Contains(normalizedClassName),
+            inUserLibrary: userCustomClasses.Contains(normalizedClassName),
+            allowedByCampaignSelector: campaign => allowedClassByCampaignId[campaign.Id].Contains(normalizedClassName),
+            assignedCampaigns: assignedCampaigns);
+
+        ValidateOptionAgainstCampaignPolicy(
+            optionType: "species",
+            optionValue: normalizedSpecies,
+            isOfficial: OfficialSpeciesNames.Contains(normalizedSpecies),
+            inUserLibrary: userCustomSpecies.Contains(normalizedSpecies),
+            allowedByCampaignSelector: campaign => allowedSpeciesByCampaignId[campaign.Id].Contains(normalizedSpecies),
+            assignedCampaigns: assignedCampaigns);
+    }
+
+    private static void ValidateOptionAgainstCampaignPolicy(
+        string optionType,
+        string optionValue,
+        bool isOfficial,
+        bool inUserLibrary,
+        Func<Campaign, bool> allowedByCampaignSelector,
+        IReadOnlyList<Campaign> assignedCampaigns)
+    {
+        if (isOfficial)
+        {
+            return;
+        }
+
+        if (!inUserLibrary)
+        {
+            throw new InvalidOperationException(
+                $"Custom {optionType} '{optionValue}' is not in your library. Add it to your {optionType} library or choose an official {optionType}.");
+        }
+
+        if (assignedCampaigns.Count == 0)
+        {
+            return;
+        }
+
+        var disallowedCampaigns = assignedCampaigns
+            .Where(campaign => !allowedByCampaignSelector(campaign))
+            .Select(campaign => campaign.Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (disallowedCampaigns.Count == 0)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Custom {optionType} '{optionValue}' is not allowed in: {string.Join(", ", disallowedCampaigns)}. Ask the campaign owner to allow it or choose an official {optionType}.");
+    }
+
+    private static HashSet<string> ParseCustomOptionNames(string? json)
+    {
+        var values = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return values;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                return values;
+            }
+
+            foreach (var item in document.RootElement.EnumerateArray())
+            {
+                var name = item.ValueKind switch
+                {
+                    JsonValueKind.String => item.GetString(),
+                    JsonValueKind.Object when item.TryGetProperty("name", out var nameProperty) => nameProperty.GetString(),
+                    _ => null
+                };
+
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    continue;
+                }
+
+                values.Add(name.Trim());
             }
         }
+        catch (JsonException)
+        {
+        }
+
+        return values;
     }
 
     private static IReadOnlyList<Guid> NormalizeCampaignIds(IEnumerable<Guid>? campaignIds, Guid? fallbackCampaignId = null)

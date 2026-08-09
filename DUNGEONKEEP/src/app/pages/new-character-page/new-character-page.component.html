@@ -13,7 +13,7 @@
                 <h2>Standard</h2>
                 <p>Create a character using a step-by-step approach.</p>
             </div>
-            <a routerLink="/characters/new/standard/home" class="method-action">Start Building</a>
+            <a routerLink="/characters/new/standard/home" [queryParams]="campaignQueryParams()" class="method-action">Start Building</a>
         </article>
 
         <article class="panel method-card">

@@ -175,6 +175,8 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
             EnsureColumnExists(dbContext, "Campaigns", "BannerImageUrl", "TEXT NOT NULL DEFAULT ''");
             EnsureColumnExists(dbContext, "Campaigns", "BannerOriginalImageUrl", "TEXT NOT NULL DEFAULT ''");
             EnsureColumnExists(dbContext, "Campaigns", "CustomTablesJson", "TEXT NOT NULL DEFAULT '[]'");
+            EnsureColumnExists(dbContext, "Campaigns", "AllowedCustomClassesJson", "TEXT NOT NULL DEFAULT '[]'");
+            EnsureColumnExists(dbContext, "Campaigns", "AllowedCustomSpeciesJson", "TEXT NOT NULL DEFAULT '[]'");
         }
         catch
         {
@@ -391,6 +393,34 @@ public sealed class CampaignRepository(DungeonKeepDbContext dbContext) : ICampai
         }
 
         campaign.CustomTablesJson = string.IsNullOrWhiteSpace(tablesJson) ? "[]" : tablesJson;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return await GetByIdAsync(campaignId, cancellationToken);
+    }
+
+    public async Task<Campaign?> SaveAllowedCustomClassesAsync(Guid campaignId, string classesJson, CancellationToken cancellationToken = default)
+    {
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        campaign.AllowedCustomClassesJson = string.IsNullOrWhiteSpace(classesJson) ? "[]" : classesJson;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return await GetByIdAsync(campaignId, cancellationToken);
+    }
+
+    public async Task<Campaign?> SaveAllowedCustomSpeciesAsync(Guid campaignId, string speciesJson, CancellationToken cancellationToken = default)
+    {
+        var campaign = await dbContext.Campaigns.FirstOrDefaultAsync(c => c.Id == campaignId, cancellationToken);
+
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        campaign.AllowedCustomSpeciesJson = string.IsNullOrWhiteSpace(speciesJson) ? "[]" : speciesJson;
         await dbContext.SaveChangesAsync(cancellationToken);
         return await GetByIdAsync(campaignId, cancellationToken);
     }

@@ -37,4 +37,6 @@ public interface ICampaignRepository
     Task DeleteAsync(Guid campaignId, CancellationToken cancellationToken = default);
     Task<Campaign?> SaveSessionDetailsAsync(Guid campaignId, Guid sessionId, string? detailsJson, string? lootAssignmentsJson, CancellationToken cancellationToken = default);
     Task<Campaign?> SaveCustomTablesAsync(Guid campaignId, string tablesJson, CancellationToken cancellationToken = default);
+    Task<Campaign?> SaveAllowedCustomClassesAsync(Guid campaignId, string classesJson, CancellationToken cancellationToken = default);
+    Task<Campaign?> SaveAllowedCustomSpeciesAsync(Guid campaignId, string speciesJson, CancellationToken cancellationToken = default);
 }

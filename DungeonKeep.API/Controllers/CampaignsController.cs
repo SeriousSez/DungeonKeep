@@ -282,6 +282,46 @@ public sealed class CampaignsController(ICampaignService campaignService, IChara
         }
     }
 
+    [HttpPut("{campaignId:guid}/allowed-custom-classes")]
+    public async Task<ActionResult<CampaignDto>> SaveAllowedCustomClasses(Guid campaignId, [FromBody] SaveAllowedCustomClassesRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var updated = await campaignService.SaveAllowedCustomClassesAsync(campaignId, request, user.Id, cancellationToken);
+            return updated is null ? NotFound("Campaign was not found.") : Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
+    [HttpPut("{campaignId:guid}/allowed-custom-species")]
+    public async Task<ActionResult<CampaignDto>> SaveAllowedCustomSpecies(Guid campaignId, [FromBody] SaveAllowedCustomSpeciesRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var updated = await campaignService.SaveAllowedCustomSpeciesAsync(campaignId, request, user.Id, cancellationToken);
+            return updated is null ? NotFound("Campaign was not found.") : Ok(updated);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(403);
+        }
+    }
+
     [HttpPatch("{campaignId:guid}/sessions/{sessionId:guid}/visibility")]
     public async Task<ActionResult<CampaignDto>> SetSessionVisibility(Guid campaignId, Guid sessionId, [FromBody] SetSessionVisibilityRequest request, CancellationToken cancellationToken)
     {

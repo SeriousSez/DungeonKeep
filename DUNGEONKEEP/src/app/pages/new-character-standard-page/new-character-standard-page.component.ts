@@ -7,6 +7,7 @@ import { map } from 'rxjs/operators';
 import { marked } from 'marked';
 
 import { classLevelOneFeatures, classOptions as sharedClassOptions, type ClassFeature, type ClassFeaturesForLevel } from '../../data/class-features.data';
+import { sanitizeCustomClassOption, sanitizeCustomSpeciesOption } from '../../data/custom-character-options.helpers';
 import type { ActiveInfoModal, BackgroundDetail, BuilderInfo, CurrencyState, EquipmentItem, InventoryEntry } from '../../data/new-character-standard-page.types';
 import { backgroundDescriptionFallbacks, backgroundDetailOverrides, backgroundLanguagesFallbacks, backgroundOptions as sharedBackgroundOptions, backgroundSkillProficienciesFallbacks, backgroundStartingPackages, backgroundToolProficienciesFallbacks, classDetailFallbacks, classInfoMap, classStartingPackages, classSubclassSnapshots, equipmentCatalog, magicInitiateSpellsByAbility, speciesInfoMap, validSteps } from '../../data/new-character-standard-page.data';
 import type { Character, CharacterDraft } from '../../models/dungeon.models';
@@ -280,6 +281,10 @@ export class NewCharacterStandardPageComponent {
         this.route.queryParamMap.pipe(map((params) => params.get('characterId') ?? '')),
         { initialValue: this.route.snapshot.queryParamMap.get('characterId') ?? '' }
     );
+    private readonly routeCampaignId = toSignal(
+        this.route.queryParamMap.pipe(map((params) => params.get('campaignId') ?? '')),
+        { initialValue: this.route.snapshot.queryParamMap.get('campaignId') ?? '' }
+    );
     private readonly hydratedCharacterId = signal('');
     private readonly navigationEditLevel = signal<number | null>(this.resolveNavigationEditLevel());
 
@@ -353,6 +358,28 @@ export class NewCharacterStandardPageComponent {
                 replaceUrl: true,
                 state: this.getBuilderRouteState()
             });
+        });
+
+        effect(() => {
+            const queryCampaignId = this.routeCampaignId().trim();
+            if (!queryCampaignId) {
+                return;
+            }
+
+            if (this.activeBuilderCharacterId()) {
+                return;
+            }
+
+            if (this.selectedCampaignIdsOnCreate().length > 0) {
+                return;
+            }
+
+            const exists = this.store.campaigns().some((campaign) => campaign.id === queryCampaignId);
+            if (!exists) {
+                return;
+            }
+
+            this.selectedCampaignIdsOnCreate.set([queryCampaignId]);
         });
 
         effect(() => {
@@ -830,13 +857,58 @@ export class NewCharacterStandardPageComponent {
         ]
     };
     readonly classCategories = computed(() => this.classCategorySets[this.selectedClassSortMode()]);
+    readonly selectedCampaignsForCreate = computed(() => {
+        const selectedIds = this.selectedCampaignIdsOnCreate();
+        if (!selectedIds.length) {
+            return [];
+        }
+
+        return this.store.campaigns().filter((campaign) => selectedIds.includes(campaign.id));
+    });
+    readonly allowedCustomClassNames = computed(() => {
+        const userNames = (this.store.userClassLibrary() ?? [])
+            .map((item) => sanitizeCustomClassOption(item).name.trim())
+            .filter(Boolean);
+        const selectedCampaigns = this.selectedCampaignsForCreate();
+        if (!selectedCampaigns.length) {
+            return [...new Set(userNames)];
+        }
+
+        const allowedByAll = new Set(
+            selectedCampaigns[0]?.allowedCustomClasses?.map((name) => name.trim().toLowerCase()).filter(Boolean) ?? []
+        );
+
+        for (const campaign of selectedCampaigns.slice(1)) {
+            const current = new Set((campaign.allowedCustomClasses ?? []).map((name) => name.trim().toLowerCase()).filter(Boolean));
+            for (const existing of [...allowedByAll]) {
+                if (!current.has(existing)) {
+                    allowedByAll.delete(existing);
+                }
+            }
+        }
+
+        return [...new Set(userNames.filter((name) => allowedByAll.has(name.toLowerCase())))];
+    });
+    readonly classCategoriesWithCustom = computed(() => {
+        const categories = this.classCategories().map((category) => ({ ...category, classes: [...category.classes] }));
+        const customNames = this.allowedCustomClassNames().sort((left, right) => left.localeCompare(right));
+        if (customNames.length > 0) {
+            categories.unshift({
+                label: 'Custom Library Classes',
+                source: 'Your account library',
+                classes: customNames
+            });
+        }
+
+        return categories;
+    });
     readonly filteredClassCategories = computed(() => {
         const query = this.classSearchTerm().trim().toLowerCase();
         if (!query) {
-            return this.classCategories();
+            return this.classCategoriesWithCustom();
         }
 
-        return this.classCategories()
+        return this.classCategoriesWithCustom()
             .map((category) => ({
                 ...category,
                 classes: category.classes.filter((className) => className.toLowerCase().includes(query))
@@ -1317,13 +1389,50 @@ export class NewCharacterStandardPageComponent {
         ]
     };
     readonly speciesCategories = computed(() => this.speciesCategorySets[this.selectedSpeciesSortMode()]);
+    readonly allowedCustomSpeciesNames = computed(() => {
+        const userNames = (this.store.userSpeciesLibrary() ?? [])
+            .map((item) => sanitizeCustomSpeciesOption(item).name.trim())
+            .filter(Boolean);
+        const selectedCampaigns = this.selectedCampaignsForCreate();
+        if (!selectedCampaigns.length) {
+            return [...new Set(userNames)];
+        }
+
+        const allowedByAll = new Set(
+            selectedCampaigns[0]?.allowedCustomSpecies?.map((name) => name.trim().toLowerCase()).filter(Boolean) ?? []
+        );
+
+        for (const campaign of selectedCampaigns.slice(1)) {
+            const current = new Set((campaign.allowedCustomSpecies ?? []).map((name) => name.trim().toLowerCase()).filter(Boolean));
+            for (const existing of [...allowedByAll]) {
+                if (!current.has(existing)) {
+                    allowedByAll.delete(existing);
+                }
+            }
+        }
+
+        return [...new Set(userNames.filter((name) => allowedByAll.has(name.toLowerCase())))];
+    });
+    readonly speciesCategoriesWithCustom = computed(() => {
+        const categories = this.speciesCategories().map((category) => ({ ...category, species: [...category.species] }));
+        const customNames = this.allowedCustomSpeciesNames().sort((left, right) => left.localeCompare(right));
+        if (customNames.length > 0) {
+            categories.unshift({
+                label: 'Custom Library Species',
+                source: 'Your account library',
+                species: customNames
+            });
+        }
+
+        return categories;
+    });
     readonly filteredSpeciesCategories = computed(() => {
         const query = this.speciesSearchTerm().trim().toLowerCase();
         if (!query) {
-            return this.speciesCategories();
+            return this.speciesCategoriesWithCustom();
         }
 
-        return this.speciesCategories()
+        return this.speciesCategoriesWithCustom()
             .map((category) => ({
                 ...category,
                 species: category.species.filter((speciesName) => speciesName.toLowerCase().includes(query))
@@ -3870,6 +3979,7 @@ export class NewCharacterStandardPageComponent {
     openClassModal(className: string): void {
         const info = classInfoMap[className];
         if (!info) {
+            this.selectClass(className);
             return;
         }
 
@@ -4086,6 +4196,7 @@ export class NewCharacterStandardPageComponent {
     openSpeciesModal(speciesName: string): void {
         const info = speciesInfoMap[speciesName];
         if (!info) {
+            this.selectSpecies(speciesName);
             return;
         }
 
@@ -9865,8 +9976,5 @@ export class NewCharacterStandardPageComponent {
     }
 
 }
-
-
-
 
 

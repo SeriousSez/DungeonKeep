@@ -39,4 +39,6 @@ public interface ICampaignService
     Task DeleteAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken = default);
     Task<CampaignDto?> SaveSessionDetailsAsync(Guid campaignId, Guid sessionId, SaveSessionDetailsRequest request, Guid userId, CancellationToken cancellationToken = default);
     Task<CampaignDto?> SaveCustomTablesAsync(Guid campaignId, SaveCustomTablesRequest request, Guid userId, CancellationToken cancellationToken = default);
+    Task<CampaignDto?> SaveAllowedCustomClassesAsync(Guid campaignId, SaveAllowedCustomClassesRequest request, Guid userId, CancellationToken cancellationToken = default);
+    Task<CampaignDto?> SaveAllowedCustomSpeciesAsync(Guid campaignId, SaveAllowedCustomSpeciesRequest request, Guid userId, CancellationToken cancellationToken = default);
 }

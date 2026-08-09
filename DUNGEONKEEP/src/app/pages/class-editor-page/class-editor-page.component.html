@@ -1,0 +1,68 @@
+<main class="page-stack">
+  <a routerLink="/classes" class="back-link">← Back to Class Library</a>
+
+  <section class="panel">
+    <p class="eyebrow">{{ isEditing() ? 'Edit Class' : 'New Class' }}</p>
+    <h1>{{ isEditing() ? 'Update Custom Class' : 'Create Custom Class' }}</h1>
+  </section>
+
+  <section class="panel form-grid">
+    <label>
+      <span>Name</span>
+      <input type="text" [value]="draft().name" (input)="updateField('name', $any($event.target).value)" />
+    </label>
+    <label>
+      <span>Hit Die</span>
+      <input type="text" [value]="draft().hitDie" (input)="updateField('hitDie', $any($event.target).value)" placeholder="d8" />
+    </label>
+    <label>
+      <span>Primary Ability</span>
+      <input type="text" [value]="draft().primaryAbility" (input)="updateField('primaryAbility', $any($event.target).value)" />
+    </label>
+    <label>
+      <span>Saving Throws</span>
+      <input type="text" [value]="draft().savingThrows" (input)="updateField('savingThrows', $any($event.target).value)" />
+    </label>
+    <label class="full-width">
+      <span>Summary</span>
+      <textarea rows="3" [value]="draft().summary" (input)="updateField('summary', $any($event.target).value)"></textarea>
+    </label>
+    <label>
+      <span>Armor Training</span>
+      <input type="text" [value]="draft().armorTraining" (input)="updateField('armorTraining', $any($event.target).value)" />
+    </label>
+    <label>
+      <span>Weapon Training</span>
+      <input type="text" [value]="draft().weaponTraining" (input)="updateField('weaponTraining', $any($event.target).value)" />
+    </label>
+    <label>
+      <span>Tool Training</span>
+      <input type="text" [value]="draft().toolTraining" (input)="updateField('toolTraining', $any($event.target).value)" />
+    </label>
+    <label>
+      <span>Key Features (comma-separated)</span>
+      <input type="text" [value]="draft().keyFeatures.join(', ')" (input)="updateKeyFeatures($any($event.target).value)" />
+    </label>
+    <label>
+      <span>Starting Equipment (comma-separated)</span>
+      <input type="text" [value]="draft().startingEquipment.join(', ')" (input)="updateStartingEquipment($any($event.target).value)" />
+    </label>
+    <label class="full-width">
+      <span>Spellcasting Notes</span>
+      <textarea rows="2" [value]="draft().spellcastingNotes" (input)="updateField('spellcastingNotes', $any($event.target).value)"></textarea>
+    </label>
+    <label class="full-width">
+      <span>Additional Notes</span>
+      <textarea rows="3" [value]="draft().notes" (input)="updateField('notes', $any($event.target).value)"></textarea>
+    </label>
+  </section>
+
+  @if (errorMessage()) {
+  <p class="error-text">{{ errorMessage() }}</p>
+  }
+
+  <section class="actions">
+    <button type="button" class="ghost-btn" [disabled]="draftBusy()" [class.is-loading]="draftBusy()" (click)="generateDraft()">{{ draftBusy() ? 'Generating...' : 'Generate AI Draft' }}</button>
+    <button type="button" class="primary-btn" [disabled]="saveBusy()" [class.is-loading]="saveBusy()" (click)="save()">{{ saveBusy() ? 'Saving...' : 'Save Class' }}</button>
+  </section>
+</main>

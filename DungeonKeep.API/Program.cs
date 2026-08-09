@@ -134,7 +134,7 @@ app.Run();
 static void EnsureBaseSqliteSchema(DungeonKeepDbContext dbContext)
 {
     dbContext.Database.ExecuteSqlRaw(
-        "CREATE TABLE IF NOT EXISTS AppUsers (Id TEXT NOT NULL CONSTRAINT PK_AppUsers PRIMARY KEY, Email TEXT NOT NULL, DisplayName TEXT NOT NULL, PasswordHash TEXT NOT NULL, IsEmailVerified INTEGER NOT NULL DEFAULT 0, ActivationCodeHash TEXT NOT NULL DEFAULT '', ActivationCodeExpiresAtUtc TEXT NULL, PasswordResetCodeHash TEXT NOT NULL DEFAULT '', PasswordResetCodeExpiresAtUtc TEXT NULL, CreatedAtUtc TEXT NOT NULL);"
+        "CREATE TABLE IF NOT EXISTS AppUsers (Id TEXT NOT NULL CONSTRAINT PK_AppUsers PRIMARY KEY, Email TEXT NOT NULL, DisplayName TEXT NOT NULL, PasswordHash TEXT NOT NULL, IsEmailVerified INTEGER NOT NULL DEFAULT 0, ActivationCodeHash TEXT NOT NULL DEFAULT '', ActivationCodeExpiresAtUtc TEXT NULL, PasswordResetCodeHash TEXT NOT NULL DEFAULT '', PasswordResetCodeExpiresAtUtc TEXT NULL, NpcLibraryJson TEXT NOT NULL DEFAULT '[]', CustomTableLibraryJson TEXT NOT NULL DEFAULT '[]', MonsterLibraryJson TEXT NOT NULL DEFAULT '[]', ClassLibraryJson TEXT NOT NULL DEFAULT '[]', SpeciesLibraryJson TEXT NOT NULL DEFAULT '[]', MonsterReferenceJson TEXT NOT NULL DEFAULT '[]', AudioLibraryJson TEXT NOT NULL DEFAULT '[]', CreatedAtUtc TEXT NOT NULL);"
     );
     dbContext.Database.ExecuteSqlRaw(
         "CREATE UNIQUE INDEX IF NOT EXISTS IX_AppUsers_Email ON AppUsers (Email);"
@@ -148,7 +148,7 @@ static void EnsureBaseSqliteSchema(DungeonKeepDbContext dbContext)
     );
 
     dbContext.Database.ExecuteSqlRaw(
-        "CREATE TABLE IF NOT EXISTS Campaigns (Id TEXT NOT NULL CONSTRAINT PK_Campaigns PRIMARY KEY, Name TEXT NOT NULL, Setting TEXT NOT NULL DEFAULT '', Tone TEXT NOT NULL DEFAULT 'Heroic', LevelStart INTEGER NOT NULL DEFAULT 1, LevelEnd INTEGER NOT NULL DEFAULT 4, Hook TEXT NOT NULL DEFAULT '', NextSession TEXT NOT NULL DEFAULT '', Summary TEXT NOT NULL DEFAULT '', BannerImageUrl TEXT NOT NULL DEFAULT '', BannerOriginalImageUrl TEXT NOT NULL DEFAULT '', SessionsJson TEXT NOT NULL DEFAULT '[]', NpcsJson TEXT NOT NULL DEFAULT '[]', CampaignNpcsJson TEXT NOT NULL DEFAULT '[]', LootJson TEXT NOT NULL DEFAULT '[]', OpenThreadsJson TEXT NOT NULL DEFAULT '[]', WorldNotesJson TEXT NOT NULL DEFAULT '[]', CampaignMapJson TEXT NOT NULL DEFAULT '{{}}', CreatedAtUtc TEXT NOT NULL DEFAULT '');"
+        "CREATE TABLE IF NOT EXISTS Campaigns (Id TEXT NOT NULL CONSTRAINT PK_Campaigns PRIMARY KEY, Name TEXT NOT NULL, Setting TEXT NOT NULL DEFAULT '', Tone TEXT NOT NULL DEFAULT 'Heroic', LevelStart INTEGER NOT NULL DEFAULT 1, LevelEnd INTEGER NOT NULL DEFAULT 4, Hook TEXT NOT NULL DEFAULT '', NextSession TEXT NOT NULL DEFAULT '', Summary TEXT NOT NULL DEFAULT '', BannerImageUrl TEXT NOT NULL DEFAULT '', BannerOriginalImageUrl TEXT NOT NULL DEFAULT '', SessionsJson TEXT NOT NULL DEFAULT '[]', NpcsJson TEXT NOT NULL DEFAULT '[]', CampaignNpcsJson TEXT NOT NULL DEFAULT '[]', LootJson TEXT NOT NULL DEFAULT '[]', OpenThreadsJson TEXT NOT NULL DEFAULT '[]', WorldNotesJson TEXT NOT NULL DEFAULT '[]', CampaignMapJson TEXT NOT NULL DEFAULT '{{}}', CustomTablesJson TEXT NOT NULL DEFAULT '[]', AllowedCustomClassesJson TEXT NOT NULL DEFAULT '[]', AllowedCustomSpeciesJson TEXT NOT NULL DEFAULT '[]', CreatedAtUtc TEXT NOT NULL DEFAULT '');"
     );
 
     dbContext.Database.ExecuteSqlRaw(
@@ -255,6 +255,12 @@ static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)
     EnsureColumnExists(dbContext, "AppUsers", "ActivationCodeExpiresAtUtc", "TEXT NULL");
     EnsureColumnExists(dbContext, "AppUsers", "PasswordResetCodeHash", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "AppUsers", "PasswordResetCodeExpiresAtUtc", "TEXT NULL");
+    EnsureColumnExists(dbContext, "AppUsers", "NpcLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
+    EnsureColumnExists(dbContext, "AppUsers", "CustomTableLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
+    EnsureColumnExists(dbContext, "AppUsers", "MonsterLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
+    EnsureColumnExists(dbContext, "AppUsers", "ClassLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
+    EnsureColumnExists(dbContext, "AppUsers", "SpeciesLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
+    EnsureColumnExists(dbContext, "AppUsers", "MonsterReferenceJson", "TEXT NOT NULL DEFAULT '[]'");
     EnsureColumnExists(dbContext, "AppUsers", "AudioLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
 
     EnsureColumnExists(dbContext, "CampaignMemberships", "UserId", "TEXT NULL");
@@ -278,6 +284,9 @@ static void EnsureCurrentSqliteSchema(DungeonKeepDbContext dbContext)
     EnsureColumnExists(dbContext, "Campaigns", "Summary", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "Campaigns", "BannerImageUrl", "TEXT NOT NULL DEFAULT ''");
     EnsureColumnExists(dbContext, "Campaigns", "BannerOriginalImageUrl", "TEXT NOT NULL DEFAULT ''");
+    EnsureColumnExists(dbContext, "Campaigns", "CustomTablesJson", "TEXT NOT NULL DEFAULT '[]'");
+    EnsureColumnExists(dbContext, "Campaigns", "AllowedCustomClassesJson", "TEXT NOT NULL DEFAULT '[]'");
+    EnsureColumnExists(dbContext, "Campaigns", "AllowedCustomSpeciesJson", "TEXT NOT NULL DEFAULT '[]'");
 
     EnsureColumnExists(dbContext, "Characters", "Status", "TEXT NOT NULL DEFAULT 'Ready'");
     EnsureColumnExists(dbContext, "Characters", "OwnerUserId", "TEXT NULL");
@@ -399,6 +408,16 @@ static void EnsureCurrentMySqlAuthSchema(DungeonKeepDbContext dbContext)
     EnsureMySqlColumnExists(dbContext, "AppUsers", "ActivationCodeExpiresAtUtc", "DATETIME(6) NULL");
     EnsureMySqlColumnExists(dbContext, "AppUsers", "PasswordResetCodeHash", "TEXT NOT NULL");
     EnsureMySqlColumnExists(dbContext, "AppUsers", "PasswordResetCodeExpiresAtUtc", "DATETIME(6) NULL");
+    EnsureMySqlColumnExists(dbContext, "AppUsers", "NpcLibraryJson", "TEXT NOT NULL");
+    EnsureMySqlColumnExists(dbContext, "AppUsers", "CustomTableLibraryJson", "TEXT NOT NULL");
+    EnsureMySqlColumnExists(dbContext, "AppUsers", "MonsterLibraryJson", "TEXT NOT NULL");
+    EnsureMySqlColumnExists(dbContext, "AppUsers", "ClassLibraryJson", "TEXT NOT NULL");
+    EnsureMySqlColumnExists(dbContext, "AppUsers", "SpeciesLibraryJson", "TEXT NOT NULL");
+    EnsureMySqlColumnExists(dbContext, "AppUsers", "MonsterReferenceJson", "TEXT NOT NULL");
+    EnsureMySqlColumnExists(dbContext, "AppUsers", "AudioLibraryJson", "TEXT NOT NULL");
+    EnsureMySqlColumnExists(dbContext, "Campaigns", "CustomTablesJson", "TEXT NOT NULL");
+    EnsureMySqlColumnExists(dbContext, "Campaigns", "AllowedCustomClassesJson", "TEXT NOT NULL");
+    EnsureMySqlColumnExists(dbContext, "Campaigns", "AllowedCustomSpeciesJson", "TEXT NOT NULL");
 }
 
 static void EnsureMySqlColumnExists(DungeonKeepDbContext dbContext, string tableName, string columnName, string columnDefinition)

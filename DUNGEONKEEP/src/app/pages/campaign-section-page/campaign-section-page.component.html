@@ -96,6 +96,25 @@
             </div>
             <span class="count-badge">{{ partyMembers().length }}</span>
         </div>
+        <section class="panel policy-card">
+            <h3>Allowed Custom Character Options</h3>
+            <p>Official classes and species are always available. Campaign owners can choose which custom library options are allowed here.</p>
+            @if (campaign.currentUserRole === 'Owner') {
+            <div class="policy-grid">
+                <label class="policy-field">
+                    <span>Allowed Custom Classes</span>
+                    <app-multi-select-dropdown [groups]="allowedCustomClassGroups()" [value]="campaignAllowedCustomClasses()" placeholder="No custom classes allowed" (changed)="onAllowedCustomClassesChanged($event)"></app-multi-select-dropdown>
+                </label>
+                <label class="policy-field">
+                    <span>Allowed Custom Species</span>
+                    <app-multi-select-dropdown [groups]="allowedCustomSpeciesGroups()" [value]="campaignAllowedCustomSpecies()" placeholder="No custom species allowed" (changed)="onAllowedCustomSpeciesChanged($event)"></app-multi-select-dropdown>
+                </label>
+            </div>
+            } @else {
+            <p><strong>Classes:</strong> {{ campaignAllowedCustomClasses().length ? campaignAllowedCustomClasses().join(', ') : 'No custom classes allowed.' }}</p>
+            <p><strong>Species:</strong> {{ campaignAllowedCustomSpecies().length ? campaignAllowedCustomSpecies().join(', ') : 'No custom species allowed.' }}</p>
+            }
+        </section>
 
         @if (partyMembers().length > 0) {
         @if (activePartyMembers().length > 0) {
@@ -137,12 +156,10 @@
             </div>
             <h3>No active party members right now</h3>
             <p>Activate or assign characters to move them from reserve into the active adventuring roster.</p>
-            @if (campaign.currentUserRole === 'Owner') {
-            <a class="empty-state-cta" [routerLink]="['/characters/new']">
+            <a class="empty-state-cta" [routerLink]="['/characters/new']" [queryParams]="{ campaignId: campaign.id }">
                 <i class="fa-duotone fa-thin fa-plus"></i>
                 Add Character
             </a>
-            }
         </div>
         }
 
@@ -192,12 +209,10 @@
             </div>
             <h3>No party members assigned yet</h3>
             <p>Invite or create characters to build your active adventuring party for this campaign.</p>
-            @if (campaign.currentUserRole === 'Owner') {
-            <a class="empty-state-cta" [routerLink]="['/characters/new']">
+            <a class="empty-state-cta" [routerLink]="['/characters/new']" [queryParams]="{ campaignId: campaign.id }">
                 <i class="fa-duotone fa-thin fa-plus"></i>
                 Add Character
             </a>
-            }
         </div>
         }
         }

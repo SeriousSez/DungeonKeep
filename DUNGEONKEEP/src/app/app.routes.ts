@@ -18,6 +18,10 @@ import { NotFoundPage } from './pages/not-found-page/not-found-page';
 import { NpcEditorPageComponent } from './pages/npc-editor-page/npc-editor-page.component';
 import { NpcDetailPage } from './pages/npc-detail-page/npc-detail-page';
 import { NpcLibraryPageComponent } from './pages/npc-library-page/npc-library-page.component';
+import { ClassLibraryPageComponent } from './pages/class-library-page/class-library-page.component';
+import { ClassEditorPageComponent } from './pages/class-editor-page/class-editor-page.component';
+import { SpeciesLibraryPageComponent } from './pages/species-library-page/species-library-page.component';
+import { SpeciesEditorPageComponent } from './pages/species-editor-page/species-editor-page.component';
 import { TablesLibraryPageComponent } from './pages/tables-library-page/tables-library-page.component';
 import { TableDetailPageComponent } from './pages/table-detail-page/table-detail-page.component';
 import { TableEditorPageComponent } from './pages/table-editor-page/table-editor-page.component';
@@ -279,6 +283,36 @@ export const routes: Routes = [
         path: 'npcs',
         component: NpcLibraryPageComponent,
         data: { title: 'NPC Library', breadcrumb: 'NPC Library' }
+    },
+    {
+        path: 'classes',
+        component: ClassLibraryPageComponent,
+        data: { title: 'Class Library', breadcrumb: 'Class Library' }
+    },
+    {
+        path: 'classes/new',
+        component: ClassEditorPageComponent,
+        data: { title: 'New Class', breadcrumb: 'New Class', parentCrumbs: [{ label: 'Class Library', url: '/classes' }] }
+    },
+    {
+        path: 'classes/:classId/edit',
+        component: ClassEditorPageComponent,
+        data: { title: 'Edit Class', breadcrumb: 'Edit Class', parentCrumbs: [{ label: 'Class Library', url: '/classes' }] }
+    },
+    {
+        path: 'species',
+        component: SpeciesLibraryPageComponent,
+        data: { title: 'Species Library', breadcrumb: 'Species Library' }
+    },
+    {
+        path: 'species/new',
+        component: SpeciesEditorPageComponent,
+        data: { title: 'New Species', breadcrumb: 'New Species', parentCrumbs: [{ label: 'Species Library', url: '/species' }] }
+    },
+    {
+        path: 'species/:speciesId/edit',
+        component: SpeciesEditorPageComponent,
+        data: { title: 'Edit Species', breadcrumb: 'Edit Species', parentCrumbs: [{ label: 'Species Library', url: '/species' }] }
     },
     {
         path: 'monsters',

@@ -222,6 +222,156 @@ public sealed class AccountController(IAuthService authService, ILogger<AccountC
         }
     }
 
+    [HttpPost("class-library/generate-draft")]
+    public async Task<ActionResult<GenerateClassDraftResponse>> GenerateClassDraft(
+        [FromBody] GenerateClassDraftRequest request,
+        [FromServices] IHttpClientFactory httpClientFactory,
+        [FromServices] IConfiguration configuration,
+        CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var apiKey = configuration["OpenAI:ApiKey"] ?? configuration["OPENAI_API_KEY"];
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            return Problem(title: "Class generation unavailable.", detail: "OpenAI API key is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
+        var responsesUrl = configuration["OpenAI:ResponsesUrl"] ?? DefaultResponsesUrl;
+        var model = configuration["OpenAI:Model"] ?? DefaultModel;
+
+        using var message = new HttpRequestMessage(HttpMethod.Post, responsesUrl)
+        {
+            Headers =
+            {
+                Authorization = new AuthenticationHeaderValue("Bearer", apiKey.Trim())
+            },
+            Content = JsonContent.Create(new
+            {
+                model,
+                temperature = 0.7,
+                max_output_tokens = 1800,
+                input = BuildClassDraftPrompt(request)
+            })
+        };
+
+        var client = httpClientFactory.CreateClient();
+        client.Timeout = OpenAiRequestTimeout;
+
+        try
+        {
+            using var response = await client.SendAsync(message, cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var detail = body.Length > 280 ? body[..280] : body;
+                return Problem(title: "Class generation failed.", detail: detail, statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            var payload = JsonSerializer.Deserialize<OpenAiResponsesApiResponse>(body, SerializerOptions);
+            var text = ExtractResponseText(payload);
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return Problem(title: "Class generation failed.", detail: "The model returned no text.", statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            var generated = TryParseGeneratedClassDraftPayload(text);
+            if (generated is null)
+            {
+                return Problem(title: "Class generation failed.", detail: "Model output was not valid JSON.", statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            return Ok(NormalizeClassDraft(generated, request));
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return Problem(title: "Class generation timed out.", detail: "Generation is taking too long. Try again.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+        catch (HttpRequestException exception)
+        {
+            return Problem(title: "Class generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+    }
+
+    [HttpPost("species-library/generate-draft")]
+    public async Task<ActionResult<GenerateSpeciesDraftResponse>> GenerateSpeciesDraft(
+        [FromBody] GenerateSpeciesDraftRequest request,
+        [FromServices] IHttpClientFactory httpClientFactory,
+        [FromServices] IConfiguration configuration,
+        CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var apiKey = configuration["OpenAI:ApiKey"] ?? configuration["OPENAI_API_KEY"];
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            return Problem(title: "Species generation unavailable.", detail: "OpenAI API key is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
+        var responsesUrl = configuration["OpenAI:ResponsesUrl"] ?? DefaultResponsesUrl;
+        var model = configuration["OpenAI:Model"] ?? DefaultModel;
+
+        using var message = new HttpRequestMessage(HttpMethod.Post, responsesUrl)
+        {
+            Headers =
+            {
+                Authorization = new AuthenticationHeaderValue("Bearer", apiKey.Trim())
+            },
+            Content = JsonContent.Create(new
+            {
+                model,
+                temperature = 0.7,
+                max_output_tokens = 1800,
+                input = BuildSpeciesDraftPrompt(request)
+            })
+        };
+
+        var client = httpClientFactory.CreateClient();
+        client.Timeout = OpenAiRequestTimeout;
+
+        try
+        {
+            using var response = await client.SendAsync(message, cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var detail = body.Length > 280 ? body[..280] : body;
+                return Problem(title: "Species generation failed.", detail: detail, statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            var payload = JsonSerializer.Deserialize<OpenAiResponsesApiResponse>(body, SerializerOptions);
+            var text = ExtractResponseText(payload);
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return Problem(title: "Species generation failed.", detail: "The model returned no text.", statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            var generated = TryParseGeneratedSpeciesDraftPayload(text);
+            if (generated is null)
+            {
+                return Problem(title: "Species generation failed.", detail: "Model output was not valid JSON.", statusCode: StatusCodes.Status502BadGateway);
+            }
+
+            return Ok(NormalizeSpeciesDraft(generated, request));
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return Problem(title: "Species generation timed out.", detail: "Generation is taking too long. Try again.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+        catch (HttpRequestException exception)
+        {
+            return Problem(title: "Species generation failed.", detail: exception.Message, statusCode: StatusCodes.Status502BadGateway);
+        }
+    }
+
     [HttpPut("monster-reference")]
     public async Task<ActionResult<UserLibrariesDto>> SaveMonsterReference([FromBody] SaveUserMonsterReferenceRequest request, CancellationToken cancellationToken)
     {
@@ -323,6 +473,78 @@ Design hints:
 - Extra notes: {request.NotesHint}";
     }
 
+    private static string BuildClassDraftPrompt(GenerateClassDraftRequest request)
+    {
+        var existingNames = request.ExistingClassNames is { Count: > 0 }
+            ? string.Join(", ", request.ExistingClassNames.Where((name) => !string.IsNullOrWhiteSpace(name)).Select((name) => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(50))
+            : "none";
+
+        return $@"You are generating a concise custom Dungeons & Dragons class draft.
+Return ONLY valid JSON. No markdown fences. No commentary.
+
+Use this exact JSON shape:
+{{
+  ""name"": """",
+  ""summary"": """",
+  ""hitDie"": ""d8"",
+  ""primaryAbility"": """",
+  ""savingThrows"": """",
+  ""armorTraining"": """",
+  ""weaponTraining"": """",
+  ""toolTraining"": """",
+  ""keyFeatures"": ["""", """"],
+  ""startingEquipment"": ["""", """"],
+  ""spellcastingNotes"": """",
+  ""notes"": """"
+}}
+
+Rules:
+- Keep entries brief and practical for table use.
+- Use plain text and avoid null values.
+- Avoid existing class names: {existingNames}
+
+Design hints:
+- Name hint: {request.NameHint}
+- Theme hint: {request.ThemeHint}
+- Primary role hint: {request.RoleHint}
+- Signature mechanic hint: {request.MechanicHint}
+- Extra notes: {request.NotesHint}";
+    }
+
+    private static string BuildSpeciesDraftPrompt(GenerateSpeciesDraftRequest request)
+    {
+        var existingNames = request.ExistingSpeciesNames is { Count: > 0 }
+            ? string.Join(", ", request.ExistingSpeciesNames.Where((name) => !string.IsNullOrWhiteSpace(name)).Select((name) => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(50))
+            : "none";
+
+        return $@"You are generating a concise custom Dungeons & Dragons species draft.
+Return ONLY valid JSON. No markdown fences. No commentary.
+
+Use this exact JSON shape:
+{{
+  ""name"": """",
+  ""summary"": """",
+  ""size"": ""Medium"",
+  ""speed"": ""30 ft."",
+  ""creatureType"": ""Humanoid"",
+  ""languages"": [""Common""],
+  ""traits"": [{{""name"":"""",""description"":""""}}],
+  ""notes"": """"
+}}
+
+Rules:
+- Keep entries brief and practical for table use.
+- Use plain text and avoid null values.
+- Avoid existing species names: {existingNames}
+
+Design hints:
+- Name hint: {request.NameHint}
+- Origin hint: {request.OriginHint}
+- Culture hint: {request.CultureHint}
+- Signature trait hint: {request.TraitHint}
+- Extra notes: {request.NotesHint}";
+    }
+
     private static GenerateMonsterDraftPayload? TryParseGeneratedMonsterDraftPayload(string text)
     {
         if (TryDeserializeMonsterDraft(text, out var parsed))
@@ -337,6 +559,66 @@ Design hints:
         }
 
         return TryDeserializeMonsterDraft(extracted, out var fromExtracted) ? fromExtracted : null;
+    }
+
+    private static GenerateClassDraftPayload? TryParseGeneratedClassDraftPayload(string text)
+    {
+        if (TryDeserializeClassDraft(text, out var parsed))
+        {
+            return parsed;
+        }
+
+        var extracted = ExtractFirstJsonObject(text);
+        if (string.IsNullOrWhiteSpace(extracted))
+        {
+            return null;
+        }
+
+        return TryDeserializeClassDraft(extracted, out var fromExtracted) ? fromExtracted : null;
+    }
+
+    private static bool TryDeserializeClassDraft(string text, out GenerateClassDraftPayload? payload)
+    {
+        payload = null;
+        try
+        {
+            payload = JsonSerializer.Deserialize<GenerateClassDraftPayload>(text, SerializerOptions);
+            return payload is not null;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static GenerateSpeciesDraftPayload? TryParseGeneratedSpeciesDraftPayload(string text)
+    {
+        if (TryDeserializeSpeciesDraft(text, out var parsed))
+        {
+            return parsed;
+        }
+
+        var extracted = ExtractFirstJsonObject(text);
+        if (string.IsNullOrWhiteSpace(extracted))
+        {
+            return null;
+        }
+
+        return TryDeserializeSpeciesDraft(extracted, out var fromExtracted) ? fromExtracted : null;
+    }
+
+    private static bool TryDeserializeSpeciesDraft(string text, out GenerateSpeciesDraftPayload? payload)
+    {
+        payload = null;
+        try
+        {
+            payload = JsonSerializer.Deserialize<GenerateSpeciesDraftPayload>(text, SerializerOptions);
+            return payload is not null;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     private static bool TryDeserializeMonsterDraft(string text, out GenerateMonsterDraftPayload? payload)
@@ -478,6 +760,36 @@ Design hints:
             Notes: FirstNonEmpty(generated.Notes, request.NotesHint, string.Empty));
     }
 
+    private static GenerateClassDraftResponse NormalizeClassDraft(GenerateClassDraftPayload generated, GenerateClassDraftRequest request)
+    {
+        return new GenerateClassDraftResponse(
+            Name: FirstNonEmpty(generated.Name, request.NameHint, "Generated Class"),
+            Summary: FirstNonEmpty(generated.Summary, request.ThemeHint, string.Empty),
+            HitDie: FirstNonEmpty(generated.HitDie, "d8"),
+            PrimaryAbility: FirstNonEmpty(generated.PrimaryAbility, request.RoleHint, "Strength"),
+            SavingThrows: FirstNonEmpty(generated.SavingThrows, string.Empty),
+            ArmorTraining: FirstNonEmpty(generated.ArmorTraining, string.Empty),
+            WeaponTraining: FirstNonEmpty(generated.WeaponTraining, string.Empty),
+            ToolTraining: FirstNonEmpty(generated.ToolTraining, string.Empty),
+            KeyFeatures: NormalizeTextList(generated.KeyFeatures),
+            StartingEquipment: NormalizeTextList(generated.StartingEquipment),
+            SpellcastingNotes: FirstNonEmpty(generated.SpellcastingNotes, string.Empty),
+            Notes: FirstNonEmpty(generated.Notes, request.NotesHint, string.Empty));
+    }
+
+    private static GenerateSpeciesDraftResponse NormalizeSpeciesDraft(GenerateSpeciesDraftPayload generated, GenerateSpeciesDraftRequest request)
+    {
+        return new GenerateSpeciesDraftResponse(
+            Name: FirstNonEmpty(generated.Name, request.NameHint, "Generated Species"),
+            Summary: FirstNonEmpty(generated.Summary, request.OriginHint, string.Empty),
+            Size: FirstNonEmpty(generated.Size, "Medium"),
+            Speed: FirstNonEmpty(generated.Speed, "30 ft."),
+            CreatureType: FirstNonEmpty(generated.CreatureType, "Humanoid"),
+            Languages: NormalizeTextList(generated.Languages),
+            Traits: NormalizeEntries(generated.Traits),
+            Notes: FirstNonEmpty(generated.Notes, request.NotesHint, string.Empty));
+    }
+
     private static List<GenerateMonsterTextEntryResponse> NormalizeEntries(List<GenerateMonsterTextEntryPayload>? entries)
     {
         return (entries ?? new List<GenerateMonsterTextEntryPayload>())
@@ -485,6 +797,16 @@ Design hints:
                 Name: FirstNonEmpty(entry.Name, string.Empty),
                 Description: FirstNonEmpty(entry.Description, string.Empty)))
             .Where((entry) => !string.IsNullOrWhiteSpace(entry.Name) || !string.IsNullOrWhiteSpace(entry.Description))
+            .Take(20)
+            .ToList();
+    }
+
+    private static List<string> NormalizeTextList(List<string>? values)
+    {
+        return (values ?? [])
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(20)
             .ToList();
     }
@@ -566,6 +888,46 @@ Design hints:
         string? NotesHint,
         IReadOnlyList<string>? ExistingMonsterNames);
 
+    public sealed record GenerateClassDraftRequest(
+        string? NameHint,
+        string? ThemeHint,
+        string? RoleHint,
+        string? MechanicHint,
+        string? NotesHint,
+        IReadOnlyList<string>? ExistingClassNames);
+
+    public sealed record GenerateClassDraftResponse(
+        string Name,
+        string Summary,
+        string HitDie,
+        string PrimaryAbility,
+        string SavingThrows,
+        string ArmorTraining,
+        string WeaponTraining,
+        string ToolTraining,
+        List<string> KeyFeatures,
+        List<string> StartingEquipment,
+        string SpellcastingNotes,
+        string Notes);
+
+    public sealed record GenerateSpeciesDraftRequest(
+        string? NameHint,
+        string? OriginHint,
+        string? CultureHint,
+        string? TraitHint,
+        string? NotesHint,
+        IReadOnlyList<string>? ExistingSpeciesNames);
+
+    public sealed record GenerateSpeciesDraftResponse(
+        string Name,
+        string Summary,
+        string Size,
+        string Speed,
+        string CreatureType,
+        List<string> Languages,
+        List<GenerateMonsterTextEntryResponse> Traits,
+        string Notes);
+
     public sealed record GenerateMonsterDraftResponse(
         string Name,
         string ChallengeRating,
@@ -630,6 +992,30 @@ Design hints:
         List<GenerateMonsterTextEntryPayload>? Actions,
         List<GenerateMonsterTextEntryPayload>? Reactions,
         List<GenerateMonsterTextEntryPayload>? LegendaryActions,
+        string? Notes);
+
+    private sealed record GenerateClassDraftPayload(
+        string? Name,
+        string? Summary,
+        string? HitDie,
+        string? PrimaryAbility,
+        string? SavingThrows,
+        string? ArmorTraining,
+        string? WeaponTraining,
+        string? ToolTraining,
+        List<string>? KeyFeatures,
+        List<string>? StartingEquipment,
+        string? SpellcastingNotes,
+        string? Notes);
+
+    private sealed record GenerateSpeciesDraftPayload(
+        string? Name,
+        string? Summary,
+        string? Size,
+        string? Speed,
+        string? CreatureType,
+        List<string>? Languages,
+        List<GenerateMonsterTextEntryPayload>? Traits,
         string? Notes);
 
     private sealed record GenerateMonsterAbilityScoresPayload(

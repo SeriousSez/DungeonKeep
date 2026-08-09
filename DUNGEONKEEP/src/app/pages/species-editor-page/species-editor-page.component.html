@@ -1,0 +1,52 @@
+<main class="page-stack">
+  <a routerLink="/species" class="back-link">← Back to Species Library</a>
+
+  <section class="panel">
+    <p class="eyebrow">{{ isEditing() ? 'Edit Species' : 'New Species' }}</p>
+    <h1>{{ isEditing() ? 'Update Custom Species' : 'Create Custom Species' }}</h1>
+  </section>
+
+  <section class="panel form-grid">
+    <label>
+      <span>Name</span>
+      <input type="text" [value]="draft().name" (input)="updateField('name', $any($event.target).value)" />
+    </label>
+    <label>
+      <span>Size</span>
+      <input type="text" [value]="draft().size" (input)="updateField('size', $any($event.target).value)" />
+    </label>
+    <label>
+      <span>Speed</span>
+      <input type="text" [value]="draft().speed" (input)="updateField('speed', $any($event.target).value)" />
+    </label>
+    <label>
+      <span>Creature Type</span>
+      <input type="text" [value]="draft().creatureType" (input)="updateField('creatureType', $any($event.target).value)" />
+    </label>
+    <label class="full-width">
+      <span>Summary</span>
+      <textarea rows="3" [value]="draft().summary" (input)="updateField('summary', $any($event.target).value)"></textarea>
+    </label>
+    <label class="full-width">
+      <span>Languages (comma-separated)</span>
+      <input type="text" [value]="draft().languages.join(', ')" (input)="updateLanguages($any($event.target).value)" />
+    </label>
+    <label class="full-width">
+      <span>Traits (one per line: Name: Description)</span>
+      <textarea rows="5" [value]="traitsText()" (input)="updateTraits($any($event.target).value)"></textarea>
+    </label>
+    <label class="full-width">
+      <span>Additional Notes</span>
+      <textarea rows="3" [value]="draft().notes" (input)="updateField('notes', $any($event.target).value)"></textarea>
+    </label>
+  </section>
+
+  @if (errorMessage()) {
+  <p class="error-text">{{ errorMessage() }}</p>
+  }
+
+  <section class="actions">
+    <button type="button" class="ghost-btn" [disabled]="draftBusy()" [class.is-loading]="draftBusy()" (click)="generateDraft()">{{ draftBusy() ? 'Generating...' : 'Generate AI Draft' }}</button>
+    <button type="button" class="primary-btn" [disabled]="saveBusy()" [class.is-loading]="saveBusy()" (click)="save()">{{ saveBusy() ? 'Saving...' : 'Save Species' }}</button>
+  </section>
+</main>

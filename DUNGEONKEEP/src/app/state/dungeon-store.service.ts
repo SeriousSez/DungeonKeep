@@ -39,6 +39,8 @@ export class DungeonStoreService {
     readonly userNpcLibrary = signal<unknown[]>([]);
     readonly userCustomTableLibrary = signal<unknown[]>([]);
     readonly userMonsterLibrary = signal<unknown[]>([]);
+    readonly userClassLibrary = signal<unknown[]>([]);
+    readonly userSpeciesLibrary = signal<unknown[]>([]);
     readonly userMonsterReference = signal<unknown[]>([]);
     readonly selectedCampaignId = signal('');
     readonly initialized = signal(false);
@@ -691,6 +693,54 @@ export class DungeonStoreService {
         try {
             const libraries = await this.api.saveUserMonsterLibrary(JSON.stringify(Array.isArray(items) ? items : []));
             this.applyUserLibraries(libraries);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async saveUserClassLibrary(items: unknown[]): Promise<boolean> {
+        try {
+            const libraries = await this.api.saveUserClassLibrary(JSON.stringify(Array.isArray(items) ? items : []));
+            this.applyUserLibraries(libraries);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async saveUserSpeciesLibrary(items: unknown[]): Promise<boolean> {
+        try {
+            const libraries = await this.api.saveUserSpeciesLibrary(JSON.stringify(Array.isArray(items) ? items : []));
+            this.applyUserLibraries(libraries);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async saveCampaignAllowedCustomClasses(campaignId: string, classNames: string[]): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
+        try {
+            const updated = await this.api.saveCampaignAllowedCustomClasses(campaignId, JSON.stringify(Array.isArray(classNames) ? classNames : []));
+            this.replaceCampaignFromApi(campaignId, updated);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    async saveCampaignAllowedCustomSpecies(campaignId: string, speciesNames: string[]): Promise<boolean> {
+        if (!this.canManageCampaignContent(campaignId)) {
+            return false;
+        }
+
+        try {
+            const updated = await this.api.saveCampaignAllowedCustomSpecies(campaignId, JSON.stringify(Array.isArray(speciesNames) ? speciesNames : []));
+            this.replaceCampaignFromApi(campaignId, updated);
             return true;
         } catch {
             return false;
@@ -1512,7 +1562,9 @@ export class DungeonStoreService {
                 role: member.role,
                 status: member.status
             })),
-            customTablesJson: campaign.customTablesJson ?? '[]'
+            customTablesJson: campaign.customTablesJson ?? '[]',
+            allowedCustomClasses: [...(campaign.allowedCustomClasses ?? [])],
+            allowedCustomSpecies: [...(campaign.allowedCustomSpecies ?? [])]
         };
     }
 
@@ -1550,7 +1602,10 @@ export class DungeonStoreService {
             npcs: [],
             campaignNpcs: [],
             currentUserRole: campaign.currentUserRole,
-            members: []
+            members: [],
+            customTablesJson: '[]',
+            allowedCustomClasses: [],
+            allowedCustomSpecies: []
         };
     }
 
@@ -3341,6 +3396,8 @@ export class DungeonStoreService {
         this.userNpcLibrary.set([]);
         this.userCustomTableLibrary.set([]);
         this.userMonsterLibrary.set([]);
+        this.userClassLibrary.set([]);
+        this.userSpeciesLibrary.set([]);
         this.userMonsterReference.set([]);
         this.selectedCampaignId.set('');
     }
@@ -3349,6 +3406,8 @@ export class DungeonStoreService {
         this.userNpcLibrary.set(this.parseJsonArray(libraries.npcLibraryJson));
         this.userCustomTableLibrary.set(this.parseJsonArray(libraries.customTableLibraryJson));
         this.userMonsterLibrary.set(this.parseJsonArray(libraries.monsterLibraryJson));
+        this.userClassLibrary.set(this.parseJsonArray(libraries.classLibraryJson));
+        this.userSpeciesLibrary.set(this.parseJsonArray(libraries.speciesLibraryJson));
         this.userMonsterReference.set(this.parseJsonArray(libraries.monsterReferenceJson));
     }
 
