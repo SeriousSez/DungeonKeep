@@ -448,7 +448,7 @@ public sealed class AuthService(
         var user = await authRepository.GetUserByIdAsync(userId, cancellationToken);
         if (user is null)
         {
-            return new UserLibrariesDto("[]", "[]", "[]", "[]", "[]");
+            return new UserLibrariesDto("[]", "[]", "[]", "[]", "[]", "[]", "[]");
         }
 
         return MapLibraries(user);
@@ -475,6 +475,20 @@ public sealed class AuthService(
         return MapLibraries(user);
     }
 
+    public async Task<UserLibrariesDto> SaveUserClassLibraryAsync(Guid userId, string json, CancellationToken cancellationToken = default)
+    {
+        var user = await authRepository.UpdateUserLibraryAsync(userId, nameof(AppUser.ClassLibraryJson), json, cancellationToken)
+            ?? throw new InvalidOperationException("User not found.");
+        return MapLibraries(user);
+    }
+
+    public async Task<UserLibrariesDto> SaveUserSpeciesLibraryAsync(Guid userId, string json, CancellationToken cancellationToken = default)
+    {
+        var user = await authRepository.UpdateUserLibraryAsync(userId, nameof(AppUser.SpeciesLibraryJson), json, cancellationToken)
+            ?? throw new InvalidOperationException("User not found.");
+        return MapLibraries(user);
+    }
+
     public async Task<UserLibrariesDto> SaveUserMonsterReferenceAsync(Guid userId, string json, CancellationToken cancellationToken = default)
     {
         var user = await authRepository.UpdateUserLibraryAsync(userId, nameof(AppUser.MonsterReferenceJson), json, cancellationToken)
@@ -495,6 +509,8 @@ public sealed class AuthService(
             string.IsNullOrWhiteSpace(user.NpcLibraryJson) ? "[]" : user.NpcLibraryJson,
             string.IsNullOrWhiteSpace(user.CustomTableLibraryJson) ? "[]" : user.CustomTableLibraryJson,
             string.IsNullOrWhiteSpace(user.MonsterLibraryJson) ? "[]" : user.MonsterLibraryJson,
+            string.IsNullOrWhiteSpace(user.ClassLibraryJson) ? "[]" : user.ClassLibraryJson,
+            string.IsNullOrWhiteSpace(user.SpeciesLibraryJson) ? "[]" : user.SpeciesLibraryJson,
             string.IsNullOrWhiteSpace(user.MonsterReferenceJson) ? "[]" : user.MonsterReferenceJson,
             string.IsNullOrWhiteSpace(user.AudioLibraryJson) ? "[]" : user.AudioLibraryJson
         );

@@ -96,6 +96,12 @@ public sealed class AuthRepository(DungeonKeepDbContext dbContext) : IAuthReposi
             case nameof(AppUser.MonsterLibraryJson):
                 user.MonsterLibraryJson = normalizedJson;
                 break;
+            case nameof(AppUser.ClassLibraryJson):
+                user.ClassLibraryJson = normalizedJson;
+                break;
+            case nameof(AppUser.SpeciesLibraryJson):
+                user.SpeciesLibraryJson = normalizedJson;
+                break;
             case nameof(AppUser.MonsterReferenceJson):
                 user.MonsterReferenceJson = normalizedJson;
                 break;
@@ -142,6 +148,8 @@ public sealed class AuthRepository(DungeonKeepDbContext dbContext) : IAuthReposi
             EnsureColumnExists("AppUsers", "NpcLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
             EnsureColumnExists("AppUsers", "CustomTableLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
             EnsureColumnExists("AppUsers", "MonsterLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
+            EnsureColumnExists("AppUsers", "ClassLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
+            EnsureColumnExists("AppUsers", "SpeciesLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
             EnsureColumnExists("AppUsers", "MonsterReferenceJson", "TEXT NOT NULL DEFAULT '[]'");
             EnsureColumnExists("AppUsers", "AudioLibraryJson", "TEXT NOT NULL DEFAULT '[]'");
 

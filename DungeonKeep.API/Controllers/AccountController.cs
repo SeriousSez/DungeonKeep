@@ -73,7 +73,7 @@ public sealed class AccountController(IAuthService authService, ILogger<AccountC
         catch (Exception exception)
         {
             logger.LogError(exception, "Failed to load user libraries for user {UserId}. Returning empty libraries.", user.Id);
-            return Ok(new UserLibrariesDto("[]", "[]", "[]", "[]", "[]"));
+            return Ok(new UserLibrariesDto("[]", "[]", "[]", "[]", "[]", "[]", "[]"));
         }
     }
 
@@ -113,6 +113,32 @@ public sealed class AccountController(IAuthService authService, ILogger<AccountC
         }
 
         var libraries = await authService.SaveUserMonsterLibraryAsync(user.Id, request.Json, cancellationToken);
+        return Ok(libraries);
+    }
+
+    [HttpPut("class-library")]
+    public async Task<ActionResult<UserLibrariesDto>> SaveClassLibrary([FromBody] SaveUserClassLibraryRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var libraries = await authService.SaveUserClassLibraryAsync(user.Id, request.Json, cancellationToken);
+        return Ok(libraries);
+    }
+
+    [HttpPut("species-library")]
+    public async Task<ActionResult<UserLibrariesDto>> SaveSpeciesLibrary([FromBody] SaveUserSpeciesLibraryRequest request, CancellationToken cancellationToken)
+    {
+        var user = await GetAuthenticatedUserAsync(cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        var libraries = await authService.SaveUserSpeciesLibraryAsync(user.Id, request.Json, cancellationToken);
         return Ok(libraries);
     }
 
