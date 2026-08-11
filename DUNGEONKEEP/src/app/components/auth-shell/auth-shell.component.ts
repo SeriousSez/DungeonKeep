@@ -28,12 +28,14 @@ export class AuthShellComponent {
     readonly errorMessage = signal('');
     readonly infoMessage = signal('');
     readonly isSubmitting = signal(false);
+    readonly showLoginPassword = signal(false);
+    readonly showSignupPassword = signal(false);
     readonly activationCodeDigits = signal<string[]>(Array.from({ length: 6 }, () => ''));
     readonly activationCodeSlots = [0, 1, 2, 3, 4, 5] as const;
 
     readonly loginForm = new FormGroup({
         email: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.email] }),
-        password: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(8)] })
+        password: new FormControl('', { nonNullable: true, validators: [Validators.required] })
     });
 
     readonly signupForm = new FormGroup({
@@ -126,6 +128,11 @@ export class AuthShellComponent {
     async submitLogin(): Promise<void> {
         if (this.loginForm.invalid) {
             this.loginForm.markAllAsTouched();
+            this.errorMessage.set(
+                this.loginForm.controls.email.invalid
+                    ? 'Enter a valid email address.'
+                    : 'Password is required.'
+            );
             return;
         }
 
