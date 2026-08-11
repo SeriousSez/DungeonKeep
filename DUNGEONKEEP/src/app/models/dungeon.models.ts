@@ -262,6 +262,8 @@ export interface Campaign {
     currentUserRole?: CampaignMemberRole;
     members?: CampaignMember[];
     customTablesJson?: string;
+    allowedCustomClasses?: string[];
+    allowedCustomSpecies?: string[];
 }
 
 export interface AbilityScores {

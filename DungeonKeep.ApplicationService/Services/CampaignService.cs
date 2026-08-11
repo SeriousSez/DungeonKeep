@@ -241,6 +241,30 @@ public sealed class CampaignService(
         return updated is null ? null : MapCampaign(updated, userId);
     }
 
+    public async Task<CampaignDto?> SaveAllowedCustomClassesAsync(Guid campaignId, SaveAllowedCustomClassesRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var updated = await campaignRepository.SaveAllowedCustomClassesAsync(campaignId, request.ClassesJson, cancellationToken);
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
+    public async Task<CampaignDto?> SaveAllowedCustomSpeciesAsync(Guid campaignId, SaveAllowedCustomSpeciesRequest request, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
+        if (campaign is null)
+        {
+            return null;
+        }
+
+        var updated = await campaignRepository.SaveAllowedCustomSpeciesAsync(campaignId, request.SpeciesJson, cancellationToken);
+        return updated is null ? null : MapCampaign(updated, userId);
+    }
+
     public async Task<CampaignDto?> AddNpcAsync(Guid campaignId, CreateCampaignNpcRequest request, Guid userId, CancellationToken cancellationToken = default)
     {
         var campaign = await RequireOwnerCampaignAsync(campaignId, userId, cancellationToken);
@@ -1170,7 +1194,9 @@ public sealed class CampaignService(
                     member.Status
                 ))
                 .ToList(),
-            campaign.CustomTablesJson
+            campaign.CustomTablesJson,
+            ParseNamedItems(campaign.AllowedCustomClassesJson),
+            ParseNamedItems(campaign.AllowedCustomSpeciesJson)
         );
     }
 

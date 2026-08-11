@@ -105,17 +105,35 @@
                 </div>
             </div>
 
-            <a class="nav-direct" routerLink="/npcs" routerLinkActive="is-active" (click)="closeMobileNav(); closeDropdown()">
-                NPC Library
-            </a>
-
-            <a class="nav-direct" routerLink="/monsters" routerLinkActive="is-active" (click)="closeMobileNav(); closeDropdown()">
-                Monster Library
-            </a>
-
-            <a class="nav-direct" routerLink="/tables" routerLinkActive="is-active" (click)="closeMobileNav(); closeDropdown()">
-                Table Library
-            </a>
+            <div class="nav-group" [class.is-open]="openDropdown() === 'libraries'">
+                <button class="nav-group-btn" type="button" [class.is-active]="isLibrariesActive()" (click)="toggleDropdown('libraries')">
+                    Libraries
+                    <i class="fa-duotone fa-thin fa-chevron-down nav-chevron"></i>
+                </button>
+                <div class="nav-dropdown">
+                    <p class="nav-dropdown-section">Browse</p>
+                    <a routerLink="/npcs" routerLinkActive="is-active" (click)="closeDropdown(); closeMobileNav()">
+                        <i class="fa-duotone fa-thin fa-user-crown"></i>
+                        NPC Library
+                    </a>
+                    <a routerLink="/classes" routerLinkActive="is-active" (click)="closeDropdown(); closeMobileNav()">
+                        <i class="fa-duotone fa-thin fa-shield-halved"></i>
+                        Class Library
+                    </a>
+                    <a routerLink="/species" routerLinkActive="is-active" (click)="closeDropdown(); closeMobileNav()">
+                        <i class="fa-duotone fa-thin fa-people-group"></i>
+                        Species Library
+                    </a>
+                    <a routerLink="/monsters" routerLinkActive="is-active" (click)="closeDropdown(); closeMobileNav()">
+                        <i class="fa-duotone fa-thin fa-dragon"></i>
+                        Monster Library
+                    </a>
+                    <a routerLink="/tables" routerLinkActive="is-active" (click)="closeDropdown(); closeMobileNav()">
+                        <i class="fa-duotone fa-thin fa-table-list"></i>
+                        Table Library
+                    </a>
+                </div>
+            </div>
 
             <div class="nav-mobile-footer">
                 <a class="nav-mobile-user-link" routerLink="/account" (click)="closeMobileNav()">{{ currentUser()?.displayName }}</a>

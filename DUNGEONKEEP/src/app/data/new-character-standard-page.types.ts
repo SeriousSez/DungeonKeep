@@ -57,6 +57,7 @@ export interface SpeciesDetail {
         details: string;
         choices?: number;
         choiceLabel?: string;
+        choiceOptions?: string[];
     }>;
 }
 

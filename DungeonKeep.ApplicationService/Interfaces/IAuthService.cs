@@ -17,6 +17,8 @@ public interface IAuthService
     Task<UserLibrariesDto> SaveUserNpcLibraryAsync(Guid userId, string json, CancellationToken cancellationToken = default);
     Task<UserLibrariesDto> SaveUserCustomTableLibraryAsync(Guid userId, string json, CancellationToken cancellationToken = default);
     Task<UserLibrariesDto> SaveUserMonsterLibraryAsync(Guid userId, string json, CancellationToken cancellationToken = default);
+    Task<UserLibrariesDto> SaveUserClassLibraryAsync(Guid userId, string json, CancellationToken cancellationToken = default);
+    Task<UserLibrariesDto> SaveUserSpeciesLibraryAsync(Guid userId, string json, CancellationToken cancellationToken = default);
     Task<UserLibrariesDto> SaveUserMonsterReferenceAsync(Guid userId, string json, CancellationToken cancellationToken = default);
     Task<UserLibrariesDto> SaveUserAudioLibraryAsync(Guid userId, string json, CancellationToken cancellationToken = default);
 }

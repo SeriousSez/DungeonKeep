@@ -15,6 +15,8 @@ public sealed class AppUser
     public string NpcLibraryJson { get; set; } = "[]";
     public string CustomTableLibraryJson { get; set; } = "[]";
     public string MonsterLibraryJson { get; set; } = "[]";
+    public string ClassLibraryJson { get; set; } = "[]";
+    public string SpeciesLibraryJson { get; set; } = "[]";
     public string MonsterReferenceJson { get; set; } = "[]";
     public string AudioLibraryJson { get; set; } = "[]";
 

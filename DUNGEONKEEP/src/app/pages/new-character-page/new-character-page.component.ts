@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DropdownComponent, type DropdownOption } from '../../components/dropdown/dropdown.component';
 import { classLevelOneFeatures, classOptions } from '../../data/class-features.data';
 import { backgroundOptions } from '../../data/new-character-standard-page.data';
@@ -19,6 +19,7 @@ import { SessionService } from '../../state/session.service';
 })
 export class NewCharacterPageComponent {
     private readonly router = inject(Router);
+    private readonly route = inject(ActivatedRoute);
     private readonly store = inject(DungeonStoreService);
     private readonly session = inject(SessionService);
     private readonly cdr = inject(ChangeDetectorRef);
@@ -49,6 +50,8 @@ export class NewCharacterPageComponent {
     readonly selectedRandomLevel = signal(1);
     readonly quickBuildPending = signal(false);
     readonly randomBuildPending = signal(false);
+    readonly selectedCampaignId = computed(() => this.route.snapshot.queryParamMap.get('campaignId') ?? '');
+    readonly campaignQueryParams = computed(() => this.selectedCampaignId() ? { campaignId: this.selectedCampaignId() } : {});
 
     private readonly classRoles: Record<string, PartyRole> = {
         Artificer: 'Support',
@@ -327,6 +330,7 @@ export class NewCharacterPageComponent {
 
         const backgroundName = this.pickRandomValue(backgroundOptions).name;
         const playerName = this.session.currentUser()?.displayName || 'Player';
+        const selectedCampaignId = this.selectedCampaignId().trim();
 
         return {
             name: `${options.namePrefix} ${this.generateCharacterName()}`,
@@ -345,6 +349,8 @@ export class NewCharacterPageComponent {
             classFeatures,
             speciesTraits: race?.traits ?? [],
             languages: race?.languages ?? ['Common'],
+            campaignId: selectedCampaignId || undefined,
+            campaignIds: selectedCampaignId ? [selectedCampaignId] : [],
             equipment,
             spells,
             experiencePoints: 0,

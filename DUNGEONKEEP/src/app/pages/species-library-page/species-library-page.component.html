@@ -1,0 +1,54 @@
+<main class="page-stack">
+  <a routerLink="/dashboard" class="back-link">← Back to Dashboard</a>
+
+  <section class="panel hero">
+    <div>
+      <p class="eyebrow">Player Options</p>
+      <h1>Species Library</h1>
+      <p>Build and edit custom species, then allow specific options in campaign settings.</p>
+    </div>
+    <div class="hero-stats">
+      <div><strong>{{ species().length }}</strong><span>Species</span></div>
+      <div><strong>{{ languageCount() }}</strong><span>Languages</span></div>
+    </div>
+  </section>
+
+  <section class="toolbar">
+    <input type="search" [value]="searchTerm()" (input)="updateSearchTerm($any($event.target).value)" placeholder="Search species..." aria-label="Search species" />
+    <a class="primary-btn" routerLink="/species/new">
+      <i class="fa-duotone fa-thin fa-circle-plus"></i>
+      New Species
+    </a>
+  </section>
+
+  @if (species().length === 0) {
+  <section class="panel empty-state">
+    <h3>No custom species yet</h3>
+    <p>Create your first custom species and then allow it in campaigns where it fits.</p>
+    <a class="primary-btn" routerLink="/species/new">Create Species</a>
+  </section>
+  } @else if (filteredSpecies().length === 0) {
+  <section class="panel empty-state">
+    <p>No species match your search.</p>
+  </section>
+  } @else {
+  <section class="card-grid">
+    @for (entry of filteredSpecies(); track entry.id) {
+    <article class="panel card">
+      <header>
+        <h3>{{ entry.name || 'Unnamed species' }}</h3>
+        <span>{{ entry.size || 'Medium' }}</span>
+      </header>
+      <p>{{ entry.summary || 'No summary yet.' }}</p>
+      <p class="muted">{{ entry.creatureType || 'Humanoid' }} · {{ entry.speed || '30 ft.' }}</p>
+      <div class="actions">
+        <button type="button" class="ghost-btn" (click)="editSpecies(entry)">Edit</button>
+        <button type="button" class="ghost-btn danger" (click)="requestDelete(entry)">Delete</button>
+      </div>
+    </article>
+    }
+  </section>
+  }
+</main>
+
+<app-confirm-modal [open]="deleteCandidate() !== null" title="Delete Species?" [message]="deleteCandidate() ? 'Delete ' + deleteCandidate()!.name + '? This cannot be undone.' : ''" confirmText="Delete" cancelText="Cancel" (confirmed)="confirmDelete()" (cancelled)="cancelDelete()"></app-confirm-modal>

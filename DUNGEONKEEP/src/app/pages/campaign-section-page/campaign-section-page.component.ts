@@ -6,7 +6,9 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NpcManagerComponent } from '../../components/npc-manager/npc-manager.component';
 import { CustomTableManagerComponent } from '../../components/custom-table-manager/custom-table-manager.component';
 import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
+import { MultiSelectDropdownComponent, type MultiSelectOptionGroup } from '../../components/multi-select-dropdown/multi-select-dropdown.component';
 import { ItemDetailModalComponent } from '../../components/item-detail-modal/item-detail-modal.component';
+import { sanitizeCustomClassOption, sanitizeCustomSpeciesOption } from '../../data/custom-character-options.helpers';
 import { equipmentCatalog } from '../../data/new-character-standard-page.data';
 import type { InventoryEntry } from '../../data/new-character-standard-page.types';
 import type { CampaignMapBoard, CampaignMapToken, CampaignMember, CampaignWorldNote, CampaignWorldNoteCategory, Character, CharacterStatus } from '../../models/dungeon.models';
@@ -39,7 +41,7 @@ const equipmentCatalogByName = new Map(equipmentCatalog.map((item) => [item.name
 
 @Component({
     selector: 'app-campaign-section-page',
-    imports: [CommonModule, RouterLink, ConfirmModalComponent, DropdownComponent, NpcManagerComponent, CustomTableManagerComponent, ItemDetailModalComponent],
+    imports: [CommonModule, RouterLink, ConfirmModalComponent, DropdownComponent, MultiSelectDropdownComponent, NpcManagerComponent, CustomTableManagerComponent, ItemDetailModalComponent],
     templateUrl: './campaign-section-page.component.html',
     styleUrl: './campaign-section-page.component.scss',
     standalone: true,
@@ -114,6 +116,8 @@ export class CampaignSectionPageComponent {
     readonly lootViewMode = signal<LootViewMode>('flat');
     readonly isSavingNote = signal(false);
     readonly isDeletingNoteId = signal<string | null>(null);
+    readonly isSavingAllowedCustomClasses = signal(false);
+    readonly isSavingAllowedCustomSpecies = signal(false);
 
     readonly threadVisibilityOptions: DropdownOption[] = [
         { value: 'Party', label: 'Party', description: 'Visible to all campaign members.' },
@@ -148,6 +152,28 @@ export class CampaignSectionPageComponent {
         return this.store.campaigns().find((campaign) => campaign.id === id) ?? null;
     });
     readonly campaignReady = computed(() => this.selectedCampaign()?.detailsLoaded === true);
+    readonly campaignAllowedCustomClasses = computed(() => this.selectedCampaign()?.allowedCustomClasses ?? []);
+    readonly campaignAllowedCustomSpecies = computed(() => this.selectedCampaign()?.allowedCustomSpecies ?? []);
+    readonly userCustomClassNames = computed(() =>
+        (this.store.userClassLibrary() ?? [])
+            .map((item) => sanitizeCustomClassOption(item).name.trim())
+            .filter((name, index, all) => !!name && all.findIndex((value) => value.toLowerCase() === name.toLowerCase()) === index)
+            .sort((left, right) => left.localeCompare(right))
+    );
+    readonly userCustomSpeciesNames = computed(() =>
+        (this.store.userSpeciesLibrary() ?? [])
+            .map((item) => sanitizeCustomSpeciesOption(item).name.trim())
+            .filter((name, index, all) => !!name && all.findIndex((value) => value.toLowerCase() === name.toLowerCase()) === index)
+            .sort((left, right) => left.localeCompare(right))
+    );
+    readonly allowedCustomClassGroups = computed<MultiSelectOptionGroup[]>(() => [{
+        label: '',
+        options: this.userCustomClassNames()
+    }]);
+    readonly allowedCustomSpeciesGroups = computed<MultiSelectOptionGroup[]>(() => [{
+        label: '',
+        options: this.userCustomSpeciesNames()
+    }]);
 
     readonly partyMembers = computed(() => {
         const campaign = this.selectedCampaign();
@@ -806,6 +832,42 @@ export class CampaignSectionPageComponent {
         this.pendingMemberRemoval.set(null);
         this.pendingCharacterRemoval.set(character);
         this.confirmAction.set('remove-character');
+    }
+
+    async onAllowedCustomClassesChanged(names: string[]): Promise<void> {
+        const campaign = this.selectedCampaign();
+        if (!campaign || campaign.currentUserRole !== 'Owner' || this.isSavingAllowedCustomClasses()) {
+            return;
+        }
+
+        this.isSavingAllowedCustomClasses.set(true);
+        this.sectionFeedback.set('');
+
+        try {
+            const success = await this.store.saveCampaignAllowedCustomClasses(campaign.id, names);
+            this.sectionFeedback.set(success ? 'Allowed custom classes updated.' : 'Could not update allowed custom classes.');
+        } finally {
+            this.isSavingAllowedCustomClasses.set(false);
+            this.cdr.detectChanges();
+        }
+    }
+
+    async onAllowedCustomSpeciesChanged(names: string[]): Promise<void> {
+        const campaign = this.selectedCampaign();
+        if (!campaign || campaign.currentUserRole !== 'Owner' || this.isSavingAllowedCustomSpecies()) {
+            return;
+        }
+
+        this.isSavingAllowedCustomSpecies.set(true);
+        this.sectionFeedback.set('');
+
+        try {
+            const success = await this.store.saveCampaignAllowedCustomSpecies(campaign.id, names);
+            this.sectionFeedback.set(success ? 'Allowed custom species updated.' : 'Could not update allowed custom species.');
+        } finally {
+            this.isSavingAllowedCustomSpecies.set(false);
+            this.cdr.detectChanges();
+        }
     }
 
     async toggleCharacterActive(character: Character): Promise<void> {

@@ -65,7 +65,9 @@ public sealed record CampaignDto(
     Guid ActiveMapId,
     string CurrentUserRole,
     IReadOnlyList<CampaignMemberDto> Members,
-    string CustomTablesJson = "[]"
+    string CustomTablesJson = "[]",
+    IReadOnlyList<string>? AllowedCustomClasses = null,
+    IReadOnlyList<string>? AllowedCustomSpecies = null
 );
 
 public sealed record CampaignNpcDto(
@@ -404,6 +406,8 @@ public sealed record MoveCampaignMapTokenRequest(Guid MapId, double X, double Y,
 public sealed record ResetCampaignMapVisionRequest(Guid MapId, string? Key);
 public sealed record UpdateCampaignMapVisionRequest(Guid MapId, CampaignMapVisionMemoryDto Memory);
 public sealed record SaveCustomTablesRequest(string TablesJson);
+public sealed record SaveAllowedCustomClassesRequest(string ClassesJson);
+public sealed record SaveAllowedCustomSpeciesRequest(string SpeciesJson);
 
 public sealed record CampaignInvitationEmail(
     Guid CampaignId,

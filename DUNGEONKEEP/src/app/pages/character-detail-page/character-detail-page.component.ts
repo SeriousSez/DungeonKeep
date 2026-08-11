@@ -10,7 +10,8 @@ import { CharacterPortraitModalComponent } from '../../components/character-port
 import { DropdownComponent, type DropdownOption } from '../../components/dropdown/dropdown.component';
 import { MultiSelectDropdownComponent, type MultiSelectOptionGroup } from '../../components/multi-select-dropdown/multi-select-dropdown.component';
 import { TooltipDirective } from '../../shared/tooltip.directive';
-import { classLevelOneFeatures } from '../../data/class-features.data';
+import { classLevelOneFeatures, type ClassFeaturesForLevel } from '../../data/class-features.data';
+import { getCustomClassFeatureEffectValue, getCustomClassFeatureProgression, getCustomSpeciesBuilderInfo, sanitizeCustomClassOption } from '../../data/custom-character-options.helpers';
 import { classProgressionColumns } from '../../data/class-progression.data';
 import { monsterCatalog } from '../../data/monster-catalog.generated';
 import { premadeCharacters, type PremadeCharacter } from '../../data/premade-characters.data';
@@ -1753,7 +1754,8 @@ export class CharacterDetailPageComponent {
         }
 
         const race = this.raceLookup.get(char.race.toLowerCase());
-        return race?.speed ?? 30;
+        const customSpeed = this.parseCustomSpeciesSpeed(this.persistedBuilderState()?.customSpeciesSnapshot?.speed);
+        return (race?.speed ?? customSpeed ?? 30) + this.getCustomClassEffectBonus('speed');
     });
 
     readonly initiative = computed(() => {
@@ -1762,7 +1764,7 @@ export class CharacterDetailPageComponent {
             return 0;
         }
 
-        return this.getAbilityModifier(scores.dexterity);
+        return this.getAbilityModifier(scores.dexterity) + this.getCustomClassEffectBonus('initiative');
     });
 
     readonly isZeroHp = computed(() => {
@@ -1926,7 +1928,8 @@ export class CharacterDetailPageComponent {
         ].map((item) => {
             const proficient = saveProficiencies.has(item.key as AbilityKey);
             const base = this.getAbilityModifier(item.score);
-            const modifier = base + (proficient ? char.proficiencyBonus : 0);
+            const customBonus = this.getCustomClassEffectBonus('saving-throw-bonus', item.key);
+            const modifier = base + (proficient ? char.proficiencyBonus : 0) + customBonus;
 
             return {
                 ...item,
@@ -2611,13 +2614,13 @@ export class CharacterDetailPageComponent {
         if (!armorName) {
             // Unarmored — compute from ability scores
             const secondary = this.getUnarmoredSecondaryMod();
-            return 10 + dexMod + (secondary?.mod ?? 0) + shieldBonus;
+            return 10 + dexMod + (secondary?.mod ?? 0) + shieldBonus + this.getCustomClassEffectBonus('armor-class');
         }
 
         const profile = this.getArmorClassProfile(armorName);
         const armorBase = profile?.base ?? 10;
         const dexApplied = profile?.dexCap == null ? dexMod : Math.min(dexMod, profile.dexCap);
-        return armorBase + dexApplied + shieldBonus;
+        return armorBase + dexApplied + shieldBonus + this.getCustomClassEffectBonus('armor-class');
     });
 
     readonly filteredInventoryItems = computed(() => {
@@ -3098,7 +3101,7 @@ export class CharacterDetailPageComponent {
             return [];
         }
 
-        const allLevels = classLevelOneFeatures[char.className] ?? [];
+        const allLevels = this.getClassFeatureProgression(char.className);
         const selectedSubclassName = this.getSelectedSubclassNameForCharacter(char.className, char.level);
         const subclassConfig = this.getSubclassConfig(char.className);
         const features: FeatureListEntry[] = [];
@@ -3179,6 +3182,19 @@ export class CharacterDetailPageComponent {
         return features;
     });
 
+    private getClassFeatureProgression(className: string): ClassFeaturesForLevel[] {
+        const builtInProgression = classLevelOneFeatures[className];
+        if (builtInProgression) {
+            return builtInProgression;
+        }
+
+        const customClass = (this.store.userClassLibrary() ?? [])
+            .map((item) => sanitizeCustomClassOption(item))
+            .find((item) => item.name.toLowerCase() === className.trim().toLowerCase());
+
+        return customClass ? getCustomClassFeatureProgression(customClass) : [];
+    }
+
     readonly feats = computed(() => {
         const char = this.character();
         const state = this.persistedBuilderState();
@@ -3187,7 +3203,7 @@ export class CharacterDetailPageComponent {
         }
 
         const featItems: Array<{ name: string; description: string }> = [];
-        const allLevels = classLevelOneFeatures[char.className] ?? [];
+        const allLevels = this.getClassFeatureProgression(char.className);
         const speciesSourceLabel = char.race?.trim() || 'Species';
         const backgroundSourceLabel = char.background?.trim() || 'Background';
         const addFeatItem = (name: string, sourceLabel: string, followUpLines: string[] = []) => {
@@ -3275,7 +3291,8 @@ export class CharacterDetailPageComponent {
             return [];
         }
 
-        const speciesInfo = getSpeciesInfo(char.race, speciesInfoMap);
+        const customSpecies = this.persistedBuilderState()?.customSpeciesSnapshot;
+        const speciesInfo = customSpecies ? getCustomSpeciesBuilderInfo(customSpecies) : getSpeciesInfo(char.race, speciesInfoMap);
         const speciesDetails = speciesInfo?.speciesDetails;
         const baseTraits = [...(char.traits ?? [])];
         const persistedChoiceMap = this.persistedBuilderState()?.selectedSpeciesTraitChoices ?? {};
@@ -7398,14 +7415,23 @@ export class CharacterDetailPageComponent {
 
     private getSkillProficiencyBonus(skillKey: string, fallbackSkills?: SkillProficiencies): number {
         const char = this.character();
-        if (!char || !this.isSkillProficient(skillKey, fallbackSkills)) {
+        if (!char) {
             return 0;
         }
 
-        return char.proficiencyBonus * (this.isSkillExpertise(skillKey) ? 2 : 1);
+        const flatBonus = this.getCustomClassSkillBonus(skillKey);
+        if (!this.isSkillProficient(skillKey, fallbackSkills)) {
+            return flatBonus;
+        }
+
+        return char.proficiencyBonus * (this.isSkillExpertise(skillKey) ? 2 : 1) + flatBonus;
     }
 
     private isSkillProficient(skillKey: string, fallbackSkills?: SkillProficiencies): boolean {
+        if (this.hasCustomClassSkillEffect(skillKey, 'skill-proficiency') || this.hasCustomClassSkillEffect(skillKey, 'skill-expertise')) {
+            return true;
+        }
+
         if (this.persistedSkillProficiencies().has(skillKey)) {
             return true;
         }
@@ -7414,7 +7440,69 @@ export class CharacterDetailPageComponent {
     }
 
     private isSkillExpertise(skillKey: string): boolean {
-        return this.persistedSkillExpertise().has(skillKey);
+        return this.persistedSkillExpertise().has(skillKey) || this.hasCustomClassSkillEffect(skillKey, 'skill-expertise');
+    }
+
+    private getCustomClassSkillBonus(skillKey: string): number {
+        return this.getUnlockedCustomClassEffects()
+            .filter((effect) => effect.type === 'skill-bonus' && this.skillLabelToKey(effect.target) === skillKey)
+            .reduce((total, effect) => total + effect.value, 0);
+    }
+
+    private hasCustomClassSkillEffect(skillKey: string, type: 'skill-proficiency' | 'skill-expertise'): boolean {
+        return this.getUnlockedCustomClassEffects()
+            .some((effect) => effect.type === type && this.skillLabelToKey(effect.target) === skillKey);
+    }
+
+    private getUnlockedCustomClassEffects() {
+        const char = this.character();
+        if (!char) {
+            return [];
+        }
+
+        const state = this.persistedBuilderState();
+        const persistedClassEffects = state?.customClassFeatureEffects;
+        const persistedSpeciesEffects = state?.customSpeciesFeatureEffects;
+        if (Array.isArray(persistedClassEffects) || Array.isArray(persistedSpeciesEffects)) {
+            return [...(persistedClassEffects ?? []), ...(persistedSpeciesEffects ?? [])];
+        }
+
+        const customClass = (this.store.userClassLibrary() ?? [])
+            .map((item) => sanitizeCustomClassOption(item))
+            .find((item) => item.name.toLowerCase() === char.className.trim().toLowerCase());
+
+        if (!customClass) {
+            return [];
+        }
+
+        const selections = this.persistedBuilderState()?.classFeatureSelections ?? {};
+        return customClass.features
+            .filter((feature) => feature.level <= char.level)
+            .flatMap((feature) => {
+                const selectionKey = `${char.className}:${feature.level}:${feature.name}`;
+                const selectedTarget = selections[selectionKey]?.[0] ?? '';
+                return feature.effects
+                    .filter((effect) => effect.targetOptions.length === 0 || effect.targetOptions.includes(selectedTarget))
+                    .map((effect) => ({
+                        ...effect,
+                        target: effect.targetOptions.length > 0 ? selectedTarget : effect.target,
+                        targetOptions: [],
+                        value: getCustomClassFeatureEffectValue(effect, char.level, char.proficiencyBonus),
+                        scaling: 'fixed' as const
+                    }));
+            });
+    }
+
+    private parseCustomSpeciesSpeed(value: string | undefined): number | null {
+        const match = value?.match(/\d+/);
+        return match ? Number(match[0]) : null;
+    }
+
+    private getCustomClassEffectBonus(type: 'armor-class' | 'speed' | 'initiative' | 'saving-throw-bonus', target = ''): number {
+        return this.getUnlockedCustomClassEffects()
+            .filter((effect) => effect.type === type)
+            .filter((effect) => !target || effect.target.toLowerCase() === target.toLowerCase())
+            .reduce((total, effect) => total + effect.value, 0);
     }
 
     private parseSkillTokens(raw: string): string[] {
@@ -7564,6 +7652,18 @@ export class CharacterDetailPageComponent {
         const selections = state.classFeatureSelections ?? {};
         const asiChoices = state.abilityScoreImprovementChoices ?? {};
         const featChoices = state.featFollowUpChoices ?? {};
+        const char = this.character();
+
+        if (char) {
+            const persistedEffects = [...(state.customClassFeatureEffects ?? []), ...(state.customSpeciesFeatureEffects ?? [])];
+            const customEffects = persistedEffects.length > 0 ? persistedEffects : this.getUnlockedCustomClassEffects();
+            for (const effect of customEffects) {
+                const ability = effect.type === 'ability-score' ? this.parseAbilityKey(effect.target) : null;
+                if (ability) {
+                    this.addAbilityBonus(bonuses, ability, effect.value);
+                }
+            }
+        }
 
         Object.entries(selections).forEach(([selectionKey, values]) => {
             values.forEach((selectedValue) => {

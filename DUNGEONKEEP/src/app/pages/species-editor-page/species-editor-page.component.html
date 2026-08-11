@@ -1,0 +1,101 @@
+<main class="page-stack">
+  <a routerLink="/species" class="back-link">← Back to Species Library</a>
+
+  <section class="panel">
+    <p class="eyebrow">{{ isEditing() ? 'Edit Species' : 'New Species' }}</p>
+    <h1>{{ isEditing() ? 'Update Custom Species' : 'Create Custom Species' }}</h1>
+  </section>
+
+  <section class="panel form-grid">
+    <label>
+      <span>Name</span>
+      <input type="text" [value]="draft().name" (input)="updateField('name', $any($event.target).value)" />
+    </label>
+    <label>
+      <span>Size</span>
+      <input type="text" [value]="draft().size" (input)="updateField('size', $any($event.target).value)" />
+    </label>
+    <label>
+      <span>Speed</span>
+      <input type="text" [value]="draft().speed" (input)="updateField('speed', $any($event.target).value)" />
+    </label>
+    <label>
+      <span>Creature Type</span>
+      <input type="text" [value]="draft().creatureType" (input)="updateField('creatureType', $any($event.target).value)" />
+    </label>
+    <label class="full-width">
+      <span>Summary</span>
+      <textarea rows="3" [value]="draft().summary" (input)="updateField('summary', $any($event.target).value)"></textarea>
+    </label>
+    <label class="full-width">
+      <span>Languages (comma-separated)</span>
+      <input type="text" [value]="draft().languages.join(', ')" (input)="updateLanguages($any($event.target).value)" />
+    </label>
+    <label class="full-width">
+      <span>Additional Notes</span>
+      <textarea rows="3" [value]="draft().notes" (input)="updateField('notes', $any($event.target).value)"></textarea>
+    </label>
+  </section>
+
+  <section class="panel trait-editor">
+    <header class="trait-editor-header">
+      <div>
+        <p class="eyebrow">Species Rules</p>
+        <h2>Traits</h2>
+      </div>
+      <button type="button" class="ghost-btn" (click)="addTrait()"><i class="fa-duotone fa-thin fa-circle-plus"></i> Add Trait</button>
+    </header>
+
+    @if (draft().traits.length === 0) {
+    <p class="muted">Add the traits characters receive when they choose this species.</p>
+    }
+    @for (trait of draft().traits; track $index; let traitIndex = $index) {
+    <article class="trait-card">
+      <header class="trait-card-header">
+        <strong>{{ trait.name || 'Unnamed Trait' }}</strong>
+        <div>
+          <button type="button" title="Duplicate trait" aria-label="Duplicate trait" (click)="duplicateTrait(traitIndex)"><i class="fa-duotone fa-thin fa-copy"></i></button>
+          <button type="button" title="Remove trait" aria-label="Remove trait" (click)="removeTrait(traitIndex)"><i class="fa-duotone fa-thin fa-trash-can"></i></button>
+        </div>
+      </header>
+      <div class="trait-fields">
+        <label><span>Name</span><input type="text" [value]="trait.name" (input)="updateTrait(traitIndex, 'name', $any($event.target).value)" /></label>
+        <label class="trait-description"><span>Description</span><textarea rows="3" [value]="trait.description" (input)="updateTrait(traitIndex, 'description', $any($event.target).value)"></textarea></label>
+        <label><span>Choices Required</span><input type="number" min="0" [max]="trait.choiceOptions.length" [value]="trait.choiceCount" (input)="updateTrait(traitIndex, 'choiceCount', $any($event.target).value)" /></label>
+        <label><span>Choice Options (comma-separated)</span><input type="text" [value]="trait.choiceOptions.join(', ')" (input)="updateTraitChoices(traitIndex, $any($event.target).value)" /></label>
+      </div>
+
+      <section class="trait-effects">
+        <header>
+          <div>
+            <h3>Mechanical Effects</h3>
+            <p>Applied automatically when this species is selected.</p>
+          </div><button type="button" class="ghost-btn" (click)="addTraitEffect(traitIndex)"><i class="fa-duotone fa-thin fa-plus"></i> Add Effect</button>
+        </header>
+        @for (effect of trait.effects; track $index; let effectIndex = $index) {
+        <div class="effect-row">
+          <label><span>Effect</span><app-dropdown [value]="effect.type" [options]="effectTypeOptions" size="wide" (changed)="updateTraitEffect(traitIndex, effectIndex, 'type', $event)"></app-dropdown></label>
+          @if (effectNeedsTarget(effect.type)) {
+          <label><span>Target</span><app-dropdown [value]="effect.target" [options]="getEffectTargets(effect.type)" size="wide" [searchable]="true" (changed)="updateTraitEffect(traitIndex, effectIndex, 'target', $event)"></app-dropdown></label>
+          }
+          @if (effectUsesValue(effect.type)) {
+          <label><span>Scaling</span><app-dropdown [value]="effect.scaling" [options]="scalingOptions" size="wide" (changed)="updateTraitEffect(traitIndex, effectIndex, 'scaling', $event)"></app-dropdown></label>
+          <label><span>{{ effect.scaling === 'fixed' ? 'Bonus' : 'Multiplier' }}</span><input type="number" min="-20" max="20" [value]="effect.value" (input)="updateTraitEffect(traitIndex, effectIndex, 'value', $any($event.target).value)" /></label>
+          }
+          <button type="button" class="effect-remove" title="Remove effect" aria-label="Remove effect" (click)="removeTraitEffect(traitIndex, effectIndex)"><i class="fa-duotone fa-thin fa-trash-can"></i></button>
+        </div>
+        }
+      </section>
+    </article>
+    }
+  </section>
+
+  @if (errorMessage()) {
+  <p class="error-text">{{ errorMessage() }}</p>
+  }
+
+  <section class="actions">
+    <button type="button" class="ghost-btn" [disabled]="draftBusy()" [class.is-loading]="draftBusy()" (click)="generateDraft()">{{ draftBusy() ? 'Generating...' : 'Generate AI Draft' }}</button>
+    <button type="button" class="primary-btn" [disabled]="saveBusy()" [class.is-loading]="saveBusy()" (click)="save()">{{ saveBusy() ? 'Saving...' : 'Save Species' }}</button>
+  </section>
+</main>

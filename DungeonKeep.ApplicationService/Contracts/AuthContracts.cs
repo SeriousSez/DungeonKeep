@@ -61,6 +61,8 @@ public sealed record UserLibrariesDto(
     string NpcLibraryJson,
     string CustomTableLibraryJson,
     string MonsterLibraryJson,
+    string ClassLibraryJson,
+    string SpeciesLibraryJson,
     string MonsterReferenceJson,
     string AudioLibraryJson
 );
@@ -68,6 +70,8 @@ public sealed record UserLibrariesDto(
 public sealed record SaveUserNpcLibraryRequest(string Json);
 public sealed record SaveUserCustomTableLibraryRequest(string Json);
 public sealed record SaveUserMonsterLibraryRequest(string Json);
+public sealed record SaveUserClassLibraryRequest(string Json);
+public sealed record SaveUserSpeciesLibraryRequest(string Json);
 public sealed record SaveUserMonsterReferenceRequest(string Json);
 public sealed record SaveUserAudioLibraryRequest(string Json);
 

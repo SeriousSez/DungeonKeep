@@ -85,9 +85,9 @@ public sealed class CharactersController(ICharacterService characterService, IAu
         {
             return StatusCode(403);
         }
-        catch (InvalidOperationException)
+        catch (InvalidOperationException exception)
         {
-            return NotFound("Campaign was not found.");
+            return BadRequest(exception.Message);
         }
     }
 
@@ -109,14 +109,14 @@ public sealed class CharactersController(ICharacterService characterService, IAu
         {
             return StatusCode(403);
         }
-        catch (InvalidOperationException)
+        catch (InvalidOperationException exception)
         {
-            return NotFound("Character or campaign was not found.");
+            return BadRequest(exception.Message);
         }
 
         if (updated is null)
         {
-            return NotFound("Character or campaign was not found.");
+            return NotFound("Character was not found.");
         }
 
         return Ok(updated);
@@ -140,14 +140,14 @@ public sealed class CharactersController(ICharacterService characterService, IAu
         {
             return StatusCode(403);
         }
-        catch (InvalidOperationException)
+        catch (InvalidOperationException exception)
         {
-            return NotFound("Character or campaign was not found.");
+            return BadRequest(exception.Message);
         }
 
         if (updated is null)
         {
-            return NotFound("Character or campaign was not found.");
+            return NotFound("Character was not found.");
         }
 
         return Ok(updated);

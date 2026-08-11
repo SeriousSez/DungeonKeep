@@ -1,0 +1,167 @@
+<main class="page-stack">
+  <a routerLink="/classes" class="back-link">← Back to Class Library</a>
+
+  <section class="panel">
+    <p class="eyebrow">{{ isEditing() ? 'Edit Class' : 'New Class' }}</p>
+    <h1>{{ isEditing() ? 'Update Custom Class' : 'Create Custom Class' }}</h1>
+  </section>
+
+  <section class="panel form-grid">
+    <label>
+      <span>Name</span>
+      <input type="text" [value]="draft().name" (input)="updateField('name', $any($event.target).value)" />
+    </label>
+    <label>
+      <span>Hit Die</span>
+      <input type="text" [value]="draft().hitDie" (input)="updateField('hitDie', $any($event.target).value)" placeholder="d8" />
+    </label>
+    <label>
+      <span>Primary Ability</span>
+      <input type="text" [value]="draft().primaryAbility" (input)="updateField('primaryAbility', $any($event.target).value)" />
+    </label>
+    <label>
+      <span>Saving Throws</span>
+      <input type="text" [value]="draft().savingThrows" (input)="updateField('savingThrows', $any($event.target).value)" />
+    </label>
+    <label class="full-width">
+      <span>Summary</span>
+      <textarea rows="3" [value]="draft().summary" (input)="updateField('summary', $any($event.target).value)"></textarea>
+    </label>
+    <label>
+      <span>Armor Training</span>
+      <input type="text" [value]="draft().armorTraining" (input)="updateField('armorTraining', $any($event.target).value)" />
+    </label>
+    <label>
+      <span>Weapon Training</span>
+      <input type="text" [value]="draft().weaponTraining" (input)="updateField('weaponTraining', $any($event.target).value)" />
+    </label>
+    <label>
+      <span>Tool Training</span>
+      <input type="text" [value]="draft().toolTraining" (input)="updateField('toolTraining', $any($event.target).value)" />
+    </label>
+    <label>
+      <span>Starting Equipment (comma-separated)</span>
+      <input type="text" [value]="draft().startingEquipment.join(', ')" (input)="updateStartingEquipment($any($event.target).value)" />
+    </label>
+    <label class="full-width">
+      <span>Spellcasting Notes</span>
+      <textarea rows="2" [value]="draft().spellcastingNotes" (input)="updateField('spellcastingNotes', $any($event.target).value)"></textarea>
+    </label>
+    <label class="full-width">
+      <span>Additional Notes</span>
+      <textarea rows="3" [value]="draft().notes" (input)="updateField('notes', $any($event.target).value)"></textarea>
+    </label>
+  </section>
+
+  <section class="panel feature-editor">
+    <header class="feature-editor-header">
+      <div>
+        <p class="eyebrow">Class Progression</p>
+        <h2>Features by Level</h2>
+      </div>
+      <button type="button" class="ghost-btn" (click)="addFeature()">
+        <i class="fa-duotone fa-thin fa-circle-plus"></i>
+        Add Feature
+      </button>
+    </header>
+
+    @if (draft().features.length === 0) {
+    <p class="feature-empty">Add the features characters unlock as they gain levels in this class.</p>
+    } @else {
+    <div class="feature-list">
+      @for (feature of draft().features; track $index; let featureIndex = $index) {
+      <article class="feature-row" [class.is-collapsed]="isFeatureCollapsed(featureIndex)">
+        <header class="feature-card-toolbar">
+          <button type="button" class="feature-collapse" [attr.aria-expanded]="!isFeatureCollapsed(featureIndex)" (click)="toggleFeatureCollapsed(featureIndex)">
+            <i class="fa-duotone fa-thin fa-chevron-down"></i>
+            <span>Level {{ feature.level }} · {{ feature.name || 'Unnamed Feature' }}</span>
+          </button>
+          <div class="feature-card-actions">
+            <button type="button" title="Move feature up within level" aria-label="Move feature up within level" [disabled]="!canMoveFeature(featureIndex, -1)" (click)="moveFeature(featureIndex, -1)">
+              <i class="fa-duotone fa-thin fa-arrow-up"></i>
+            </button>
+            <button type="button" title="Move feature down within level" aria-label="Move feature down within level" [disabled]="!canMoveFeature(featureIndex, 1)" (click)="moveFeature(featureIndex, 1)">
+              <i class="fa-duotone fa-thin fa-arrow-down"></i>
+            </button>
+            <button type="button" title="Duplicate feature" aria-label="Duplicate feature" (click)="duplicateFeature(featureIndex)">
+              <i class="fa-duotone fa-thin fa-copy"></i>
+            </button>
+          </div>
+        </header>
+        <label class="feature-level-field">
+          <span>Level</span>
+          <input type="number" min="1" max="20" [value]="feature.level" (input)="updateFeature(featureIndex, 'level', $any($event.target).value)" />
+        </label>
+        <label>
+          <span>Feature Name</span>
+          <input type="text" [value]="feature.name" (input)="updateFeature(featureIndex, 'name', $any($event.target).value)" />
+        </label>
+        <button type="button" class="feature-remove" title="Remove feature" aria-label="Remove feature" (click)="removeFeature(featureIndex)">
+          <i class="fa-duotone fa-thin fa-trash-can"></i>
+        </button>
+        <label class="feature-description-field">
+          <span>Description</span>
+          <textarea rows="3" [value]="feature.description" (input)="updateFeature(featureIndex, 'description', $any($event.target).value)"></textarea>
+        </label>
+        <section class="feature-effects">
+          <header class="feature-effects-header">
+            <div>
+              <h3>Mechanical Effects</h3>
+              <p>Applied automatically when the character reaches this feature's level.</p>
+            </div>
+            <button type="button" class="ghost-btn" (click)="addFeatureEffect(featureIndex)">
+              <i class="fa-duotone fa-thin fa-plus"></i>
+              Add Effect
+            </button>
+          </header>
+          @for (effect of feature.effects; track $index; let effectIndex = $index) {
+          <div class="feature-effect-row">
+            <label>
+              <span>Effect</span>
+              <app-dropdown [value]="effect.type" [options]="effectTypeOptions" size="wide" (changed)="updateFeatureEffect(featureIndex, effectIndex, 'type', $event)"></app-dropdown>
+            </label>
+            @if (effectNeedsTarget(effect.type)) {
+            <label>
+              <span>{{ effect.type === 'ability-score' || effect.type === 'saving-throw-bonus' ? 'Ability' : 'Skill' }}</span>
+              @if (effect.targetOptions.length > 0) {
+              <app-multi-select-dropdown [value]="effect.targetOptions" [groups]="getEffectTargetGroups(effect.type)" [searchable]="true" placeholder="Allowed choices" (changed)="updateEffectTargetOptions(featureIndex, effectIndex, $event)"></app-multi-select-dropdown>
+              } @else {
+              <app-dropdown [value]="effect.target" [options]="getEffectTargetOptions(effect.type)" size="wide" [searchable]="true" (changed)="updateFeatureEffect(featureIndex, effectIndex, 'target', $event)"></app-dropdown>
+              }
+            </label>
+            <label class="feature-effect-choice-toggle">
+              <input type="checkbox" [checked]="effect.targetOptions.length > 0" (change)="setEffectTargetChoice(featureIndex, effectIndex, $any($event.target).checked)" />
+              <span>Player chooses target</span>
+            </label>
+            }
+            @if (effectUsesValue(effect.type)) {
+            <label>
+              <span>Scaling</span>
+              <app-dropdown [value]="effect.scaling" [options]="scalingOptions" size="wide" (changed)="updateFeatureEffect(featureIndex, effectIndex, 'scaling', $event)"></app-dropdown>
+            </label>
+            <label class="feature-effect-value">
+              <span>{{ effectValueLabel(effect.scaling) }}</span>
+              <input type="number" min="-20" max="20" [value]="effect.value" (input)="updateFeatureEffect(featureIndex, effectIndex, 'value', $any($event.target).value)" />
+            </label>
+            }
+            <button type="button" class="feature-effect-remove" title="Remove effect" aria-label="Remove effect" (click)="removeFeatureEffect(featureIndex, effectIndex)">
+              <i class="fa-duotone fa-thin fa-trash-can"></i>
+            </button>
+          </div>
+          }
+        </section>
+      </article>
+      }
+    </div>
+    }
+  </section>
+
+  @if (errorMessage()) {
+  <p class="error-text">{{ errorMessage() }}</p>
+  }
+
+  <section class="actions">
+    <button type="button" class="ghost-btn" [disabled]="draftBusy()" [class.is-loading]="draftBusy()" (click)="generateDraft()">{{ draftBusy() ? 'Generating...' : 'Generate AI Draft' }}</button>
+    <button type="button" class="primary-btn" [disabled]="saveBusy()" [class.is-loading]="saveBusy()" (click)="save()">{{ saveBusy() ? 'Saving...' : 'Save Class' }}</button>
+  </section>
+</main>

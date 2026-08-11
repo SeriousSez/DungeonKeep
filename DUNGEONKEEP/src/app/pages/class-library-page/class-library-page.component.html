@@ -1,0 +1,58 @@
+<main class="page-stack">
+  <a routerLink="/dashboard" class="back-link">← Back to Dashboard</a>
+
+  <section class="panel hero">
+    <div>
+      <p class="eyebrow">Player Options</p>
+      <h1>Class Library</h1>
+      <p>Build and edit custom classes, then allow specific options in campaign settings.</p>
+    </div>
+    <div class="hero-stats">
+      <div><strong>{{ classes().length }}</strong><span>Classes</span></div>
+      <div><strong>{{ primaryAbilityCount() }}</strong><span>Abilities</span></div>
+    </div>
+  </section>
+
+  <section class="toolbar">
+    <input type="search" [value]="searchTerm()" (input)="updateSearchTerm($any($event.target).value)" placeholder="Search classes..." aria-label="Search classes" />
+    <a class="primary-btn" routerLink="/classes/new">
+      <i class="fa-duotone fa-thin fa-circle-plus"></i>
+      New Class
+    </a>
+  </section>
+
+  @if (classes().length === 0) {
+  <section class="panel empty-state">
+    <h3>No custom classes yet</h3>
+    <p>Create your first custom class and then allow it in campaigns where it fits.</p>
+    <a class="primary-btn" routerLink="/classes/new">Create Class</a>
+  </section>
+  } @else if (filteredClasses().length === 0) {
+  <section class="panel empty-state">
+    <p>No classes match your search.</p>
+  </section>
+  } @else {
+  <section class="card-grid">
+    @for (entry of filteredClasses(); track entry.id) {
+    <article class="panel card">
+      <header>
+        <h3>{{ entry.name || 'Unnamed class' }}</h3>
+        @if (entry.hitDie) {
+        <span>{{ entry.hitDie }}</span>
+        }
+      </header>
+      <p>{{ entry.summary || 'No summary yet.' }}</p>
+      @if (entry.primaryAbility) {
+      <p class="muted">Primary Ability: {{ entry.primaryAbility }}</p>
+      }
+      <div class="actions">
+        <button type="button" class="ghost-btn" (click)="editClass(entry)">Edit</button>
+        <button type="button" class="ghost-btn danger" (click)="requestDelete(entry)">Delete</button>
+      </div>
+    </article>
+    }
+  </section>
+  }
+</main>
+
+<app-confirm-modal [open]="deleteCandidate() !== null" title="Delete Class?" [message]="deleteCandidate() ? 'Delete ' + deleteCandidate()!.name + '? This cannot be undone.' : ''" confirmText="Delete" cancelText="Cancel" (confirmed)="confirmDelete()" (cancelled)="cancelDelete()"></app-confirm-modal>

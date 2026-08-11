@@ -32,6 +32,8 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
             entity.Property(user => user.NpcLibraryJson).HasColumnType("longtext").IsRequired();
             entity.Property(user => user.CustomTableLibraryJson).HasColumnType("longtext").IsRequired();
             entity.Property(user => user.MonsterLibraryJson).HasColumnType("longtext").IsRequired();
+            entity.Property(user => user.ClassLibraryJson).HasColumnType("longtext").IsRequired();
+            entity.Property(user => user.SpeciesLibraryJson).HasColumnType("longtext").IsRequired();
             entity.Property(user => user.MonsterReferenceJson).HasColumnType("longtext").IsRequired();
             entity.Property(user => user.AudioLibraryJson).HasColumnType("longtext").IsRequired();
 
@@ -73,6 +75,8 @@ public sealed class DungeonKeepDbContext(DbContextOptions<DungeonKeepDbContext> 
             entity.Property(c => c.WorldNotesJson).HasColumnType("longtext").IsRequired();
             entity.Property(c => c.CampaignMapJson).HasColumnType("longtext").IsRequired();
             entity.Property(c => c.CustomTablesJson).HasColumnType("longtext").IsRequired();
+            entity.Property(c => c.AllowedCustomClassesJson).HasColumnType("longtext").IsRequired();
+            entity.Property(c => c.AllowedCustomSpeciesJson).HasColumnType("longtext").IsRequired();
             entity.Property(c => c.CreatedAtUtc).IsRequired();
 
             entity.HasMany(c => c.Characters)

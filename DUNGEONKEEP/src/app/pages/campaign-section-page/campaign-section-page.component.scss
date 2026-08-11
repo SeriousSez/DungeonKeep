@@ -271,6 +271,33 @@
     align-items: flex-start;
 }
 
+.policy-card {
+    margin-bottom: 14px;
+    display: grid;
+    gap: 10px;
+}
+
+.policy-card h3,
+.policy-card p {
+    margin: 0;
+}
+
+.policy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+}
+
+.policy-field {
+    display: grid;
+    gap: 6px;
+}
+
+.policy-field span {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
 .section-heading--encounter {
     align-items: flex-start;
 }

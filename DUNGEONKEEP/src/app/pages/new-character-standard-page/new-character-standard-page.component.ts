@@ -7,9 +7,11 @@ import { map } from 'rxjs/operators';
 import { marked } from 'marked';
 
 import { classLevelOneFeatures, classOptions as sharedClassOptions, type ClassFeature, type ClassFeaturesForLevel } from '../../data/class-features.data';
+import { getCustomClassFeatureEffectValue, getCustomClassFeatureProgression, getCustomSpeciesBuilderInfo, sanitizeCustomClassOption, sanitizeCustomSpeciesOption } from '../../data/custom-character-options.helpers';
 import type { ActiveInfoModal, BackgroundDetail, BuilderInfo, CurrencyState, EquipmentItem, InventoryEntry } from '../../data/new-character-standard-page.types';
 import { backgroundDescriptionFallbacks, backgroundDetailOverrides, backgroundLanguagesFallbacks, backgroundOptions as sharedBackgroundOptions, backgroundSkillProficienciesFallbacks, backgroundStartingPackages, backgroundToolProficienciesFallbacks, classDetailFallbacks, classInfoMap, classStartingPackages, classSubclassSnapshots, equipmentCatalog, magicInitiateSpellsByAbility, speciesInfoMap, validSteps } from '../../data/new-character-standard-page.data';
 import type { Character, CharacterDraft } from '../../models/dungeon.models';
+import type { CustomClassFeatureEffect, CustomSpeciesOption } from '../../models/custom-character-options.models';
 import { OptionMenuFilterComponent } from '../../components/option-menu-filter/option-menu-filter.component';
 import { NewCharacterInfoModalComponent } from '../../components/new-character-info-modal/new-character-info-modal.component';
 import { CharacteristicsModalComponent } from '../../components/characteristics-modal/characteristics-modal.component';
@@ -194,6 +196,9 @@ interface PersistedBuilderState {
     selectedSpeciesLanguages: string[];
     selectedSpeciesTraitChoices: Record<string, string[]>;
     classFeatureSelections: Record<string, string[]>;
+    customClassFeatureEffects?: CustomClassFeatureEffect[];
+    customSpeciesSnapshot?: CustomSpeciesOption;
+    customSpeciesFeatureEffects?: CustomClassFeatureEffect[];
     abilityScoreImprovementChoices: Record<string, AbilityScoreImprovementChoice>;
     featFollowUpChoices: Record<string, FeatFollowUpChoice>;
     backgroundChoiceSelections: Record<string, string>;
@@ -280,6 +285,10 @@ export class NewCharacterStandardPageComponent {
         this.route.queryParamMap.pipe(map((params) => params.get('characterId') ?? '')),
         { initialValue: this.route.snapshot.queryParamMap.get('characterId') ?? '' }
     );
+    private readonly routeCampaignId = toSignal(
+        this.route.queryParamMap.pipe(map((params) => params.get('campaignId') ?? '')),
+        { initialValue: this.route.snapshot.queryParamMap.get('campaignId') ?? '' }
+    );
     private readonly hydratedCharacterId = signal('');
     private readonly navigationEditLevel = signal<number | null>(this.resolveNavigationEditLevel());
 
@@ -353,6 +362,28 @@ export class NewCharacterStandardPageComponent {
                 replaceUrl: true,
                 state: this.getBuilderRouteState()
             });
+        });
+
+        effect(() => {
+            const queryCampaignId = this.routeCampaignId().trim();
+            if (!queryCampaignId) {
+                return;
+            }
+
+            if (this.activeBuilderCharacterId()) {
+                return;
+            }
+
+            if (this.selectedCampaignIdsOnCreate().length > 0) {
+                return;
+            }
+
+            const exists = this.store.campaigns().some((campaign) => campaign.id === queryCampaignId);
+            if (!exists) {
+                return;
+            }
+
+            this.selectedCampaignIdsOnCreate.set([queryCampaignId]);
         });
 
         effect(() => {
@@ -830,13 +861,58 @@ export class NewCharacterStandardPageComponent {
         ]
     };
     readonly classCategories = computed(() => this.classCategorySets[this.selectedClassSortMode()]);
+    readonly selectedCampaignsForCreate = computed(() => {
+        const selectedIds = this.selectedCampaignIdsOnCreate();
+        if (!selectedIds.length) {
+            return [];
+        }
+
+        return this.store.campaigns().filter((campaign) => selectedIds.includes(campaign.id));
+    });
+    readonly allowedCustomClassNames = computed(() => {
+        const userNames = (this.store.userClassLibrary() ?? [])
+            .map((item) => sanitizeCustomClassOption(item).name.trim())
+            .filter(Boolean);
+        const selectedCampaigns = this.selectedCampaignsForCreate();
+        if (!selectedCampaigns.length) {
+            return [...new Set(userNames)];
+        }
+
+        const allowedByAll = new Set(
+            selectedCampaigns[0]?.allowedCustomClasses?.map((name) => name.trim().toLowerCase()).filter(Boolean) ?? []
+        );
+
+        for (const campaign of selectedCampaigns.slice(1)) {
+            const current = new Set((campaign.allowedCustomClasses ?? []).map((name) => name.trim().toLowerCase()).filter(Boolean));
+            for (const existing of [...allowedByAll]) {
+                if (!current.has(existing)) {
+                    allowedByAll.delete(existing);
+                }
+            }
+        }
+
+        return [...new Set(userNames.filter((name) => allowedByAll.has(name.toLowerCase())))];
+    });
+    readonly classCategoriesWithCustom = computed(() => {
+        const categories = this.classCategories().map((category) => ({ ...category, classes: [...category.classes] }));
+        const customNames = this.allowedCustomClassNames().sort((left, right) => left.localeCompare(right));
+        if (customNames.length > 0) {
+            categories.unshift({
+                label: 'Custom Library Classes',
+                source: 'Your account library',
+                classes: customNames
+            });
+        }
+
+        return categories;
+    });
     readonly filteredClassCategories = computed(() => {
         const query = this.classSearchTerm().trim().toLowerCase();
         if (!query) {
-            return this.classCategories();
+            return this.classCategoriesWithCustom();
         }
 
-        return this.classCategories()
+        return this.classCategoriesWithCustom()
             .map((category) => ({
                 ...category,
                 classes: category.classes.filter((className) => className.toLowerCase().includes(query))
@@ -1317,13 +1393,50 @@ export class NewCharacterStandardPageComponent {
         ]
     };
     readonly speciesCategories = computed(() => this.speciesCategorySets[this.selectedSpeciesSortMode()]);
+    readonly allowedCustomSpeciesNames = computed(() => {
+        const userNames = (this.store.userSpeciesLibrary() ?? [])
+            .map((item) => sanitizeCustomSpeciesOption(item).name.trim())
+            .filter(Boolean);
+        const selectedCampaigns = this.selectedCampaignsForCreate();
+        if (!selectedCampaigns.length) {
+            return [...new Set(userNames)];
+        }
+
+        const allowedByAll = new Set(
+            selectedCampaigns[0]?.allowedCustomSpecies?.map((name) => name.trim().toLowerCase()).filter(Boolean) ?? []
+        );
+
+        for (const campaign of selectedCampaigns.slice(1)) {
+            const current = new Set((campaign.allowedCustomSpecies ?? []).map((name) => name.trim().toLowerCase()).filter(Boolean));
+            for (const existing of [...allowedByAll]) {
+                if (!current.has(existing)) {
+                    allowedByAll.delete(existing);
+                }
+            }
+        }
+
+        return [...new Set(userNames.filter((name) => allowedByAll.has(name.toLowerCase())))];
+    });
+    readonly speciesCategoriesWithCustom = computed(() => {
+        const categories = this.speciesCategories().map((category) => ({ ...category, species: [...category.species] }));
+        const customNames = this.allowedCustomSpeciesNames().sort((left, right) => left.localeCompare(right));
+        if (customNames.length > 0) {
+            categories.unshift({
+                label: 'Custom Library Species',
+                source: 'Your account library',
+                species: customNames
+            });
+        }
+
+        return categories;
+    });
     readonly filteredSpeciesCategories = computed(() => {
         const query = this.speciesSearchTerm().trim().toLowerCase();
         if (!query) {
-            return this.speciesCategories();
+            return this.speciesCategoriesWithCustom();
         }
 
-        return this.speciesCategories()
+        return this.speciesCategoriesWithCustom()
             .map((category) => ({
                 ...category,
                 species: category.species.filter((speciesName) => speciesName.toLowerCase().includes(query))
@@ -3870,6 +3983,7 @@ export class NewCharacterStandardPageComponent {
     openClassModal(className: string): void {
         const info = classInfoMap[className];
         if (!info) {
+            this.selectClass(className);
             return;
         }
 
@@ -3909,18 +4023,38 @@ export class NewCharacterStandardPageComponent {
 
     readonly selectedSpeciesInfo = computed(() => {
         const name = this.selectedSpeciesName();
-        return name ? speciesInfoMap[name] : null;
+        if (!name) {
+            return null;
+        }
+
+        const builtIn = speciesInfoMap[name];
+        if (builtIn) {
+            return builtIn;
+        }
+
+        const customSpecies = (this.store.userSpeciesLibrary() ?? [])
+            .map((item) => sanitizeCustomSpeciesOption(item))
+            .find((item) => item.name.toLowerCase() === name.trim().toLowerCase());
+        return customSpecies ? getCustomSpeciesBuilderInfo(customSpecies) : null;
     });
     readonly selectedSpeciesSlug = computed(() => {
         const name = this.selectedSpeciesName();
         return name ? speciesNameToSlug(name) : '';
     });
     readonly selectedSpeciesImagePath = computed(() => {
+        if (this.getSelectedCustomSpecies()) {
+            return null;
+        }
+
         const slug = this.selectedSpeciesSlug();
         return slug ? getSpeciesImagePath(slug) : null;
     });
     readonly selectedSpeciesImageObjectPosition = computed(() => getSpeciesImageObjectPosition(this.selectedSpeciesSlug()));
     readonly selectedSpeciesRulesLink = computed(() => {
+        if (this.getSelectedCustomSpecies()) {
+            return ['/species'];
+        }
+
         const slug = this.selectedSpeciesSlug();
         return slug ? ['/rules/species', slug] : ['/rules/species'];
     });
@@ -3951,8 +4085,51 @@ export class NewCharacterStandardPageComponent {
     readonly canCompleteCharacter = computed(() => {
         const hasName = this.completionCharacterName().trim().length > 0;
         const hasClass = this.getPrimaryClassName().length > 0;
-        return hasName && hasClass;
+        return hasName && hasClass && this.hasCompletedCustomFeatureChoices() && this.hasCompletedCustomSpeciesChoices();
     });
+
+    private hasCompletedCustomSpeciesChoices(): boolean {
+        const species = this.getSelectedCustomSpecies();
+        if (!species) {
+            return true;
+        }
+
+        const choices = this.selectedSpeciesTraitChoices();
+        return species.traits.every((trait) => {
+            if (trait.choiceCount <= 0) {
+                return true;
+            }
+
+            const selected = choices[trait.name] ?? [];
+            return selected.length === trait.choiceCount
+                && selected.every((value) => trait.choiceOptions.includes(value));
+        });
+    }
+
+    private hasCompletedCustomFeatureChoices(): boolean {
+        const customClasses = (this.store.userClassLibrary() ?? []).map((item) => sanitizeCustomClassOption(item));
+        const selections = this.classFeatureSelections();
+
+        return Object.entries(this.multiclassList()).every(([className, classLevel]) => {
+            const customClass = customClasses.find((item) => item.name.toLowerCase() === className.trim().toLowerCase());
+            if (!customClass) {
+                return true;
+            }
+
+            return customClass.features
+                .filter((feature) => feature.level <= classLevel)
+                .every((feature) => {
+                    const allowedTargets = [...new Set(feature.effects.flatMap((effect) => effect.targetOptions))];
+                    if (allowedTargets.length === 0) {
+                        return true;
+                    }
+
+                    const selectionKey = `${className}:${feature.level}:${feature.name}`;
+                    const selectedTarget = selections[selectionKey]?.[0] ?? '';
+                    return allowedTargets.includes(selectedTarget);
+                });
+        });
+    }
 
     selectSpecies(name: string): void {
         this.selectedSpeciesName.set(name);
@@ -4004,19 +4181,22 @@ export class NewCharacterStandardPageComponent {
     }
 
     getSpeciesTraitChoiceOptions(traitTitle: string, choiceIndex: number): DropdownOption[] {
-        const pool = traitTitle === 'Skillful'
-            ? this.speciesSkillChoiceOptions
-            : traitTitle === 'Versatile'
-                ? this.speciesOriginFeatOptions
-                : traitTitle === 'Draconic Ancestry'
-                    ? ['Black (Acid)', 'Blue (Lightning)', 'Brass (Fire)', 'Bronze (Lightning)', 'Copper (Acid)', 'Gold (Fire)', 'Green (Poison)', 'Red (Fire)', 'Silver (Cold)', 'White (Cold)']
-                    : traitTitle === 'Elven Lineage'
-                        ? ['Drow', 'High Elf', 'Wood Elf']
-                        : traitTitle === 'Lineage Spellcasting Ability'
-                            ? ['Intelligence', 'Wisdom', 'Charisma']
-                            : traitTitle === 'Fiendish Legacy'
-                                ? ['Abyssal', 'Chthonic', 'Infernal']
-                                : [];
+        const customPool = this.selectedSpeciesInfo()?.speciesDetails?.traitNotes.find((trait) => trait.title === traitTitle)?.choiceOptions ?? [];
+        const pool = customPool.length > 0
+            ? customPool
+            : traitTitle === 'Skillful'
+                ? this.speciesSkillChoiceOptions
+                : traitTitle === 'Versatile'
+                    ? this.speciesOriginFeatOptions
+                    : traitTitle === 'Draconic Ancestry'
+                        ? ['Black (Acid)', 'Blue (Lightning)', 'Brass (Fire)', 'Bronze (Lightning)', 'Copper (Acid)', 'Gold (Fire)', 'Green (Poison)', 'Red (Fire)', 'Silver (Cold)', 'White (Cold)']
+                        : traitTitle === 'Elven Lineage'
+                            ? ['Drow', 'High Elf', 'Wood Elf']
+                            : traitTitle === 'Lineage Spellcasting Ability'
+                                ? ['Intelligence', 'Wisdom', 'Charisma']
+                                : traitTitle === 'Fiendish Legacy'
+                                    ? ['Abyssal', 'Chthonic', 'Infernal']
+                                    : [];
 
         const selected = this.selectedSpeciesTraitChoices()[traitTitle] ?? [];
 
@@ -4086,6 +4266,7 @@ export class NewCharacterStandardPageComponent {
     openSpeciesModal(speciesName: string): void {
         const info = speciesInfoMap[speciesName];
         if (!info) {
+            this.selectSpecies(speciesName);
             return;
         }
 
@@ -5386,7 +5567,7 @@ export class NewCharacterStandardPageComponent {
     }
 
     getClassFeatures(className: string, maxLevel: number = 1): ClassFeaturesForLevel[] {
-        const seededFeatures = classLevelOneFeatures[className] || [];
+        const seededFeatures = this.getClassProgression(className);
         const hasSeededProgression = seededFeatures.some((featureGroup) => featureGroup.level > 1);
 
         if (hasSeededProgression) {
@@ -5424,6 +5605,19 @@ export class NewCharacterStandardPageComponent {
             }))
             .sort((a, b) => a.level - b.level)
             .filter((featureLevel) => featureLevel.level <= maxLevel);
+    }
+
+    private getClassProgression(className: string): ClassFeaturesForLevel[] {
+        const builtInProgression = classLevelOneFeatures[className];
+        if (builtInProgression) {
+            return builtInProgression;
+        }
+
+        const customClass = (this.store.userClassLibrary() ?? [])
+            .map((item) => sanitizeCustomClassOption(item))
+            .find((item) => item.name.toLowerCase() === className.trim().toLowerCase());
+
+        return customClass ? getCustomClassFeatureProgression(customClass) : [];
     }
 
     private resolveFeatureChoices(className: string, feature: ClassFeature): ClassFeature {
@@ -5660,7 +5854,16 @@ export class NewCharacterStandardPageComponent {
             Wizard: 6
         };
 
-        return hitDice[className.replace(/\s+/g, '')] ?? 10;
+        const builtInHitDie = hitDice[className.replace(/\s+/g, '')];
+        if (builtInHitDie) {
+            return builtInHitDie;
+        }
+
+        const customClass = (this.store.userClassLibrary() ?? [])
+            .map((item) => sanitizeCustomClassOption(item))
+            .find((item) => item.name.toLowerCase() === className.trim().toLowerCase());
+        const customHitDie = Number(customClass?.hitDie.toLowerCase().replace(/^d/, ''));
+        return Number.isFinite(customHitDie) && customHitDie > 0 ? customHitDie : 10;
     }
 
     getConModifierForHitPoints(): number {
@@ -7224,6 +7427,18 @@ export class NewCharacterStandardPageComponent {
         const asiChoices = this.abilityScoreImprovementChoices();
         const featChoices = this.featFollowUpChoices();
 
+        for (const effect of this.getUnlockedCustomClassEffects()) {
+            if (effect.type === 'ability-score') {
+                this.addAbilityBonus(bonuses, this.normalizeAbilityName(effect.target), effect.value);
+            }
+        }
+
+        for (const effect of this.getUnlockedCustomSpeciesEffects()) {
+            if (effect.type === 'ability-score') {
+                this.addAbilityBonus(bonuses, this.normalizeAbilityName(effect.target), effect.value);
+            }
+        }
+
         if (Number(this.multiclassList()['Barbarian'] ?? 0) >= 20) {
             this.addAbilityBonus(bonuses, 'Strength', 4);
             this.addAbilityBonus(bonuses, 'Constitution', 4);
@@ -7276,6 +7491,61 @@ export class NewCharacterStandardPageComponent {
         });
 
         return bonuses;
+    }
+
+    private getUnlockedCustomClassEffects(): CustomClassFeatureEffect[] {
+        const customClasses = (this.store.userClassLibrary() ?? []).map((item) => sanitizeCustomClassOption(item));
+        const totalLevel = Object.values(this.multiclassList()).reduce((total, level) => total + Math.max(0, Number(level) || 0), 0);
+        const proficiencyBonus = 2 + Math.floor((Math.max(1, totalLevel) - 1) / 4);
+        const selections = this.classFeatureSelections();
+
+        return Object.entries(this.multiclassList()).flatMap(([className, classLevel]) => {
+            const customClass = customClasses.find((item) => item.name.toLowerCase() === className.trim().toLowerCase());
+            if (!customClass) {
+                return [];
+            }
+
+            return customClass.features
+                .filter((feature) => feature.level <= classLevel)
+                .flatMap((feature) => {
+                    const selectionKey = `${className}:${feature.level}:${feature.name}`;
+                    const selectedTarget = selections[selectionKey]?.[0] ?? '';
+                    return feature.effects
+                        .filter((effect) => effect.targetOptions.length === 0 || effect.targetOptions.includes(selectedTarget))
+                        .map((effect) => ({
+                            ...effect,
+                            target: effect.targetOptions.length > 0 ? selectedTarget : effect.target,
+                            targetOptions: [],
+                            value: getCustomClassFeatureEffectValue(effect, classLevel, proficiencyBonus),
+                            scaling: 'fixed' as const
+                        }));
+                });
+        });
+    }
+
+    private getSelectedCustomSpecies(): CustomSpeciesOption | null {
+        const speciesName = this.selectedSpeciesName().trim().toLowerCase();
+        if (!speciesName) {
+            return null;
+        }
+
+        return (this.store.userSpeciesLibrary() ?? [])
+            .map((item) => sanitizeCustomSpeciesOption(item))
+            .find((item) => item.name.toLowerCase() === speciesName) ?? null;
+    }
+
+    private getUnlockedCustomSpeciesEffects(): CustomClassFeatureEffect[] {
+        const species = this.getSelectedCustomSpecies();
+        if (!species) {
+            return [];
+        }
+
+        const proficiencyBonus = 2 + Math.floor((Math.max(1, this.getPrimaryClassLevel()) - 1) / 4);
+        return species.traits.flatMap((trait) => trait.effects.map((effect) => ({
+            ...effect,
+            value: getCustomClassFeatureEffectValue(effect, this.getPrimaryClassLevel(), proficiencyBonus),
+            scaling: 'fixed' as const
+        })));
     }
 
     private createEmptyAbilityBonusMap(): Record<string, number> {
@@ -7677,7 +7947,10 @@ export class NewCharacterStandardPageComponent {
         const notes = this.buildPersistedNotes();
         const selectedCampaignId = this.selectedCampaignIdsOnCreate()[0] || undefined;
         const level = this.getPrimaryClassLevel();
-        const maxHitPoints = this.getResolvedHitPointTotal(className, level);
+        const maxHitPointBonus = [...this.getUnlockedCustomClassEffects(), ...this.getUnlockedCustomSpeciesEffects()]
+            .filter((effect) => effect.type === 'max-hit-points')
+            .reduce((total, effect) => total + effect.value, 0);
+        const maxHitPoints = Math.max(1, this.getResolvedHitPointTotal(className, level) + maxHitPointBonus);
         const savedLanguages = this.uniqueNoteEntries([
             ...this.speciesKnownLanguages(),
             ...this.selectedSpeciesLanguages(),
@@ -7689,6 +7962,10 @@ export class NewCharacterStandardPageComponent {
             playerName,
             race: this.selectedSpeciesName() || 'Human',
             className,
+            classFeatures: this.getClassFeatures(className, level)
+                .flatMap((featureLevel) => featureLevel.features.map((feature) => feature.name)),
+            speciesTraits: this.getSelectedCustomSpecies()?.traits
+                .map((trait) => `${trait.name}: ${trait.description}`) ?? [],
             level,
             role: 'Striker',
             background,
@@ -8345,6 +8622,9 @@ export class NewCharacterStandardPageComponent {
             selectedSpeciesLanguages: this.selectedSpeciesLanguages(),
             selectedSpeciesTraitChoices: this.selectedSpeciesTraitChoices(),
             classFeatureSelections: this.classFeatureSelections(),
+            customClassFeatureEffects: this.getUnlockedCustomClassEffects(),
+            customSpeciesSnapshot: this.getSelectedCustomSpecies() ?? undefined,
+            customSpeciesFeatureEffects: this.getUnlockedCustomSpeciesEffects(),
             abilityScoreImprovementChoices: this.abilityScoreImprovementChoices(),
             featFollowUpChoices: this.featFollowUpChoices(),
             backgroundChoiceSelections: this.backgroundChoiceSelections(),
@@ -8450,7 +8730,7 @@ export class NewCharacterStandardPageComponent {
 
         for (const [className, rawLevel] of Object.entries(classLevels)) {
             const classLevel = Math.min(20, Math.max(1, Math.trunc(Number(rawLevel) || 1)));
-            const classProgression = classLevelOneFeatures[className] ?? [];
+            const classProgression = this.getClassProgression(className);
             const legacyPools = new Map<string, string[]>(
                 classProgression
                     .flatMap((levelEntry) => levelEntry.features)
@@ -8557,7 +8837,7 @@ export class NewCharacterStandardPageComponent {
 
     private inferClassFeatureSelectionsFromCharacter(character: Character): Record<string, string[]> {
         const inferredSelections: Record<string, string[]> = {};
-        const classProgression = classLevelOneFeatures[character.className] ?? [];
+        const classProgression = this.getClassProgression(character.className);
         const selectedSkills = this.getCharacterSkillLabels(character);
         const featureHints = [
             ...(character.classFeatures ?? []),
@@ -9865,8 +10145,5 @@ export class NewCharacterStandardPageComponent {
     }
 
 }
-
-
-
 
 

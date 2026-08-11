@@ -51,6 +51,8 @@ export interface ApiCampaignDto {
     currentUserRole: 'Owner' | 'Member';
     members: ApiCampaignMemberDto[];
     customTablesJson?: string;
+    allowedCustomClasses?: string[];
+    allowedCustomSpecies?: string[];
 }
 
 export interface ApiCampaignSummaryDto {
@@ -89,6 +91,8 @@ export interface UserLibrariesDto {
     npcLibraryJson: string;
     customTableLibraryJson: string;
     monsterLibraryJson: string;
+    classLibraryJson: string;
+    speciesLibraryJson: string;
     monsterReferenceJson: string;
     audioLibraryJson: string;
 }
@@ -948,6 +952,50 @@ export interface ApiGenerateMonsterDraftResponse {
     notes: string;
 }
 
+export interface ApiGenerateClassDraftRequest {
+    nameHint: string;
+    themeHint: string;
+    roleHint: string;
+    mechanicHint: string;
+    notesHint: string;
+    existingClassNames: string[];
+}
+
+export interface ApiGenerateClassDraftResponse {
+    name: string;
+    summary: string;
+    hitDie: string;
+    primaryAbility: string;
+    savingThrows: string;
+    armorTraining: string;
+    weaponTraining: string;
+    toolTraining: string;
+    keyFeatures: string[];
+    startingEquipment: string[];
+    spellcastingNotes: string;
+    notes: string;
+}
+
+export interface ApiGenerateSpeciesDraftRequest {
+    nameHint: string;
+    originHint: string;
+    cultureHint: string;
+    traitHint: string;
+    notesHint: string;
+    existingSpeciesNames: string[];
+}
+
+export interface ApiGenerateSpeciesDraftResponse {
+    name: string;
+    summary: string;
+    size: string;
+    speed: string;
+    creatureType: string;
+    languages: string[];
+    traits: Array<{ name: string; description: string }>;
+    notes: string;
+}
+
 export interface ApiGenerateTableDraftRequest {
     campaignId?: string;
     titleHint: string;
@@ -1095,6 +1143,14 @@ export class DungeonApiService {
         return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/custom-tables`, { tablesJson }));
     }
 
+    async saveCampaignAllowedCustomClasses(campaignId: string, classesJson: string): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/allowed-custom-classes`, { classesJson }));
+    }
+
+    async saveCampaignAllowedCustomSpecies(campaignId: string, speciesJson: string): Promise<ApiCampaignDto> {
+        return await firstValueFrom(this.http.put<ApiCampaignDto>(`${this.baseUrl}/campaigns/${campaignId}/allowed-custom-species`, { speciesJson }));
+    }
+
     async generateSessionDraft(campaignId: string, payload: ApiGenerateSessionDraftRequest): Promise<ApiGenerateSessionDraftResponse> {
         return await firstValueFrom(this.http.post<ApiGenerateSessionDraftResponse>(`${this.baseUrl}/campaigns/${campaignId}/sessions/generate-draft`, payload));
     }
@@ -1130,6 +1186,14 @@ export class DungeonApiService {
 
     async generateMonsterDraft(payload: ApiGenerateMonsterDraftRequest): Promise<ApiGenerateMonsterDraftResponse> {
         return await firstValueFrom(this.http.post<ApiGenerateMonsterDraftResponse>(`${this.baseUrl}/account/monster-library/generate-draft`, payload));
+    }
+
+    async generateClassDraft(payload: ApiGenerateClassDraftRequest): Promise<ApiGenerateClassDraftResponse> {
+        return await firstValueFrom(this.http.post<ApiGenerateClassDraftResponse>(`${this.baseUrl}/account/class-library/generate-draft`, payload));
+    }
+
+    async generateSpeciesDraft(payload: ApiGenerateSpeciesDraftRequest): Promise<ApiGenerateSpeciesDraftResponse> {
+        return await firstValueFrom(this.http.post<ApiGenerateSpeciesDraftResponse>(`${this.baseUrl}/account/species-library/generate-draft`, payload));
     }
 
     async generateTableDraft(payload: ApiGenerateTableDraftRequest): Promise<ApiGenerateTableDraftResponse> {
@@ -1384,6 +1448,14 @@ export class DungeonApiService {
 
     async saveUserMonsterLibrary(json: string): Promise<UserLibrariesDto> {
         return await firstValueFrom(this.http.put<UserLibrariesDto>(`${this.baseUrl}/account/monster-library`, { json }));
+    }
+
+    async saveUserClassLibrary(json: string): Promise<UserLibrariesDto> {
+        return await firstValueFrom(this.http.put<UserLibrariesDto>(`${this.baseUrl}/account/class-library`, { json }));
+    }
+
+    async saveUserSpeciesLibrary(json: string): Promise<UserLibrariesDto> {
+        return await firstValueFrom(this.http.put<UserLibrariesDto>(`${this.baseUrl}/account/species-library`, { json }));
     }
 
     async saveUserMonsterReference(json: string): Promise<UserLibrariesDto> {
