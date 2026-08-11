@@ -31,6 +31,7 @@ export class ClassEditorPageComponent {
   readonly saveBusy = signal(false);
   readonly draftBusy = signal(false);
   readonly errorMessage = signal('');
+  readonly generationBrief = signal('');
   readonly collapsedFeatureIndexes = signal<Set<number>>(new Set());
 
   readonly isEditing = computed(() => !!this.classId());
@@ -74,6 +75,7 @@ export class ClassEditorPageComponent {
           .find((item) => item.id === classId);
 
         this.draft.set(existing ?? createBlankCustomClassOption());
+        this.generationBrief.set('');
         this.errorMessage.set('');
         this.cdr.detectChanges();
       });
@@ -312,6 +314,7 @@ export class ClassEditorPageComponent {
         .filter(Boolean);
 
       const generated = await this.api.generateClassDraft({
+        generationBrief: this.generationBrief(),
         nameHint: this.draft().name,
         themeHint: this.draft().summary,
         roleHint: this.draft().primaryAbility,

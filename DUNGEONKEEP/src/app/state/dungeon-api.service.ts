@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { CampaignNpc } from '../models/campaign-npc.models';
+import type { CustomClassFeature, CustomSpeciesTrait } from '../models/custom-character-options.models';
 
 type ApiCampaignTone =
     | 'Heroic'
@@ -953,6 +954,7 @@ export interface ApiGenerateMonsterDraftResponse {
 }
 
 export interface ApiGenerateClassDraftRequest {
+    generationBrief: string;
     nameHint: string;
     themeHint: string;
     roleHint: string;
@@ -971,12 +973,14 @@ export interface ApiGenerateClassDraftResponse {
     weaponTraining: string;
     toolTraining: string;
     keyFeatures: string[];
+    features: CustomClassFeature[];
     startingEquipment: string[];
     spellcastingNotes: string;
     notes: string;
 }
 
 export interface ApiGenerateSpeciesDraftRequest {
+    generationBrief: string;
     nameHint: string;
     originHint: string;
     cultureHint: string;
@@ -992,7 +996,7 @@ export interface ApiGenerateSpeciesDraftResponse {
     speed: string;
     creatureType: string;
     languages: string[];
-    traits: Array<{ name: string; description: string }>;
+    traits: CustomSpeciesTrait[];
     notes: string;
 }
 

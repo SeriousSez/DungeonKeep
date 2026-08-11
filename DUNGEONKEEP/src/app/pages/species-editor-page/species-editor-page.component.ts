@@ -30,6 +30,7 @@ export class SpeciesEditorPageComponent {
   readonly saveBusy = signal(false);
   readonly draftBusy = signal(false);
   readonly errorMessage = signal('');
+  readonly generationBrief = signal('');
 
   readonly isEditing = computed(() => !!this.speciesId());
   readonly effectTypeOptions: ReadonlyArray<DropdownOption> = [
@@ -62,6 +63,7 @@ export class SpeciesEditorPageComponent {
           .find((item) => item.id === speciesId);
 
         this.draft.set(existing ?? createBlankCustomSpeciesOption());
+        this.generationBrief.set('');
         this.errorMessage.set('');
         this.cdr.detectChanges();
       });
@@ -180,6 +182,7 @@ export class SpeciesEditorPageComponent {
         .filter(Boolean);
 
       const generated = await this.api.generateSpeciesDraft({
+        generationBrief: this.generationBrief(),
         nameHint: this.draft().name,
         originHint: this.draft().summary,
         cultureHint: this.draft().creatureType,

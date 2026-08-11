@@ -160,6 +160,13 @@
   <p class="error-text">{{ errorMessage() }}</p>
   }
 
+  <section class="panel generation-guide">
+    <label>
+      <span>Guide AI Generation (optional)</span>
+      <textarea rows="3" [value]="generationBrief()" (input)="generationBrief.set($any($event.target).value)" placeholder="Describe your idea, intended playstyle, signature mechanics, must-have features, and anything to avoid."></textarea>
+    </label>
+  </section>
+
   <section class="actions">
     <button type="button" class="ghost-btn" [disabled]="draftBusy()" [class.is-loading]="draftBusy()" (click)="generateDraft()">{{ draftBusy() ? 'Generating...' : 'Generate AI Draft' }}</button>
     <button type="button" class="primary-btn" [disabled]="saveBusy()" [class.is-loading]="saveBusy()" (click)="save()">{{ saveBusy() ? 'Saving...' : 'Save Class' }}</button>

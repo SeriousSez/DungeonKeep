@@ -254,7 +254,7 @@ public sealed class AccountController(IAuthService authService, ILogger<AccountC
             {
                 model,
                 temperature = 0.7,
-                max_output_tokens = 1800,
+                max_output_tokens = 6000,
                 input = BuildClassDraftPrompt(request)
             })
         };
@@ -329,7 +329,7 @@ public sealed class AccountController(IAuthService authService, ILogger<AccountC
             {
                 model,
                 temperature = 0.7,
-                max_output_tokens = 1800,
+                max_output_tokens = 3000,
                 input = BuildSpeciesDraftPrompt(request)
             })
         };
@@ -492,18 +492,37 @@ Use this exact JSON shape:
   ""armorTraining"": """",
   ""weaponTraining"": """",
   ""toolTraining"": """",
-  ""keyFeatures"": ["""", """"],
+    ""features"": [
+        {{
+            ""level"": 1,
+            ""name"": """",
+            ""description"": """",
+            ""effects"": [
+                {{""type"":""skill-proficiency"",""target"":"""",""value"":0,""scaling"":""fixed"",""targetOptions"":[]}}
+            ]
+        }}
+    ],
   ""startingEquipment"": ["""", """"],
   ""spellcastingNotes"": """",
   ""notes"": """"
 }}
 
 Rules:
+- Create a playable level 1-20 progression with 12-24 features distributed across meaningful levels. Every feature must have a level from 1 through 20, a unique name at that level, and a concise rules-facing description.
+- Include core identity at level 1, meaningful improvements through all tiers, and a level 20 capstone. Do not add empty placeholder features for every level.
+- Keep power near official 2024 D&D classes. Avoid unconditional stacking bonuses to Armor Class, saving throws, or ability scores. Prefer descriptive effects when the supported mechanics cannot express a rule safely.
+- Effects are optional and only represent automatic character-sheet changes. Do not encode attacks, damage, spell slots, resources, advantage, resistances, senses, or action economy as effects; explain those in the description.
+- Effect type must be exactly one of: ability-score, skill-bonus, skill-proficiency, skill-expertise, armor-class, speed, max-hit-points, initiative, saving-throw-bonus.
+- Scaling must be exactly one of: fixed, proficiency-bonus, class-level, half-class-level. For fixed effects, value is the signed numeric bonus. For scaling effects, value is the multiplier, normally 1.
+- Use target for a fixed ability or skill. Ability targets are Strength, Dexterity, Constitution, Intelligence, Wisdom, or Charisma. Skill targets use standard skill names.
+- To let the player choose one target, leave target empty and put valid choices in targetOptions. Do not combine unrelated choices in one feature. Targetless types are armor-class, speed, max-hit-points, and initiative; use an empty target and empty targetOptions for them.
+- For skill-proficiency and skill-expertise, use value 0 and fixed scaling.
 - Keep entries brief and practical for table use.
 - Use plain text and avoid null values.
 - Avoid existing class names: {existingNames}
 
 Design hints:
+- User generation brief (highest priority): {request.GenerationBrief}
 - Name hint: {request.NameHint}
 - Theme hint: {request.ThemeHint}
 - Primary role hint: {request.RoleHint}
@@ -528,16 +547,35 @@ Use this exact JSON shape:
   ""speed"": ""30 ft."",
   ""creatureType"": ""Humanoid"",
   ""languages"": [""Common""],
-  ""traits"": [{{""name"":"""",""description"":""""}}],
+    ""traits"": [
+        {{
+            ""name"": """",
+            ""description"": """",
+            ""choiceCount"": 0,
+            ""choiceOptions"": [],
+            ""effects"": [
+                {{""type"":""speed"",""target"":"""",""value"":5,""scaling"":""fixed"",""targetOptions"":[]}}
+            ]
+        }}
+    ],
   ""notes"": """"
 }}
 
 Rules:
+- Create 3-7 distinctive, balanced traits. Keep power near official 2024 D&D species.
+- A trait may ask the player to select from choiceOptions. Set choiceCount to the number required; otherwise use 0 and an empty list. Mention what the choice represents in the description.
+- Effects are optional and only represent automatic character-sheet changes. Do not encode attacks, damage, spells, advantage, resistances, senses, or action economy as effects; explain those in the description.
+- Effect type must be exactly one of: ability-score, skill-bonus, skill-proficiency, skill-expertise, armor-class, speed, max-hit-points, initiative, saving-throw-bonus.
+- Species effect scaling must be fixed or proficiency-bonus. For fixed effects, value is the signed numeric bonus. For proficiency-bonus, value is the multiplier, normally 1.
+- Use target for a fixed ability or skill. Ability targets are Strength, Dexterity, Constitution, Intelligence, Wisdom, or Charisma. Skill targets use standard skill names.
+- To let the player choose one effect target, leave target empty and use targetOptions. Keep those options aligned with the trait's choiceOptions. Targetless types are armor-class, speed, max-hit-points, and initiative.
+- For skill-proficiency and skill-expertise, use value 0 and fixed scaling.
 - Keep entries brief and practical for table use.
 - Use plain text and avoid null values.
 - Avoid existing species names: {existingNames}
 
 Design hints:
+- User generation brief (highest priority): {request.GenerationBrief}
 - Name hint: {request.NameHint}
 - Origin hint: {request.OriginHint}
 - Culture hint: {request.CultureHint}
@@ -762,6 +800,7 @@ Design hints:
 
     private static GenerateClassDraftResponse NormalizeClassDraft(GenerateClassDraftPayload generated, GenerateClassDraftRequest request)
     {
+        var features = NormalizeClassFeatures(generated.Features, generated.KeyFeatures);
         return new GenerateClassDraftResponse(
             Name: FirstNonEmpty(generated.Name, request.NameHint, "Generated Class"),
             Summary: FirstNonEmpty(generated.Summary, request.ThemeHint, string.Empty),
@@ -771,7 +810,8 @@ Design hints:
             ArmorTraining: FirstNonEmpty(generated.ArmorTraining, string.Empty),
             WeaponTraining: FirstNonEmpty(generated.WeaponTraining, string.Empty),
             ToolTraining: FirstNonEmpty(generated.ToolTraining, string.Empty),
-            KeyFeatures: NormalizeTextList(generated.KeyFeatures),
+            KeyFeatures: features.Select(feature => feature.Name).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+            Features: features,
             StartingEquipment: NormalizeTextList(generated.StartingEquipment),
             SpellcastingNotes: FirstNonEmpty(generated.SpellcastingNotes, string.Empty),
             Notes: FirstNonEmpty(generated.Notes, request.NotesHint, string.Empty));
@@ -786,8 +826,113 @@ Design hints:
             Speed: FirstNonEmpty(generated.Speed, "30 ft."),
             CreatureType: FirstNonEmpty(generated.CreatureType, "Humanoid"),
             Languages: NormalizeTextList(generated.Languages),
-            Traits: NormalizeEntries(generated.Traits),
+            Traits: NormalizeSpeciesTraits(generated.Traits),
             Notes: FirstNonEmpty(generated.Notes, request.NotesHint, string.Empty));
+    }
+
+    private static List<GenerateClassFeatureResponse> NormalizeClassFeatures(
+        List<GenerateClassFeaturePayload>? features,
+        List<string>? legacyFeatures)
+    {
+        var normalized = (features ?? [])
+            .Select(feature => new GenerateClassFeatureResponse(
+                Level: Math.Clamp(feature.Level ?? 1, 1, 20),
+                Name: FirstNonEmpty(feature.Name, string.Empty),
+                Description: FirstNonEmpty(feature.Description, string.Empty),
+                Effects: NormalizeFeatureEffects(feature.Effects, allowClassLevelScaling: true)))
+            .Where(feature => !string.IsNullOrWhiteSpace(feature.Name))
+            .GroupBy(feature => $"{feature.Level}:{feature.Name}", StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderBy(feature => feature.Level)
+            .Take(40)
+            .ToList();
+
+        if (normalized.Count > 0)
+        {
+            return normalized;
+        }
+
+        return NormalizeTextList(legacyFeatures)
+            .Select(name => new GenerateClassFeatureResponse(1, name, string.Empty, []))
+            .ToList();
+    }
+
+    private static List<GenerateSpeciesTraitResponse> NormalizeSpeciesTraits(List<GenerateSpeciesTraitPayload>? traits)
+    {
+        return (traits ?? [])
+            .Select(trait =>
+            {
+                var options = NormalizeTextList(trait.ChoiceOptions);
+                return new GenerateSpeciesTraitResponse(
+                    Name: FirstNonEmpty(trait.Name, string.Empty),
+                    Description: FirstNonEmpty(trait.Description, string.Empty),
+                    ChoiceCount: Math.Min(options.Count, Math.Clamp(trait.ChoiceCount ?? 0, 0, 5)),
+                    ChoiceOptions: options,
+                    Effects: NormalizeFeatureEffects(trait.Effects, allowClassLevelScaling: false));
+            })
+            .Where(trait => !string.IsNullOrWhiteSpace(trait.Name))
+            .GroupBy(trait => trait.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .Take(12)
+            .ToList();
+    }
+
+    private static List<GenerateFeatureEffectResponse> NormalizeFeatureEffects(
+        List<GenerateFeatureEffectPayload>? effects,
+        bool allowClassLevelScaling)
+    {
+        return (effects ?? [])
+            .Select(effect =>
+            {
+                var type = NormalizeFeatureEffectType(effect.Type);
+                var scaling = NormalizeFeatureEffectScaling(effect.Scaling, allowClassLevelScaling);
+                var targetOptions = NormalizeTextList(effect.TargetOptions);
+                return new GenerateFeatureEffectResponse(
+                    Type: type,
+                    Target: FirstNonEmpty(effect.Target, string.Empty),
+                    Value: Math.Clamp(effect.Value ?? 0, -20, 20),
+                    Scaling: scaling,
+                    TargetOptions: targetOptions);
+            })
+            .Where(effect => !string.IsNullOrWhiteSpace(effect.Type))
+            .Where(effect => IsTargetlessFeatureEffect(effect.Type)
+                || !string.IsNullOrWhiteSpace(effect.Target)
+                || effect.TargetOptions.Count > 0)
+            .Take(10)
+            .ToList();
+    }
+
+    private static string NormalizeFeatureEffectType(string? value)
+    {
+        return value?.Trim() switch
+        {
+            "ability-score" => "ability-score",
+            "skill-bonus" => "skill-bonus",
+            "skill-proficiency" => "skill-proficiency",
+            "skill-expertise" => "skill-expertise",
+            "armor-class" => "armor-class",
+            "speed" => "speed",
+            "max-hit-points" => "max-hit-points",
+            "initiative" => "initiative",
+            "saving-throw-bonus" => "saving-throw-bonus",
+            _ => string.Empty
+        };
+    }
+
+    private static string NormalizeFeatureEffectScaling(string? value, bool allowClassLevelScaling)
+    {
+        return value?.Trim() switch
+        {
+            "proficiency-bonus" => "proficiency-bonus",
+            "class-level" when allowClassLevelScaling => "class-level",
+            "half-class-level" when allowClassLevelScaling => "half-class-level",
+            _ => "fixed"
+        };
+    }
+
+    private static bool IsTargetlessFeatureEffect(string type)
+    {
+        return type is "armor-class" or "speed" or "max-hit-points" or "initiative";
     }
 
     private static List<GenerateMonsterTextEntryResponse> NormalizeEntries(List<GenerateMonsterTextEntryPayload>? entries)
@@ -889,6 +1034,7 @@ Design hints:
         IReadOnlyList<string>? ExistingMonsterNames);
 
     public sealed record GenerateClassDraftRequest(
+        string? GenerationBrief,
         string? NameHint,
         string? ThemeHint,
         string? RoleHint,
@@ -906,11 +1052,13 @@ Design hints:
         string WeaponTraining,
         string ToolTraining,
         List<string> KeyFeatures,
+        List<GenerateClassFeatureResponse> Features,
         List<string> StartingEquipment,
         string SpellcastingNotes,
         string Notes);
 
     public sealed record GenerateSpeciesDraftRequest(
+        string? GenerationBrief,
         string? NameHint,
         string? OriginHint,
         string? CultureHint,
@@ -925,8 +1073,28 @@ Design hints:
         string Speed,
         string CreatureType,
         List<string> Languages,
-        List<GenerateMonsterTextEntryResponse> Traits,
+        List<GenerateSpeciesTraitResponse> Traits,
         string Notes);
+
+    public sealed record GenerateFeatureEffectResponse(
+        string Type,
+        string Target,
+        int Value,
+        string Scaling,
+        List<string> TargetOptions);
+
+    public sealed record GenerateClassFeatureResponse(
+        int Level,
+        string Name,
+        string Description,
+        List<GenerateFeatureEffectResponse> Effects);
+
+    public sealed record GenerateSpeciesTraitResponse(
+        string Name,
+        string Description,
+        int ChoiceCount,
+        List<string> ChoiceOptions,
+        List<GenerateFeatureEffectResponse> Effects);
 
     public sealed record GenerateMonsterDraftResponse(
         string Name,
@@ -1004,6 +1172,7 @@ Design hints:
         string? WeaponTraining,
         string? ToolTraining,
         List<string>? KeyFeatures,
+        List<GenerateClassFeaturePayload>? Features,
         List<string>? StartingEquipment,
         string? SpellcastingNotes,
         string? Notes);
@@ -1015,8 +1184,28 @@ Design hints:
         string? Speed,
         string? CreatureType,
         List<string>? Languages,
-        List<GenerateMonsterTextEntryPayload>? Traits,
+        List<GenerateSpeciesTraitPayload>? Traits,
         string? Notes);
+
+    private sealed record GenerateFeatureEffectPayload(
+        string? Type,
+        string? Target,
+        int? Value,
+        string? Scaling,
+        List<string>? TargetOptions);
+
+    private sealed record GenerateClassFeaturePayload(
+        int? Level,
+        string? Name,
+        string? Description,
+        List<GenerateFeatureEffectPayload>? Effects);
+
+    private sealed record GenerateSpeciesTraitPayload(
+        string? Name,
+        string? Description,
+        int? ChoiceCount,
+        List<string>? ChoiceOptions,
+        List<GenerateFeatureEffectPayload>? Effects);
 
     private sealed record GenerateMonsterAbilityScoresPayload(
         int? Strength,
