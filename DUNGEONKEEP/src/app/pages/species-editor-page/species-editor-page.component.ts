@@ -3,15 +3,16 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, comp
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
+import { DropdownComponent, DropdownOption } from '../../components/dropdown/dropdown.component';
 import { createBlankCustomSpeciesOption, sanitizeCustomSpeciesOption } from '../../data/custom-character-options.helpers';
-import { CustomSpeciesOption } from '../../models/custom-character-options.models';
+import { CustomClassFeatureEffect, CustomClassFeatureEffectScaling, CustomClassFeatureEffectType, CustomSpeciesOption, CustomSpeciesTrait } from '../../models/custom-character-options.models';
 import { DungeonApiService } from '../../state/dungeon-api.service';
 import { DungeonStoreService } from '../../state/dungeon-store.service';
 
 @Component({
   selector: 'app-species-editor-page',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, DropdownComponent],
   templateUrl: './species-editor-page.component.html',
   styleUrl: './species-editor-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -31,6 +32,23 @@ export class SpeciesEditorPageComponent {
   readonly errorMessage = signal('');
 
   readonly isEditing = computed(() => !!this.speciesId());
+  readonly effectTypeOptions: ReadonlyArray<DropdownOption> = [
+    { value: 'ability-score', label: 'Ability Score Bonus' },
+    { value: 'skill-bonus', label: 'Skill Check Bonus' },
+    { value: 'skill-proficiency', label: 'Skill Proficiency' },
+    { value: 'skill-expertise', label: 'Skill Expertise' },
+    { value: 'armor-class', label: 'Armor Class Bonus' },
+    { value: 'speed', label: 'Speed Bonus' },
+    { value: 'max-hit-points', label: 'Maximum Hit Points' },
+    { value: 'initiative', label: 'Initiative Bonus' },
+    { value: 'saving-throw-bonus', label: 'Saving Throw Bonus' }
+  ];
+  readonly scalingOptions: ReadonlyArray<DropdownOption> = [
+    { value: 'fixed', label: 'Fixed value' },
+    { value: 'proficiency-bonus', label: 'Proficiency bonus' }
+  ];
+  readonly abilityOptions = ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'].map((value) => ({ value, label: value }));
+  readonly skillOptions = ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation', 'Investigation', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Sleight of Hand', 'Stealth', 'Survival'].map((value) => ({ value, label: value }));
 
   constructor() {
     this.route.paramMap
@@ -58,18 +76,90 @@ export class SpeciesEditorPageComponent {
     this.draft.update((current) => ({ ...current, languages: next }));
   }
 
-  updateTraits(value: string): void {
-    const traits = value
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => {
-        const [name, ...desc] = line.split(':');
-        return { name: name?.trim() ?? '', description: desc.join(':').trim() };
-      })
-      .filter((trait) => trait.name || trait.description);
+  addTrait(): void {
+    this.draft.update((current) => ({ ...current, traits: [...current.traits, { name: '', description: '', choiceCount: 0, choiceOptions: [], effects: [] }] }));
+  }
 
-    this.draft.update((current) => ({ ...current, traits }));
+  updateTrait(index: number, field: keyof CustomSpeciesTrait, value: string): void {
+    this.draft.update((current) => ({
+      ...current,
+      traits: current.traits.map((trait, traitIndex) => traitIndex === index
+        ? { ...trait, [field]: field === 'choiceCount' ? Math.max(0, Math.trunc(Number(value) || 0)) : value }
+        : trait)
+    }));
+  }
+
+  updateTraitChoices(index: number, value: string): void {
+    const choiceOptions = value.split(',').map((entry) => entry.trim()).filter(Boolean);
+    this.draft.update((current) => ({
+      ...current,
+      traits: current.traits.map((trait, traitIndex) => traitIndex === index
+        ? { ...trait, choiceOptions, choiceCount: Math.min(trait.choiceCount, choiceOptions.length) }
+        : trait)
+    }));
+  }
+
+  removeTrait(index: number): void {
+    this.draft.update((current) => ({ ...current, traits: current.traits.filter((_, traitIndex) => traitIndex !== index) }));
+  }
+
+  duplicateTrait(index: number): void {
+    this.draft.update((current) => {
+      const source = current.traits[index];
+      if (!source) return current;
+      const copy = { ...source, name: `${source.name} Copy`, choiceOptions: [...source.choiceOptions], effects: source.effects.map((effect) => ({ ...effect, targetOptions: [...effect.targetOptions] })) };
+      return { ...current, traits: [...current.traits.slice(0, index + 1), copy, ...current.traits.slice(index + 1)] };
+    });
+  }
+
+  addTraitEffect(traitIndex: number): void {
+    this.draft.update((current) => ({
+      ...current,
+      traits: current.traits.map((trait, index) => index === traitIndex
+        ? { ...trait, effects: [...trait.effects, { type: 'skill-proficiency', target: 'Perception', value: 0, scaling: 'fixed', targetOptions: [] }] }
+        : trait)
+    }));
+  }
+
+  updateTraitEffect(traitIndex: number, effectIndex: number, field: keyof CustomClassFeatureEffect, value: string | number): void {
+    this.draft.update((current) => ({
+      ...current,
+      traits: current.traits.map((trait, index) => index === traitIndex
+        ? { ...trait, effects: trait.effects.map((effect, effectPosition) => effectPosition === effectIndex ? this.updateEffect(effect, field, value) : effect) }
+        : trait)
+    }));
+  }
+
+  removeTraitEffect(traitIndex: number, effectIndex: number): void {
+    this.draft.update((current) => ({
+      ...current,
+      traits: current.traits.map((trait, index) => index === traitIndex
+        ? { ...trait, effects: trait.effects.filter((_, effectPosition) => effectPosition !== effectIndex) }
+        : trait)
+    }));
+  }
+
+  getEffectTargets(type: CustomClassFeatureEffectType): ReadonlyArray<DropdownOption> {
+    if (type === 'ability-score' || type === 'saving-throw-bonus') return this.abilityOptions;
+    return type.startsWith('skill-') ? this.skillOptions : [];
+  }
+
+  effectNeedsTarget(type: CustomClassFeatureEffectType): boolean {
+    return this.getEffectTargets(type).length > 0;
+  }
+
+  effectUsesValue(type: CustomClassFeatureEffectType): boolean {
+    return type !== 'skill-proficiency' && type !== 'skill-expertise';
+  }
+
+  private updateEffect(effect: CustomClassFeatureEffect, field: keyof CustomClassFeatureEffect, value: string | number): CustomClassFeatureEffect {
+    if (field === 'type') {
+      const type = String(value) as CustomClassFeatureEffectType;
+      return { ...effect, type, target: String(this.getEffectTargets(type)[0]?.value ?? ''), value: this.effectUsesValue(type) ? effect.value || 1 : 0, targetOptions: [] };
+    }
+    if (field === 'value') return { ...effect, value: Math.trunc(Number(value) || 0) };
+    if (field === 'scaling') return { ...effect, scaling: String(value) as CustomClassFeatureEffectScaling };
+    return { ...effect, target: String(value) };
   }
 
   traitsText(): string {
@@ -115,6 +205,21 @@ export class SpeciesEditorPageComponent {
     const normalized = sanitizeCustomSpeciesOption(this.draft());
     if (!normalized.name) {
       this.errorMessage.set('Species name is required.');
+      return;
+    }
+
+    if (this.draft().traits.some((trait) => !trait.name.trim())) {
+      this.errorMessage.set('Every species trait needs a name.');
+      return;
+    }
+
+    if (this.draft().traits.some((trait) => trait.choiceCount > trait.choiceOptions.length)) {
+      this.errorMessage.set('A trait cannot require more choices than it offers.');
+      return;
+    }
+
+    if (this.draft().traits.some((trait) => trait.effects.some((effect) => this.effectNeedsTarget(effect.type) && !effect.target.trim()))) {
+      this.errorMessage.set('Choose a target for every mechanical effect.');
       return;
     }
 

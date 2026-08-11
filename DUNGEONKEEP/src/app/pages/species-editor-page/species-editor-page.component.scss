@@ -1,15 +1,198 @@
-:host { display:block; }
-.page-stack { display:grid; gap:16px; }
-.panel { background: var(--surface-raised); border: 1px solid var(--panel-border); border-radius: 16px; padding: 16px; }
-.back-link { color: var(--accent-primary); text-decoration:none; }
-.eyebrow { text-transform: uppercase; letter-spacing: .12em; font-size: .72rem; color: var(--text-soft); margin:0; }
-.form-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; }
-label { display:grid; gap:6px; }
-label span { font-size:.82rem; color:var(--text-soft); }
-input,textarea { border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text); border-radius:10px; padding:10px; font:inherit; }
-.full-width { grid-column: 1 / -1; }
-.actions { display:flex; justify-content:flex-end; gap:10px; }
-.primary-btn,.ghost-btn { border-radius:10px; padding:8px 12px; border:1px solid transparent; cursor:pointer; }
-.primary-btn { background: var(--gradient-primary); color: var(--color-text-on-primary, var(--color-surface)); }
-.ghost-btn { background: transparent; border-color: var(--color-border); color: var(--color-text); }
-.error-text { margin:0; color: var(--color-danger, #c0392b); }
+:host {
+    display: block;
+}
+
+.page-stack {
+    display: grid;
+    gap: 16px;
+}
+
+.panel {
+    background: var(--surface-raised);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    padding: 16px;
+}
+
+.back-link {
+    color: var(--accent-primary);
+    text-decoration: none;
+}
+
+.eyebrow {
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    font-size: .72rem;
+    color: var(--text-soft);
+    margin: 0;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+label {
+    display: grid;
+    gap: 6px;
+}
+
+label span {
+    font-size: .82rem;
+    color: var(--text-soft);
+}
+
+input,
+textarea {
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text);
+    border-radius: 10px;
+    padding: 10px;
+    font: inherit;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.trait-editor,
+.trait-effects {
+    display: grid;
+    gap: 14px;
+}
+
+.trait-editor-header,
+.trait-card-header,
+.trait-effects>header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.trait-editor-header h2,
+.trait-effects h3,
+.trait-effects p {
+    margin: 0;
+}
+
+.trait-editor-header h2 {
+    margin-top: 4px;
+    font-size: 1.2rem;
+}
+
+.trait-card {
+    display: grid;
+    gap: 14px;
+    padding: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-surface);
+}
+
+.trait-card-header>div {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.trait-card-header button,
+.effect-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--color-border);
+    border-radius: 9px;
+    background: transparent;
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.trait-fields {
+    display: grid;
+    grid-template-columns: minmax(180px, .5fr) minmax(240px, 1fr);
+    gap: 12px;
+}
+
+.trait-description {
+    grid-column: 1 / -1;
+}
+
+.trait-effects {
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border);
+}
+
+.trait-effects h3 {
+    font-size: .92rem;
+}
+
+.trait-effects p,
+.muted {
+    margin: 3px 0 0;
+    color: var(--text-soft);
+    font-size: .8rem;
+}
+
+.effect-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    align-items: end;
+    padding: 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--surface-raised);
+}
+
+.effect-remove {
+    color: var(--color-danger, #c0392b);
+    align-self: end;
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.primary-btn,
+.ghost-btn {
+    border-radius: 10px;
+    padding: 8px 12px;
+    border: 1px solid transparent;
+    cursor: pointer;
+}
+
+.primary-btn {
+    background: var(--gradient-primary);
+    color: var(--color-text-on-primary, var(--color-surface));
+}
+
+.ghost-btn {
+    background: transparent;
+    border-color: var(--color-border);
+    color: var(--color-text);
+}
+
+.error-text {
+    margin: 0;
+    color: var(--color-danger, #c0392b);
+}
+
+@media (max-width:640px) {
+
+    .trait-editor-header,
+    .trait-effects>header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .trait-fields,
+    .effect-row {
+        grid-template-columns: 1fr;
+    }
+}

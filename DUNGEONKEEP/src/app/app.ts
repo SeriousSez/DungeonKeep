@@ -25,6 +25,8 @@ const LIVE_NOTIFICATION_ICONS: Record<string, string> = {
   WorldNoteRevealed: 'book-open'
 };
 
+const LIBRARY_ROUTE_PREFIXES = ['/npcs', '/classes', '/species', '/monsters', '/tables'];
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -63,6 +65,10 @@ export class App {
     )
   );
   readonly isRulesActive = computed(() => this.currentUrl()?.startsWith('/rules') ?? false);
+  readonly isLibrariesActive = computed(() => {
+    const url = this.currentUrl() ?? '';
+    return LIBRARY_ROUTE_PREFIXES.some(route => url === route || url.startsWith(`${route}/`));
+  });
   readonly iconForLiveNotification = (type: string) => LIVE_NOTIFICATION_ICONS[type] ?? 'bell';
   private previousUserId: string | null = null;
   private readonly seenNotificationIds = new Set<string>();

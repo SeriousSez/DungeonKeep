@@ -1,4 +1,6 @@
 import type { ExtrasCatalogType } from '../../data/extras-catalog.data';
+import type { CustomClassFeatureEffect } from '../../models/custom-character-options.models';
+import type { CustomSpeciesOption } from '../../models/custom-character-options.models';
 
 export type AbilityKey = 'strength' | 'dexterity' | 'constitution' | 'intelligence' | 'wisdom' | 'charisma';
 
@@ -85,6 +87,9 @@ export interface PersistedBuilderState {
     selectedSpeciesLanguages?: string[];
     selectedSpeciesTraitChoices?: Record<string, string[]>;
     classFeatureSelections?: Record<string, string[]>;
+    customClassFeatureEffects?: CustomClassFeatureEffect[];
+    customSpeciesSnapshot?: CustomSpeciesOption;
+    customSpeciesFeatureEffects?: CustomClassFeatureEffect[];
     abilityScoreImprovementChoices?: Record<string, PersistedAbilityScoreImprovementChoice>;
     featFollowUpChoices?: Record<string, PersistedFeatFollowUpChoice>;
     backgroundChoiceSelections?: Record<string, string>;
