@@ -1,7 +1,12 @@
-@if (appUpdate.isUpdateReloading()) {
-<aside class="app-update-reloading" role="status" aria-live="polite" aria-atomic="true">
-    <i class="fa-duotone fa-thin fa-rotate"></i>
-    <span>A new version is available. Reloading...</span>
+@if (appUpdate.isUpdateAvailable() || appUpdate.isUpdateReloading()) {
+<aside class="app-update-notice" role="status" aria-live="polite" aria-atomic="true">
+    <i class="fa-duotone fa-thin" [class.fa-cloud-arrow-down]="appUpdate.isUpdateAvailable()" [class.fa-rotate]="appUpdate.isUpdateReloading()"></i>
+    @if (appUpdate.isUpdateReloading()) {
+    <span>Applying the update...</span>
+    } @else {
+    <span>A new version is available.</span>
+    <button type="button" class="secondary-btn" (click)="appUpdate.activateUpdateAndReload()">Update now</button>
+    }
 </aside>
 }
 

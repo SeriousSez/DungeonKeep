@@ -11,6 +11,7 @@ export class AppUpdateService {
     private readonly destroyRef = inject(DestroyRef);
     private readonly document = inject(DOCUMENT);
 
+    readonly isUpdateAvailable = signal(false);
     readonly isUpdateReloading = signal(false);
 
     constructor() {
@@ -23,9 +24,7 @@ export class AppUpdateService {
                 takeUntilDestroyed(this.destroyRef),
                 filter((event: VersionEvent) => event.type === 'VERSION_READY')
             )
-            .subscribe(() => {
-                void this.reloadToLatestVersion();
-            });
+            .subscribe(() => this.isUpdateAvailable.set(true));
 
         const appIsStable$ = this.appRef.isStable.pipe(first((isStable) => isStable));
         concat(appIsStable$, interval(10 * 60 * 1000))
@@ -35,11 +34,12 @@ export class AppUpdateService {
             });
     }
 
-    private async reloadToLatestVersion(): Promise<void> {
+    async activateUpdateAndReload(): Promise<void> {
         if (this.isUpdateReloading()) {
             return;
         }
 
+        this.isUpdateAvailable.set(false);
         this.isUpdateReloading.set(true);
 
         try {
